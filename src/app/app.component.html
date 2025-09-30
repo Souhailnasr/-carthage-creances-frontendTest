@@ -1,0 +1,12 @@
+<div class="app-container">
+  <!-- Sidebar -->
+  <app-sidebar *ngIf="showSidebar"></app-sidebar>
+  
+  <!-- Main Content -->
+  <div class="main-content" [class.with-sidebar]="showSidebar">
+    <router-outlet></router-outlet>
+  </div>
+  
+  <!-- Toast Notifications -->
+  <app-toast></app-toast>
+</div>

@@ -1,0 +1,17 @@
+<div class="form-group">
+  <label [for]="id" *ngIf="label" class="form-label">
+    {{ label }}
+    <span *ngIf="required" class="required">*</span>
+  </label>
+  <input
+    [id]="id"
+    [type]="type"
+    [formControl]="control!"
+    [placeholder]="placeholder"
+    [disabled]="disabled"
+    class="form-control"
+    [class.is-invalid]="hasError()">
+  <div class="invalid-feedback" *ngIf="hasError()">
+    {{ getErrorMessage() }}
+  </div>
+</div>

@@ -1,0 +1,156 @@
+<div class="tache-urgente-container">
+  <div class="tache-header">
+    <h2><i class="fas fa-tasks"></i> Tâches Urgentes</h2>
+    <div class="header-actions">
+      <button class="btn btn-success" (click)="showCreateTache = true">
+        <i class="fas fa-plus"></i> Nouvelle Tâche
+      </button>
+    </div>
+    <div class="filters">
+      <div class="search-box">
+        <input type="text" 
+               [(ngModel)]="searchTerm" 
+               (input)="onSearch()"
+               placeholder="Rechercher une tâche...">
+        <i class="fas fa-search"></i>
+      </div>
+      
+      <select [(ngModel)]="selectedStatut" (change)="onStatutChange()">
+        <option value="TOUS">Tous les statuts</option>
+        <option value="EN_COURS">En cours</option>
+        <option value="TERMINEE">Terminée</option>
+        <option value="EN_RETARD">En retard</option>
+      </select>
+      
+      <select [(ngModel)]="selectedPriorite" (change)="onPrioriteChange()">
+        <option value="TOUS">Toutes les priorités</option>
+        <option value="TRES_URGENTE">Très urgente</option>
+        <option value="ELEVEE">Élevée</option>
+        <option value="MOYENNE">Moyenne</option>
+        <option value="FAIBLE">Faible</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Formulaire de création de tâche -->
+  <div class="create-tache-form" *ngIf="showCreateTache">
+    <h3><i class="fas fa-plus-circle"></i> Créer une nouvelle tâche</h3>
+    <form (ngSubmit)="createTache()" #tacheForm="ngForm">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Titre :</label>
+          <input type="text" [(ngModel)]="newTache.titre" name="titre" required class="form-control">
+        </div>
+        <div class="form-group">
+          <label>Type :</label>
+          <select [(ngModel)]="newTache.type" name="type" required class="form-control">
+            <option value="ENQUETE">Enquête</option>
+            <option value="RELANCE">Relance</option>
+            <option value="DOSSIER">Dossier</option>
+            <option value="AUDIENCE">Audience</option>
+            <option value="ACTION">Action</option>
+          </select>
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label>Description :</label>
+        <textarea [(ngModel)]="newTache.description" name="description" required class="form-control" rows="3"></textarea>
+      </div>
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label>Priorité :</label>
+          <select [(ngModel)]="newTache.priorite" name="priorite" required class="form-control">
+            <option value="FAIBLE">Faible</option>
+            <option value="MOYENNE">Moyenne</option>
+            <option value="ELEVEE">Élevée</option>
+            <option value="TRES_URGENTE">Très urgente</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Date d'échéance :</label>
+          <input type="date" [(ngModel)]="newTache.dateEcheance" name="dateEcheance" required class="form-control">
+        </div>
+      </div>
+      
+      <div class="form-group" *ngIf="canAssignToAgent">
+        <label>Assigner à un agent :</label>
+        <select [(ngModel)]="newTache.agentId" name="agentId" class="form-control">
+          <option value="">Sélectionner un agent</option>
+          <option *ngFor="let agent of availableAgents" [value]="agent.id">{{ agent.prenom }} {{ agent.nom }}</option>
+        </select>
+      </div>
+      
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary" [disabled]="tacheForm.invalid">
+          <i class="fas fa-save"></i> Créer la tâche
+        </button>
+        <button type="button" class="btn btn-secondary" (click)="cancelCreateTache()">
+          <i class="fas fa-times"></i> Annuler
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <div class="tache-list">
+    <div class="tache-item" 
+         *ngFor="let tache of tachesFiltrees" 
+         [ngClass]="getStatutClass(tache.statut)">
+      
+      <div class="tache-priority" [ngClass]="getPrioriteClass(tache.priorite)">
+        <i class="fas fa-exclamation-triangle" *ngIf="tache.priorite === 'TRES_URGENTE'"></i>
+        <i class="fas fa-arrow-up" *ngIf="tache.priorite === 'ELEVEE'"></i>
+        <i class="fas fa-minus" *ngIf="tache.priorite === 'MOYENNE'"></i>
+        <i class="fas fa-arrow-down" *ngIf="tache.priorite === 'FAIBLE'"></i>
+      </div>
+      
+      <div class="tache-content">
+        <div class="tache-header-item">
+          <h3>{{ tache.titre }}</h3>
+          <div class="tache-meta">
+            <span class="tache-type">{{ tache.type }}</span>
+            <span class="tache-agent">{{ tache.agentNom }}</span>
+          </div>
+        </div>
+        
+        <p class="tache-description">{{ tache.description }}</p>
+        
+        <div class="tache-details">
+          <div class="tache-date">
+            <i class="fas fa-calendar-alt"></i>
+            <span>Échéance: {{ tache.dateEcheance | date:'dd/MM/yyyy' }}</span>
+            <span class="days-remaining" 
+                  [ngClass]="{'overdue': isEnRetard(tache), 'warning': getDaysUntilEcheance(tache) <= 2}">
+              {{ getDaysUntilEcheance(tache) }} jour(s)
+            </span>
+          </div>
+          
+          <div class="tache-dossier" *ngIf="tache.dossierTitre">
+            <i class="fas fa-folder"></i>
+            <span>{{ tache.dossierTitre }}</span>
+          </div>
+          
+          <div class="tache-montant" *ngIf="tache.montant">
+            <i class="fas fa-money-bill-wave"></i>
+            <span>{{ tache.montant | currency:'TND':'symbol':'1.0-0' }}</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="tache-actions">
+        <button class="btn btn-success btn-sm" 
+                (click)="marquerTerminee(tache)"
+                *ngIf="tache.statut !== 'TERMINEE'">
+          <i class="fas fa-check"></i>
+          Terminer
+        </button>
+      </div>
+    </div>
+
+    <div class="no-taches" *ngIf="tachesFiltrees.length === 0">
+      <i class="fas fa-clipboard-list"></i>
+      <p>Aucune tâche trouvée</p>
+    </div>
+  </div>
+</div>

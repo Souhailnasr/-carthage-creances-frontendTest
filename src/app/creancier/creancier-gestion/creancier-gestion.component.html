@@ -1,0 +1,239 @@
+<div class="creancier-gestion-container">
+  <!-- Header -->
+  <div class="header">
+    <h1>Gestion des Créanciers</h1>
+    <button class="btn btn-primary" (click)="resetForm()">
+      <i class="fas fa-plus"></i> Nouveau Créancier
+    </button>
+  </div>
+
+  <!-- Formulaire -->
+  <div class="form-section">
+    <form [formGroup]="creancierForm" (ngSubmit)="onSubmit()" class="creancier-form">
+      <div class="form-header">
+        <h3>{{ isEditMode ? 'Modifier le Créancier' : 'Nouveau Créancier' }}</h3>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="codeCreancier">Code Créancier *</label>
+          <input 
+            type="text" 
+            id="codeCreancier" 
+            formControlName="codeCreancier"
+            class="form-control"
+            [class.is-invalid]="codeCreancierControl?.invalid && codeCreancierControl?.touched"
+            placeholder="Ex: CRE001">
+          <div class="invalid-feedback" *ngIf="codeCreancierControl?.invalid && codeCreancierControl?.touched">
+            <div *ngIf="codeCreancierControl?.errors?.['required']">Le code créancier est requis</div>
+            <div *ngIf="codeCreancierControl?.errors?.['minlength']">Le code doit contenir au moins 2 caractères</div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="codeCreance">Code Créance *</label>
+          <input 
+            type="text" 
+            id="codeCreance" 
+            formControlName="codeCreance"
+            class="form-control"
+            [class.is-invalid]="codeCreanceControl?.invalid && codeCreanceControl?.touched"
+            placeholder="Ex: CR001">
+          <div class="invalid-feedback" *ngIf="codeCreanceControl?.invalid && codeCreanceControl?.touched">
+            <div *ngIf="codeCreanceControl?.errors?.['required']">Le code créance est requis</div>
+            <div *ngIf="codeCreanceControl?.errors?.['minlength']">Le code doit contenir au moins 2 caractères</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="nom">Nom *</label>
+          <input 
+            type="text" 
+            id="nom" 
+            formControlName="nom"
+            class="form-control"
+            [class.is-invalid]="nomControl?.invalid && nomControl?.touched"
+            placeholder="Nom du créancier">
+          <div class="invalid-feedback" *ngIf="nomControl?.invalid && nomControl?.touched">
+            <div *ngIf="nomControl?.errors?.['required']">Le nom est requis</div>
+            <div *ngIf="nomControl?.errors?.['minlength']">Le nom doit contenir au moins 2 caractères</div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="prenom">Prénom *</label>
+          <input 
+            type="text" 
+            id="prenom" 
+            formControlName="prenom"
+            class="form-control"
+            [class.is-invalid]="prenomControl?.invalid && prenomControl?.touched"
+            placeholder="Prénom du créancier">
+          <div class="invalid-feedback" *ngIf="prenomControl?.invalid && prenomControl?.touched">
+            <div *ngIf="prenomControl?.errors?.['required']">Le prénom est requis</div>
+            <div *ngIf="prenomControl?.errors?.['minlength']">Le prénom doit contenir au moins 2 caractères</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="email">Email *</label>
+          <input 
+            type="email" 
+            id="email" 
+            formControlName="email"
+            class="form-control"
+            [class.is-invalid]="emailControl?.invalid && emailControl?.touched"
+            placeholder="email@exemple.com">
+          <div class="invalid-feedback" *ngIf="emailControl?.invalid && emailControl?.touched">
+            <div *ngIf="emailControl?.errors?.['required']">L'email est requis</div>
+            <div *ngIf="emailControl?.errors?.['email']">Format d'email invalide</div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="telephone">Téléphone *</label>
+          <input 
+            type="tel" 
+            id="telephone" 
+            formControlName="telephone"
+            class="form-control"
+            [class.is-invalid]="telephoneControl?.invalid && telephoneControl?.touched"
+            placeholder="+216 20 123 456">
+          <div class="invalid-feedback" *ngIf="telephoneControl?.invalid && telephoneControl?.touched">
+            <div *ngIf="telephoneControl?.errors?.['required']">Le téléphone est requis</div>
+            <div *ngIf="telephoneControl?.errors?.['pattern']">Format de téléphone invalide</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="adresse">Adresse *</label>
+        <textarea 
+          id="adresse" 
+          formControlName="adresse"
+          class="form-control"
+          [class.is-invalid]="adresseControl?.invalid && adresseControl?.touched"
+          placeholder="Adresse complète du créancier"
+          rows="3"></textarea>
+        <div class="invalid-feedback" *ngIf="adresseControl?.invalid && adresseControl?.touched">
+          <div *ngIf="adresseControl?.errors?.['required']">L'adresse est requise</div>
+          <div *ngIf="adresseControl?.errors?.['minlength']">L'adresse doit contenir au moins 5 caractères</div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="ville">Ville</label>
+          <input 
+            type="text" 
+            id="ville" 
+            formControlName="ville"
+            class="form-control"
+            placeholder="Ville">
+        </div>
+
+        <div class="form-group">
+          <label for="codePostal">Code Postal</label>
+          <input 
+            type="text" 
+            id="codePostal" 
+            formControlName="codePostal"
+            class="form-control"
+            placeholder="Code postal">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="fax">Fax</label>
+        <input 
+          type="text" 
+          id="fax" 
+          formControlName="fax"
+          class="form-control"
+          placeholder="Numéro de fax">
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" (click)="resetForm()">
+          <i class="fas fa-times"></i> Annuler
+        </button>
+        <button type="submit" class="btn btn-primary" [disabled]="creancierForm.invalid">
+          <i class="fas fa-save"></i> {{ isEditMode ? 'Mettre à jour' : 'Créer' }}
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Recherche -->
+  <div class="search-section">
+    <div class="search-box">
+      <input 
+        type="text" 
+        [(ngModel)]="searchTerm"
+        (input)="searchCreanciers()"
+        placeholder="Rechercher par nom, prénom, email..."
+        class="search-input">
+      <button class="btn btn-outline-secondary" (click)="clearSearch()" *ngIf="searchTerm">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Liste des créanciers -->
+  <div class="creanciers-list">
+    <div class="list-header">
+      <h3>Liste des Créanciers ({{ filteredCreanciers.length }})</h3>
+    </div>
+
+    <div class="creanciers-grid" *ngIf="filteredCreanciers.length > 0; else noCreanciers">
+      <div class="creancier-card" *ngFor="let creancier of filteredCreanciers">
+        <div class="card-header">
+          <h4>{{ creancier.prenom }} {{ creancier.nom }}</h4>
+          <div class="card-actions">
+            <button class="btn btn-sm btn-outline-primary" (click)="editCreancier(creancier)">
+              <i class="fas fa-edit"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-danger" (click)="deleteCreancier(creancier.id)">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="card-body">
+          <div class="info-row">
+            <i class="fas fa-envelope"></i>
+            <span>{{ creancier.email }}</span>
+          </div>
+          <div class="info-row">
+            <i class="fas fa-phone"></i>
+            <span>{{ creancier.telephone }}</span>
+          </div>
+          <div class="info-row">
+            <i class="fas fa-map-marker-alt"></i>
+            <span>{{ creancier.adresse }}</span>
+          </div>
+          <div class="info-row" *ngIf="creancier.ville">
+            <i class="fas fa-city"></i>
+            <span>{{ creancier.ville }}{{ creancier.codePostal ? ' - ' + creancier.codePostal : '' }}</span>
+          </div>
+          <div class="info-row" *ngIf="creancier.codeCreancier">
+            <i class="fas fa-tag"></i>
+            <span>Code: {{ creancier.codeCreancier }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <ng-template #noCreanciers>
+      <div class="no-creanciers">
+        <i class="fas fa-users"></i>
+        <h4>Aucun créancier trouvé</h4>
+        <p>Commencez par créer votre premier créancier</p>
+      </div>
+    </ng-template>
+  </div>
+</div>

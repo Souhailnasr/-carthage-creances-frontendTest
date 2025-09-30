@@ -1,0 +1,161 @@
+<div class="dossier-gestion-container">
+  <div class="header">
+    <h1>Gestion des Dossiers</h1>
+    <button class="btn btn-primary" (click)="showCreateDossierForm()">
+      <i class="fas fa-plus"></i> Nouveau Dossier
+    </button>
+  </div>
+
+  <!-- Formulaire de création/édition -->
+  <div class="form-container" *ngIf="showCreateForm">
+    <div class="form-header">
+      <h2>{{ isEditMode ? 'Modifier le Dossier' : 'Nouveau Dossier' }}</h2>
+      <button class="btn btn-secondary" (click)="cancelForm()">
+        <i class="fas fa-times"></i> Annuler
+      </button>
+    </div>
+
+    <form [formGroup]="dossierForm" (ngSubmit)="onSubmit()" class="dossier-form">
+      <div class="form-grid">
+        <app-form-input label="Titre" [control]="titreControl" id="titre"></app-form-input>
+        <app-form-input label="Numéro de Dossier" [control]="numeroDossierControl" id="numeroDossier"></app-form-input>
+        <app-form-input label="Montant de la Créance" [control]="montantCreanceControl" type="number" id="montantCreance"></app-form-input>
+        
+        <div class="form-group">
+          <label for="typeDocument">Type de Document Justificatif</label>
+          <select id="typeDocument" formControlName="typeDocumentJustificatif" class="form-control">
+            <option *ngFor="let type of typeDocumentOptions" [value]="type">{{ type }}</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="urgence">Urgence</label>
+          <select id="urgence" formControlName="urgence" class="form-control">
+            <option *ngFor="let urgence of urgenceOptions" [value]="urgence">{{ getUrgenceLabel(urgence) }}</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="nomCreancier">Nom du Créancier</label>
+          <input type="text" id="nomCreancier" formControlName="nomCreancier" class="form-control" placeholder="Entrez le nom du créancier">
+        </div>
+        
+        <div class="form-group">
+          <label for="nomDebiteur">Nom du Débiteur</label>
+          <input type="text" id="nomDebiteur" formControlName="nomDebiteur" class="form-control" placeholder="Entrez le nom du débiteur">
+        </div>
+
+        <div class="form-group full-width">
+          <label for="description">Description</label>
+          <textarea id="description" formControlName="description" class="form-control" rows="3"></textarea>
+        </div>
+
+        <div class="form-group checkbox-group">
+          <label class="checkbox-label">
+            <input type="checkbox" formControlName="pouvoir">
+            <span class="checkmark"></span>
+            Pouvoir
+          </label>
+        </div>
+
+        <div class="form-group checkbox-group">
+          <label class="checkbox-label">
+            <input type="checkbox" formControlName="contratSigne">
+            <span class="checkmark"></span>
+            Contrat Signé
+          </label>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary" [disabled]="dossierForm.invalid">
+          <i class="fas fa-save"></i> {{ isEditMode ? 'Modifier' : 'Créer' }} le Dossier
+        </button>
+        <button type="button" class="btn btn-secondary" (click)="cancelForm()">
+          <i class="fas fa-times"></i> Annuler
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Barre de recherche -->
+  <div class="search-bar">
+    <div class="search-input-group">
+      <i class="fas fa-search"></i>
+      <input 
+        type="text" 
+        [(ngModel)]="searchTerm" 
+        (input)="onSearch()" 
+        placeholder="Rechercher par titre, numéro, créancier ou débiteur..."
+        class="search-input"
+      >
+    </div>
+  </div>
+
+  <!-- Tableau des dossiers -->
+  <div class="table-container">
+    <table class="dossiers-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Numéro</th>
+          <th>Titre</th>
+          <th>Montant</th>
+          <th>Créancier</th>
+          <th>Débiteur</th>
+          <th>Urgence</th>
+          <th>Date Création</th>
+          <th>Agent Créateur</th>
+          <th>Statut</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let dossier of filteredDossiers">
+          <td>{{ dossier.id }}</td>
+          <td>{{ dossier.numeroDossier }}</td>
+          <td>{{ dossier.titre }}</td>
+          <td>{{ dossier.getFormattedAmount() }}</td>
+          <td>{{ dossier.creancier.getFullName() }}</td>
+          <td>{{ dossier.debiteur.getFullName() }}</td>
+          <td>
+            <span class="urgence-badge" [ngClass]="getUrgenceClass(dossier.urgence)">
+              {{ getUrgenceLabel(dossier.urgence) }}
+            </span>
+          </td>
+          <td>{{ dossier.getFormattedDate() }}</td>
+          <td>{{ dossier.agentCreateur }}</td>
+          <td>
+            <span class="status-badge" [ngClass]="getValidationClass(dossier)">
+              {{ getValidationStatus(dossier) }}
+            </span>
+          </td>
+          <td class="actions">
+            <button class="btn btn-sm btn-info" (click)="viewDossierDetails(dossier)" title="Voir détails">
+              <i class="fas fa-eye"></i>
+            </button>
+            <button class="btn btn-sm btn-warning" (click)="showEditDossierForm(dossier)" title="Modifier">
+              <i class="fas fa-edit"></i>
+            </button>
+            <button 
+              *ngIf="canValidateDossier(dossier)" 
+              class="btn btn-sm btn-success" 
+              (click)="validateDossier(dossier)" 
+              title="Valider le dossier"
+            >
+              <i class="fas fa-check"></i>
+            </button>
+            <button class="btn btn-sm btn-danger" (click)="deleteDossier(dossier)" title="Supprimer">
+              <i class="fas fa-trash"></i>
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div *ngIf="filteredDossiers.length === 0" class="no-data">
+      <i class="fas fa-folder-open"></i>
+      <p>Aucun dossier trouvé</p>
+    </div>
+  </div>
+</div>

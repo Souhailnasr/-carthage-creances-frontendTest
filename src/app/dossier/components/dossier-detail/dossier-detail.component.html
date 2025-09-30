@@ -1,0 +1,176 @@
+<div class="dossier-detail-container" *ngIf="dossier">
+  <div class="header">
+    <div class="header-left">
+      <button class="btn btn-secondary" (click)="goBack()">
+        <i class="fas fa-arrow-left"></i> Retour
+      </button>
+      <h1>Détails du Dossier</h1>
+    </div>
+    <div class="header-right">
+      <button class="btn btn-primary" (click)="editDossier()">
+        <i class="fas fa-edit"></i> Modifier
+      </button>
+    </div>
+  </div>
+
+  <div class="dossier-content">
+    <!-- Informations générales -->
+    <div class="info-section">
+      <h2>Informations Générales</h2>
+      <div class="info-grid">
+        <div class="info-item">
+          <label>ID du Dossier</label>
+          <span>{{ dossier.id }}</span>
+        </div>
+        <div class="info-item">
+          <label>Numéro de Dossier</label>
+          <span>{{ dossier.numeroDossier }}</span>
+        </div>
+        <div class="info-item">
+          <label>Titre</label>
+          <span>{{ dossier.titre }}</span>
+        </div>
+        <div class="info-item">
+          <label>Description</label>
+          <span>{{ dossier.description }}</span>
+        </div>
+        <div class="info-item">
+          <label>Montant de la Créance</label>
+          <span class="amount">{{ dossier.getFormattedAmount() }}</span>
+        </div>
+        <div class="info-item">
+          <label>Date de Création</label>
+          <span>{{ dossier.getFormattedDate() }}</span>
+        </div>
+        <div class="info-item">
+          <label>Statut</label>
+          <span class="status-badge" [ngClass]="getStatutClass(dossier.statut)">
+            {{ getStatutLabel(dossier.statut) }}
+          </span>
+        </div>
+        <div class="info-item">
+          <label>Urgence</label>
+          <span class="urgence-badge" [ngClass]="getUrgenceClass(dossier.urgence)">
+            {{ getUrgenceLabel(dossier.urgence) }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Informations sur les parties -->
+    <div class="parties-section">
+      <div class="creancier-info">
+        <h3>Créancier</h3>
+        <div class="party-details">
+          <div class="party-item">
+            <label>Code Créancier</label>
+            <span>{{ dossier.creancier.codeCreancier }}</span>
+          </div>
+          <div class="party-item">
+            <label>Code Créance</label>
+            <span>{{ dossier.creancier.codeCreance }}</span>
+          </div>
+          <div class="party-item">
+            <label>Nom</label>
+            <span>{{ dossier.creancier.getFullName() }}</span>
+          </div>
+          <div class="party-item">
+            <label>Adresse</label>
+            <span>{{ dossier.creancier.getFullAddress() }}</span>
+          </div>
+          <div class="party-item">
+            <label>Téléphone</label>
+            <span>{{ dossier.creancier.telephone }}</span>
+          </div>
+          <div class="party-item">
+            <label>Email</label>
+            <span>{{ dossier.creancier.email }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="debiteur-info">
+        <h3>Débiteur</h3>
+        <div class="party-details">
+          <div class="party-item">
+            <label>Code Créance</label>
+            <span>{{ dossier.debiteur.codeCreance }}</span>
+          </div>
+          <div class="party-item">
+            <label>Nom</label>
+            <span>{{ dossier.debiteur.getFullName() }}</span>
+          </div>
+          <div class="party-item">
+            <label>Adresse</label>
+            <span>{{ dossier.debiteur.getFullAddress() }}</span>
+          </div>
+          <div class="party-item">
+            <label>Téléphone</label>
+            <span>{{ dossier.debiteur.telephone }}</span>
+          </div>
+          <div class="party-item">
+            <label>Email</label>
+            <span>{{ dossier.debiteur.email }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Informations sur les agents -->
+    <div class="agents-section">
+      <h3>Agents Responsables</h3>
+      <div class="agents-grid">
+        <div class="agent-item">
+          <label>Agent Créateur</label>
+          <span>{{ dossier.agentCreateur }}</span>
+        </div>
+        <div class="agent-item">
+          <label>Agent Responsable</label>
+          <span>{{ dossier.agentResponsable }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Informations sur les documents -->
+    <div class="documents-section">
+      <h3>Documents et Informations</h3>
+      <div class="documents-grid">
+        <div class="document-item">
+          <label>Type de Document Justificatif</label>
+          <span>{{ dossier.typeDocumentJustificatif }}</span>
+        </div>
+        <div class="document-item">
+          <label>Pouvoir</label>
+          <span class="boolean-badge" [ngClass]="dossier.pouvoir ? 'true' : 'false'">
+            {{ dossier.pouvoir ? 'Oui' : 'Non' }}
+          </span>
+        </div>
+        <div class="document-item">
+          <label>Contrat Signé</label>
+          <span class="boolean-badge" [ngClass]="dossier.contratSigne ? 'true' : 'false'">
+            {{ dossier.contratSigne ? 'Oui' : 'Non' }}
+          </span>
+        </div>
+        <div class="document-item" *ngIf="dossier.valide">
+          <label>Date de Validation</label>
+          <span>{{ dossier.dateValidation | date:'dd/MM/yyyy HH:mm' }}</span>
+        </div>
+        <div class="document-item" *ngIf="dossier.dateCloture">
+          <label>Date de Clôture</label>
+          <span>{{ dossier.dateCloture | date:'dd/MM/yyyy HH:mm' }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="dossier-not-found" *ngIf="!dossier">
+  <div class="not-found-content">
+    <i class="fas fa-exclamation-triangle"></i>
+    <h2>Dossier non trouvé</h2>
+    <p>Le dossier demandé n'existe pas ou a été supprimé.</p>
+    <button class="btn btn-primary" (click)="goBack()">
+      <i class="fas fa-arrow-left"></i> Retour à la liste
+    </button>
+  </div>
+</div>

@@ -1,0 +1,61 @@
+<div class="user-profile-container">
+  <div class="header">
+    <h1>Mon Profil</h1>
+    <p>Gérez vos informations personnelles et votre mot de passe</p>
+  </div>
+
+  <div class="profile-content">
+    <!-- Informations utilisateur -->
+    <div class="user-info-card">
+      <div class="user-avatar-large">
+        <span class="avatar-text">{{ getUserInitials() }}</span>
+      </div>
+      <div class="user-details">
+        <h2>{{ currentUser?.getFullName() }}</h2>
+        <p class="user-role">{{ getRoleDisplayName(currentUser?.role || 'AGENT_DOSSIER') }}</p>
+        <p class="user-email">{{ currentUser?.email }}</p>
+      </div>
+    </div>
+
+    <!-- Formulaire de profil -->
+    <div class="profile-form-section">
+      <h3>Informations Personnelles</h3>
+      <form [formGroup]="profileForm" (ngSubmit)="onUpdateProfile()" class="profile-form">
+        <div class="form-grid">
+          <app-form-input label="Nom" [control]="nomControl" id="nom" [disabled]="true"></app-form-input>
+          <app-form-input label="Prénom" [control]="prenomControl" id="prenom" [disabled]="true"></app-form-input>
+          <app-form-input label="Email" [control]="emailControl" type="email" id="email" [disabled]="true"></app-form-input>
+          
+          <div class="form-group">
+            <label for="role">Rôle</label>
+            <input id="role" formControlName="role" class="form-control" [disabled]="true">
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary" [disabled]="profileForm.invalid">
+            <i class="fas fa-save"></i> Mettre à jour le Profil
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Formulaire de changement de mot de passe -->
+    <div class="password-form-section">
+      <h3>Changer le Mot de Passe</h3>
+      <form [formGroup]="passwordForm" (ngSubmit)="onChangePassword()" class="password-form">
+        <div class="form-grid">
+          <app-form-input label="Mot de passe actuel" [control]="currentPasswordControl" type="password" id="currentPassword"></app-form-input>
+          <app-form-input label="Nouveau mot de passe" [control]="newPasswordControl" type="password" id="newPassword"></app-form-input>
+          <app-form-input label="Confirmer le nouveau mot de passe" [control]="confirmPasswordControl" type="password" id="confirmPassword"></app-form-input>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary" [disabled]="passwordForm.invalid">
+            <i class="fas fa-key"></i> Changer le Mot de Passe
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

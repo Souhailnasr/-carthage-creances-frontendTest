@@ -1,0 +1,77 @@
+<div class="sidebar" [class.collapsed]="isCollapsed">
+  <!-- Header -->
+  <div class="sidebar-header">
+    <div class="logo" *ngIf="!isCollapsed">
+      <i class="fas fa-balance-scale"></i>
+      <span class="logo-text">Carthage Créance</span>
+    </div>
+    <div class="logo-collapsed" *ngIf="isCollapsed">
+      <i class="fas fa-balance-scale"></i>
+    </div>
+    <button class="toggle-btn" (click)="toggleSidebar()">
+      <i class="fas" [class.fa-chevron-left]="!isCollapsed" [class.fa-chevron-right]="isCollapsed"></i>
+    </button>
+  </div>
+
+  <!-- User Info -->
+  <div class="user-info" *ngIf="currentUser && !isCollapsed">
+    <div class="user-avatar">
+      <span class="avatar-text">{{ getUserInitials() }}</span>
+    </div>
+    <div class="user-details">
+      <div class="user-name">{{ currentUser.getFullName() }}</div>
+      <div class="user-role">
+        {{ getRoleDisplayName() }}
+      </div>
+    </div>
+  </div>
+
+  <!-- Navigation Menu -->
+  <nav class="sidebar-nav">
+    <ul class="nav-list">
+      <li *ngFor="let item of menuItems" class="nav-item" [class.has-children]="item.children">
+        <!-- Menu item principal -->
+        <div 
+          *ngIf="isMenuItemVisible(item)"
+          class="nav-link"
+          [class.active]="isActiveRoute(item.route)"
+          [class.has-active-child]="hasActiveChild(item)"
+          (click)="navigateTo(item.route)">
+          <i [class]="item.icon"></i>
+          <span class="nav-text" *ngIf="!isCollapsed">{{ item.label }}</span>
+          <i 
+            *ngIf="item.children && !isCollapsed" 
+            class="fas fa-chevron-down expand-icon"
+            [class.rotated]="hasActiveChild(item)">
+          </i>
+        </div>
+
+        <!-- Sous-menu -->
+        <ul *ngIf="item.children && !isCollapsed" class="sub-nav" [class.expanded]="hasActiveChild(item)">
+          <li *ngFor="let child of item.children" class="sub-nav-item">
+            <div 
+              *ngIf="isChildMenuItemVisible(child)"
+              class="sub-nav-link"
+              [class.active]="isActiveRoute(child.route)"
+              (click)="navigateTo(child.route)">
+              <i [class]="child.icon"></i>
+              <span class="nav-text">{{ child.label }}</span>
+            </div>
+          </li>
+        </ul>
+      </li>
+    </ul>
+  </nav>
+
+              <!-- Footer -->
+              <div class="sidebar-footer">
+                <button class="profile-btn" (click)="navigateTo('/dossier/profil')" [title]="isCollapsed ? 'Mon Profil' : ''">
+                  <i class="fas fa-user"></i>
+                  <span *ngIf="!isCollapsed">Mon Profil</span>
+                </button>
+                <button class="logout-btn" (click)="logout()" [title]="isCollapsed ? 'Déconnexion' : ''">
+                  <i class="fas fa-sign-out-alt"></i>
+                  <span *ngIf="!isCollapsed">Déconnexion</span>
+                </button>
+              </div>
+</div>

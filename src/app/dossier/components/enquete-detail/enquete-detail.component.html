@@ -1,0 +1,295 @@
+<div class="enquete-detail-container" *ngIf="dossier">
+  <div class="header">
+    <div class="header-left">
+      <button class="btn btn-secondary" (click)="goBack()">
+        <i class="fas fa-arrow-left"></i> Retour
+      </button>
+      <h1>Phase d'Enquête - {{ dossier.titre }}</h1>
+    </div>
+  </div>
+
+  <!-- Informations du dossier -->
+  <div class="dossier-info-section">
+    <h2>Informations du Dossier</h2>
+    <div class="dossier-info-grid">
+      <div class="info-item">
+        <label>Numéro de Dossier</label>
+        <span>{{ dossier.numeroDossier }}</span>
+      </div>
+      <div class="info-item">
+        <label>Montant</label>
+        <span class="amount">{{ dossier.getFormattedAmount() }}</span>
+      </div>
+      <div class="info-item">
+        <label>Urgence</label>
+        <span class="urgence-badge" [ngClass]="getUrgenceClass(dossier.urgence)">
+          {{ getUrgenceLabel(dossier.urgence) }}
+        </span>
+      </div>
+      <div class="info-item">
+        <label>Créancier</label>
+        <span>{{ dossier.creancier.getFullName() }}</span>
+      </div>
+      <div class="info-item">
+        <label>Débiteur</label>
+        <span>{{ dossier.debiteur.getFullName() }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Formulaire d'enquête -->
+  <div class="enquete-form-section">
+    <h2>Rapport d'Enquête</h2>
+    <form [formGroup]="enqueteForm" (ngSubmit)="onSubmit()" class="enquete-form">
+      
+      <!-- Section Informations Générales -->
+      <div class="form-section">
+        <h3>Informations Générales</h3>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="rapportCode">Code du Rapport</label>
+            <input type="text" id="rapportCode" formControlName="rapportCode" class="form-control">
+          </div>
+          <div class="form-group">
+            <label for="nomElementFinancier">Nom de l'Élément Financier</label>
+            <input type="text" id="nomElementFinancier" formControlName="nomElementFinancier" class="form-control">
+          </div>
+          <div class="form-group">
+            <label for="pourcentage">Pourcentage (%)</label>
+            <input type="number" id="pourcentage" formControlName="pourcentage" class="form-control" min="0" max="100">
+          </div>
+          <div class="form-group">
+            <label for="banqueAgence">Banque/Agence</label>
+            <input type="text" id="banqueAgence" formControlName="banqueAgence" class="form-control">
+          </div>
+        </div>
+      </div>
+
+      <!-- Section Informations Financières -->
+      <div class="form-section">
+        <h3>Informations Financières</h3>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="banques">Banques</label>
+            <input type="text" id="banques" formControlName="banques" class="form-control">
+          </div>
+          <div class="form-group">
+            <label for="exercices">Exercices</label>
+            <input type="text" id="exercices" formControlName="exercices" class="form-control">
+          </div>
+          <div class="form-group">
+            <label for="chiffreAffaire">Chiffre d'Affaires</label>
+            <input type="number" id="chiffreAffaire" formControlName="chiffreAffaire" class="form-control" min="0">
+          </div>
+          <div class="form-group">
+            <label for="resultatNet">Résultat Net</label>
+            <input type="number" id="resultatNet" formControlName="resultatNet" class="form-control" min="0">
+          </div>
+          <div class="form-group checkbox-group">
+            <label class="checkbox-label">
+              <input type="checkbox" formControlName="disponibiliteBilan">
+              <span class="checkmark"></span>
+              Disponibilité du Bilan
+            </label>
+          </div>
+          <div class="form-group">
+            <label for="appreciationBancaire">Appréciation Bancaire</label>
+            <select id="appreciationBancaire" formControlName="appreciationBancaire" class="form-control">
+              <option value="">Sélectionner...</option>
+              <option value="EXCELLENTE">Excellente</option>
+              <option value="BONNE">Bonne</option>
+              <option value="MOYENNE">Moyenne</option>
+              <option value="FAIBLE">Faible</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="paiementsCouverture">Paiements de Couverture</label>
+            <input type="number" id="paiementsCouverture" formControlName="paiementsCouverture" class="form-control" min="0">
+          </div>
+          <div class="form-group">
+            <label for="reputationCommerciale">Réputation Commerciale</label>
+            <select id="reputationCommerciale" formControlName="reputationCommerciale" class="form-control">
+              <option value="">Sélectionner...</option>
+              <option value="EXCELLENTE">Excellente</option>
+              <option value="BONNE">Bonne</option>
+              <option value="MOYENNE">Moyenne</option>
+              <option value="FAIBLE">Faible</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section Biens -->
+      <div class="form-section">
+        <h3>Biens et Situation Juridique</h3>
+        <div class="form-grid">
+          <div class="form-group checkbox-group">
+            <label class="checkbox-label">
+              <input type="checkbox" formControlName="bienImmobilier">
+              <span class="checkmark"></span>
+              Bien Immobilier
+            </label>
+          </div>
+          <div class="form-group">
+            <label for="situationJuridiqueImmobilier">Situation Juridique Immobilier</label>
+            <textarea id="situationJuridiqueImmobilier" formControlName="situationJuridiqueImmobilier" class="form-control" rows="3"></textarea>
+          </div>
+          <div class="form-group checkbox-group">
+            <label class="checkbox-label">
+              <input type="checkbox" formControlName="bienMobilier">
+              <span class="checkmark"></span>
+              Bien Mobilier
+            </label>
+          </div>
+          <div class="form-group">
+            <label for="situationJuridiqueMobilier">Situation Juridique Mobilier</label>
+            <textarea id="situationJuridiqueMobilier" formControlName="situationJuridiqueMobilier" class="form-control" rows="3"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="incidents">Incidents</label>
+            <textarea id="incidents" formControlName="incidents" class="form-control" rows="3"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="autresAffaires">Autres Affaires</label>
+            <textarea id="autresAffaires" formControlName="autresAffaires" class="form-control" rows="3"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section Entreprise -->
+      <div class="form-section">
+        <h3>Informations sur l'Entreprise</h3>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="registreCommerce">Registre de Commerce</label>
+            <input type="text" id="registreCommerce" formControlName="registreCommerce" class="form-control">
+          </div>
+          <div class="form-group">
+            <label for="codeDouane">Code Douane</label>
+            <input type="text" id="codeDouane" formControlName="codeDouane" class="form-control">
+          </div>
+          <div class="form-group">
+            <label for="matriculeFiscale">Matricule Fiscale</label>
+            <input type="text" id="matriculeFiscale" formControlName="matriculeFiscale" class="form-control">
+          </div>
+          <div class="form-group">
+            <label for="formeJuridique">Forme Juridique</label>
+            <select id="formeJuridique" formControlName="formeJuridique" class="form-control">
+              <option value="">Sélectionner...</option>
+              <option value="SARL">SARL</option>
+              <option value="SA">SA</option>
+              <option value="EURL">EURL</option>
+              <option value="SNC">SNC</option>
+              <option value="AUTRE">Autre</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="capital">Capital</label>
+            <input type="number" id="capital" formControlName="capital" class="form-control" min="0">
+          </div>
+          <div class="form-group">
+            <label for="pdg">PDG</label>
+            <input type="text" id="pdg" formControlName="pdg" class="form-control">
+          </div>
+          <div class="form-group">
+            <label for="directeurAdjoint">Directeur Adjoint</label>
+            <input type="text" id="directeurAdjoint" formControlName="directeurAdjoint" class="form-control">
+          </div>
+          <div class="form-group">
+            <label for="directeurFinancier">Directeur Financier</label>
+            <input type="text" id="directeurFinancier" formControlName="directeurFinancier" class="form-control">
+          </div>
+          <div class="form-group">
+            <label for="directeurCommercial">Directeur Commercial</label>
+            <input type="text" id="directeurCommercial" formControlName="directeurCommercial" class="form-control">
+          </div>
+          <div class="form-group">
+            <label for="descriptionActivite">Description de l'Activité</label>
+            <textarea id="descriptionActivite" formControlName="descriptionActivite" class="form-control" rows="3"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="secteurActivite">Secteur d'Activité</label>
+            <input type="text" id="secteurActivite" formControlName="secteurActivite" class="form-control">
+          </div>
+          <div class="form-group">
+            <label for="effectif">Effectif</label>
+            <input type="number" id="effectif" formControlName="effectif" class="form-control" min="0">
+          </div>
+          <div class="form-group">
+            <label for="email">Email</label>
+            <input type="email" id="email" formControlName="email" class="form-control">
+          </div>
+          <div class="form-group">
+            <label for="marques">Marques</label>
+            <input type="text" id="marques" formControlName="marques" class="form-control">
+          </div>
+          <div class="form-group">
+            <label for="groupe">Groupe</label>
+            <input type="text" id="groupe" formControlName="groupe" class="form-control">
+          </div>
+        </div>
+      </div>
+
+      <!-- Section Décisions et Visas -->
+      <div class="form-section">
+        <h3>Décisions et Visas</h3>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="observations">Observations</label>
+            <textarea id="observations" formControlName="observations" class="form-control" rows="4"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="decisionComite">Décision du Comité</label>
+            <select id="decisionComite" formControlName="decisionComite" class="form-control">
+              <option value="">Sélectionner...</option>
+              <option value="APPROUVEE">Approuvée</option>
+              <option value="REJETEE">Rejetée</option>
+              <option value="EN_ATTENTE">En Attente</option>
+            </select>
+          </div>
+          <div class="form-group checkbox-group">
+            <label class="checkbox-label">
+              <input type="checkbox" formControlName="visaDirecteurJuridique">
+              <span class="checkmark"></span>
+              Visa Directeur Juridique
+            </label>
+          </div>
+          <div class="form-group checkbox-group">
+            <label class="checkbox-label">
+              <input type="checkbox" formControlName="visaEnqueteur">
+              <span class="checkmark"></span>
+              Visa Enquêteur
+            </label>
+          </div>
+          <div class="form-group checkbox-group">
+            <label class="checkbox-label">
+              <input type="checkbox" formControlName="visaDirecteurCommercial">
+              <span class="checkmark"></span>
+              Visa Directeur Commercial
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary" [disabled]="enqueteForm.invalid">
+          <i class="fas fa-save"></i> Sauvegarder le Rapport
+        </button>
+        <button type="button" class="btn btn-secondary" (click)="goBack()">
+          <i class="fas fa-times"></i> Annuler
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="enquete-not-found" *ngIf="!dossier">
+  <div class="not-found-content">
+    <i class="fas fa-exclamation-triangle"></i>
+    <h2>Dossier non trouvé</h2>
+    <p>Le dossier demandé n'existe pas ou a été supprimé.</p>
+    <button class="btn btn-primary" (click)="goBack()">
+      <i class="fas fa-arrow-left"></i> Retour à la liste
+    </button>
+  </div>
+</div>

@@ -1,0 +1,13 @@
+<div class="toast-container" *ngIf="currentToast">
+  <div class="toast" [class]="'toast-' + currentToast.type">
+    <div class="toast-icon">
+      <i [class]="'fas ' + getIconClass(currentToast.type)"></i>
+    </div>
+    <div class="toast-content">
+      <p class="toast-message">{{ currentToast.message }}</p>
+    </div>
+    <button class="toast-close" (click)="hideToast()">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+</div>

@@ -1,0 +1,168 @@
+<div class="dashboard-container">
+  <div class="header">
+    <h1>Tableau de Bord</h1>
+    <p class="current-time">{{ getCurrentTime() }}</p>
+  </div>
+
+  <!-- User Info Card -->
+  <div class="user-info-card" *ngIf="currentUser">
+    <div class="user-avatar">
+      <span class="avatar-text">{{ getUserInitials() }}</span>
+    </div>
+    <div class="user-details">
+      <h2>{{ currentUser.getFullName() }}</h2>
+      <p class="user-role">{{ getRoleDisplayName() }}</p>
+      <p class="user-email">{{ currentUser.email }}</p>
+    </div>
+  </div>
+
+  <!-- API Diagnostic Section -->
+  <div class="diagnostic-section">
+    <app-api-diagnostic></app-api-diagnostic>
+  </div>
+
+
+  <!-- Statistiques -->
+  <div class="statistics-section" *ngIf="roleService.canManageDossiers()">
+    <h3>Statistiques des Dossiers</h3>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon">
+          <i class="fas fa-folder"></i>
+        </div>
+        <div class="stat-content">
+          <h4>{{ stats.totalDossiers }}</h4>
+          <p>Total Dossiers</p>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon">
+          <i class="fas fa-clock"></i>
+        </div>
+        <div class="stat-content">
+          <h4>{{ stats.dossiersEnCours }}</h4>
+          <p>En Cours</p>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon">
+          <i class="fas fa-handshake"></i>
+        </div>
+        <div class="stat-content">
+          <h4>{{ stats.dossiersAmiables }}</h4>
+          <p>Recouvrement Amiable</p>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon">
+          <i class="fas fa-gavel"></i>
+        </div>
+        <div class="stat-content">
+          <h4>{{ stats.dossiersJuridiques }}</h4>
+          <p>Recouvrement Juridique</p>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon">
+          <i class="fas fa-check-circle"></i>
+        </div>
+        <div class="stat-content">
+          <h4>{{ stats.dossiersClotures }}</h4>
+          <p>Clôturés</p>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon">
+          <i class="fas fa-plus-circle"></i>
+        </div>
+        <div class="stat-content">
+          <h4>{{ stats.dossiersCrees }}</h4>
+          <p>Créés ce Mois</p>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon">
+          <i class="fas fa-users"></i>
+        </div>
+        <div class="stat-content">
+          <h4>{{ stats.agentsActifs }}</h4>
+          <p>Agents Actifs</p>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon">
+          <i class="fas fa-chart-line"></i>
+        </div>
+        <div class="stat-content">
+          <h4>{{ stats.performanceAgents }}%</h4>
+          <p>Performance Agents</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+          <!-- Performance par Agent -->
+          <div class="agent-performance-section" *ngIf="roleService.canManageDossiers() && currentUser?.role !== 'AGENT_DOSSIER'">
+            <h3>Performance par Agent</h3>
+            <div class="performance-table-container">
+              <table class="performance-table">
+                <thead>
+                  <tr>
+                    <th>Agent</th>
+                    <th>Dossiers Traités</th>
+                    <th>Dossiers Clôturés</th>
+                    <th>Taux de Réussite</th>
+                    <th>Montant Récupéré</th>
+                    <th>Performance</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let agent of agentPerformance" class="performance-row">
+                    <td class="agent-info">
+                      <div class="agent-avatar">
+                        <span class="avatar-text">{{ agent.prenom.charAt(0) }}{{ agent.nom.charAt(0) }}</span>
+                      </div>
+                      <div class="agent-details">
+                        <div class="agent-name">{{ agent.prenom }} {{ agent.nom }}</div>
+                        <div class="agent-role">{{ agent.role }}</div>
+                      </div>
+                    </td>
+                    <td class="stat-value">{{ agent.dossiersTraites }}</td>
+                    <td class="stat-value">{{ agent.dossiersClotures }}</td>
+                    <td class="stat-value">
+                      <div class="progress-container">
+                        <div class="progress-bar">
+                          <div class="progress-fill" [style.width.%]="agent.tauxReussite"></div>
+                        </div>
+                        <span class="progress-text">{{ agent.tauxReussite }}%</span>
+                      </div>
+                    </td>
+                    <td class="stat-value currency">{{ formatCurrency(agent.montantRecupere) }}</td>
+                    <td class="performance-badge">
+                      <span class="badge" [ngClass]="getPerformanceClass(agent.performance)">
+                        {{ getPerformanceLabel(agent.performance) }}
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Tâches Urgentes pour l'Agent -->
+          <div class="urgent-tasks-section" *ngIf="currentUser?.role === 'AGENT_DOSSIER'">
+            <app-tache-urgente></app-tache-urgente>
+          </div>
+
+<!-- Notifications - Position fixe en haut à gauche -->
+<div class="notifications-fixed">
+  <app-notification></app-notification>
+</div>
+</div>

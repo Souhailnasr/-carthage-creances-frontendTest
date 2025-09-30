@@ -1,0 +1,28 @@
+<div class="huissier-form-container">
+  <div class="header">
+    <h2>{{ isEditMode ? 'Modifier' : 'Ajouter' }} un Huissier</h2>
+    <button class="btn btn-back" (click)="onCancel()">
+      <i class="fas fa-arrow-left"></i> Retour
+    </button>
+  </div>
+
+  <form [formGroup]="huissierForm" (ngSubmit)="onSubmit()" class="huissier-form">
+    <div class="form-grid">
+      <app-form-input label="Nom" [control]="nomControl" id="huissierNom"></app-form-input>
+      <app-form-input label="Prénom" [control]="prenomControl" id="huissierPrenom"></app-form-input>
+      <app-form-input label="Email" [control]="emailControl" type="email" id="huissierEmail"></app-form-input>
+      <app-form-input label="Téléphone" [control]="telephoneControl" type="tel" id="huissierTelephone"></app-form-input>
+      <app-form-input label="Spécialité" [control]="specialiteControl" id="huissierSpecialite"></app-form-input>
+      <app-form-input label="Adresse" [control]="adresseControl" id="huissierAdresse"></app-form-input>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary" [disabled]="huissierForm.invalid">
+        <i class="fas fa-save"></i> {{ isEditMode ? 'Modifier' : 'Enregistrer' }} le Huissier
+      </button>
+      <button type="button" class="btn btn-secondary" (click)="onCancel()">
+        <i class="fas fa-times"></i> Annuler
+      </button>
+    </div>
+  </form>
+</div>

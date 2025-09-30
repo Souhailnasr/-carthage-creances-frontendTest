@@ -1,0 +1,93 @@
+<div class="partie-prenante-detail-container">
+  <div class="header">
+    <button class="btn btn-back" (click)="goBack()">
+      <i class="fas fa-arrow-left"></i> Retour
+    </button>
+    <h2>Détails {{ type === 'creancier' ? 'du Créancier' : 'du Débiteur' }}</h2>
+    <div class="header-actions">
+      <button class="btn btn-warning" (click)="editPartiePrenante()">
+        <i class="fas fa-edit"></i> Modifier
+      </button>
+      <button class="btn btn-danger" (click)="deletePartiePrenante()">
+        <i class="fas fa-trash"></i> Supprimer
+      </button>
+    </div>
+  </div>
+
+  <div class="content" *ngIf="partiePrenante">
+    <div class="detail-card">
+      <div class="detail-header">
+        <div class="avatar">
+          <i class="fas" [class.fa-building]="type === 'creancier'" [class.fa-user]="type === 'debiteur'"></i>
+        </div>
+        <div class="info">
+          <h3>{{ partiePrenante.getFullName() }}</h3>
+          <p class="type-badge" [class.creancier]="type === 'creancier'" [class.debiteur]="type === 'debiteur'">
+            {{ type === 'creancier' ? 'Créancier' : 'Débiteur' }}
+          </p>
+        </div>
+      </div>
+
+      <div class="detail-content">
+        <div class="detail-section">
+          <h4>Informations Générales</h4>
+          <div class="detail-grid">
+            <div class="detail-item" *ngIf="type === 'creancier'">
+              <label>Code Créancier:</label>
+              <span>{{ getCreancierCodeCreancier() }}</span>
+            </div>
+            <div class="detail-item">
+              <label>Code Créance:</label>
+              <span>{{ getCodeCreance() }}</span>
+            </div>
+            <div class="detail-item">
+              <label>Nom:</label>
+              <span>{{ partiePrenante.nom }}</span>
+            </div>
+            <div class="detail-item" *ngIf="partiePrenante.prenom">
+              <label>Prénom:</label>
+              <span>{{ partiePrenante.prenom }}</span>
+            </div>
+            <div class="detail-item">
+              <label>Email:</label>
+              <span>{{ partiePrenante.email }}</span>
+            </div>
+            <div class="detail-item">
+              <label>Téléphone:</label>
+              <span>{{ partiePrenante.telephone }}</span>
+            </div>
+            <div class="detail-item" *ngIf="getFax()">
+              <label>Fax:</label>
+              <span>{{ getFax() }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <h4>Adresse</h4>
+          <div class="detail-grid">
+            <div class="detail-item">
+              <label>Adresse:</label>
+              <span>{{ partiePrenante.adresse }}</span>
+            </div>
+            <div class="detail-item">
+              <label>Ville:</label>
+              <span>{{ partiePrenante.ville }}</span>
+            </div>
+            <div class="detail-item">
+              <label>Code Postal:</label>
+              <span>{{ partiePrenante.codePostal }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <h4>Adresse Complète</h4>
+          <div class="address-display">
+            <p>{{ partiePrenante.getFullAddress() }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

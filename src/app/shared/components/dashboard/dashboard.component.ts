@@ -1,0 +1,406 @@
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { RouterModule } from '@angular/router';
+import { FormsModule } from '@angular/forms';
+import { AuthService } from '../../../core/services/auth.service';
+import { RoleService } from '../../../core/services/role.service';
+import { User, Role, Dossier, StatutDossier, Urgence } from '../../models';
+import { Subject, takeUntil } from 'rxjs';
+import { NotificationComponent } from '../notification/notification.component';
+import { TacheUrgenteComponent } from '../tache-urgente/tache-urgente.component';
+import { ApiDiagnosticComponent } from '../api-diagnostic/api-diagnostic.component';
+
+@Component({
+  selector: 'app-dashboard',
+  standalone: true,
+  imports: [CommonModule, RouterModule, FormsModule, NotificationComponent, TacheUrgenteComponent, ApiDiagnosticComponent],
+  templateUrl: './dashboard.component.html',
+  styleUrls: ['./dashboard.component.scss']
+})
+export class DashboardComponent implements OnInit, OnDestroy {
+  currentUser: User | null = null;
+  private destroy$ = new Subject<void>();
+
+  // Statistiques
+  stats = {
+    totalDossiers: 0,
+    dossiersEnCours: 0,
+    dossiersAmiables: 0,
+    dossiersJuridiques: 0,
+    dossiersClotures: 0,
+    dossiersCrees: 0,
+    agentsActifs: 0,
+    performanceAgents: 0
+  };
+
+  // Performance par agent
+  agentPerformance: Array<{
+    id: number;
+    nom: string;
+    prenom: string;
+    role: string;
+    dossiersTraites: number;
+    dossiersClotures: number;
+    tauxReussite: number;
+    montantRecupere: number;
+    performance: 'excellent' | 'bon' | 'moyen' | 'faible';
+  }> = [];
+
+  // Tâches urgentes pour l'agent
+  urgentTasks: Array<{
+    id: number;
+    titre: string;
+    description: string;
+    urgence: 'TRES_URGENT' | 'MOYENNE' | 'FAIBLE';
+    dateEcheance: Date;
+    type: 'DOSSIER' | 'ENQUETE' | 'RELANCE';
+    dossierId?: string;
+  }> = [];
+  
+  filteredUrgentTasks: Array<{
+    id: number;
+    titre: string;
+    description: string;
+    urgence: 'TRES_URGENT' | 'MOYENNE' | 'FAIBLE';
+    dateEcheance: Date;
+    type: 'DOSSIER' | 'ENQUETE' | 'RELANCE';
+    dossierId?: string;
+  }> = [];
+  
+  searchTaskTerm: string = '';
+
+  constructor(
+    private authService: AuthService,
+    public roleService: RoleService // Public to be accessible in template
+  ) { }
+
+  ngOnInit(): void {
+    this.currentUser = this.authService.getCurrentUser();
+    this.loadStatistics();
+  }
+
+  loadStatistics(): void {
+    if (this.currentUser?.role === 'AGENT_DOSSIER') {
+      this.loadAgentPersonalStats();
+    } else {
+      // Simulation des statistiques - dans une vraie app, ceci viendrait d'une API
+      this.stats = {
+        totalDossiers: 156,
+        dossiersEnCours: 45,
+        dossiersAmiables: 32,
+        dossiersJuridiques: 18,
+        dossiersClotures: 89,
+        dossiersCrees: 12,
+        agentsActifs: 8,
+        performanceAgents: 87
+      };
+
+      // Chargement des performances par agent
+      this.loadAgentPerformance();
+    }
+  }
+
+  loadAgentPersonalStats(): void {
+    // Simulation des statistiques personnelles pour l'agent
+    this.stats = {
+      totalDossiers: 24,
+      dossiersEnCours: 8,
+      dossiersAmiables: 5,
+      dossiersJuridiques: 3,
+      dossiersClotures: 16,
+      dossiersCrees: 2,
+      agentsActifs: 1,
+      performanceAgents: 85
+    };
+
+    this.loadUrgentTasks();
+  }
+
+  loadUrgentTasks(): void {
+    // Simulation des tâches urgentes pour l'agent
+    this.urgentTasks = [
+      {
+        id: 1,
+        titre: 'Dossier Client ABC - Enquête urgente',
+        description: 'Compléter l\'enquête financière pour le dossier ABC avant le 25/01/2024',
+        urgence: 'TRES_URGENT',
+        dateEcheance: new Date('2024-01-25'),
+        type: 'ENQUETE',
+        dossierId: '1'
+      },
+      {
+        id: 2,
+        titre: 'Relance Client XYZ',
+        description: 'Effectuer une relance téléphonique pour le dossier XYZ',
+        urgence: 'MOYENNE',
+        dateEcheance: new Date('2024-01-30'),
+        type: 'RELANCE',
+        dossierId: '2'
+      },
+      {
+        id: 3,
+        titre: 'Nouveau dossier à traiter',
+        description: 'Analyser et traiter le nouveau dossier DEF assigné par le chef',
+        urgence: 'FAIBLE',
+        dateEcheance: new Date('2024-02-05'),
+        type: 'DOSSIER',
+        dossierId: '3'
+      }
+    ];
+    this.filteredUrgentTasks = [...this.urgentTasks];
+  }
+
+  loadAgentPerformance(): void {
+    // Simulation des données de performance - dans une vraie app, ceci viendrait d'une API
+    this.agentPerformance = [
+      {
+        id: 1,
+        nom: 'Ben Ali',
+        prenom: 'Ahmed',
+        role: 'Agent de Dossier',
+        dossiersTraites: 45,
+        dossiersClotures: 38,
+        tauxReussite: 84.4,
+        montantRecupere: 125000,
+        performance: 'excellent'
+      },
+      {
+        id: 2,
+        nom: 'Trabelsi',
+        prenom: 'Fatma',
+        role: 'Agent de Dossier',
+        dossiersTraites: 38,
+        dossiersClotures: 32,
+        tauxReussite: 84.2,
+        montantRecupere: 98000,
+        performance: 'excellent'
+      },
+      {
+        id: 3,
+        nom: 'Khelil',
+        prenom: 'Mohamed',
+        role: 'Agent de Dossier',
+        dossiersTraites: 32,
+        dossiersClotures: 25,
+        tauxReussite: 78.1,
+        montantRecupere: 87000,
+        performance: 'bon'
+      },
+      {
+        id: 4,
+        nom: 'Ben Salah',
+        prenom: 'Leila',
+        role: 'Agent de Dossier',
+        dossiersTraites: 28,
+        dossiersClotures: 20,
+        tauxReussite: 71.4,
+        montantRecupere: 65000,
+        performance: 'bon'
+      },
+      {
+        id: 5,
+        nom: 'Mansouri',
+        prenom: 'Omar',
+        role: 'Agent de Dossier',
+        dossiersTraites: 25,
+        dossiersClotures: 16,
+        tauxReussite: 64.0,
+        montantRecupere: 52000,
+        performance: 'moyen'
+      },
+      {
+        id: 6,
+        nom: 'Hammami',
+        prenom: 'Sonia',
+        role: 'Agent de Dossier',
+        dossiersTraites: 22,
+        dossiersClotures: 12,
+        tauxReussite: 54.5,
+        montantRecupere: 38000,
+        performance: 'moyen'
+      },
+      {
+        id: 7,
+        nom: 'Ben Ammar',
+        prenom: 'Ali',
+        role: 'Agent de Dossier',
+        dossiersTraites: 18,
+        dossiersClotures: 8,
+        tauxReussite: 44.4,
+        montantRecupere: 25000,
+        performance: 'faible'
+      },
+      {
+        id: 8,
+        nom: 'Khelil',
+        prenom: 'Nadia',
+        role: 'Agent de Dossier',
+        dossiersTraites: 15,
+        dossiersClotures: 6,
+        tauxReussite: 40.0,
+        montantRecupere: 18000,
+        performance: 'faible'
+      }
+    ];
+  }
+
+  getPerformanceClass(performance: string): string {
+    switch (performance) {
+      case 'excellent': return 'performance-excellent';
+      case 'bon': return 'performance-bon';
+      case 'moyen': return 'performance-moyen';
+      case 'faible': return 'performance-faible';
+      default: return 'performance-moyen';
+    }
+  }
+
+  getPerformanceLabel(performance: string): string {
+    switch (performance) {
+      case 'excellent': return 'Excellent';
+      case 'bon': return 'Bon';
+      case 'moyen': return 'Moyen';
+      case 'faible': return 'Faible';
+      default: return 'Moyen';
+    }
+  }
+
+  formatCurrency(amount: number): string {
+    return new Intl.NumberFormat('fr-TN', {
+      style: 'currency',
+      currency: 'TND',
+      minimumFractionDigits: 0
+    }).format(amount);
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  getCurrentTime(): string {
+    return new Date().toLocaleString('fr-FR', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+
+  getRoleDisplayName(): string {
+    if (!this.currentUser) return '';
+    
+    const roleNames: { [key: string]: string } = {
+      'SUPER_ADMIN': 'Super Administrateur',
+      'CHEF_DOSSIER': 'Chef de Dossier',
+      'AGENT_DOSSIER': 'Agent de Dossier',
+      'CHEF_JURIDIQUE': 'Chef Juridique',
+      'AGENT_JURIDIQUE': 'Agent Juridique',
+      'CHEF_FINANCE': 'Chef Finance',
+      'AGENT_FINANCE': 'Agent Finance'
+    };
+
+    return roleNames[this.currentUser.role] || this.currentUser.role;
+  }
+
+  getUserInitials(): string {
+    if (!this.currentUser) return '';
+    return this.currentUser.getFullName().split(' ').map(n => n[0]).join('');
+  }
+
+  // Méthodes pour les tâches urgentes
+  getUrgentTasksClass(urgence: string): string {
+    switch (urgence) {
+      case 'TRES_URGENT':
+        return 'urgence-tres-urgent';
+      case 'MOYENNE':
+        return 'urgence-moyenne';
+      case 'FAIBLE':
+        return 'urgence-faible';
+      default:
+        return '';
+    }
+  }
+
+  getUrgentTasksLabel(urgence: string): string {
+    switch (urgence) {
+      case 'TRES_URGENT':
+        return 'Très Urgent';
+      case 'MOYENNE':
+        return 'Moyenne';
+      case 'FAIBLE':
+        return 'Faible';
+      default:
+        return urgence;
+    }
+  }
+
+  getTaskTypeIcon(type: string): string {
+    switch (type) {
+      case 'DOSSIER':
+        return 'fas fa-folder';
+      case 'ENQUETE':
+        return 'fas fa-search';
+      case 'RELANCE':
+        return 'fas fa-phone';
+      default:
+        return 'fas fa-tasks';
+    }
+  }
+
+  getTaskTypeLabel(type: string): string {
+    switch (type) {
+      case 'DOSSIER':
+        return 'Dossier';
+      case 'ENQUETE':
+        return 'Enquête';
+      case 'RELANCE':
+        return 'Relance';
+      default:
+        return type;
+    }
+  }
+
+  formatDateEcheance(date: Date): string {
+    return new Intl.DateTimeFormat('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    }).format(new Date(date));
+  }
+
+  isTaskOverdue(dateEcheance: Date): boolean {
+    return new Date(dateEcheance) < new Date();
+  }
+
+  navigateToTask(task: any): void {
+    if (task.dossierId) {
+      if (task.type === 'ENQUETE') {
+        // Navigation vers l'enquête
+        window.location.href = `/dossier/enquete-detail/${task.dossierId}`;
+      } else {
+        // Navigation vers le dossier
+        window.location.href = `/dossier/detail/${task.dossierId}`;
+      }
+    }
+  }
+
+  // Méthodes pour la recherche des tâches
+  onSearchTasks(): void {
+    if (!this.searchTaskTerm.trim()) {
+      this.filteredUrgentTasks = [...this.urgentTasks];
+    } else {
+      this.filteredUrgentTasks = this.urgentTasks.filter(task =>
+        task.titre.toLowerCase().includes(this.searchTaskTerm.toLowerCase()) ||
+        task.description.toLowerCase().includes(this.searchTaskTerm.toLowerCase()) ||
+        task.type.toLowerCase().includes(this.searchTaskTerm.toLowerCase())
+      );
+    }
+  }
+
+  clearSearch(): void {
+    this.searchTaskTerm = '';
+    this.filteredUrgentTasks = [...this.urgentTasks];
+  }
+}

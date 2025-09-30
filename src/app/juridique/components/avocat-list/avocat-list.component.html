@@ -1,0 +1,84 @@
+<div class="avocat-list-container">
+  <div class="header">
+    <h2>Liste des Avocats</h2>
+    <div class="header-actions">
+      <div class="search-box">
+        <input
+          type="text"
+          [(ngModel)]="searchTerm"
+          (input)="onSearch()"
+          placeholder="Rechercher un avocat..."
+          class="search-input">
+        <i class="fas fa-search search-icon"></i>
+      </div>
+      <button
+        *ngIf="roleService.isChefJuridique() || roleService.isSuperAdmin()"
+        routerLink="/juridique/avocats/ajouter"
+        class="btn btn-primary">
+        <i class="fas fa-plus"></i>
+        Ajouter un Avocat
+      </button>
+    </div>
+  </div>
+
+  <div class="table-container">
+    <table class="avocat-table">
+      <thead>
+        <tr>
+          <th>Nom</th>
+          <th>Prénom</th>
+          <th>Email</th>
+          <th>Téléphone</th>
+          <th>Spécialité</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let avocat of getPaginatedAvocats()">
+          <td>{{ avocat.nom }}</td>
+          <td>{{ avocat.prenom }}</td>
+          <td>{{ avocat.email }}</td>
+          <td>{{ avocat.telephone }}</td>
+          <td>{{ avocat.specialite }}</td>
+          <td class="actions">
+            <button
+              *ngIf="roleService.isChefJuridique() || roleService.isSuperAdmin()"
+              routerLink="/juridique/avocats/modifier/{{ avocat.id }}"
+              class="btn btn-sm btn-edit">
+              <i class="fas fa-edit"></i>
+            </button>
+            <button
+              *ngIf="roleService.isChefJuridique() || roleService.isSuperAdmin()"
+              (click)="deleteAvocat(avocat.id)"
+              class="btn btn-sm btn-delete">
+              <i class="fas fa-trash"></i>
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div *ngIf="filteredAvocats.length === 0" class="no-data">
+      <i class="fas fa-user-tie"></i>
+      <p>Aucun avocat trouvé</p>
+    </div>
+  </div>
+
+  <div *ngIf="totalPages > 1" class="pagination">
+    <button
+      (click)="onPageChange(currentPage - 1)"
+      [disabled]="currentPage === 1"
+      class="btn btn-sm">
+      <i class="fas fa-chevron-left"></i>
+    </button>
+    <span class="page-info">
+      Page {{ currentPage }} sur {{ totalPages }}
+    </span>
+    <button
+      (click)="onPageChange(currentPage + 1)"
+      [disabled]="currentPage === totalPages"
+      class="btn btn-sm">
+      <i class="fas fa-chevron-right"></i>
+    </button>
+  </div>
+</div>

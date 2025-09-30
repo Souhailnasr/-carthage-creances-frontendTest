@@ -1,0 +1,199 @@
+<div class="enquete-phase-container">
+  <div class="header">
+    <h1>Phase d'Enquête</h1>
+    <p>Gestion des dossiers en phase d'enquête</p>
+  </div>
+
+  <!-- Barre de recherche -->
+  <div class="search-bar">
+    <div class="search-input-group">
+      <i class="fas fa-search"></i>
+      <input 
+        type="text" 
+        [(ngModel)]="searchTerm" 
+        (input)="onSearch()" 
+        placeholder="Rechercher par titre ou numéro de dossier..."
+        class="search-input"
+      >
+    </div>
+  </div>
+
+  <!-- Tableau des dossiers -->
+  <div class="table-container">
+    <table class="dossiers-table">
+      <thead>
+        <tr>
+          <th>Numéro</th>
+          <th>Montant</th>
+          <th>Créancier</th>
+          <th>Débiteur</th>
+          <th>Urgence</th>
+          <th>Date Création</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let dossier of filteredDossiers">
+          <td>{{ dossier.numeroDossier }}</td>
+          <td>{{ dossier.getFormattedAmount() }}</td>
+          <td>{{ dossier.creancier.getFullName() }}</td>
+          <td>{{ dossier.debiteur.getFullName() }}</td>
+          <td>
+            <span class="urgence-badge" [ngClass]="'urgence-' + dossier.urgence.toLowerCase()">
+              {{ dossier.urgence }}
+            </span>
+          </td>
+          <td>{{ dossier.getFormattedDate() }}</td>
+          <td class="actions">
+            <button class="btn btn-sm btn-info" (click)="viewDossierDetails(dossier)" title="Voir détails">
+              <i class="fas fa-eye"></i>
+            </button>
+            <button class="btn btn-sm btn-primary" (click)="showEnqueteFormForDossier(dossier)" title="Phase d'enquête">
+              <i class="fas fa-search"></i>
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div *ngIf="filteredDossiers.length === 0" class="no-data">
+      <i class="fas fa-folder-open"></i>
+      <p>Aucun dossier en phase d'enquête</p>
+    </div>
+  </div>
+
+  <!-- Formulaire d'enquête -->
+  <div class="enquete-form-container" *ngIf="showEnqueteForm">
+    <div class="form-header">
+      <h2>Rapport d'Enquête - {{ selectedDossier?.numeroDossier }}</h2>
+      <button class="btn btn-secondary" (click)="cancelForm()">
+        <i class="fas fa-times"></i> Fermer
+      </button>
+    </div>
+
+    <form [formGroup]="enqueteForm" (ngSubmit)="onSubmit()" class="enquete-form">
+      <div class="form-sections">
+        <!-- Section Informations Financières -->
+        <div class="form-section">
+          <h3>Informations Financières</h3>
+          <div class="form-grid">
+            <app-form-input label="Code Rapport" [control]="rapportCodeControl" id="rapportCode"></app-form-input>
+            <app-form-input label="Nom Élément Financier" [control]="nomElementFinancierControl" id="nomElementFinancier"></app-form-input>
+            <app-form-input label="Pourcentage" [control]="pourcentageControl" type="number" id="pourcentage"></app-form-input>
+            <app-form-input label="Banque Agence" [control]="banqueAgenceControl" id="banqueAgence"></app-form-input>
+            <app-form-input label="Banques" [control]="banquesControl" id="banques"></app-form-input>
+            <app-form-input label="Exercices" [control]="exercicesControl" id="exercices"></app-form-input>
+            <app-form-input label="Chiffre d'Affaires" [control]="chiffreAffaireControl" type="number" id="chiffreAffaire"></app-form-input>
+            <app-form-input label="Résultat Net" [control]="resultatNetControl" type="number" id="resultatNet"></app-form-input>
+            <app-form-input label="Disponibilité Bilan" [control]="disponibiliteBilanControl" type="number" id="disponibiliteBilan"></app-form-input>
+            <app-form-input label="Appréciation Bancaire" [control]="appreciationBancaireControl" id="appreciationBancaire"></app-form-input>
+            <app-form-input label="Paiements Couverture" [control]="paiementsCouvertureControl" type="number" id="paiementsCouverture"></app-form-input>
+            <app-form-input label="Réputation Commerciale" [control]="reputationCommercialeControl" id="reputationCommerciale"></app-form-input>
+            <app-form-input label="Incidents" [control]="incidentsControl" id="incidents"></app-form-input>
+          </div>
+        </div>
+
+        <!-- Section Biens -->
+        <div class="form-section">
+          <h3>Biens</h3>
+          <div class="form-grid">
+            <app-form-input label="Bien Immobilier" [control]="bienImmobilierControl" id="bienImmobilier"></app-form-input>
+            <app-form-input label="Situation Juridique Immobilier" [control]="situationJuridiqueImmobilierControl" id="situationJuridiqueImmobilier"></app-form-input>
+            <app-form-input label="Bien Mobilier" [control]="bienMobilierControl" id="bienMobilier"></app-form-input>
+            <app-form-input label="Situation Juridique Mobilier" [control]="situationJuridiqueMobilierControl" id="situationJuridiqueMobilier"></app-form-input>
+            <app-form-input label="Autres Affaires" [control]="autresAffairesControl" id="autresAffaires"></app-form-input>
+          </div>
+        </div>
+
+        <!-- Section Décisions -->
+        <div class="form-section">
+          <h3>Décisions et Visas</h3>
+          <div class="form-grid">
+            <app-form-input label="Décision Comité" [control]="decisionComiteControl" id="decisionComite"></app-form-input>
+            <app-form-input label="Observations" [control]="observationsControl" id="observations"></app-form-input>
+            
+            <div class="form-group checkbox-group">
+              <label class="checkbox-label">
+                <input type="checkbox" formControlName="visaDirecteurJuridique">
+                <span class="checkmark"></span>
+                Visa Directeur Juridique
+              </label>
+            </div>
+
+            <div class="form-group checkbox-group">
+              <label class="checkbox-label">
+                <input type="checkbox" formControlName="visaEnqueteur">
+                <span class="checkmark"></span>
+                Visa Enquêteur
+              </label>
+            </div>
+
+            <div class="form-group checkbox-group">
+              <label class="checkbox-label">
+                <input type="checkbox" formControlName="visaDirecteurCommercial">
+                <span class="checkmark"></span>
+                Visa Directeur Commercial
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section Informations Légales -->
+        <div class="form-section">
+          <h3>Informations Légales</h3>
+          <div class="form-grid">
+            <app-form-input label="Registre Commerce" [control]="registreCommerceControl" id="registreCommerce"></app-form-input>
+            <app-form-input label="Code Douane" [control]="codeDouaneControl" id="codeDouane"></app-form-input>
+            <app-form-input label="Matricule Fiscale" [control]="matriculeFiscaleControl" id="matriculeFiscale"></app-form-input>
+            <app-form-input label="Forme Juridique" [control]="formeJuridiqueControl" id="formeJuridique"></app-form-input>
+            <app-form-input label="Date Création" [control]="dateCreationControl" type="date" id="dateCreation"></app-form-input>
+            <app-form-input label="Capital" [control]="capitalControl" type="number" id="capital"></app-form-input>
+            <app-form-input label="PDG" [control]="pdgControl" id="pdg"></app-form-input>
+            <app-form-input label="Directeur Adjoint" [control]="directeurAdjointControl" id="directeurAdjoint"></app-form-input>
+            <app-form-input label="Directeur Financier" [control]="directeurFinancierControl" id="directeurFinancier"></app-form-input>
+            <app-form-input label="Directeur Commercial" [control]="directeurCommercialControl" id="directeurCommercial"></app-form-input>
+            <app-form-input label="Description Activité" [control]="descriptionActiviteControl" id="descriptionActivite"></app-form-input>
+            <app-form-input label="Secteur Activité" [control]="secteurActiviteControl" id="secteurActivite"></app-form-input>
+            <app-form-input label="Effectif" [control]="effectifControl" type="number" id="effectif"></app-form-input>
+            <app-form-input label="Email" [control]="emailControl" type="email" id="email"></app-form-input>
+            <app-form-input label="Marques" [control]="marquesControl" id="marques"></app-form-input>
+            <app-form-input label="Groupe" [control]="groupeControl" id="groupe"></app-form-input>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary" [disabled]="enqueteForm.invalid">
+          <i class="fas fa-save"></i> 
+          <span *ngIf="currentUser?.role === 'AGENT_DOSSIER'">Envoyer pour Validation</span>
+          <span *ngIf="currentUser?.role !== 'AGENT_DOSSIER'">Valider l'Enquête</span>
+        </button>
+        <button type="button" class="btn btn-secondary" (click)="cancelForm()">
+          <i class="fas fa-times"></i> Annuler
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Zone d'affectation -->
+  <div class="affectation-zone">
+    <h3>Zone d'Affectation</h3>
+    <div class="affectation-form">
+      <div class="form-group">
+        <label for="dossierNumber">Numéro de Dossier</label>
+        <input type="text" id="dossierNumber" class="form-control" placeholder="Entrez le numéro de dossier">
+      </div>
+      <div class="affectation-buttons">
+        <button class="btn btn-success" (click)="affecterAmiable(selectedDossier!)">
+          <i class="fas fa-handshake"></i> Affecter au Recouvrement Amiable
+        </button>
+        <button class="btn btn-warning" (click)="affecterJuridique(selectedDossier!)">
+          <i class="fas fa-gavel"></i> Affecter au Recouvrement Juridique
+        </button>
+        <button class="btn btn-danger" (click)="cloturer(selectedDossier!)">
+          <i class="fas fa-check-circle"></i> Clôturer
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

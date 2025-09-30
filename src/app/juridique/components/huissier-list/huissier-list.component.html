@@ -1,0 +1,84 @@
+<div class="huissier-list-container">
+  <div class="header">
+    <h2>Liste des Huissiers</h2>
+    <div class="header-actions">
+      <div class="search-box">
+        <input
+          type="text"
+          [(ngModel)]="searchTerm"
+          (input)="onSearch()"
+          placeholder="Rechercher un huissier..."
+          class="search-input">
+        <i class="fas fa-search search-icon"></i>
+      </div>
+      <button
+        *ngIf="roleService.isChefJuridique() || roleService.isSuperAdmin()"
+        routerLink="/juridique/huissiers/ajouter"
+        class="btn btn-primary">
+        <i class="fas fa-plus"></i>
+        Ajouter un Huissier
+      </button>
+    </div>
+  </div>
+
+  <div class="table-container">
+    <table class="huissier-table">
+      <thead>
+        <tr>
+          <th>Nom</th>
+          <th>Prénom</th>
+          <th>Email</th>
+          <th>Téléphone</th>
+          <th>Spécialité</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let huissier of getPaginatedHuissiers()">
+          <td>{{ huissier.nom }}</td>
+          <td>{{ huissier.prenom }}</td>
+          <td>{{ huissier.email }}</td>
+          <td>{{ huissier.telephone }}</td>
+          <td>{{ huissier.specialite }}</td>
+          <td class="actions">
+            <button
+              *ngIf="roleService.isChefJuridique() || roleService.isSuperAdmin()"
+              routerLink="/juridique/huissiers/modifier/{{ huissier.id }}"
+              class="btn btn-sm btn-edit">
+              <i class="fas fa-edit"></i>
+            </button>
+            <button
+              *ngIf="roleService.isChefJuridique() || roleService.isSuperAdmin()"
+              (click)="deleteHuissier(huissier.id)"
+              class="btn btn-sm btn-delete">
+              <i class="fas fa-trash"></i>
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div *ngIf="filteredHuissiers.length === 0" class="no-data">
+      <i class="fas fa-balance-scale"></i>
+      <p>Aucun huissier trouvé</p>
+    </div>
+  </div>
+
+  <div *ngIf="totalPages > 1" class="pagination">
+    <button
+      (click)="onPageChange(currentPage - 1)"
+      [disabled]="currentPage === 1"
+      class="btn btn-sm">
+      <i class="fas fa-chevron-left"></i>
+    </button>
+    <span class="page-info">
+      Page {{ currentPage }} sur {{ totalPages }}
+    </span>
+    <button
+      (click)="onPageChange(currentPage + 1)"
+      [disabled]="currentPage === totalPages"
+      class="btn btn-sm">
+      <i class="fas fa-chevron-right"></i>
+    </button>
+  </div>
+</div>

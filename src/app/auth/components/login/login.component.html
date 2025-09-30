@@ -1,0 +1,84 @@
+<div class="login-container">
+  <div class="login-card">
+    <!-- Logo et titre -->
+    <div class="login-header">
+      <div class="logo">
+        <i class="fas fa-balance-scale"></i>
+        <h1>Carthage Créance</h1>
+      </div>
+      <p class="subtitle">CRM de Recouvrement</p>
+    </div>
+
+    <!-- Formulaire de connexion -->
+    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input
+          id="email"
+          type="email"
+          class="form-control"
+          [class.is-invalid]="f['email'].invalid && (f['email'].dirty || f['email'].touched)"
+          formControlName="email"
+          placeholder="votre.email@carthage-creance.tn">
+        <div class="invalid-feedback" *ngIf="f['email'].invalid && (f['email'].dirty || f['email'].touched)">
+          <span *ngIf="f['email'].errors?.['required']">L'email est requis</span>
+          <span *ngIf="f['email'].errors?.['email']">Format d'email invalide</span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="password">Mot de passe</label>
+        <div class="password-input">
+          <input
+            id="password"
+            [type]="showPassword ? 'text' : 'password'"
+            class="form-control"
+            [class.is-invalid]="f['password'].invalid && (f['password'].dirty || f['password'].touched)"
+            formControlName="password"
+            placeholder="Votre mot de passe">
+          <button
+            type="button"
+            class="password-toggle"
+            (click)="togglePasswordVisibility()">
+            <i [class]="showPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+          </button>
+        </div>
+        <div class="invalid-feedback" *ngIf="f['password'].invalid && (f['password'].dirty || f['password'].touched)">
+          <span *ngIf="f['password'].errors?.['required']">Le mot de passe est requis</span>
+        </div>
+      </div>
+
+      <button
+        type="submit"
+        class="btn btn-primary btn-login"
+        [disabled]="loading || loginForm.invalid">
+        <i class="fas fa-spinner fa-spin" *ngIf="loading"></i>
+        <i class="fas fa-sign-in-alt" *ngIf="!loading"></i>
+        {{ loading ? 'Connexion...' : 'Se connecter' }}
+      </button>
+    </form>
+
+    <!-- Comptes de démonstration -->
+    <div class="demo-accounts">
+      <h3>Comptes de démonstration</h3>
+      <div class="demo-buttons">
+        <button type="button" class="btn btn-demo" (click)="loginAsSuperAdmin()">
+          <i class="fas fa-crown"></i>
+          Super Admin
+        </button>
+        <button type="button" class="btn btn-demo" (click)="loginAsChefJuridique()">
+          <i class="fas fa-gavel"></i>
+          Chef Juridique
+        </button>
+        <button type="button" class="btn btn-demo" (click)="loginAsChefDossier()">
+          <i class="fas fa-folder-open"></i>
+          Chef Dossier
+        </button>
+        <button type="button" class="btn btn-demo" (click)="loginAsAgentDossier()">
+          <i class="fas fa-user"></i>
+          Agent Dossier
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

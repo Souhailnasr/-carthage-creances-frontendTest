@@ -1,0 +1,74 @@
+<div class="partie-prenante-form-container">
+  <div class="header">
+    <h2>{{ isEditMode ? 'Modifier' : 'Ajouter' }} une Partie Prenante</h2>
+    <button class="btn btn-back" (click)="onCancel()">
+      <i class="fas fa-arrow-left"></i> Retour
+    </button>
+  </div>
+
+  <div class="tabs">
+    <button
+      class="tab-button"
+      [class.active]="activeTab === 'creancier'"
+      (click)="setActiveTab('creancier')"
+    >
+      Créancier
+    </button>
+    <button
+      class="tab-button"
+      [class.active]="activeTab === 'debiteur'"
+      (click)="setActiveTab('debiteur')"
+    >
+      Débiteur
+    </button>
+  </div>
+
+  <div class="form-content">
+    <!-- Créancier Form -->
+    <form [formGroup]="creancierForm" (ngSubmit)="onSubmitCreancier()" *ngIf="activeTab === 'creancier'">
+      <div class="form-grid">
+        <app-form-input label="Code Créancier" [control]="creancierCodeCreancierControl" id="creancierCodeCreancier"></app-form-input>
+        <app-form-input label="Code Créance" [control]="creancierCodeCreanceControl" id="creancierCodeCreance"></app-form-input>
+        <app-form-input label="Nom" [control]="creancierNomControl" id="creancierNom"></app-form-input>
+        <app-form-input label="Prénom (optionnel)" [control]="creancierPrenomControl" id="creancierPrenom"></app-form-input>
+        <app-form-input label="Adresse" [control]="creancierAdresseControl" id="creancierAdresse"></app-form-input>
+        <app-form-input label="Ville" [control]="creancierVilleControl" id="creancierVille"></app-form-input>
+        <app-form-input label="Code Postal" [control]="creancierCodePostalControl" id="creancierCodePostal"></app-form-input>
+        <app-form-input label="Téléphone" [control]="creancierTelephoneControl" type="tel" id="creancierTelephone"></app-form-input>
+        <app-form-input label="Fax (optionnel)" [control]="creancierFaxControl" type="tel" id="creancierFax"></app-form-input>
+        <app-form-input label="Email" [control]="creancierEmailControl" type="email" id="creancierEmail"></app-form-input>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary" [disabled]="creancierForm.invalid">
+          <i class="fas fa-save"></i> {{ isEditMode ? 'Modifier' : 'Enregistrer' }} Créancier
+        </button>
+        <button type="button" class="btn btn-secondary" (click)="onCancel()">
+          <i class="fas fa-times"></i> Annuler
+        </button>
+      </div>
+    </form>
+
+    <!-- Débiteur Form -->
+    <form [formGroup]="debiteurForm" (ngSubmit)="onSubmitDebiteur()" *ngIf="activeTab === 'debiteur'">
+      <div class="form-grid">
+        <app-form-input label="Code Créance" [control]="debiteurCodeCreanceControl" id="debiteurCodeCreance"></app-form-input>
+        <app-form-input label="Nom" [control]="debiteurNomControl" id="debiteurNom"></app-form-input>
+        <app-form-input label="Prénom" [control]="debiteurPrenomControl" id="debiteurPrenom"></app-form-input>
+        <app-form-input label="Adresse" [control]="debiteurAdresseControl" id="debiteurAdresse"></app-form-input>
+        <app-form-input label="Ville" [control]="debiteurVilleControl" id="debiteurVille"></app-form-input>
+        <app-form-input label="Code Postal" [control]="debiteurCodePostalControl" id="debiteurCodePostal"></app-form-input>
+        <app-form-input label="Téléphone" [control]="debiteurTelephoneControl" type="tel" id="debiteurTelephone"></app-form-input>
+        <app-form-input label="Fax (optionnel)" [control]="debiteurFaxControl" type="tel" id="debiteurFax"></app-form-input>
+        <app-form-input label="Email" [control]="debiteurEmailControl" type="email" id="debiteurEmail"></app-form-input>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary" [disabled]="debiteurForm.invalid">
+          <i class="fas fa-save"></i> {{ isEditMode ? 'Modifier' : 'Enregistrer' }} Débiteur
+        </button>
+        <button type="button" class="btn btn-secondary" (click)="onCancel()">
+          <i class="fas fa-times"></i> Annuler
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

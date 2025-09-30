@@ -1,0 +1,28 @@
+<div class="avocat-form-container">
+  <div class="header">
+    <h2>{{ isEditMode ? 'Modifier' : 'Ajouter' }} un Avocat</h2>
+    <button class="btn btn-back" (click)="onCancel()">
+      <i class="fas fa-arrow-left"></i> Retour
+    </button>
+  </div>
+
+  <form [formGroup]="avocatForm" (ngSubmit)="onSubmit()" class="avocat-form">
+    <div class="form-grid">
+      <app-form-input label="Nom" [control]="nomControl" id="avocatNom"></app-form-input>
+      <app-form-input label="Prénom" [control]="prenomControl" id="avocatPrenom"></app-form-input>
+      <app-form-input label="Email" [control]="emailControl" type="email" id="avocatEmail"></app-form-input>
+      <app-form-input label="Téléphone" [control]="telephoneControl" type="tel" id="avocatTelephone"></app-form-input>
+      <app-form-input label="Spécialité" [control]="specialiteControl" id="avocatSpecialite"></app-form-input>
+      <app-form-input label="Adresse" [control]="adresseControl" id="avocatAdresse"></app-form-input>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary" [disabled]="avocatForm.invalid">
+        <i class="fas fa-save"></i> {{ isEditMode ? 'Modifier' : 'Enregistrer' }} l'Avocat
+      </button>
+      <button type="button" class="btn btn-secondary" (click)="onCancel()">
+        <i class="fas fa-times"></i> Annuler
+      </button>
+    </div>
+  </form>
+</div>

@@ -1,0 +1,148 @@
+<div class="partie-prenante-list-container">
+  <div class="header">
+    <h2>Gestion des Parties Prenantes</h2>
+    <div class="header-actions">
+      <button class="btn btn-primary" (click)="addCreancier()" *ngIf="activeTab === 'creancier'">
+        <i class="fas fa-plus"></i> Ajouter Créancier
+      </button>
+      <button class="btn btn-primary" (click)="addDebiteur()" *ngIf="activeTab === 'debiteur'">
+        <i class="fas fa-plus"></i> Ajouter Débiteur
+      </button>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button
+      class="tab-button"
+      [class.active]="activeTab === 'creancier'"
+      (click)="setActiveTab('creancier')"
+    >
+      <i class="fas fa-building"></i> Créanciers ({{ filteredCreanciers.length }})
+    </button>
+    <button
+      class="tab-button"
+      [class.active]="activeTab === 'debiteur'"
+      (click)="setActiveTab('debiteur')"
+    >
+      <i class="fas fa-user"></i> Débiteurs ({{ filteredDebiteurs.length }})
+    </button>
+  </div>
+
+  <div class="content">
+    <!-- Créanciers Table -->
+    <div *ngIf="activeTab === 'creancier'" class="table-container">
+      <div class="table-header">
+        <h3>Liste des Créanciers</h3>
+      </div>
+      
+      <div class="table-responsive" *ngIf="filteredCreanciers.length > 0; else noCreanciers">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Code Créancier</th>
+              <th>Code Créance</th>
+              <th>Nom</th>
+              <th>Prénom</th>
+              <th>Email</th>
+              <th>Téléphone</th>
+              <th>Fax</th>
+              <th>Ville</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let creancier of filteredCreanciers">
+              <td>{{ creancier.codeCreancier }}</td>
+              <td>{{ creancier.codeCreance }}</td>
+              <td>{{ creancier.nom }}</td>
+              <td>{{ creancier.prenom || '-' }}</td>
+              <td>{{ creancier.email }}</td>
+              <td>{{ creancier.telephone }}</td>
+              <td>{{ creancier.fax || '-' }}</td>
+              <td>{{ creancier.ville }}</td>
+              <td class="actions">
+                <button class="btn btn-sm btn-info" (click)="viewCreancier(creancier.id)" title="Voir détails">
+                  <i class="fas fa-eye"></i>
+                </button>
+                <button class="btn btn-sm btn-warning" (click)="editCreancier(creancier.id)" title="Modifier">
+                  <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn btn-sm btn-danger" (click)="deleteCreancier(creancier.id)" title="Supprimer">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <ng-template #noCreanciers>
+        <div class="empty-state">
+          <i class="fas fa-building"></i>
+          <h3>Aucun créancier trouvé</h3>
+          <p>Commencez par ajouter votre premier créancier.</p>
+          <button class="btn btn-primary" (click)="addCreancier()">
+            <i class="fas fa-plus"></i> Ajouter un Créancier
+          </button>
+        </div>
+      </ng-template>
+    </div>
+
+    <!-- Débiteurs Table -->
+    <div *ngIf="activeTab === 'debiteur'" class="table-container">
+      <div class="table-header">
+        <h3>Liste des Débiteurs</h3>
+      </div>
+      
+      <div class="table-responsive" *ngIf="filteredDebiteurs.length > 0; else noDebiteurs">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Code Créance</th>
+              <th>Nom</th>
+              <th>Prénom</th>
+              <th>Email</th>
+              <th>Téléphone</th>
+              <th>Fax</th>
+              <th>Ville</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let debiteur of filteredDebiteurs">
+              <td>{{ debiteur.codeCreance }}</td>
+              <td>{{ debiteur.nom }}</td>
+              <td>{{ debiteur.prenom }}</td>
+              <td>{{ debiteur.email }}</td>
+              <td>{{ debiteur.telephone }}</td>
+              <td>{{ debiteur.fax || '-' }}</td>
+              <td>{{ debiteur.ville }}</td>
+              <td class="actions">
+                <button class="btn btn-sm btn-info" (click)="viewDebiteur(debiteur.id)" title="Voir détails">
+                  <i class="fas fa-eye"></i>
+                </button>
+                <button class="btn btn-sm btn-warning" (click)="editDebiteur(debiteur.id)" title="Modifier">
+                  <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn btn-sm btn-danger" (click)="deleteDebiteur(debiteur.id)" title="Supprimer">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <ng-template #noDebiteurs>
+        <div class="empty-state">
+          <i class="fas fa-user"></i>
+          <h3>Aucun débiteur trouvé</h3>
+          <p>Commencez par ajouter votre premier débiteur.</p>
+          <button class="btn btn-primary" (click)="addDebiteur()">
+            <i class="fas fa-plus"></i> Ajouter un Débiteur
+          </button>
+        </div>
+      </ng-template>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,239 @@
+<div class="debiteur-gestion-container">
+  <!-- Header -->
+  <div class="header">
+    <h1>Gestion des Débiteurs</h1>
+    <button class="btn btn-primary" (click)="resetForm()">
+      <i class="fas fa-plus"></i> Nouveau Débiteur
+    </button>
+  </div>
+
+  <!-- Formulaire -->
+  <div class="form-section">
+    <form [formGroup]="debiteurForm" (ngSubmit)="onSubmit()" class="debiteur-form">
+      <div class="form-header">
+        <h3>{{ isEditMode ? 'Modifier le Débiteur' : 'Nouveau Débiteur' }}</h3>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="codeCreance">Code Créance</label>
+          <input 
+            type="text" 
+            id="codeCreance" 
+            formControlName="codeCreance"
+            class="form-control"
+            placeholder="Ex: CR001">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="nom">Nom *</label>
+          <input 
+            type="text" 
+            id="nom" 
+            formControlName="nom"
+            class="form-control"
+            [class.is-invalid]="nomControl?.invalid && nomControl?.touched"
+            placeholder="Nom du débiteur">
+          <div class="invalid-feedback" *ngIf="nomControl?.invalid && nomControl?.touched">
+            <div *ngIf="nomControl?.errors?.['required']">Le nom est requis</div>
+            <div *ngIf="nomControl?.errors?.['minlength']">Le nom doit contenir au moins 2 caractères</div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="prenom">Prénom *</label>
+          <input 
+            type="text" 
+            id="prenom" 
+            formControlName="prenom"
+            class="form-control"
+            [class.is-invalid]="prenomControl?.invalid && prenomControl?.touched"
+            placeholder="Prénom du débiteur">
+          <div class="invalid-feedback" *ngIf="prenomControl?.invalid && prenomControl?.touched">
+            <div *ngIf="prenomControl?.errors?.['required']">Le prénom est requis</div>
+            <div *ngIf="prenomControl?.errors?.['minlength']">Le prénom doit contenir au moins 2 caractères</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="email">Email *</label>
+          <input 
+            type="email" 
+            id="email" 
+            formControlName="email"
+            class="form-control"
+            [class.is-invalid]="emailControl?.invalid && emailControl?.touched"
+            placeholder="email@exemple.com">
+          <div class="invalid-feedback" *ngIf="emailControl?.invalid && emailControl?.touched">
+            <div *ngIf="emailControl?.errors?.['required']">L'email est requis</div>
+            <div *ngIf="emailControl?.errors?.['email']">Format d'email invalide</div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="telephone">Téléphone *</label>
+          <input 
+            type="tel" 
+            id="telephone" 
+            formControlName="telephone"
+            class="form-control"
+            [class.is-invalid]="telephoneControl?.invalid && telephoneControl?.touched"
+            placeholder="+216 20 123 456">
+          <div class="invalid-feedback" *ngIf="telephoneControl?.invalid && telephoneControl?.touched">
+            <div *ngIf="telephoneControl?.errors?.['required']">Le téléphone est requis</div>
+            <div *ngIf="telephoneControl?.errors?.['pattern']">Format de téléphone invalide</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="fax">Fax</label>
+          <input 
+            type="tel" 
+            id="fax" 
+            formControlName="fax"
+            class="form-control"
+            placeholder="+216 20 123 456">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="adresse">Adresse *</label>
+        <textarea 
+          id="adresse" 
+          formControlName="adresse"
+          class="form-control"
+          [class.is-invalid]="adresseControl?.invalid && adresseControl?.touched"
+          placeholder="Adresse complète du débiteur"
+          rows="3"></textarea>
+        <div class="invalid-feedback" *ngIf="adresseControl?.invalid && adresseControl?.touched">
+          <div *ngIf="adresseControl?.errors?.['required']">L'adresse est requise</div>
+          <div *ngIf="adresseControl?.errors?.['minlength']">L'adresse doit contenir au moins 5 caractères</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="adresseElue">Adresse Élue</label>
+        <textarea 
+          id="adresseElue" 
+          formControlName="adresseElue"
+          class="form-control"
+          placeholder="Adresse élue pour domiciliation (optionnel)"
+          rows="2"></textarea>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="ville">Ville</label>
+          <input 
+            type="text" 
+            id="ville" 
+            formControlName="ville"
+            class="form-control"
+            placeholder="Ville">
+        </div>
+
+        <div class="form-group">
+          <label for="codePostal">Code Postal</label>
+          <input 
+            type="text" 
+            id="codePostal" 
+            formControlName="codePostal"
+            class="form-control"
+            placeholder="Code postal">
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" (click)="resetForm()">
+          <i class="fas fa-times"></i> Annuler
+        </button>
+        <button type="submit" class="btn btn-primary" [disabled]="debiteurForm.invalid">
+          <i class="fas fa-save"></i> {{ isEditMode ? 'Mettre à jour' : 'Créer' }}
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Recherche -->
+  <div class="search-section">
+    <div class="search-box">
+      <input 
+        type="text" 
+        [(ngModel)]="searchTerm"
+        (input)="searchDebiteurs()"
+        placeholder="Rechercher par nom, prénom, email..."
+        class="search-input">
+      <button class="btn btn-outline-secondary" (click)="clearSearch()" *ngIf="searchTerm">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Liste des débiteurs -->
+  <div class="debiteurs-list">
+    <div class="list-header">
+      <h3>Liste des Débiteurs ({{ filteredDebiteurs.length }})</h3>
+    </div>
+
+    <div class="debiteurs-grid" *ngIf="filteredDebiteurs.length > 0; else noDebiteurs">
+      <div class="debiteur-card" *ngFor="let debiteur of filteredDebiteurs">
+        <div class="card-header">
+          <h4>{{ debiteur.prenom }} {{ debiteur.nom }}</h4>
+          <div class="card-actions">
+            <button class="btn btn-sm btn-outline-primary" (click)="editDebiteur(debiteur)">
+              <i class="fas fa-edit"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-danger" (click)="deleteDebiteur(debiteur.id)">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="card-body">
+          <div class="info-row">
+            <i class="fas fa-envelope"></i>
+            <span>{{ debiteur.email }}</span>
+          </div>
+          <div class="info-row">
+            <i class="fas fa-phone"></i>
+            <span>{{ debiteur.telephone }}</span>
+          </div>
+          <div class="info-row" *ngIf="debiteur.fax">
+            <i class="fas fa-fax"></i>
+            <span>Fax: {{ debiteur.fax }}</span>
+          </div>
+          <div class="info-row">
+            <i class="fas fa-map-marker-alt"></i>
+            <span>{{ debiteur.adresse }}</span>
+          </div>
+          <div class="info-row" *ngIf="debiteur.adresseElue">
+            <i class="fas fa-home"></i>
+            <span>Adresse élue: {{ debiteur.adresseElue }}</span>
+          </div>
+          <div class="info-row" *ngIf="debiteur.ville">
+            <i class="fas fa-city"></i>
+            <span>{{ debiteur.ville }}{{ debiteur.codePostal ? ' - ' + debiteur.codePostal : '' }}</span>
+          </div>
+          <div class="info-row" *ngIf="debiteur.codeCreance">
+            <i class="fas fa-tag"></i>
+            <span>Code: {{ debiteur.codeCreance }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <ng-template #noDebiteurs>
+      <div class="no-debiteurs">
+        <i class="fas fa-users"></i>
+        <h4>Aucun débiteur trouvé</h4>
+        <p>Commencez par créer votre premier débiteur</p>
+      </div>
+    </ng-template>
+  </div>
+</div>

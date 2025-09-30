@@ -1,0 +1,355 @@
+.dossier-detail-container {
+  padding: 20px;
+  background-color: #f8f9fa;
+  min-height: 100vh;
+
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding: 20px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+
+      h1 {
+        color: #2c3e50;
+        margin: 0;
+        font-size: 2rem;
+      }
+    }
+
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      &.btn-primary {
+        background-color: #007bff;
+        color: white;
+
+        &:hover {
+          background-color: #0056b3;
+          transform: translateY(-2px);
+        }
+      }
+
+      &.btn-secondary {
+        background-color: #6c757d;
+        color: white;
+
+        &:hover {
+          background-color: #5a6268;
+          transform: translateY(-2px);
+        }
+      }
+    }
+  }
+
+  .dossier-content {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+
+    .info-section,
+    .parties-section,
+    .agents-section,
+    .documents-section {
+      background: white;
+      border-radius: 10px;
+      padding: 30px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+
+      h2, h3 {
+        color: #2c3e50;
+        margin: 0 0 20px 0;
+        font-size: 1.5rem;
+        border-bottom: 2px solid #e9ecef;
+        padding-bottom: 10px;
+      }
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+
+      .info-item {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+
+        label {
+          font-weight: 600;
+          color: #495057;
+          font-size: 0.9rem;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        span {
+          color: #2c3e50;
+          font-size: 1rem;
+
+          &.amount {
+            font-weight: 700;
+            color: #28a745;
+            font-size: 1.2rem;
+          }
+        }
+      }
+    }
+
+    .parties-section {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: 30px;
+
+      .creancier-info,
+      .debiteur-info {
+        h3 {
+          color: #007bff;
+          margin-bottom: 20px;
+        }
+
+        .party-details {
+          display: flex;
+          flex-direction: column;
+          gap: 15px;
+
+          .party-item {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+
+            label {
+              font-weight: 600;
+              color: #495057;
+              font-size: 0.9rem;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+            }
+
+            span {
+              color: #2c3e50;
+              font-size: 1rem;
+            }
+          }
+        }
+      }
+    }
+
+    .agents-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+
+      .agent-item {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+
+        label {
+          font-weight: 600;
+          color: #495057;
+          font-size: 0.9rem;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        span {
+          color: #2c3e50;
+          font-size: 1rem;
+        }
+      }
+    }
+
+    .documents-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+
+      .document-item {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+
+        label {
+          font-weight: 600;
+          color: #495057;
+          font-size: 0.9rem;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        span {
+          color: #2c3e50;
+          font-size: 1rem;
+        }
+      }
+    }
+
+    // Badges
+    .status-badge,
+    .urgence-badge {
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      display: inline-block;
+      width: fit-content;
+
+      &.statut-en-cours {
+        background-color: #17a2b8;
+        color: white;
+      }
+
+      &.statut-enquete {
+        background-color: #ffc107;
+        color: #212529;
+      }
+
+      &.statut-cloture {
+        background-color: #28a745;
+        color: white;
+      }
+
+      &.urgence-tres-urgent {
+        background-color: #dc3545;
+        color: white;
+      }
+
+      &.urgence-moyenne {
+        background-color: #ffc107;
+        color: #212529;
+      }
+
+      &.urgence-faible {
+        background-color: #28a745;
+        color: white;
+      }
+    }
+
+    .boolean-badge {
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      display: inline-block;
+      width: fit-content;
+
+      &.true {
+        background-color: #28a745;
+        color: white;
+      }
+
+      &.false {
+        background-color: #dc3545;
+        color: white;
+      }
+    }
+  }
+}
+
+.dossier-not-found {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: #f8f9fa;
+
+  .not-found-content {
+    text-align: center;
+    background: white;
+    padding: 60px;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+
+    i {
+      font-size: 4rem;
+      color: #dc3545;
+      margin-bottom: 20px;
+    }
+
+    h2 {
+      color: #2c3e50;
+      margin-bottom: 15px;
+    }
+
+    p {
+      color: #6c757d;
+      margin-bottom: 30px;
+      font-size: 1.1rem;
+    }
+
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+
+      &.btn-primary {
+        background-color: #007bff;
+        color: white;
+
+        &:hover {
+          background-color: #0056b3;
+          transform: translateY(-2px);
+        }
+      }
+    }
+  }
+}
+
+// Responsive
+@media (max-width: 768px) {
+  .dossier-detail-container {
+    padding: 10px;
+
+    .header {
+      flex-direction: column;
+      gap: 15px;
+      text-align: center;
+
+      .header-left {
+        flex-direction: column;
+        gap: 10px;
+
+        h1 {
+          font-size: 1.5rem;
+        }
+      }
+    }
+
+    .dossier-content {
+      .info-grid,
+      .agents-grid,
+      .documents-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .parties-section {
+        grid-template-columns: 1fr;
+      }
+    }
+  }
+}
