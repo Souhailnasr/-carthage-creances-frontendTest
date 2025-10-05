@@ -119,4 +119,21 @@ export class JwtAuthService {
     }
     return token || '';
   }
+
+  // Obtenir l'utilisateur courant (mock minimal pour éviter les erreurs au runtime)
+  getCurrentUser(): any {
+    return {
+      id: 1,
+      nom: 'Smith',
+      prenom: 'Jane',
+      email: 'jane.smith@carthage-creance.tn',
+      role: 'CHEF_DEPARTEMENT_DOSSIER',
+      actif: true
+    };
+  }
+
+  // Alias pratique
+  isLoggedIn(): boolean {
+    return this.isAuthenticated();
+  }
 }

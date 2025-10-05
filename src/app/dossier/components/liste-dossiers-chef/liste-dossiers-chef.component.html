@@ -1,0 +1,111 @@
+<div class="liste-dossiers-chef-container">
+  <div class="header">
+    <h2>Validation des Dossiers</h2>
+    <button class="btn btn-primary" (click)="refresh()" [disabled]="loading">
+      <i class="fas fa-sync-alt" [class.fa-spin]="loading"></i>
+      {{ loading ? 'Chargement...' : 'Actualiser' }}
+    </button>
+  </div>
+
+  <!-- Message d'erreur -->
+  <div class="alert alert-error" *ngIf="error">
+    <i class="fas fa-exclamation-triangle"></i>
+    {{ error }}
+  </div>
+
+  <!-- Indicateur de chargement -->
+  <div class="loading-indicator" *ngIf="loading && dossiers.length === 0">
+    <i class="fas fa-spinner fa-spin"></i>
+    <span>Chargement des dossiers...</span>
+  </div>
+
+  <!-- Message si aucun dossier -->
+  <div class="no-data" *ngIf="!loading && dossiers.length === 0 && !error">
+    <i class="fas fa-check-circle"></i>
+    <h3>Aucun dossier en attente</h3>
+    <p>Tous les dossiers ont été validés.</p>
+  </div>
+
+  <!-- Statistiques -->
+  <div class="stats-container" *ngIf="!loading && dossiers.length > 0">
+    <div class="stat-item">
+      <span class="stat-label">Dossiers en attente :</span>
+      <span class="stat-value">{{ getTotalDossiersEnAttente() }}</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-label">Montant total :</span>
+      <span class="stat-value">{{ formatMontant(getMontantTotal()) }}</span>
+    </div>
+  </div>
+
+  <!-- Tableau des dossiers -->
+  <div class="table-container" *ngIf="!loading && dossiers.length > 0">
+    <table class="dossiers-table">
+      <thead>
+        <tr>
+          <th>Titre</th>
+          <th>Montant</th>
+          <th>Agent Créateur</th>
+          <th>Date de création</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let dossier of dossiers" class="dossier-row">
+          <td class="titre-cell">
+            <div class="titre-content">
+              <strong>{{ dossier.titre }}</strong>
+              <small class="numero-dossier">{{ dossier.numeroDossier }}</small>
+              <div class="description" *ngIf="dossier.description">
+                {{ dossier.description }}
+              </div>
+            </div>
+          </td>
+          <td class="montant-cell">
+            <span class="montant">{{ formatMontant(dossier.montantCreance) }}</span>
+          </td>
+          <td class="agent-cell">
+            <div class="agent-info">
+              <span class="agent-name">{{ getAgentCreateurName(dossier) }}</span>
+              <small class="agent-role" *ngIf="dossier.agentCreateur?.roleUtilisateur">
+                {{ dossier.agentCreateur?.roleUtilisateur }}
+              </small>
+            </div>
+          </td>
+          <td class="date-cell">
+            <span class="date">{{ formatDate(dossier.dateCreation) }}</span>
+          </td>
+          <td class="actions-cell">
+            <button 
+              class="btn btn-success btn-validate"
+              (click)="validateDossier(dossier.id)"
+              [disabled]="isDossierValidating(dossier.id)"
+              [class.loading]="isDossierValidating(dossier.id)"
+            >
+              <i class="fas fa-check" *ngIf="!isDossierValidating(dossier.id)"></i>
+              <i class="fas fa-spinner fa-spin" *ngIf="isDossierValidating(dossier.id)"></i>
+              {{ isDossierValidating(dossier.id) ? 'Validation...' : 'Valider' }}
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Modal de confirmation (optionnel) -->
+  <div class="modal-overlay" *ngIf="false">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Confirmer la validation</h3>
+        <button class="btn-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>Êtes-vous sûr de vouloir valider ce dossier ?</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary">Annuler</button>
+        <button class="btn btn-success">Confirmer</button>
+      </div>
+    </div>
+  </div>
+</div>

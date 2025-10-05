@@ -1,0 +1,102 @@
+<div class="utilisateur-edit-container">
+  <!-- En-tête -->
+  <div class="header">
+    <h2 mat-dialog-title>Modifier l'utilisateur</h2>
+    <button mat-icon-button (click)="onCancel()" class="close-button">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <!-- Informations de l'utilisateur -->
+  <div class="user-info">
+    <div class="user-avatar">
+      <div class="avatar" [style.background-color]="getAvatarColor(data.utilisateur.nom)">
+        {{ getInitials(data.utilisateur.nom, data.utilisateur.prenom) }}
+      </div>
+    </div>
+    <div class="user-details">
+      <h3>{{ data.utilisateur.prenom }} {{ data.utilisateur.nom }}</h3>
+      <p class="user-email">{{ data.utilisateur.email }}</p>
+      <div class="user-status">
+        <mat-icon [class]="getStatutClass(data.utilisateur.statut)">
+          {{ getStatutIcon(data.utilisateur.statut) }}
+        </mat-icon>
+        <span [class]="getStatutClass(data.utilisateur.statut)">
+          {{ data.utilisateur.statut }}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Formulaire -->
+  <form [formGroup]="utilisateurForm" (ngSubmit)="onSubmit()" class="form-container">
+    <div class="form-content">
+      
+      <!-- Nom et Prénom -->
+      <div class="form-row">
+        <mat-form-field appearance="outline" class="form-field">
+          <mat-label>Nom *</mat-label>
+          <input matInput formControlName="nom" placeholder="Entrez le nom">
+          <mat-error *ngIf="hasError('nom')">
+            {{ getErrorMessage('nom') }}
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="form-field">
+          <mat-label>Prénom *</mat-label>
+          <input matInput formControlName="prenom" placeholder="Entrez le prénom">
+          <mat-error *ngIf="hasError('prenom')">
+            {{ getErrorMessage('prenom') }}
+          </mat-error>
+        </mat-form-field>
+      </div>
+
+      <!-- Email -->
+      <mat-form-field appearance="outline" class="form-field full-width">
+        <mat-label>Email *</mat-label>
+        <input matInput formControlName="email" type="email" placeholder="exemple@email.com">
+        <mat-icon matSuffix>email</mat-icon>
+        <mat-error *ngIf="hasError('email')">
+          {{ getErrorMessage('email') }}
+        </mat-error>
+      </mat-form-field>
+
+      <!-- Rôle -->
+      <mat-form-field appearance="outline" class="form-field full-width">
+        <mat-label>Rôle *</mat-label>
+        <mat-select formControlName="role">
+          <mat-option *ngFor="let role of roles" [value]="role.value">
+            <div class="role-option">
+              <mat-icon class="role-icon">{{ getRoleIcon(role.value) }}</mat-icon>
+              <span>{{ role.label }}</span>
+            </div>
+          </mat-option>
+        </mat-select>
+        <mat-error *ngIf="hasError('role')">
+          {{ getErrorMessage('role') }}
+        </mat-error>
+      </mat-form-field>
+
+      <!-- Note sur le mot de passe -->
+      <div class="password-note">
+        <mat-icon>info</mat-icon>
+        <span>Le mot de passe ne peut pas être modifié depuis cette interface. Contactez l'administrateur si nécessaire.</span>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="form-actions">
+      <button mat-button type="button" (click)="onCancel()" [disabled]="isLoading">
+        Annuler
+      </button>
+      <button mat-raised-button 
+              color="primary" 
+              type="submit" 
+              [disabled]="utilisateurForm.invalid || isLoading || !isFormDirty()">
+        <mat-icon *ngIf="isLoading">hourglass_empty</mat-icon>
+        <mat-icon *ngIf="!isLoading">save</mat-icon>
+        {{ isLoading ? 'Modification...' : 'Modifier' }}
+      </button>
+    </div>
+  </form>
+</div>

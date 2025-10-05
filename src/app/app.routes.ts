@@ -42,6 +42,26 @@ export const routes: Routes = [
     canActivate: [AuthGuard]
   },
   {
+    path: 'admin/utilisateurs',
+    loadComponent: () => import('./admin/components/utilisateurs/utilisateurs.component').then(m => m.UtilisateursComponent),
+    canActivate: [AuthGuard]
+  },
+  {
+    path: 'admin/utilisateurs/:id',
+    loadComponent: () => import('./admin/components/utilisateur-detail/utilisateur-detail.component').then(m => m.UtilisateurDetailComponent),
+    canActivate: [AuthGuard]
+  },
+  {
+    path: 'profile',
+    loadComponent: () => import('./shared/components/user-profile/user-profile.component').then(m => m.UserProfileComponent),
+    canActivate: [AuthGuard]
+  },
+  {
+    path: 'chef/dashboard',
+    loadComponent: () => import('./chef/components/chef-dashboard/chef-dashboard.component').then(m => m.ChefDashboardComponent),
+    canActivate: [AuthGuard]
+  },
+  {
     path: 'chef-dossier',
     loadComponent: () => import('./chef-dossier/chef-dossier.component').then(m => m.ChefDossierComponent),
     canActivate: [AuthGuard]
@@ -59,11 +79,6 @@ export const routes: Routes = [
   {
     path: 'debiteurs',
     loadComponent: () => import('./debiteur/debiteur-gestion/debiteur-gestion.component').then(m => m.DebiteurGestionComponent),
-    canActivate: [AuthGuard]
-  },
-  {
-    path: 'auth-test',
-    loadComponent: () => import('./shared/components/auth-test/auth-test.component').then(m => m.AuthTestComponent),
     canActivate: [AuthGuard]
   },
   {

@@ -5,14 +5,13 @@ import { provideAnimations } from '@angular/platform-browser/animations';
 // import { provideForms } from '@angular/forms'; // Not available in Angular 17
 
 import { routes } from './app.routes';
-import { AuthInterceptor } from './core/interceptors/auth.interceptor';
 import { ErrorInterceptor } from './core/interceptors/error.interceptor';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideRouter(routes),
     provideHttpClient(
-      withInterceptors([AuthInterceptor, ErrorInterceptor])
+      withInterceptors([ErrorInterceptor])
     ),
     provideAnimations(),
     // provideForms() // Not available in Angular 17

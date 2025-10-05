@@ -53,6 +53,12 @@ export class SidebarComponent implements OnInit, OnDestroy {
       roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER]
     },
     {
+      label: 'Utilisateurs',
+      icon: 'fas fa-users',
+      route: '/admin/utilisateurs',
+      roles: [Role.SUPER_ADMIN]
+    },
+    {
       label: 'Phase d\'Enquête',
       icon: 'fas fa-search',
       route: '/dossier/enquete',
@@ -101,6 +107,13 @@ export class SidebarComponent implements OnInit, OnDestroy {
           roles: [Role.SUPER_ADMIN, Role.CHEF_JURIDIQUE]
         }
       ]
+    },
+    // Ajout: Gestion des Utilisateurs pour Chef Juridique
+    {
+      label: 'Gestion des Utilisateurs',
+      icon: 'fas fa-users-cog',
+      route: '/admin/utilisateurs',
+      roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE]
     },
     {
       label: 'Gestion Finance',
@@ -224,6 +237,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
 
   getUserInitials(): string {
     if (!this.currentUser) return '';
-    return this.currentUser.getFullName().split(' ').map(n => n[0]).join('');
+    const fullName = `${this.currentUser.prenom} ${this.currentUser.nom}`;
+    return fullName.split(' ').map((n: string) => n[0]).join('');
   }
 }

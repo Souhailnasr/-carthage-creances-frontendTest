@@ -1,0 +1,148 @@
+<div class="utilisateur-list-container">
+  <!-- En-tête avec titre et bouton d'ajout -->
+  <div class="header">
+    <div class="header-content">
+      <h1>Gestion des Utilisateurs</h1>
+      <button mat-raised-button color="primary" (click)="openCreateDialog()">
+        <mat-icon>add</mat-icon>
+        Nouvel Utilisateur
+      </button>
+    </div>
+  </div>
+
+  <!-- Barre de recherche et filtres -->
+  <div class="search-section">
+    <mat-form-field appearance="outline" class="search-field">
+      <mat-label>Rechercher un utilisateur</mat-label>
+      <input matInput [formControl]="searchControl" placeholder="Nom, prénom, email ou rôle...">
+      <mat-icon matSuffix>search</mat-icon>
+    </mat-form-field>
+  </div>
+
+  <!-- Tableau des utilisateurs -->
+  <div class="table-container">
+    <mat-table [dataSource]="dataSource" matSort class="utilisateurs-table">
+      
+      <!-- Colonne Avatar -->
+      <ng-container matColumnDef="avatar">
+        <mat-header-cell *matHeaderCellDef>Avatar</mat-header-cell>
+        <mat-cell *matCellDef="let utilisateur">
+          <div class="avatar-container">
+            <div class="avatar" [style.background-color]="getAvatarColor(utilisateur.nom)">
+              {{ getInitials(utilisateur.nom, utilisateur.prenom) }}
+            </div>
+          </div>
+        </mat-cell>
+      </ng-container>
+
+      <!-- Colonne Nom -->
+      <ng-container matColumnDef="nom">
+        <mat-header-cell *matHeaderCellDef mat-sort-header>Nom</mat-header-cell>
+        <mat-cell *matCellDef="let utilisateur">
+          <span class="nom-cell">{{ utilisateur.nom }}</span>
+        </mat-cell>
+      </ng-container>
+
+      <!-- Colonne Prénom -->
+      <ng-container matColumnDef="prenom">
+        <mat-header-cell *matHeaderCellDef mat-sort-header>Prénom</mat-header-cell>
+        <mat-cell *matCellDef="let utilisateur">
+          <span class="prenom-cell">{{ utilisateur.prenom }}</span>
+        </mat-cell>
+      </ng-container>
+
+      <!-- Colonne Email -->
+      <ng-container matColumnDef="email">
+        <mat-header-cell *matHeaderCellDef mat-sort-header>Email</mat-header-cell>
+        <mat-cell *matCellDef="let utilisateur">
+          <span class="email-cell">{{ utilisateur.email }}</span>
+        </mat-cell>
+      </ng-container>
+
+      <!-- Colonne Rôle -->
+      <ng-container matColumnDef="role">
+        <mat-header-cell *matHeaderCellDef mat-sort-header>Rôle</mat-header-cell>
+        <mat-cell *matCellDef="let utilisateur">
+          <div class="role-cell">
+            <mat-icon class="role-icon">{{ getRoleIcon(utilisateur.role) }}</mat-icon>
+            <span class="role-text">{{ utilisateur.role }}</span>
+          </div>
+        </mat-cell>
+      </ng-container>
+
+      <!-- Colonne Statut -->
+      <ng-container matColumnDef="statut">
+        <mat-header-cell *matHeaderCellDef mat-sort-header>Statut</mat-header-cell>
+        <mat-cell *matCellDef="let utilisateur">
+          <div class="statut-cell">
+            <mat-icon [class]="getStatutClass(utilisateur.statut)">
+              {{ getStatutIcon(utilisateur.statut) }}
+            </mat-icon>
+            <span [class]="getStatutClass(utilisateur.statut)">
+              {{ utilisateur.statut }}
+            </span>
+          </div>
+        </mat-cell>
+      </ng-container>
+
+      <!-- Colonne Actions -->
+      <ng-container matColumnDef="actions">
+        <mat-header-cell *matHeaderCellDef>Actions</mat-header-cell>
+        <mat-cell *matCellDef="let utilisateur">
+          <div class="actions-container">
+            <!-- Bouton Modifier -->
+            <button mat-icon-button 
+                    color="primary" 
+                    (click)="openEditDialog(utilisateur)"
+                    matTooltip="Modifier l'utilisateur">
+              <mat-icon>edit</mat-icon>
+            </button>
+
+            <!-- Bouton Changer Statut -->
+            <button mat-icon-button 
+                    [color]="utilisateur.statut === 'ACTIF' ? 'warn' : 'primary'"
+                    (click)="toggleStatut(utilisateur)"
+                    [matTooltip]="utilisateur.statut === 'ACTIF' ? 'Désactiver' : 'Activer'">
+              <mat-icon>{{ utilisateur.statut === 'ACTIF' ? 'block' : 'check_circle' }}</mat-icon>
+            </button>
+
+            <!-- Bouton Supprimer -->
+            <button mat-icon-button 
+                    color="warn" 
+                    (click)="deleteUtilisateur(utilisateur)"
+                    matTooltip="Supprimer l'utilisateur">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </div>
+        </mat-cell>
+      </ng-container>
+
+      <!-- En-tête du tableau -->
+      <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
+      
+      <!-- Lignes du tableau -->
+      <mat-row *matRowDef="let row; columns: displayedColumns;" 
+               class="utilisateur-row"
+               [class.selected]="false">
+      </mat-row>
+    </mat-table>
+
+    <!-- Pagination -->
+    <mat-paginator [pageSizeOptions]="[5, 10, 25, 50]" 
+                   showFirstLastButtons
+                   aria-label="Sélectionner la page des utilisateurs">
+    </mat-paginator>
+
+    <!-- Message si aucun utilisateur -->
+    <div *ngIf="dataSource.data.length === 0 && !isLoading" class="no-data">
+      <mat-icon class="no-data-icon">people</mat-icon>
+      <p>Aucun utilisateur trouvé</p>
+    </div>
+
+    <!-- Indicateur de chargement -->
+    <div *ngIf="isLoading" class="loading-container">
+      <mat-spinner diameter="50"></mat-spinner>
+      <p>Chargement des utilisateurs...</p>
+    </div>
+  </div>
+</div>

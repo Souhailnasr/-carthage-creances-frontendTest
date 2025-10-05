@@ -1,0 +1,134 @@
+<div class="utilisateur-create-container">
+  <!-- En-tête -->
+  <div class="header">
+    <h2 mat-dialog-title>Créer un nouvel utilisateur</h2>
+    <button mat-icon-button (click)="onCancel()" class="close-button">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <!-- Formulaire -->
+  <form [formGroup]="utilisateurForm" (ngSubmit)="onSubmit()" class="form-container">
+    <div class="form-content">
+      
+      <!-- Nom et Prénom -->
+      <div class="form-row">
+        <mat-form-field appearance="outline" class="form-field">
+          <mat-label>Nom *</mat-label>
+          <input matInput formControlName="nom" placeholder="Entrez le nom">
+          <mat-error *ngIf="hasError('nom')">
+            {{ getErrorMessage('nom') }}
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="form-field">
+          <mat-label>Prénom *</mat-label>
+          <input matInput formControlName="prenom" placeholder="Entrez le prénom">
+          <mat-error *ngIf="hasError('prenom')">
+            {{ getErrorMessage('prenom') }}
+          </mat-error>
+        </mat-form-field>
+      </div>
+
+      <!-- Email -->
+      <mat-form-field appearance="outline" class="form-field full-width">
+        <mat-label>Email *</mat-label>
+        <input matInput formControlName="email" type="email" placeholder="exemple@email.com">
+        <mat-icon matSuffix>email</mat-icon>
+        <mat-error *ngIf="hasError('email')">
+          {{ getErrorMessage('email') }}
+        </mat-error>
+      </mat-form-field>
+
+      <!-- Mot de passe et Confirmation -->
+      <div class="form-row">
+        <mat-form-field appearance="outline" class="form-field">
+          <mat-label>Mot de passe *</mat-label>
+          <input matInput 
+                 formControlName="motDePasse" 
+                 [type]="hidePassword ? 'password' : 'text'"
+                 placeholder="Entrez le mot de passe">
+          <button mat-icon-button 
+                  matSuffix 
+                  type="button"
+                  (click)="hidePassword = !hidePassword"
+                  [attr.aria-label]="'Cacher le mot de passe'"
+                  [attr.aria-pressed]="hidePassword">
+            <mat-icon>{{ hidePassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+          </button>
+          <mat-error *ngIf="hasError('motDePasse')">
+            {{ getErrorMessage('motDePasse') }}
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="form-field">
+          <mat-label>Confirmation *</mat-label>
+          <input matInput 
+                 formControlName="confirmationMotDePasse" 
+                 [type]="hideConfirmPassword ? 'password' : 'text'"
+                 placeholder="Confirmez le mot de passe">
+          <button mat-icon-button 
+                  matSuffix 
+                  type="button"
+                  (click)="hideConfirmPassword = !hideConfirmPassword"
+                  [attr.aria-label]="'Cacher la confirmation'"
+                  [attr.aria-pressed]="hideConfirmPassword">
+            <mat-icon>{{ hideConfirmPassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+          </button>
+          <mat-error *ngIf="hasError('confirmationMotDePasse')">
+            {{ getErrorMessage('confirmationMotDePasse') }}
+          </mat-error>
+        </mat-form-field>
+      </div>
+
+      <!-- Erreur globale pour les mots de passe -->
+      <div *ngIf="hasGlobalError()" class="global-error">
+        <mat-icon>error</mat-icon>
+        <span>{{ getErrorMessage('confirmationMotDePasse') }}</span>
+      </div>
+
+      <!-- Rôle -->
+      <mat-form-field appearance="outline" class="form-field full-width">
+        <mat-label>Rôle *</mat-label>
+        <mat-select formControlName="role">
+          <mat-option *ngFor="let role of roles" [value]="role.value">
+            <div class="role-option">
+              <mat-icon class="role-icon">{{ getRoleIcon(role.value) }}</mat-icon>
+              <span>{{ role.label }}</span>
+            </div>
+          </mat-option>
+        </mat-select>
+        <mat-error *ngIf="hasError('role')">
+          {{ getErrorMessage('role') }}
+        </mat-error>
+      </mat-form-field>
+
+      <!-- Informations sur les critères du mot de passe -->
+      <div class="password-criteria">
+        <h4>Critères du mot de passe :</h4>
+        <ul>
+          <li>Au moins 8 caractères</li>
+          <li>Une lettre minuscule</li>
+          <li>Une lettre majuscule</li>
+          <li>Un chiffre</li>
+          <li>Un caractère spécial (@$!%*?&)</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="form-actions">
+      <button mat-button type="button" (click)="onCancel()" [disabled]="isLoading">
+        Annuler
+      </button>
+      <button mat-raised-button 
+              color="primary" 
+              type="submit" 
+              [disabled]="utilisateurForm.invalid || isLoading">
+        <mat-icon *ngIf="isLoading">hourglass_empty</mat-icon>
+        <mat-icon *ngIf="!isLoading">save</mat-icon>
+        {{ isLoading ? 'Création...' : 'Créer' }}
+      </button>
+    </div>
+  </form>
+</div>

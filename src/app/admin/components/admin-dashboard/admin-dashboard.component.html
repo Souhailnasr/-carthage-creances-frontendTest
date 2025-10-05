@@ -1,0 +1,135 @@
+<div class="admin-dashboard">
+  <!-- Header -->
+  <div class="dashboard-header">
+    <div class="welcome-section">
+      <h1>Tableau de bord Administrateur</h1>
+      <p class="welcome-message">
+        Bienvenue, <strong>{{ getUserDisplayName() }}</strong>
+        <span class="role-badge">{{ getUserRoleDisplay() }}</span>
+      </p>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-outline-primary" routerLink="/admin/settings">
+        <i class="fas fa-cog"></i>
+        Paramètres
+      </button>
+    </div>
+  </div>
+
+  <!-- Statistiques -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon">
+        <i class="fas fa-users"></i>
+      </div>
+      <div class="stat-content">
+        <h3>{{ stats.totalUsers }}</h3>
+        <p>Utilisateurs totaux</p>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon">
+        <i class="fas fa-user-check"></i>
+      </div>
+      <div class="stat-content">
+        <h3>{{ stats.activeUsers }}</h3>
+        <p>Utilisateurs actifs</p>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon">
+        <i class="fas fa-folder"></i>
+      </div>
+      <div class="stat-content">
+        <h3>{{ stats.totalDossiers }}</h3>
+        <p>Dossiers totaux</p>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon">
+        <i class="fas fa-clock"></i>
+      </div>
+      <div class="stat-content">
+        <h3>{{ stats.pendingDossiers }}</h3>
+        <p>Dossiers en attente</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Actions rapides -->
+  <div class="quick-actions-section">
+    <h2>Actions rapides</h2>
+    <div class="actions-grid">
+      <div 
+        *ngFor="let action of quickActions" 
+        class="action-card"
+        [routerLink]="action.route"
+      >
+        <div class="action-icon" [ngClass]="'icon-' + action.color">
+          <i [class]="action.icon"></i>
+        </div>
+        <div class="action-content">
+          <h4>{{ action.title }}</h4>
+          <p>{{ action.description }}</p>
+        </div>
+        <div class="action-arrow">
+          <i class="fas fa-arrow-right"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Fonctionnalités avancées -->
+  <div class="advanced-features">
+    <h2>Fonctionnalités avancées</h2>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-header">
+          <i class="fas fa-shield-alt"></i>
+          <h3>Sécurité</h3>
+        </div>
+        <div class="feature-content">
+          <p>Gestion des permissions et de la sécurité</p>
+          <ul>
+            <li>Audit des connexions</li>
+            <li>Gestion des rôles</li>
+            <li>Politiques de sécurité</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-header">
+          <i class="fas fa-database"></i>
+          <h3>Base de données</h3>
+        </div>
+        <div class="feature-content">
+          <p>Gestion et maintenance de la base de données</p>
+          <ul>
+            <li>Sauvegarde automatique</li>
+            <li>Optimisation des performances</li>
+            <li>Surveillance de l'espace</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-header">
+          <i class="fas fa-chart-line"></i>
+          <h3>Analytics</h3>
+        </div>
+        <div class="feature-content">
+          <p>Analyse des données et rapports</p>
+          <ul>
+            <li>Métriques d'utilisation</li>
+            <li>Rapports de performance</li>
+            <li>Analyses prédictives</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

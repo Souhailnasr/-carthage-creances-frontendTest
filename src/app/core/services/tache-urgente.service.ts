@@ -26,7 +26,7 @@ export interface TacheUrgente {
   providedIn: 'root'
 })
 export class TacheUrgenteService {
-  private apiUrl = 'http://localhost:8080/api/taches-urgentes';
+  private apiUrl = 'http://localhost:8089/carthage-creance/api/taches-urgentes';
 
   constructor(private http: HttpClient) {}
 

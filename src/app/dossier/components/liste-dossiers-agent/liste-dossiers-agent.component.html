@@ -1,0 +1,79 @@
+<div class="liste-dossiers-agent-container">
+  <div class="header">
+    <h2>Mes Dossiers</h2>
+    <button class="btn btn-primary" (click)="refresh()" [disabled]="loading">
+      <i class="fas fa-sync-alt" [class.fa-spin]="loading"></i>
+      {{ loading ? 'Chargement...' : 'Actualiser' }}
+    </button>
+  </div>
+
+  <!-- Message d'erreur -->
+  <div class="alert alert-error" *ngIf="error">
+    <i class="fas fa-exclamation-triangle"></i>
+    {{ error }}
+  </div>
+
+  <!-- Indicateur de chargement -->
+  <div class="loading-indicator" *ngIf="loading && dossiers.length === 0">
+    <i class="fas fa-spinner fa-spin"></i>
+    <span>Chargement des dossiers...</span>
+  </div>
+
+  <!-- Message si aucun dossier -->
+  <div class="no-data" *ngIf="!loading && dossiers.length === 0 && !error">
+    <i class="fas fa-folder-open"></i>
+    <h3>Aucun dossier trouvé</h3>
+    <p>Vous n'avez pas encore créé de dossiers.</p>
+  </div>
+
+  <!-- Tableau des dossiers -->
+  <div class="table-container" *ngIf="!loading && dossiers.length > 0">
+    <table class="dossiers-table">
+      <thead>
+        <tr>
+          <th>Titre</th>
+          <th>Montant</th>
+          <th>Statut</th>
+          <th>Date de création</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let dossier of dossiers" class="dossier-row">
+          <td class="titre-cell">
+            <div class="titre-content">
+              <strong>{{ dossier.titre }}</strong>
+              <small class="numero-dossier">{{ dossier.numeroDossier }}</small>
+            </div>
+          </td>
+          <td class="montant-cell">
+            <span class="montant">{{ formatMontant(dossier.montantCreance) }}</span>
+          </td>
+          <td class="statut-cell">
+            <span class="statut-badge" [ngClass]="getStatutClass(dossier.dossierStatus)">
+              {{ getStatutLabel(dossier.dossierStatus) }}
+            </span>
+          </td>
+          <td class="date-cell">
+            <span class="date">{{ formatDate(dossier.dateCreation) }}</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Statistiques -->
+  <div class="stats-container" *ngIf="!loading && dossiers.length > 0">
+    <div class="stat-item">
+      <span class="stat-label">Total des dossiers :</span>
+      <span class="stat-value">{{ dossiers.length }}</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-label">En attente de validation :</span>
+      <span class="stat-value">{{ getDossiersEnAttente().length }}</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-label">Validés :</span>
+      <span class="stat-value">{{ getDossiersValides().length }}</span>
+    </div>
+  </div>
+</div>

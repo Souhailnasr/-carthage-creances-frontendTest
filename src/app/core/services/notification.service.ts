@@ -21,7 +21,7 @@ export interface Notification {
   providedIn: 'root'
 })
 export class NotificationService {
-  private apiUrl = 'http://localhost:8080/api/notifications';
+  private apiUrl = 'http://localhost:8089/carthage-creance/api/notifications';
   private notificationsSubject = new BehaviorSubject<Notification[]>([]);
   public notifications$ = this.notificationsSubject.asObservable();
 
