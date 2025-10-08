@@ -7,6 +7,7 @@ import { User, Role } from '../../../shared/models';
 import { FormInputComponent } from '../../../shared/components/form-input/form-input.component';
 import { ToastService } from '../../../core/services/toast.service';
 import { UtilisateurService, Utilisateur, UtilisateurRequest } from '../../../core/services/utilisateur.service';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-utilisateurs',
@@ -19,6 +20,8 @@ export class UtilisateursComponent implements OnInit, OnDestroy {
   utilisateurs: Utilisateur[] = [];
   filteredUtilisateurs: Utilisateur[] = [];
   searchTerm: string = '';
+  searchType: string = 'all'; // 'all', 'name', 'email', 'role'
+  selectedRole: string = '';
   showCreateForm: boolean = false;
   userForm!: FormGroup;
   isEditMode: boolean = false;
@@ -26,6 +29,7 @@ export class UtilisateursComponent implements OnInit, OnDestroy {
   showPassword: boolean = false;
   showConfirmPassword: boolean = false;
   isLoading: boolean = false;
+  currentUser: any;
   private destroy$ = new Subject<void>();
 
   // Getters pour les contrôles de formulaire
@@ -39,12 +43,15 @@ export class UtilisateursComponent implements OnInit, OnDestroy {
   constructor(
     private fb: FormBuilder,
     private toastService: ToastService,
-    private utilisateurService: UtilisateurService
+    private utilisateurService: UtilisateurService,
+    private authService: AuthService
   ) { }
 
   ngOnInit(): void {
+    this.currentUser = this.authService.getCurrentUser();
     this.initializeForm();
     this.loadUsers();
+    console.log('🔧 UtilisateursComponent initialisé avec filtres avancés');
   }
 
   ngOnDestroy(): void {
@@ -85,10 +92,23 @@ export class UtilisateursComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (utilisateurs) => {
-          this.utilisateurs = utilisateurs;
-          this.filteredUtilisateurs = [...utilisateurs];
+          // Appliquer le filtre par rôle selon l'utilisateur connecté
+          let filteredUsers = utilisateurs;
+          
+          // Si l'utilisateur connecté est un Chef Dossier, ne montrer que les Agents de Dossier
+          if (this.currentUser && this.currentUser.role === 'CHEF_DOSSIER') {
+            filteredUsers = utilisateurs.filter(user => 
+              (user.roleUtilisateur || user.role) === 'AGENT_DOSSIER'
+            );
+            console.log('🔒 Filtre Chef Dossier appliqué - Utilisateurs filtrés:', filteredUsers.length);
+          } else {
+            console.log('👑 Utilisateur avec accès complet - Tous les utilisateurs affichés');
+          }
+          
+          this.utilisateurs = filteredUsers;
+          this.filteredUtilisateurs = [...filteredUsers];
           this.isLoading = false;
-          console.log('✅ Utilisateurs chargés:', utilisateurs);
+          console.log('✅ Utilisateurs chargés:', filteredUsers);
         },
         error: (error) => {
           console.error('❌ Erreur lors du chargement des utilisateurs:', error);
@@ -102,10 +122,37 @@ export class UtilisateursComponent implements OnInit, OnDestroy {
     if (!this.searchTerm.trim()) {
       this.filteredUtilisateurs = [...this.utilisateurs];
     } else {
+      this.filteredUtilisateurs = this.utilisateurs.filter(utilisateur => {
+        const searchLower = this.searchTerm.toLowerCase();
+        
+        switch (this.searchType) {
+          case 'name':
+            return `${utilisateur.prenom} ${utilisateur.nom}`.toLowerCase().includes(searchLower);
+          case 'email':
+            return utilisateur.email.toLowerCase().includes(searchLower);
+          case 'role':
+            return (utilisateur.roleUtilisateur || utilisateur.role || '').toLowerCase().includes(searchLower);
+          case 'all':
+          default:
+            return `${utilisateur.prenom} ${utilisateur.nom}`.toLowerCase().includes(searchLower) ||
+                   utilisateur.email.toLowerCase().includes(searchLower) ||
+                   (utilisateur.roleUtilisateur || utilisateur.role || '').toLowerCase().includes(searchLower);
+        }
+      });
+    }
+  }
+
+  onSearchTypeChange(): void {
+    // Réinitialiser la recherche quand le type change
+    this.onSearch();
+  }
+
+  onRoleFilterChange(): void {
+    if (!this.selectedRole) {
+      this.filteredUtilisateurs = [...this.utilisateurs];
+    } else {
       this.filteredUtilisateurs = this.utilisateurs.filter(utilisateur =>
-        `${utilisateur.prenom} ${utilisateur.nom}`.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-        utilisateur.email.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-        (utilisateur.roleUtilisateur || utilisateur.role || '').toLowerCase().includes(this.searchTerm.toLowerCase())
+        (utilisateur.roleUtilisateur || utilisateur.role) === this.selectedRole
       );
     }
   }
@@ -238,5 +285,45 @@ export class UtilisateursComponent implements OnInit, OnDestroy {
 
   getConfirmPasswordFieldType(): string {
     return this.showConfirmPassword ? 'text' : 'password';
+  }
+
+  getAvailableRoles(): string[] {
+    // Si l'utilisateur connecté est un Chef Dossier, ne peut créer que des Agents de Dossier
+    if (this.currentUser && this.currentUser.role === 'CHEF_DOSSIER') {
+      return ['AGENT_DOSSIER'];
+    }
+    
+    // Pour les autres rôles (Super Admin, etc.), tous les rôles sont disponibles
+    return [
+      'SUPER_ADMIN',
+      'CHEF_DOSSIER',
+      'AGENT_DOSSIER',
+      'CHEF_JURIDIQUE',
+      'AGENT_JURIDIQUE',
+      'CHEF_FINANCE',
+      'AGENT_FINANCE',
+      'CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE',
+      'AGENT_RECOUVREMENT_AMIABLE'
+    ];
+  }
+
+  getAvailableRolesForFilter(): string[] {
+    // Pour le filtre, on peut filtrer par tous les rôles disponibles
+    const roles = this.getAvailableRoles();
+    return ['', ...roles]; // Ajouter une option vide pour "Tous les rôles"
+  }
+
+  getSearchPlaceholder(): string {
+    switch (this.searchType) {
+      case 'name':
+        return 'Rechercher par nom ou prénom...';
+      case 'email':
+        return 'Rechercher par email...';
+      case 'role':
+        return 'Rechercher par rôle...';
+      case 'all':
+      default:
+        return 'Rechercher par nom, email ou rôle...';
+    }
   }
 }

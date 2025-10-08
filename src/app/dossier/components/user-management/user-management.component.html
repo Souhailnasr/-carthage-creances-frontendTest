@@ -78,10 +78,15 @@
         
         <div class="form-group">
           <label for="role">Rôle Utilisateur</label>
-          <select id="role" formControlName="role" class="form-control" [disabled]="true">
-            <option [value]="'AGENT_DOSSIER'">Agent de Dossier</option>
+          <select id="role" formControlName="role" class="form-control">
+            <option value="">Sélectionnez un rôle</option>
+            <option *ngFor="let role of getAvailableRoles()" [value]="role">
+              {{ getRoleDisplayName(role) }}
+            </option>
           </select>
-          <small class="form-text text-muted">Le rôle par défaut est Agent de Dossier et ne peut pas être modifié.</small>
+          <div class="form-error" *ngIf="roleControl.invalid && roleControl.touched">
+            Le rôle est requis
+          </div>
         </div>
       </div>
 
@@ -96,17 +101,95 @@
     </form>
   </div>
 
-  <!-- Barre de recherche -->
-  <div class="search-bar">
-    <div class="search-input-group">
-      <i class="fas fa-search"></i>
-      <input 
-        type="text" 
-        [(ngModel)]="searchTerm" 
-        (input)="onSearch()" 
-        placeholder="Rechercher par nom, email ou rôle..."
-        class="search-input"
-      >
+  <!-- Barre de recherche et filtres améliorée -->
+  <div class="search-container">
+    <div class="search-header">
+      <h3><i class="fas fa-filter"></i> Recherche et Filtres</h3>
+      <button class="btn btn-outline-secondary btn-sm" (click)="clearAllFilters()">
+        <i class="fas fa-times"></i> Effacer tout
+      </button>
+    </div>
+
+    <div class="search-filters-grid">
+      <!-- Ligne 1: Recherche textuelle -->
+      <div class="search-row">
+        <div class="search-type-selector">
+          <label for="searchType"><i class="fas fa-list"></i> Type de recherche:</label>
+          <select id="searchType" [(ngModel)]="searchType" (change)="onSearchTypeChange()" class="form-control">
+            <option value="all">🔍 Tout</option>
+            <option value="name">👤 Nom/Prénom</option>
+            <option value="email">📧 Email</option>
+            <option value="role">🎭 Rôle</option>
+            <option value="department">🏢 Département</option>
+            <option value="phone">📞 Téléphone</option>
+          </select>
+        </div>
+
+        <div class="search-input-wrapper">
+          <i class="fas fa-search search-icon"></i>
+          <input 
+            type="text" 
+            [(ngModel)]="searchTerm" 
+            (input)="onSearch()"
+            [placeholder]="getSearchPlaceholder()"
+            class="search-input">
+        </div>
+      </div>
+
+      <!-- Ligne 2: Filtres -->
+      <div class="filters-row">
+        <div class="filter-group">
+          <label for="roleFilter"><i class="fas fa-user-tag"></i> Rôle:</label>
+          <select id="roleFilter" [(ngModel)]="selectedRole" (change)="onRoleFilterChange()" class="form-control">
+            <option value="">Tous les rôles</option>
+            <option *ngFor="let role of getAvailableRolesForFilter().slice(1)" [value]="role">
+              {{ getRoleDisplayName(role) }}
+            </option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label for="activityFilter"><i class="fas fa-toggle-on"></i> Activité:</label>
+          <select id="activityFilter" [(ngModel)]="selectedActivity" (change)="onActivityFilterChange()" class="form-control">
+            <option value="">Tous les statuts</option>
+            <option value="active">✅ Actif</option>
+            <option value="inactive">❌ Inactif</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label for="departmentFilter"><i class="fas fa-building"></i> Département:</label>
+          <select id="departmentFilter" [(ngModel)]="selectedDepartment" (change)="onDepartmentFilterChange()" class="form-control">
+            <option value="">Tous les départements</option>
+            <option *ngFor="let dept of getAvailableDepartments().slice(1)" [value]="dept">
+              {{ dept }}
+            </option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Ligne 3: Résumé des filtres actifs -->
+      <div class="active-filters" *ngIf="hasActiveFilters()">
+        <span class="filter-label">Filtres actifs:</span>
+        <div class="filter-tags">
+          <span *ngIf="searchTerm" class="filter-tag">
+            <i class="fas fa-search"></i> "{{ searchTerm }}"
+            <button class="remove-filter" (click)="searchTerm = ''; onSearch()">×</button>
+          </span>
+          <span *ngIf="selectedRole" class="filter-tag">
+            <i class="fas fa-user-tag"></i> {{ getRoleDisplayName(selectedRole) }}
+            <button class="remove-filter" (click)="selectedRole = ''; onRoleFilterChange()">×</button>
+          </span>
+          <span *ngIf="selectedActivity" class="filter-tag">
+            <i class="fas fa-toggle-on"></i> {{ selectedActivity === 'active' ? 'Actif' : 'Inactif' }}
+            <button class="remove-filter" (click)="selectedActivity = ''; onActivityFilterChange()">×</button>
+          </span>
+          <span *ngIf="selectedDepartment" class="filter-tag">
+            <i class="fas fa-building"></i> {{ selectedDepartment }}
+            <button class="remove-filter" (click)="selectedDepartment = ''; onDepartmentFilterChange()">×</button>
+          </span>
+        </div>
+      </div>
     </div>
   </div>
 

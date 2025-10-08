@@ -9,6 +9,7 @@ import { HuissierFormComponent } from './components/huissier-form/huissier-form.
 import { HuissierListComponent } from './components/huissier-list/huissier-list.component';
 import { AffectationDossiersComponent } from './components/affectation-dossiers/affectation-dossiers.component';
 import { GestionAudiencesComponent } from './components/gestion-audiences/gestion-audiences.component';
+import { TachesComponent } from '../shared/components/taches/taches.component';
 
 export const juridiqueRoutes: Routes = [
   {
@@ -59,6 +60,10 @@ export const juridiqueRoutes: Routes = [
       {
         path: 'gestion-audiences',
         component: GestionAudiencesComponent
+      },
+      {
+        path: 'taches',
+        component: TachesComponent
       },
       {
         path: 'profile',

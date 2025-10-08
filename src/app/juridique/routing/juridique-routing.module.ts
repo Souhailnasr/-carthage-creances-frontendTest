@@ -43,6 +43,12 @@ const routes: Routes = [
     component: JuridiqueUserManagementComponent,
     canActivate: [AuthGuard],
     data: { allowedRoles: [Role.CHEF_JURIDIQUE, Role.SUPER_ADMIN] }
+  },
+  {
+    path: 'taches',
+    loadComponent: () => import('../shared/components/taches/taches.component').then(m => m.TachesComponent),
+    canActivate: [AuthGuard],
+    data: { allowedRoles: [Role.CHEF_JURIDIQUE, Role.SUPER_ADMIN] }
   }
 ];
 

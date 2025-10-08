@@ -1,0 +1,222 @@
+<div class="taches-page">
+  <div class="page-header">
+    <div class="header-content">
+      <div class="title-section">
+        <h1 class="page-title">
+          <i class="fas fa-tasks"></i>
+          Gestion des Tâches
+        </h1>
+        <p class="page-description">
+          Gérez vos tâches et suivez leur progression
+        </p>
+      </div>
+      <button class="btn btn-primary create-btn" (click)="showCreateTache = true">
+        <i class="fas fa-plus"></i>
+        Nouvelle Tâche
+      </button>
+    </div>
+  </div>
+
+  <!-- Filtres -->
+  <div class="filters-section">
+    <div class="filters-row">
+      <div class="search-box">
+        <i class="fas fa-search"></i>
+        <input 
+          type="text" 
+          placeholder="Rechercher une tâche..." 
+          [(ngModel)]="searchTerm"
+          (input)="onSearch()"
+          class="search-input">
+      </div>
+      
+      <div class="filter-group">
+        <label>Statut:</label>
+        <select [(ngModel)]="selectedStatut" (change)="onStatutChange()" class="filter-select">
+          <option value="TOUS">Tous les statuts</option>
+          <option value="EN_COURS">En cours</option>
+          <option value="EN_ATTENTE">En attente</option>
+          <option value="TERMINEE">Terminée</option>
+          <option value="ANNULEE">Annulée</option>
+        </select>
+      </div>
+      
+      <div class="filter-group">
+        <label>Priorité:</label>
+        <select [(ngModel)]="selectedPriorite" (change)="onPrioriteChange()" class="filter-select">
+          <option value="TOUS">Toutes les priorités</option>
+          <option value="TRES_URGENTE">Très urgente</option>
+          <option value="ELEVEE">Élevée</option>
+          <option value="MOYENNE">Moyenne</option>
+          <option value="FAIBLE">Faible</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Liste des tâches -->
+  <div class="taches-container">
+    <div class="taches-grid" *ngIf="tachesFiltrees.length > 0; else noTaches">
+      <div 
+        class="tache-card" 
+        *ngFor="let tache of tachesFiltrees"
+        [class.en-retard]="isEnRetard(tache)">
+        
+        <div class="tache-header">
+          <div class="tache-type">
+            <i [class]="getTypeIcon(tache.type)"></i>
+            <span class="type-label">{{ getTypeLabel(tache.type) }}</span>
+          </div>
+          <div class="tache-priorite" [class]="getPrioriteClass(tache.priorite)">
+            {{ getPrioriteLabel(tache.priorite) }}
+          </div>
+        </div>
+
+        <div class="tache-content">
+          <h3 class="tache-titre">{{ tache.titre }}</h3>
+          <p class="tache-description">{{ tache.description }}</p>
+          
+          <div class="tache-meta">
+            <div class="meta-item">
+              <i class="fas fa-user"></i>
+              <span>{{ tache.agentNom }}</span>
+            </div>
+            <div class="meta-item">
+              <i class="fas fa-calendar-alt"></i>
+              <span>{{ tache.dateEcheance | date:'dd/MM/yyyy' }}</span>
+            </div>
+            <div class="meta-item" *ngIf="isEnRetard(tache)">
+              <i class="fas fa-exclamation-triangle"></i>
+              <span class="retard-text">En retard</span>
+            </div>
+            <div class="meta-item" *ngIf="!isEnRetard(tache) && getDaysUntilEcheance(tache) <= 3">
+              <i class="fas fa-clock"></i>
+              <span class="urgent-text">{{ getDaysUntilEcheance(tache) }} jour(s)</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="tache-footer">
+          <div class="tache-statut" [class]="getStatutClass(tache.statut)">
+            {{ tache.statut.replace('_', ' ') }}
+          </div>
+          <div class="tache-actions">
+            <button class="btn btn-sm btn-outline-primary">
+              <i class="fas fa-edit"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-success">
+              <i class="fas fa-check"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <ng-template #noTaches>
+      <div class="empty-state">
+        <div class="empty-icon">
+          <i class="fas fa-tasks"></i>
+        </div>
+        <h3>Aucune tâche trouvée</h3>
+        <p>Aucune tâche ne correspond à vos critères de recherche.</p>
+        <button class="btn btn-primary" (click)="showCreateTache = true">
+          <i class="fas fa-plus"></i>
+          Créer une nouvelle tâche
+        </button>
+      </div>
+    </ng-template>
+  </div>
+
+  <!-- Modal de création de tâche -->
+  <div class="modal-overlay" *ngIf="showCreateTache" (click)="cancelCreateTache()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Nouvelle Tâche</h3>
+        <button class="close-btn" (click)="cancelCreateTache()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      
+      <div class="modal-body">
+        <form (ngSubmit)="createTache()">
+          <div class="form-group">
+            <label>Titre de la tâche</label>
+            <input 
+              type="text" 
+              [(ngModel)]="newTache.titre" 
+              name="titre"
+              class="form-control" 
+              placeholder="Ex: Enquête sur le dossier XYZ"
+              required>
+          </div>
+          
+          <div class="form-group">
+            <label>Description</label>
+            <textarea 
+              [(ngModel)]="newTache.description" 
+              name="description"
+              class="form-control" 
+              rows="3"
+              placeholder="Décrivez les détails de la tâche..."
+              required></textarea>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label>Type de tâche</label>
+              <select [(ngModel)]="newTache.type" name="type" class="form-control">
+                <option value="ENQUETE">Enquête</option>
+                <option value="RELANCE">Relance</option>
+                <option value="DOSSIER">Dossier</option>
+                <option value="AUDIENCE">Audience</option>
+                <option value="ACTION">Action</option>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label>Priorité</label>
+              <select [(ngModel)]="newTache.priorite" name="priorite" class="form-control">
+                <option value="TRES_URGENTE">Très urgente</option>
+                <option value="ELEVEE">Élevée</option>
+                <option value="MOYENNE">Moyenne</option>
+                <option value="FAIBLE">Faible</option>
+              </select>
+            </div>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label>Assigner à</label>
+              <select [(ngModel)]="newTache.agentId" name="agentId" class="form-control" required>
+                <option value="">Sélectionner un agent</option>
+                <option *ngFor="let agent of availableAgents" [value]="agent.id">
+                  {{ agent.prenom }} {{ agent.nom }}
+                </option>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label>Date d'échéance</label>
+              <input 
+                type="date" 
+                [(ngModel)]="newTache.dateEcheance" 
+                name="dateEcheance"
+                class="form-control"
+                required>
+            </div>
+          </div>
+        </form>
+      </div>
+      
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="cancelCreateTache()">
+          Annuler
+        </button>
+        <button type="button" class="btn btn-primary" (click)="createTache()">
+          <i class="fas fa-plus"></i>
+          Créer la tâche
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

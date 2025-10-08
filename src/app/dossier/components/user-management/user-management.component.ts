@@ -7,6 +7,7 @@ import { User, Role } from '../../../shared/models';
 import { FormInputComponent } from '../../../shared/components/form-input/form-input.component';
 import { ToastService } from '../../../core/services/toast.service';
 import { UtilisateurService, Utilisateur, UtilisateurRequest } from '../../../core/services/utilisateur.service';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-user-management',
@@ -19,6 +20,10 @@ export class UserManagementComponent implements OnInit, OnDestroy {
   utilisateurs: Utilisateur[] = [];
   filteredUtilisateurs: Utilisateur[] = [];
   searchTerm: string = '';
+  searchType: string = 'all'; // 'all', 'name', 'email', 'role', 'department'
+  selectedRole: string = '';
+  selectedActivity: string = ''; // 'all', 'active', 'inactive'
+  selectedDepartment: string = '';
   showCreateForm: boolean = false;
   userForm!: FormGroup;
   isEditMode: boolean = false;
@@ -26,6 +31,7 @@ export class UserManagementComponent implements OnInit, OnDestroy {
   showPassword: boolean = false;
   showConfirmPassword: boolean = false;
   isLoading: boolean = false;
+  currentUser: any;
   private destroy$ = new Subject<void>();
 
   // Getters pour les contrôles de formulaire
@@ -39,12 +45,15 @@ export class UserManagementComponent implements OnInit, OnDestroy {
   constructor(
     private fb: FormBuilder,
     private toastService: ToastService,
-    private utilisateurService: UtilisateurService
+    private utilisateurService: UtilisateurService,
+    private authService: AuthService
   ) { }
 
   ngOnInit(): void {
+    this.currentUser = this.authService.getCurrentUser();
     this.initializeForm();
     this.loadUsers();
+    console.log('🔧 UserManagementComponent initialisé avec filtres avancés');
   }
 
   ngOnDestroy(): void {
@@ -85,10 +94,25 @@ export class UserManagementComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (utilisateurs) => {
-          this.utilisateurs = utilisateurs;
-          this.filteredUtilisateurs = [...utilisateurs];
+          // Appliquer le filtre par rôle selon l'utilisateur connecté
+          let filteredUsers = utilisateurs;
+          
+          // Si l'utilisateur connecté est un Chef Dossier, ne montrer que les Agents de Dossier
+          if (this.currentUser && (this.currentUser.role === 'CHEF_DEPARTEMENT_DOSSIER' || this.currentUser.role === 'CHEF_DOSSIER')) {
+            filteredUsers = utilisateurs.filter(user => 
+              (user.roleUtilisateur || user.role) === 'AGENT_DOSSIER'
+            );
+            console.log('🔒 Filtre Chef Dossier appliqué - Utilisateurs filtrés:', filteredUsers.length);
+            console.log('👤 Utilisateur connecté:', this.currentUser);
+          } else {
+            console.log('👑 Utilisateur avec accès complet - Tous les utilisateurs affichés');
+            console.log('👤 Utilisateur connecté:', this.currentUser);
+          }
+          
+          this.utilisateurs = filteredUsers;
+          this.filteredUtilisateurs = [...filteredUsers];
           this.isLoading = false;
-          console.log('✅ Utilisateurs chargés:', utilisateurs);
+          console.log('✅ Utilisateurs chargés:', filteredUsers);
         },
         error: (error) => {
           console.error('❌ Erreur lors du chargement des utilisateurs:', error);
@@ -99,15 +123,88 @@ export class UserManagementComponent implements OnInit, OnDestroy {
   }
 
   onSearch(): void {
-    if (!this.searchTerm.trim()) {
-      this.filteredUtilisateurs = [...this.utilisateurs];
-    } else {
-      this.filteredUtilisateurs = this.utilisateurs.filter(utilisateur =>
-        `${utilisateur.prenom} ${utilisateur.nom}`.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-        utilisateur.email.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-        (utilisateur.roleUtilisateur || utilisateur.role || '').toLowerCase().includes(this.searchTerm.toLowerCase())
+    this.applyAllFilters();
+  }
+
+  onSearchTypeChange(): void {
+    // Réinitialiser la recherche quand le type change
+    this.onSearch();
+  }
+
+  onRoleFilterChange(): void {
+    this.applyAllFilters();
+  }
+
+  onActivityFilterChange(): void {
+    this.applyAllFilters();
+  }
+
+  onDepartmentFilterChange(): void {
+    this.applyAllFilters();
+  }
+
+  applyAllFilters(): void {
+    let filtered = [...this.utilisateurs];
+
+    // Recherche textuelle
+    if (this.searchTerm.trim()) {
+      const searchLower = this.searchTerm.toLowerCase();
+      filtered = filtered.filter(utilisateur => {
+        switch (this.searchType) {
+          case 'name':
+            return `${utilisateur.prenom} ${utilisateur.nom}`.toLowerCase().includes(searchLower);
+          case 'email':
+            return utilisateur.email.toLowerCase().includes(searchLower);
+          case 'role':
+            return (utilisateur.roleUtilisateur || utilisateur.role || '').toLowerCase().includes(searchLower);
+          case 'department':
+            return (utilisateur.departement || '').toLowerCase().includes(searchLower);
+          case 'phone':
+            return (utilisateur.telephone || '').toLowerCase().includes(searchLower);
+          case 'all':
+          default:
+            return `${utilisateur.prenom} ${utilisateur.nom}`.toLowerCase().includes(searchLower) ||
+                   utilisateur.email.toLowerCase().includes(searchLower) ||
+                   (utilisateur.roleUtilisateur || utilisateur.role || '').toLowerCase().includes(searchLower) ||
+                   (utilisateur.departement || '').toLowerCase().includes(searchLower) ||
+                   (utilisateur.telephone || '').toLowerCase().includes(searchLower);
+        }
+      });
+    }
+
+    // Filtre par rôle
+    if (this.selectedRole) {
+      filtered = filtered.filter(utilisateur =>
+        (utilisateur.roleUtilisateur || utilisateur.role) === this.selectedRole
       );
     }
+
+    // Filtre par activité
+    if (this.selectedActivity) {
+      if (this.selectedActivity === 'active') {
+        filtered = filtered.filter(utilisateur => utilisateur.actif === true);
+      } else if (this.selectedActivity === 'inactive') {
+        filtered = filtered.filter(utilisateur => utilisateur.actif === false);
+      }
+    }
+
+    // Filtre par département
+    if (this.selectedDepartment) {
+      filtered = filtered.filter(utilisateur =>
+        (utilisateur.departement || '').toLowerCase().includes(this.selectedDepartment.toLowerCase())
+      );
+    }
+
+    this.filteredUtilisateurs = filtered;
+  }
+
+  clearAllFilters(): void {
+    this.searchTerm = '';
+    this.selectedRole = '';
+    this.selectedActivity = '';
+    this.selectedDepartment = '';
+    this.searchType = 'all';
+    this.filteredUtilisateurs = [...this.utilisateurs];
   }
 
   showCreateUserForm(): void {
@@ -207,11 +304,15 @@ export class UserManagementComponent implements OnInit, OnDestroy {
   getRoleDisplayName(role: string): string {
     const roleNames: { [key: string]: string } = {
       'SUPER_ADMIN': 'Super Administrateur',
-      'CHEF_DOSSIER': 'Chef de Dossier',
+      'CHEF_DEPARTEMENT_DOSSIER': 'Chef de Dossier',
+      'CHEF_DOSSIER': 'Chef de Dossier', // Alias pour compatibilité
       'AGENT_DOSSIER': 'Agent de Dossier',
-      'CHEF_JURIDIQUE': 'Chef Juridique',
-      'AGENT_JURIDIQUE': 'Agent Juridique',
-      'CHEF_FINANCE': 'Chef Finance',
+      'CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE': 'Chef Département Recouvrement Juridique',
+      'CHEF_JURIDIQUE': 'Chef Juridique', // Alias pour compatibilité
+      'AGENT_RECOUVREMENT_JURIDIQUE': 'Agent Recouvrement Juridique',
+      'AGENT_JURIDIQUE': 'Agent Juridique', // Alias pour compatibilité
+      'CHEF_DEPARTEMENT_FINANCE': 'Chef Département Finance',
+      'CHEF_FINANCE': 'Chef Finance', // Alias pour compatibilité
       'AGENT_FINANCE': 'Agent Finance',
       'CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE': 'Chef Département Recouvrement Amiable',
       'AGENT_RECOUVREMENT_AMIABLE': 'Agent Recouvrement Amiable'
@@ -238,5 +339,63 @@ export class UserManagementComponent implements OnInit, OnDestroy {
 
   getConfirmPasswordFieldType(): string {
     return this.showConfirmPassword ? 'text' : 'password';
+  }
+
+  getAvailableRoles(): string[] {
+    // Si l'utilisateur connecté est un Chef Dossier, ne peut créer que des Agents de Dossier
+    if (this.currentUser && (this.currentUser.role === 'CHEF_DEPARTEMENT_DOSSIER' || this.currentUser.role === 'CHEF_DOSSIER')) {
+      return ['AGENT_DOSSIER'];
+    }
+    
+    // Pour les autres rôles (Super Admin, etc.), tous les rôles sont disponibles
+    return [
+      'SUPER_ADMIN',
+      'CHEF_DEPARTEMENT_DOSSIER',
+      'AGENT_DOSSIER',
+      'CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE',
+      'AGENT_RECOUVREMENT_JURIDIQUE',
+      'CHEF_DEPARTEMENT_FINANCE',
+      'AGENT_FINANCE',
+      'CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE',
+      'AGENT_RECOUVREMENT_AMIABLE'
+    ];
+  }
+
+  getAvailableRolesForFilter(): string[] {
+    // Pour le filtre, on peut filtrer par tous les rôles disponibles
+    const roles = this.getAvailableRoles();
+    return ['', ...roles]; // Ajouter une option vide pour "Tous les rôles"
+  }
+
+  getSearchPlaceholder(): string {
+    switch (this.searchType) {
+      case 'name':
+        return 'Rechercher par nom ou prénom...';
+      case 'email':
+        return 'Rechercher par email...';
+      case 'role':
+        return 'Rechercher par rôle...';
+      case 'department':
+        return 'Rechercher par département...';
+      case 'phone':
+        return 'Rechercher par téléphone...';
+      case 'all':
+      default:
+        return 'Rechercher par nom, email, rôle, département...';
+    }
+  }
+
+  getAvailableDepartments(): string[] {
+    const departments = new Set<string>();
+    this.utilisateurs.forEach(user => {
+      if (user.departement) {
+        departments.add(user.departement);
+      }
+    });
+    return ['', ...Array.from(departments).sort()];
+  }
+
+  hasActiveFilters(): boolean {
+    return !!(this.searchTerm || this.selectedRole || this.selectedActivity || this.selectedDepartment);
   }
 }

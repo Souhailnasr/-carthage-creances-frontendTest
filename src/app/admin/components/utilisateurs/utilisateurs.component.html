@@ -69,15 +69,9 @@
           <select id="role" formControlName="role" class="form-control" 
                   [class.is-invalid]="roleControl.invalid && roleControl.touched">
             <option value="">Sélectionnez un rôle</option>
-            <option value="SUPER_ADMIN">Super Administrateur</option>
-            <option value="CHEF_DOSSIER">Chef de Dossier</option>
-            <option value="AGENT_DOSSIER">Agent de Dossier</option>
-            <option value="CHEF_JURIDIQUE">Chef Juridique</option>
-            <option value="AGENT_JURIDIQUE">Agent Juridique</option>
-            <option value="CHEF_FINANCE">Chef Finance</option>
-            <option value="AGENT_FINANCE">Agent Finance</option>
-            <option value="CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE">Chef Département Recouvrement Amiable</option>
-            <option value="AGENT_RECOUVREMENT_AMIABLE">Agent Recouvrement Amiable</option>
+            <option *ngFor="let role of getAvailableRoles()" [value]="role">
+              {{ getRoleDisplayName(role) }}
+            </option>
           </select>
           <div class="invalid-feedback" *ngIf="roleControl.invalid && roleControl.touched">
             Le rôle est requis
@@ -94,16 +88,41 @@
     </form>
   </div>
 
-  <!-- Barre de recherche -->
+  <!-- Barre de recherche et filtres -->
   <div class="search-container">
-    <div class="search-input-wrapper">
-      <i class="fas fa-search search-icon"></i>
-      <input 
-        type="text" 
-        [(ngModel)]="searchTerm" 
-        (input)="onSearch()"
-        placeholder="Rechercher par nom, email ou rôle..."
-        class="search-input">
+    <div class="search-filters-row">
+      <!-- Type de recherche -->
+      <div class="search-type-selector">
+        <label for="searchType">Type de recherche:</label>
+        <select id="searchType" [(ngModel)]="searchType" (change)="onSearchTypeChange()" class="form-control">
+          <option value="all">Tout</option>
+          <option value="name">Nom/Prénom</option>
+          <option value="email">Email</option>
+          <option value="role">Rôle</option>
+        </select>
+      </div>
+
+      <!-- Barre de recherche -->
+      <div class="search-input-wrapper">
+        <i class="fas fa-search search-icon"></i>
+        <input 
+          type="text" 
+          [(ngModel)]="searchTerm" 
+          (input)="onSearch()"
+          [placeholder]="getSearchPlaceholder()"
+          class="search-input">
+      </div>
+
+      <!-- Filtre par rôle -->
+      <div class="role-filter-selector">
+        <label for="roleFilter">Filtrer par rôle:</label>
+        <select id="roleFilter" [(ngModel)]="selectedRole" (change)="onRoleFilterChange()" class="form-control">
+          <option value="">Tous les rôles</option>
+          <option *ngFor="let role of getAvailableRolesForFilter().slice(1)" [value]="role">
+            {{ getRoleDisplayName(role) }}
+          </option>
+        </select>
+      </div>
     </div>
   </div>
 
