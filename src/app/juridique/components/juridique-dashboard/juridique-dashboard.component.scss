@@ -1,0 +1,271 @@
+.juridique-dashboard {
+  padding: 2rem;
+  background-color: #f4f7f6;
+  min-height: calc(100vh - 60px);
+  font-family: 'Roboto', sans-serif;
+  color: #333;
+
+  .dashboard-header {
+    margin-bottom: 2rem;
+    background-color: #fff;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+
+    h1 {
+      margin: 0 0 0.5rem 0;
+      color: #2c3e50;
+      font-size: 2rem;
+      font-weight: 700;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: #6c757d;
+      font-size: 1.1rem;
+    }
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+
+    .stat-card {
+      background-color: #fff;
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+      }
+
+      .stat-icon {
+        width: 60px;
+        height: 60px;
+        background: linear-gradient(135deg, #6f42c1, #8e44ad);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        i {
+          font-size: 1.5rem;
+          color: white;
+        }
+      }
+
+      .stat-content {
+        h3 {
+          margin: 0 0 0.25rem 0;
+          color: #2c3e50;
+          font-size: 2rem;
+          font-weight: 700;
+        }
+
+        p {
+          margin: 0;
+          color: #6c757d;
+          font-size: 0.9rem;
+        }
+      }
+    }
+  }
+
+  .performance-section {
+    margin-bottom: 2rem;
+
+    h2 {
+      margin: 0 0 1.5rem 0;
+      color: #2c3e50;
+      font-size: 1.5rem;
+      font-weight: 600;
+    }
+
+    .performance-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: 1.5rem;
+
+      .performance-card {
+        background-color: #fff;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+
+        h3 {
+          margin: 0 0 1rem 0;
+          color: #2c3e50;
+          font-size: 1.2rem;
+          font-weight: 600;
+        }
+
+        .agent-stats {
+          .agent-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #e9ecef;
+
+            &:last-child {
+              border-bottom: none;
+            }
+
+            .agent-info {
+              display: flex;
+              flex-direction: column;
+
+              .agent-name {
+                font-weight: 500;
+                color: #2c3e50;
+                margin-bottom: 0.25rem;
+              }
+
+              .agent-email {
+                font-size: 0.8rem;
+                color: #6c757d;
+              }
+            }
+
+            .agent-performance {
+              .performance-metric {
+                display: flex;
+                flex-direction: column;
+                align-items: flex-end;
+
+                .metric-label {
+                  font-size: 0.8rem;
+                  color: #6c757d;
+                  margin-bottom: 0.25rem;
+                }
+
+                .metric-value {
+                  font-weight: 600;
+                  color: #6f42c1;
+                  font-size: 1.1rem;
+                }
+              }
+            }
+          }
+        }
+
+        .decision-stats {
+          .decision-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #e9ecef;
+
+            &:last-child {
+              border-bottom: none;
+            }
+
+            .decision-type {
+              padding: 0.25rem 0.75rem;
+              border-radius: 20px;
+              font-size: 0.8rem;
+              font-weight: 500;
+
+              &.positive {
+                background-color: #d4edda;
+                color: #155724;
+              }
+
+              &.negative {
+                background-color: #f8d7da;
+                color: #721c24;
+              }
+
+              &.rapporter {
+                background-color: #fff3cd;
+                color: #856404;
+              }
+            }
+
+            .decision-count {
+              font-weight: 600;
+              color: #2c3e50;
+              font-size: 1.1rem;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  .recent-activities {
+    h2 {
+      margin: 0 0 1.5rem 0;
+      color: #2c3e50;
+      font-size: 1.5rem;
+      font-weight: 600;
+    }
+
+    .activities-list {
+      background-color: #fff;
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+
+      .activity-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 1rem;
+        padding: 1rem 0;
+        border-bottom: 1px solid #e9ecef;
+
+        &:last-child {
+          border-bottom: none;
+        }
+
+        .activity-icon {
+          width: 40px;
+          height: 40px;
+          background: linear-gradient(135deg, #6f42c1, #8e44ad);
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+
+          i {
+            color: white;
+            font-size: 1rem;
+          }
+        }
+
+        .activity-content {
+          flex: 1;
+
+          h4 {
+            margin: 0 0 0.25rem 0;
+            color: #2c3e50;
+            font-size: 1rem;
+            font-weight: 600;
+          }
+
+          p {
+            margin: 0 0 0.5rem 0;
+            color: #6c757d;
+            font-size: 0.9rem;
+            line-height: 1.4;
+          }
+
+          .activity-date {
+            font-size: 0.8rem;
+            color: #6c757d;
+          }
+        }
+      }
+    }
+  }
+}

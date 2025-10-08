@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../../core/services/auth.service';
+import { DossierService, DossierStats } from '../../../core/services/dossier.service';
 import { RoleService } from '../../../core/services/role.service';
 import { User, Role, Dossier, StatutDossier, Urgence } from '../../models';
 import { Subject, takeUntil } from 'rxjs';
@@ -22,15 +23,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   // Statistiques
-  stats = {
+  stats: any = {
     totalDossiers: 0,
     dossiersEnCours: 0,
-    dossiersAmiables: 0,
-    dossiersJuridiques: 0,
-    dossiersClotures: 0,
-    dossiersCrees: 0,
-    agentsActifs: 0,
-    performanceAgents: 0
+    dossiersValides: 0,
+    dossiersCreesCeMois: 0,
+    dossiersAssignes: 0,
+    dossiersCreesParAgent: 0
   };
 
   // Performance par agent
@@ -71,6 +70,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   constructor(
     private authService: AuthService,
+    private dossierService: DossierService,
     public roleService: RoleService // Public to be accessible in template
   ) { }
 
@@ -80,39 +80,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   loadStatistics(): void {
-    if (this.currentUser?.role === 'AGENT_DOSSIER') {
-      this.loadAgentPersonalStats();
-    } else {
-      // Simulation des statistiques - dans une vraie app, ceci viendrait d'une API
-      this.stats = {
-        totalDossiers: 156,
-        dossiersEnCours: 45,
-        dossiersAmiables: 32,
-        dossiersJuridiques: 18,
-        dossiersClotures: 89,
-        dossiersCrees: 12,
-        agentsActifs: 8,
-        performanceAgents: 87
-      };
-
-      // Chargement des performances par agent
-      this.loadAgentPerformance();
-    }
+    this.dossierService.refreshStats()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(s => {
+        this.stats = s;
+      });
   }
 
   loadAgentPersonalStats(): void {
-    // Simulation des statistiques personnelles pour l'agent
-    this.stats = {
-      totalDossiers: 24,
-      dossiersEnCours: 8,
-      dossiersAmiables: 5,
-      dossiersJuridiques: 3,
-      dossiersClotures: 16,
-      dossiersCrees: 2,
-      agentsActifs: 1,
-      performanceAgents: 85
-    };
-
+    // Désormais couvert par refreshStats, garder pour compat
     this.loadUrgentTasks();
   }
 
@@ -306,7 +282,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   getUserInitials(): string {
     if (!this.currentUser) return '';
-    return this.currentUser.getFullName().split(' ').map(n => n[0]).join('');
+    const full = (this.currentUser as any).getFullName ? (this.currentUser as any).getFullName() : `${(this.currentUser as any).prenom || ''} ${(this.currentUser as any).nom || ''}`.trim();
+    const basis = full || (this.currentUser as any).email || '';
+    return basis.split(' ').map((n: string) => n[0]).filter(Boolean).join('').slice(0, 2).toUpperCase();
   }
 
   // Méthodes pour les tâches urgentes

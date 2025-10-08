@@ -86,6 +86,14 @@
               <i class="fas fa-spinner fa-spin" *ngIf="isDossierValidating(dossier.id)"></i>
               {{ isDossierValidating(dossier.id) ? 'Validation...' : 'Valider' }}
             </button>
+            <button 
+              class="btn btn-danger btn-reject"
+              (click)="promptReject(dossier.id)"
+              [disabled]="isDossierValidating(dossier.id)"
+            >
+              <i class="fas fa-times"></i>
+              Rejeter
+            </button>
           </td>
         </tr>
       </tbody>

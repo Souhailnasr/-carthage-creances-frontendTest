@@ -1,0 +1,216 @@
+<div class="gestion-audiences-container">
+  <div class="header">
+    <h1>Gestion des Audiences</h1>
+    <p class="subtitle">Gérer les audiences et les décisions juridiques</p>
+  </div>
+
+  <!-- Search Bar -->
+  <div class="search-section">
+    <div class="search-bar">
+      <div class="search-input-group">
+        <i class="fas fa-search"></i>
+        <input 
+          type="text" 
+          [(ngModel)]="searchTerm" 
+          (input)="onSearch()" 
+          placeholder="Rechercher par numéro de dossier, créancier ou débiteur..."
+          class="search-input"
+        >
+      </div>
+    </div>
+  </div>
+
+  <!-- Dossiers with Audiences -->
+  <div class="dossiers-section">
+    <div class="loading-spinner" *ngIf="isLoading">
+      <i class="fas fa-spinner fa-spin"></i>
+      <p>Chargement des dossiers...</p>
+    </div>
+    
+    <div class="dossiers-list" *ngIf="!isLoading && filteredDossiers.length > 0; else noDossiers">
+      <div class="dossier-item" *ngFor="let dossier of filteredDossiers">
+        <div class="dossier-header">
+          <div class="dossier-info">
+            <h3 class="dossier-number">{{ dossier.numeroDossier }}</h3>
+            <div class="dossier-details">
+              <span><strong>Créancier:</strong> {{ dossier.creancier.nom }}</span>
+              <span><strong>Débiteur:</strong> {{ dossier.debiteur.nom }}</span>
+              <span *ngIf="dossier.montantCreance"><strong>Montant:</strong> {{ dossier.montantCreance | currency:'TND':'symbol':'1.2-2' }}</span>
+            </div>
+          </div>
+          <button class="btn btn-primary" (click)="showAudienceModal(dossier)">
+            <i class="fas fa-plus"></i> Ajouter Audience
+          </button>
+        </div>
+
+        <!-- Audiences for this dossier -->
+        <div class="audiences-section" *ngIf="getAudiencesForDossier(+dossier.id).length > 0">
+          <h4>Audiences</h4>
+          <div class="audiences-list">
+            <div class="audience-card" *ngFor="let audience of getAudiencesForDossier(+dossier.id)">
+              <div class="audience-header">
+                <div class="audience-date">
+                  <i class="fas fa-calendar"></i>
+                  <span>{{ audience.dateAudience | date:'dd/MM/yyyy' }}</span>
+                </div>
+                <div class="audience-tribunal">
+                  <i class="fas fa-gavel"></i>
+                  <span>{{ getTribunalTypeDisplay(audience.tribunalType) }}</span>
+                </div>
+              </div>
+              
+              <div class="audience-details">
+                <div class="detail-row">
+                  <i class="fas fa-map-marker-alt"></i>
+                  <span>{{ audience.lieuTribunal }}</span>
+                </div>
+                <div class="detail-row" *ngIf="audience.dateProchaine">
+                  <i class="fas fa-calendar-check"></i>
+                  <span>Prochaine audience: {{ audience.dateProchaine | date:'dd/MM/yyyy' }}</span>
+                </div>
+                <div class="detail-row">
+                  <i class="fas fa-user-tie"></i>
+                  <span>{{ getAssigneeType(audience) }}: {{ getAssigneeName(audience) }}</span>
+                </div>
+                <div class="detail-row" *ngIf="audience.decisionResult">
+                  <i class="fas fa-balance-scale"></i>
+                  <span>Décision: {{ getDecisionResultDisplay(audience.decisionResult) }}</span>
+                </div>
+                <div class="detail-row" *ngIf="audience.commentaireDecision">
+                  <i class="fas fa-comment"></i>
+                  <span>{{ audience.commentaireDecision }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="no-audiences" *ngIf="getAudiencesForDossier(+dossier.id).length === 0">
+          <p>Aucune audience enregistrée pour ce dossier.</p>
+        </div>
+      </div>
+    </div>
+
+    <ng-template #noDossiers>
+      <div class="no-dossiers">
+        <i class="fas fa-folder-open"></i>
+        <h3>Aucun dossier trouvé</h3>
+        <p>Aucun dossier n'est disponible pour la gestion des audiences.</p>
+      </div>
+    </ng-template>
+  </div>
+
+  <!-- Audience Form Modal -->
+  <div class="modal-overlay" *ngIf="showAudienceForm" (click)="cancelAudienceForm()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>Ajouter une Audience</h2>
+        <button class="close-btn" (click)="cancelAudienceForm()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="dossier-info-modal">
+          <h3>{{ selectedDossier?.numeroDossier }}</h3>
+          <p><strong>Créancier:</strong> {{ selectedDossier?.creancier?.nom }}</p>
+          <p><strong>Débiteur:</strong> {{ selectedDossier?.debiteur?.nom }}</p>
+        </div>
+
+        <form [formGroup]="audienceForm" (ngSubmit)="onSubmitAudience()" class="audience-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="dateAudience">Date de l'audience *</label>
+              <input 
+                type="date" 
+                id="dateAudience" 
+                formControlName="dateAudience" 
+                class="form-control"
+              >
+            </div>
+            <div class="form-group">
+              <label for="dateProchaine">Date prochaine audience</label>
+              <input 
+                type="date" 
+                id="dateProchaine" 
+                formControlName="dateProchaine" 
+                class="form-control"
+              >
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="tribunalType">Type de tribunal *</label>
+              <select id="tribunalType" formControlName="tribunalType" class="form-control">
+                <option value="">Sélectionner...</option>
+                <option *ngFor="let type of getTribunalTypes()" [value]="type">
+                  {{ getTribunalTypeDisplay(type) }}
+                </option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="lieuTribunal">Lieu du tribunal *</label>
+              <input 
+                type="text" 
+                id="lieuTribunal" 
+                formControlName="lieuTribunal" 
+                class="form-control"
+                placeholder="Ex: Tribunal de Tunis"
+              >
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="avocatId">Avocat assigné</label>
+              <select id="avocatId" formControlName="avocatId" class="form-control">
+                <option value="">Sélectionner un avocat...</option>
+                <option *ngFor="let avocat of avocats" [value]="avocat.id">
+                  {{ avocat.prenom }} {{ avocat.nom }}
+                </option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="huissierId">Huissier assigné</label>
+              <select id="huissierId" formControlName="huissierId" class="form-control">
+                <option value="">Sélectionner un huissier...</option>
+                <option *ngFor="let huissier of huissiers" [value]="huissier.id">
+                  {{ huissier.prenom }} {{ huissier.nom }}
+                </option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="decisionResult">Résultat de la décision</label>
+            <select id="decisionResult" formControlName="decisionResult" class="form-control">
+              <option value="">Sélectionner...</option>
+              <option *ngFor="let result of getDecisionResults()" [value]="result">
+                {{ getDecisionResultDisplay(result) }}
+              </option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="commentaireDecision">Commentaire sur la décision</label>
+            <textarea 
+              id="commentaireDecision" 
+              formControlName="commentaireDecision" 
+              class="form-control"
+              rows="3"
+              placeholder="Détails sur la décision prise..."
+            ></textarea>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" (click)="cancelAudienceForm()">Annuler</button>
+            <button type="submit" class="btn btn-primary" [disabled]="audienceForm.invalid">
+              <i class="fas fa-check"></i> Ajouter Audience
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>

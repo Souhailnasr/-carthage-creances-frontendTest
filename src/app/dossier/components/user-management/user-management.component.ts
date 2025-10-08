@@ -6,6 +6,7 @@ import { Subject, takeUntil } from 'rxjs';
 import { User, Role } from '../../../shared/models';
 import { FormInputComponent } from '../../../shared/components/form-input/form-input.component';
 import { ToastService } from '../../../core/services/toast.service';
+import { UtilisateurService, Utilisateur, UtilisateurRequest } from '../../../core/services/utilisateur.service';
 
 @Component({
   selector: 'app-user-management',
@@ -15,15 +16,16 @@ import { ToastService } from '../../../core/services/toast.service';
   styleUrls: ['./user-management.component.scss']
 })
 export class UserManagementComponent implements OnInit, OnDestroy {
-  users: User[] = [];
-  filteredUsers: User[] = [];
+  utilisateurs: Utilisateur[] = [];
+  filteredUtilisateurs: Utilisateur[] = [];
   searchTerm: string = '';
   showCreateForm: boolean = false;
   userForm!: FormGroup;
   isEditMode: boolean = false;
-  editingUser: User | null = null;
+  editingUser: Utilisateur | null = null;
   showPassword: boolean = false;
   showConfirmPassword: boolean = false;
+  isLoading: boolean = false;
   private destroy$ = new Subject<void>();
 
   // Getters pour les contrôles de formulaire
@@ -36,7 +38,8 @@ export class UserManagementComponent implements OnInit, OnDestroy {
 
   constructor(
     private fb: FormBuilder,
-    private toastService: ToastService
+    private toastService: ToastService,
+    private utilisateurService: UtilisateurService
   ) { }
 
   ngOnInit(): void {
@@ -77,47 +80,32 @@ export class UserManagementComponent implements OnInit, OnDestroy {
   }
 
   loadUsers(): void {
-    // Simulation de données - dans une vraie app, ceci viendrait d'une API
-    this.users = [
-      new User({
-        id: '1',
-        nom: 'Doe',
-        prenom: 'John',
-        email: 'john.doe@carthage-creance.tn',
-        motDePasse: 'password',
-        role: Role.AGENT_DOSSIER,
-        actif: true
-      }),
-      new User({
-        id: '2',
-        nom: 'Smith',
-        prenom: 'Jane',
-        email: 'jane.smith@carthage-creance.tn',
-        motDePasse: 'password',
-        role: Role.AGENT_DOSSIER,
-        actif: true
-      }),
-      new User({
-        id: '3',
-        nom: 'Johnson',
-        prenom: 'Mike',
-        email: 'mike.johnson@carthage-creance.tn',
-        motDePasse: 'password',
-        role: Role.AGENT_DOSSIER,
-        actif: true
-      })
-    ];
-    this.filteredUsers = [...this.users];
+    this.isLoading = true;
+    this.utilisateurService.getAllUtilisateurs()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (utilisateurs) => {
+          this.utilisateurs = utilisateurs;
+          this.filteredUtilisateurs = [...utilisateurs];
+          this.isLoading = false;
+          console.log('✅ Utilisateurs chargés:', utilisateurs);
+        },
+        error: (error) => {
+          console.error('❌ Erreur lors du chargement des utilisateurs:', error);
+          this.toastService.error('Erreur lors du chargement des utilisateurs');
+          this.isLoading = false;
+        }
+      });
   }
 
   onSearch(): void {
     if (!this.searchTerm.trim()) {
-      this.filteredUsers = [...this.users];
+      this.filteredUtilisateurs = [...this.utilisateurs];
     } else {
-      this.filteredUsers = this.users.filter(user =>
-        user.getFullName().toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-        user.email.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-        user.role.toLowerCase().includes(this.searchTerm.toLowerCase())
+      this.filteredUtilisateurs = this.utilisateurs.filter(utilisateur =>
+        `${utilisateur.prenom} ${utilisateur.nom}`.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
+        utilisateur.email.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
+        (utilisateur.roleUtilisateur || utilisateur.role || '').toLowerCase().includes(this.searchTerm.toLowerCase())
       );
     }
   }
@@ -129,16 +117,16 @@ export class UserManagementComponent implements OnInit, OnDestroy {
     this.initializeForm();
   }
 
-  showEditUserForm(user: User): void {
+  showEditUserForm(utilisateur: Utilisateur): void {
     this.showCreateForm = true;
     this.isEditMode = true;
-    this.editingUser = user;
+    this.editingUser = utilisateur;
     this.userForm.patchValue({
-      nom: user.nom,
-      prenom: user.prenom,
-      email: user.email,
+      nom: utilisateur.nom,
+      prenom: utilisateur.prenom,
+      email: utilisateur.email,
       motDePasse: '', // Ne pas pré-remplir le mot de passe
-      role: user.role
+      role: utilisateur.roleUtilisateur || utilisateur.role
     });
   }
 
@@ -150,37 +138,62 @@ export class UserManagementComponent implements OnInit, OnDestroy {
     }
 
     const formValue = this.userForm.value;
+    const utilisateurRequest: UtilisateurRequest = {
+      nom: formValue.nom,
+      prenom: formValue.prenom,
+      email: formValue.email,
+      roleUtilisateur: formValue.role,
+      motDePasse: formValue.motDePasse,
+      actif: true
+    };
     
     if (this.isEditMode && this.editingUser) {
       // Mise à jour
-      const index = this.users.findIndex(u => u.id === this.editingUser!.id);
-      if (index !== -1) {
-        this.users[index] = { ...this.users[index], ...formValue };
-        this.toastService.success('Utilisateur mis à jour avec succès.');
-      }
+      this.utilisateurService.updateUtilisateur(this.editingUser.id!, utilisateurRequest)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: () => {
+            this.toastService.success('Utilisateur mis à jour avec succès.');
+            this.cancelForm();
+            this.loadUsers(); // Recharger la liste
+          },
+          error: (error) => {
+            console.error('❌ Erreur lors de la mise à jour:', error);
+            this.toastService.error('Erreur lors de la mise à jour de l\'utilisateur');
+          }
+        });
     } else {
       // Création
-      const newUser = new User({
-        id: Date.now().toString(),
-        ...formValue,
-        actif: true
-      });
-      this.users.push(newUser);
-      this.toastService.success('Utilisateur créé avec succès.');
+      this.utilisateurService.createUtilisateur(utilisateurRequest)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: () => {
+            this.toastService.success('Utilisateur créé avec succès.');
+            this.cancelForm();
+            this.loadUsers(); // Recharger la liste
+          },
+          error: (error) => {
+            console.error('❌ Erreur lors de la création:', error);
+            this.toastService.error('Erreur lors de la création de l\'utilisateur');
+          }
+        });
     }
-
-    this.filteredUsers = [...this.users];
-    this.cancelForm();
   }
 
-  deleteUser(user: User): void {
+  deleteUser(utilisateur: Utilisateur): void {
     if (confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?')) {
-      const index = this.users.findIndex(u => u.id === user.id);
-      if (index !== -1) {
-        this.users.splice(index, 1);
-        this.filteredUsers = [...this.users];
-        this.toastService.success('Utilisateur supprimé avec succès.');
-      }
+      this.utilisateurService.deleteUtilisateur(utilisateur.id!)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: () => {
+            this.toastService.success('Utilisateur supprimé avec succès.');
+            this.loadUsers(); // Recharger la liste
+          },
+          error: (error) => {
+            console.error('❌ Erreur lors de la suppression:', error);
+            this.toastService.error('Erreur lors de la suppression de l\'utilisateur');
+          }
+        });
     }
   }
 
@@ -191,24 +204,24 @@ export class UserManagementComponent implements OnInit, OnDestroy {
     this.initializeForm();
   }
 
-  getRoleDisplayName(role: Role): string {
-    const roleNames: { [key in Role]: string } = {
-      [Role.SUPER_ADMIN]: 'Super Administrateur',
-      [Role.CHEF_DOSSIER]: 'Chef de Dossier',
-      [Role.AGENT_DOSSIER]: 'Agent de Dossier',
-      [Role.CHEF_JURIDIQUE]: 'Chef Juridique',
-      [Role.AGENT_JURIDIQUE]: 'Agent Juridique',
-      [Role.CHEF_FINANCE]: 'Chef Finance',
-      [Role.AGENT_FINANCE]: 'Agent Finance',
-      [Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE]: 'Chef Département Recouvrement Amiable',
-      [Role.AGENT_RECOUVREMENT_AMIABLE]: 'Agent Recouvrement Amiable'
+  getRoleDisplayName(role: string): string {
+    const roleNames: { [key: string]: string } = {
+      'SUPER_ADMIN': 'Super Administrateur',
+      'CHEF_DOSSIER': 'Chef de Dossier',
+      'AGENT_DOSSIER': 'Agent de Dossier',
+      'CHEF_JURIDIQUE': 'Chef Juridique',
+      'AGENT_JURIDIQUE': 'Agent Juridique',
+      'CHEF_FINANCE': 'Chef Finance',
+      'AGENT_FINANCE': 'Agent Finance',
+      'CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE': 'Chef Département Recouvrement Amiable',
+      'AGENT_RECOUVREMENT_AMIABLE': 'Agent Recouvrement Amiable'
     };
 
     return roleNames[role] || role;
   }
 
-  getUserInitials(user: User): string {
-    return user.getFullName().split(' ').map(n => n[0]).join('');
+  getUserInitials(utilisateur: Utilisateur): string {
+    return `${utilisateur.prenom} ${utilisateur.nom}`.split(' ').map(n => n[0]).join('');
   }
 
   togglePasswordVisibility(): void {

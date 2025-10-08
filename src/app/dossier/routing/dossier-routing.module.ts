@@ -7,9 +7,7 @@ import { DossierGestionComponent } from '../components/dossier-gestion/dossier-g
 import { DossierDetailComponent } from '../components/dossier-detail/dossier-detail.component';
 import { EnquetePhaseComponent } from '../components/enquete-phase/enquete-phase.component';
 import { EnqueteDetailComponent } from '../components/enquete-detail/enquete-detail.component';
-// Remplace l'ancien écran mock par le composant relié à l'API
-// import { UserManagementComponent } from '../components/user-management/user-management.component';
-import { UtilisateursComponent } from '../../admin/components/utilisateurs/utilisateurs.component';
+import { UserManagementComponent } from '../components/user-management/user-management.component';
 import { UserProfileComponent } from '../../shared/components/user-profile/user-profile.component';
 import { AuthGuard, ChefDossierGuard } from '../../core/guards';
 import { Role } from '../../shared/models';
@@ -65,7 +63,7 @@ const routes: Routes = [
   },
   {
     path: 'utilisateurs',
-    component: UtilisateursComponent,
+    component: UserManagementComponent,
     canActivate: [AuthGuard, ChefDossierGuard],
     data: { allowedRoles: [Role.CHEF_DOSSIER, Role.SUPER_ADMIN] }
   },

@@ -1,0 +1,126 @@
+<div class="juridique-sidebar" [class.collapsed]="isCollapsed">
+  <!-- Header -->
+  <div class="sidebar-header">
+    <div class="logo-section">
+      <i class="fas fa-gavel logo-icon"></i>
+      <span class="app-name">Juridique</span>
+    </div>
+    <button class="collapse-btn" (click)="toggleCollapse()">
+      <i class="fas" [ngClass]="isCollapsed ? 'fa-angle-right' : 'fa-angle-left'"></i>
+    </button>
+  </div>
+
+  <!-- User Profile -->
+  <div class="user-profile">
+    <div class="user-avatar">
+      <span class="avatar-text">CJ</span>
+    </div>
+    <div class="user-info">
+      <h3 class="user-name">Chef Juridique</h3>
+      <p class="user-role">Chef Juridique</p>
+    </div>
+  </div>
+
+  <!-- Navigation -->
+  <nav class="sidebar-nav">
+    <ul class="nav-list">
+      <!-- Dashboard -->
+      <li class="nav-item" [class.active]="isActiveRoute('/juridique/dashboard')">
+        <a class="nav-link" routerLink="/juridique/dashboard" routerLinkActive="active">
+          <i class="fas fa-tachometer-alt"></i>
+          <span>Tableau de Bord</span>
+        </a>
+      </li>
+
+      <!-- Avocat -->
+      <li class="nav-item nav-group" [class.active]="isActiveRoute('/juridique/avocats')">
+        <a class="nav-link nav-group-header" (click)="toggleSubmenu('avocat')">
+          <i class="fas fa-user-tie"></i>
+          <span>Avocat</span>
+          <i class="fas fa-chevron-down expand-icon" [class.rotated]="expandedMenus['avocat']"></i>
+        </a>
+        <ul class="nav-sublist" [style.display]="expandedMenus['avocat'] ? 'block' : 'none'">
+          <li class="nav-subitem" [class.active]="isActiveRoute('/juridique/avocats/add')">
+            <a class="nav-sublink" routerLink="/juridique/avocats/add" routerLinkActive="active">
+              <i class="fas fa-plus"></i>
+              <span>Ajouter Avocat</span>
+            </a>
+          </li>
+          <li class="nav-subitem" [class.active]="isActiveRoute('/juridique/avocats')">
+            <a class="nav-sublink" routerLink="/juridique/avocats" routerLinkActive="active">
+              <i class="fas fa-list"></i>
+              <span>Liste Avocats</span>
+            </a>
+          </li>
+        </ul>
+      </li>
+
+      <!-- Huissier -->
+      <li class="nav-item nav-group" [class.active]="isActiveRoute('/juridique/huissiers')">
+        <a class="nav-link nav-group-header" (click)="toggleSubmenu('huissier')">
+          <i class="fas fa-balance-scale"></i>
+          <span>Huissier</span>
+          <i class="fas fa-chevron-down expand-icon" [class.rotated]="expandedMenus['huissier']"></i>
+        </a>
+        <ul class="nav-sublist" [style.display]="expandedMenus['huissier'] ? 'block' : 'none'">
+          <li class="nav-subitem" [class.active]="isActiveRoute('/juridique/huissiers/add')">
+            <a class="nav-sublink" routerLink="/juridique/huissiers/add" routerLinkActive="active">
+              <i class="fas fa-plus"></i>
+              <span>Ajouter Huissier</span>
+            </a>
+          </li>
+          <li class="nav-subitem" [class.active]="isActiveRoute('/juridique/huissiers')">
+            <a class="nav-sublink" routerLink="/juridique/huissiers" routerLinkActive="active">
+              <i class="fas fa-list"></i>
+              <span>Liste Huissiers</span>
+            </a>
+          </li>
+        </ul>
+      </li>
+
+      <!-- Affectation des Dossiers -->
+      <li class="nav-item" [class.active]="isActiveRoute('/juridique/affectation-dossiers')">
+        <a class="nav-link" routerLink="/juridique/affectation-dossiers" routerLinkActive="active">
+          <i class="fas fa-folder-open"></i>
+          <span>Affectation des Dossiers</span>
+        </a>
+      </li>
+
+      <!-- Gestion des Audiences -->
+      <li class="nav-item" [class.active]="isActiveRoute('/juridique/gestion-audiences')">
+        <a class="nav-link" routerLink="/juridique/gestion-audiences" routerLinkActive="active">
+          <i class="fas fa-gavel"></i>
+          <span>Gestion des Audiences</span>
+        </a>
+      </li>
+
+      <!-- Gestion D'utilisateur juridique -->
+      <li class="nav-item" [class.active]="isActiveRoute('/juridique/gestion-utilisateurs')">
+        <a class="nav-link" routerLink="/juridique/gestion-utilisateurs" routerLinkActive="active">
+          <i class="fas fa-users"></i>
+          <span>Gestion D'utilisateur juridique</span>
+        </a>
+      </li>
+
+      <!-- Tâches -->
+      <li class="nav-item" [class.active]="isActiveRoute('/juridique/taches')">
+        <a class="nav-link" routerLink="/juridique/taches" routerLinkActive="active">
+          <i class="fas fa-tasks"></i>
+          <span>Tâches</span>
+        </a>
+      </li>
+    </ul>
+  </nav>
+
+  <!-- Actions -->
+  <div class="sidebar-actions">
+    <button class="action-btn profile-btn" (click)="goToProfile()">
+      <i class="fas fa-user"></i>
+      <span>Profil</span>
+    </button>
+    <button class="action-btn logout-btn" (click)="logout()">
+      <i class="fas fa-sign-out-alt"></i>
+      <span>Déconnexion</span>
+    </button>
+  </div>
+</div>

@@ -4,8 +4,8 @@ import { AuthGuard } from './core/guards';
 export const routes: Routes = [
   {
     path: '',
-    redirectTo: '/dashboard',
-    pathMatch: 'full'
+    loadComponent: () => import('./shared/components/role-redirect/role-redirect.component').then(m => m.RoleRedirectComponent),
+    canActivate: [AuthGuard]
   },
   {
     path: 'login',

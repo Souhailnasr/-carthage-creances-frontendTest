@@ -1,0 +1,171 @@
+<div class="juridique-profile-container">
+  <div class="profile-header">
+    <div class="profile-avatar">
+      <span class="avatar-text">{{ getInitials() }}</span>
+    </div>
+    <div class="profile-info">
+      <h1 class="profile-name">{{ getFullName() }}</h1>
+      <p class="profile-role">Chef Juridique</p>
+    </div>
+    <button class="edit-btn" (click)="toggleEdit()" [class.editing]="isEditing">
+      <i class="fas" [ngClass]="isEditing ? 'fa-times' : 'fa-edit'"></i>
+      {{ isEditing ? 'Annuler' : 'Modifier' }}
+    </button>
+  </div>
+
+  <div class="profile-content">
+    <!-- Informations personnelles -->
+    <div class="profile-section">
+      <h2 class="section-title">
+        <i class="fas fa-user"></i>
+        Informations personnelles
+      </h2>
+      
+      <form [formGroup]="profileForm" (ngSubmit)="onSaveProfile()" *ngIf="isEditing; else displayMode">
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="prenom">Prénom *</label>
+            <input 
+              type="text" 
+              id="prenom" 
+              formControlName="prenom"
+              class="form-control"
+              [class.error]="profileForm.get('prenom')?.invalid && profileForm.get('prenom')?.touched">
+            <div class="error-message" *ngIf="profileForm.get('prenom')?.invalid && profileForm.get('prenom')?.touched">
+              <span *ngIf="profileForm.get('prenom')?.errors?.['required']">Le prénom est requis</span>
+              <span *ngIf="profileForm.get('prenom')?.errors?.['minlength']">Le prénom doit contenir au moins 2 caractères</span>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="nom">Nom *</label>
+            <input 
+              type="text" 
+              id="nom" 
+              formControlName="nom"
+              class="form-control"
+              [class.error]="profileForm.get('nom')?.invalid && profileForm.get('nom')?.touched">
+            <div class="error-message" *ngIf="profileForm.get('nom')?.invalid && profileForm.get('nom')?.touched">
+              <span *ngIf="profileForm.get('nom')?.errors?.['required']">Le nom est requis</span>
+              <span *ngIf="profileForm.get('nom')?.errors?.['minlength']">Le nom doit contenir au moins 2 caractères</span>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="email">Email *</label>
+            <input 
+              type="email" 
+              id="email" 
+              formControlName="email"
+              class="form-control"
+              [class.error]="profileForm.get('email')?.invalid && profileForm.get('email')?.touched">
+            <div class="error-message" *ngIf="profileForm.get('email')?.invalid && profileForm.get('email')?.touched">
+              <span *ngIf="profileForm.get('email')?.errors?.['required']">L'email est requis</span>
+              <span *ngIf="profileForm.get('email')?.errors?.['email']">Format d'email invalide</span>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary" [disabled]="profileForm.invalid">
+            <i class="fas fa-save"></i>
+            Sauvegarder
+          </button>
+        </div>
+      </form>
+
+      <ng-template #displayMode>
+        <div class="info-grid">
+          <div class="info-item">
+            <label>Prénom</label>
+            <span>{{ currentUser?.prenom || 'Non renseigné' }}</span>
+          </div>
+          <div class="info-item">
+            <label>Nom</label>
+            <span>{{ currentUser?.nom || 'Non renseigné' }}</span>
+          </div>
+          <div class="info-item">
+            <label>Email</label>
+            <span>{{ currentUser?.email || 'Non renseigné' }}</span>
+          </div>
+          <div class="info-item">
+            <label>Rôle</label>
+            <span>{{ currentUser?.role || 'Non renseigné' }}</span>
+          </div>
+          <div class="info-item">
+            <label>Statut</label>
+            <span>{{ currentUser?.actif ? 'Actif' : 'Inactif' }}</span>
+          </div>
+        </div>
+      </ng-template>
+    </div>
+
+    <!-- Sécurité -->
+    <div class="profile-section">
+      <h2 class="section-title">
+        <i class="fas fa-shield-alt"></i>
+        Sécurité
+      </h2>
+      
+      <div class="security-actions">
+        <button class="btn btn-secondary" (click)="togglePasswordForm()">
+          <i class="fas fa-key"></i>
+          {{ showPasswordForm ? 'Annuler' : 'Changer le mot de passe' }}
+        </button>
+      </div>
+
+      <form [formGroup]="passwordForm" (ngSubmit)="onChangePassword()" *ngIf="showPasswordForm" class="password-form">
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="currentPassword">Mot de passe actuel *</label>
+            <input 
+              type="password" 
+              id="currentPassword" 
+              formControlName="currentPassword"
+              class="form-control"
+              [class.error]="passwordForm.get('currentPassword')?.invalid && passwordForm.get('currentPassword')?.touched">
+            <div class="error-message" *ngIf="passwordForm.get('currentPassword')?.invalid && passwordForm.get('currentPassword')?.touched">
+              Le mot de passe actuel est requis
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="newPassword">Nouveau mot de passe *</label>
+            <input 
+              type="password" 
+              id="newPassword" 
+              formControlName="newPassword"
+              class="form-control"
+              [class.error]="passwordForm.get('newPassword')?.invalid && passwordForm.get('newPassword')?.touched">
+            <div class="error-message" *ngIf="passwordForm.get('newPassword')?.invalid && passwordForm.get('newPassword')?.touched">
+              <span *ngIf="passwordForm.get('newPassword')?.errors?.['required']">Le nouveau mot de passe est requis</span>
+              <span *ngIf="passwordForm.get('newPassword')?.errors?.['minlength']">Le mot de passe doit contenir au moins 6 caractères</span>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="confirmPassword">Confirmer le mot de passe *</label>
+            <input 
+              type="password" 
+              id="confirmPassword" 
+              formControlName="confirmPassword"
+              class="form-control"
+              [class.error]="passwordForm.get('confirmPassword')?.invalid && passwordForm.get('confirmPassword')?.touched">
+            <div class="error-message" *ngIf="passwordForm.get('confirmPassword')?.invalid && passwordForm.get('confirmPassword')?.touched">
+              <span *ngIf="passwordForm.get('confirmPassword')?.errors?.['required']">La confirmation est requise</span>
+              <span *ngIf="passwordForm.get('confirmPassword')?.errors?.['passwordMismatch']">Les mots de passe ne correspondent pas</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary" [disabled]="passwordForm.invalid">
+            <i class="fas fa-save"></i>
+            Changer le mot de passe
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

@@ -36,7 +36,9 @@ export class LoginComponent implements OnInit, OnDestroy {
 
     // Redirect if already logged in
     if (this.authService.isAuthenticated()) {
-      this.router.navigate([this.returnUrl]);
+      const currentUser = this.authService.getCurrentUser();
+      const redirectUrl = currentUser ? this.getRedirectUrlByRole(currentUser.role) : this.returnUrl;
+      this.router.navigate([redirectUrl]);
     }
   }
 
@@ -66,7 +68,8 @@ export class LoginComponent implements OnInit, OnDestroy {
           
           // Attendre un peu pour que l'authentification soit complètement persistée
           setTimeout(() => {
-            this.router.navigate([this.returnUrl]);
+            const redirectUrl = this.getRedirectUrlByRole(response.user.role);
+            this.router.navigate([redirectUrl]);
           }, 100);
         },
         error: (error) => {
@@ -114,6 +117,23 @@ export class LoginComponent implements OnInit, OnDestroy {
     const passwordInput = document.getElementById('password') as HTMLInputElement;
     if (passwordInput) {
       passwordInput.type = this.showPassword ? 'text' : 'password';
+    }
+  }
+
+  private getRedirectUrlByRole(role: string): string {
+    switch (role) {
+      case 'CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE':
+        return '/juridique/dashboard';
+      case 'CHEF_DEPARTEMENT_DOSSIER':
+        return '/dossier/dashboard';
+      case 'AGENT_DOSSIER':
+        return '/dossier/dashboard';
+      case 'AGENT_RECOUVREMENT_JURIDIQUE':
+        return '/juridique/dashboard';
+      case 'SUPER_ADMIN':
+        return '/admin/dashboard';
+      default:
+        return '/dashboard';
     }
   }
 }

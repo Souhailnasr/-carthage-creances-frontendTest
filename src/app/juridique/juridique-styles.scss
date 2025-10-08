@@ -1,0 +1,317 @@
+// Global styles for Juridique module
+.juridique-module {
+  font-family: 'Roboto', sans-serif;
+  color: #333;
+  background-color: #f4f7f6;
+
+  // Common button styles
+  .btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    border: none;
+    text-decoration: none;
+
+    &-primary {
+      background-color: #6f42c1;
+      color: white;
+
+      &:hover {
+        background-color: #5a35a0;
+      }
+
+      &:disabled {
+        background-color: #a78ed1;
+        cursor: not-allowed;
+      }
+    }
+
+    &-secondary {
+      background-color: #6c757d;
+      color: white;
+
+      &:hover {
+        background-color: #5a6268;
+      }
+    }
+
+    &-success {
+      background-color: #28a745;
+      color: white;
+
+      &:hover {
+        background-color: #218838;
+      }
+    }
+
+    &-danger {
+      background-color: #dc3545;
+      color: white;
+
+      &:hover {
+        background-color: #c82333;
+      }
+    }
+
+    &-warning {
+      background-color: #ffc107;
+      color: #212529;
+
+      &:hover {
+        background-color: #e0a800;
+      }
+    }
+
+    &-outline-primary {
+      background-color: transparent;
+      color: #6f42c1;
+      border: 1px solid #6f42c1;
+
+      &:hover {
+        background-color: #6f42c1;
+        color: white;
+      }
+    }
+
+    &-outline-danger {
+      background-color: transparent;
+      color: #dc3545;
+      border: 1px solid #dc3545;
+
+      &:hover {
+        background-color: #dc3545;
+        color: white;
+      }
+    }
+
+    &-sm {
+      padding: 0.4rem 0.8rem;
+      font-size: 0.8rem;
+    }
+  }
+
+  // Common form styles
+  .form-control {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+
+    &:focus {
+      outline: none;
+      border-color: #6f42c1;
+    }
+
+    &.is-invalid {
+      border-color: #dc3545;
+    }
+  }
+
+  .form-group {
+    margin-bottom: 1rem;
+
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      color: #2c3e50;
+      font-weight: 500;
+    }
+
+    .form-error {
+      margin-top: 0.25rem;
+
+      small {
+        color: #dc3545;
+        font-size: 0.8rem;
+      }
+    }
+  }
+
+  // Common card styles
+  .card {
+    background-color: #fff;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e9ecef;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    }
+  }
+
+  // Common loading spinner
+  .loading-spinner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+
+    i {
+      font-size: 2rem;
+      color: #6f42c1;
+      margin-bottom: 1rem;
+    }
+
+    p {
+      margin: 0;
+      color: #6c757d;
+      font-size: 1.1rem;
+    }
+  }
+
+  // Common no-data state
+  .no-data {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+
+    i {
+      font-size: 4rem;
+      color: #6f42c1;
+      margin-bottom: 1.5rem;
+    }
+
+    h3 {
+      margin: 0 0 0.5rem 0;
+      color: #2c3e50;
+      font-size: 1.5rem;
+      font-weight: 600;
+    }
+
+    p {
+      margin: 0;
+      color: #6c757d;
+      font-size: 1.1rem;
+      text-align: center;
+    }
+  }
+
+  // Common search bar
+  .search-bar {
+    background-color: #fff;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+
+    .search-input-group {
+      position: relative;
+      display: flex;
+      align-items: center;
+
+      i {
+        position: absolute;
+        left: 1rem;
+        color: #6c757d;
+        z-index: 1;
+      }
+
+      .search-input {
+        width: 100%;
+        padding: 0.75rem 1rem 0.75rem 3rem;
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: border-color 0.3s ease;
+
+        &:focus {
+          outline: none;
+          border-color: #6f42c1;
+        }
+      }
+    }
+  }
+
+  // Common modal styles
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+
+    .modal-content {
+      background-color: #fff;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 600px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.5rem;
+        border-bottom: 1px solid #e9ecef;
+
+        h2 {
+          margin: 0;
+          color: #2c3e50;
+          font-size: 1.5rem;
+          font-weight: 600;
+        }
+
+        .close-btn {
+          background: none;
+          border: none;
+          font-size: 1.2rem;
+          color: #6c757d;
+          cursor: pointer;
+          padding: 0.5rem;
+          border-radius: 50%;
+          transition: background-color 0.3s ease;
+
+          &:hover {
+            background-color: #f8f9fa;
+          }
+        }
+      }
+
+      .modal-body {
+        padding: 1.5rem;
+      }
+    }
+  }
+
+  // Responsive utilities
+  @media (max-width: 768px) {
+    .btn {
+      padding: 0.5rem 1rem;
+      font-size: 0.9rem;
+    }
+
+    .card {
+      padding: 1rem;
+    }
+
+    .modal-content {
+      width: 95%;
+      margin: 1rem;
+    }
+  }
+}

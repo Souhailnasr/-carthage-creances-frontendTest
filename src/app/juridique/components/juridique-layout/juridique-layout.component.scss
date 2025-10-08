@@ -1,0 +1,26 @@
+.juridique-layout {
+  display: flex;
+  min-height: 100vh;
+  background-color: #f4f7f6;
+
+  .main-content {
+    flex: 1;
+    margin-left: 280px;
+    transition: margin-left 0.3s ease;
+    min-height: 100vh;
+
+    // When sidebar is collapsed
+    .juridique-sidebar.collapsed + & {
+      margin-left: 70px;
+    }
+  }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .juridique-layout {
+    .main-content {
+      margin-left: 0;
+    }
+  }
+}

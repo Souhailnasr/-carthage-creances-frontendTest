@@ -21,6 +21,8 @@ export interface DossierApi {
   commentaireValidation?: string;
   avocat?: AvocatApi;
   huissier?: HuissierApi;
+  avocatId?: number;
+  huissierId?: number;
   enquette?: EnquetteApi;
   audiences?: AudienceApi[];
   actions?: ActionApi[];
@@ -130,8 +132,7 @@ export interface FinanceApi {
 export enum Urgence {
   FAIBLE = 'FAIBLE',
   MOYENNE = 'MOYENNE',
-  ELEVEE = 'ELEVEE',
-  CRITIQUE = 'CRITIQUE'
+  TRES_URGENT = 'TRES_URGENT'
 }
 
 export enum DossierStatus {

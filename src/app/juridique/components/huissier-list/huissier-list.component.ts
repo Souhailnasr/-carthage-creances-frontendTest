@@ -2,11 +2,10 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { HuissierService } from '../../services/huissier.service';
-import { RoleService } from '../../../core/services/role.service';
-import { ToastService } from '../../../core/services/toast.service';
-import { Huissier } from '../../../shared/models';
 import { Subject, takeUntil } from 'rxjs';
+import { Huissier } from '../../models/huissier.model';
+import { HuissierService } from '../../services/huissier.service';
+import { ToastService } from '../../../core/services/toast.service';
 
 @Component({
   selector: 'app-huissier-list',
@@ -19,16 +18,13 @@ export class HuissierListComponent implements OnInit, OnDestroy {
   huissiers: Huissier[] = [];
   filteredHuissiers: Huissier[] = [];
   searchTerm: string = '';
-  currentPage: number = 1;
-  pageSize: number = 10;
-  totalPages: number = 0;
+  isLoading: boolean = false;
   private destroy$ = new Subject<void>();
 
   constructor(
     private huissierService: HuissierService,
-    public roleService: RoleService,
     private toastService: ToastService
-  ) { }
+  ) {}
 
   ngOnInit(): void {
     this.loadHuissiers();
@@ -40,63 +36,54 @@ export class HuissierListComponent implements OnInit, OnDestroy {
   }
 
   loadHuissiers(): void {
-    this.huissierService.getAll()
+    this.isLoading = true;
+    this.huissierService.getAllHuissiers()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (huissiers) => {
           this.huissiers = huissiers;
-          this.filteredHuissiers = huissiers;
-          this.updatePagination();
+          this.filteredHuissiers = [...huissiers];
+          this.isLoading = false;
+          console.log('✅ Huissiers chargés:', huissiers);
         },
-        error: (err) => {
-          this.toastService.error('Erreur lors du chargement des huissiers.');
-          console.error(err);
+        error: (error) => {
+          console.error('❌ Erreur lors du chargement des huissiers:', error);
+          this.toastService.error('Erreur lors du chargement des huissiers');
+          this.isLoading = false;
         }
       });
   }
 
   onSearch(): void {
     if (!this.searchTerm.trim()) {
-      this.filteredHuissiers = this.huissiers;
+      this.filteredHuissiers = [...this.huissiers];
     } else {
       this.filteredHuissiers = this.huissiers.filter(huissier =>
-        huissier.nom.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-        huissier.prenom.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
+        `${huissier.prenom} ${huissier.nom}`.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
         huissier.email.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-        huissier.specialite.toLowerCase().includes(this.searchTerm.toLowerCase())
+        (huissier.telephone || '').includes(this.searchTerm)
       );
     }
-    this.currentPage = 1;
-    this.updatePagination();
   }
 
-  updatePagination(): void {
-    this.totalPages = Math.ceil(this.filteredHuissiers.length / this.pageSize);
-  }
-
-  getPaginatedHuissiers(): Huissier[] {
-    const startIndex = (this.currentPage - 1) * this.pageSize;
-    return this.filteredHuissiers.slice(startIndex, startIndex + this.pageSize);
-  }
-
-  onPageChange(page: number): void {
-    this.currentPage = page;
-  }
-
-  deleteHuissier(id: string): void {
+  deleteHuissier(huissier: Huissier): void {
     if (confirm('Êtes-vous sûr de vouloir supprimer cet huissier ?')) {
-      this.huissierService.delete(id)
+      this.huissierService.deleteHuissier(huissier.id!)
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: () => {
             this.toastService.success('Huissier supprimé avec succès.');
             this.loadHuissiers();
           },
-          error: (err) => {
-            this.toastService.error('Erreur lors de la suppression de l\'huissier.');
-            console.error(err);
+          error: (error) => {
+            console.error('❌ Erreur lors de la suppression:', error);
+            this.toastService.error('Erreur lors de la suppression de l\'huissier');
           }
         });
     }
+  }
+
+  getHuissierInitials(huissier: Huissier): string {
+    return `${huissier.prenom} ${huissier.nom}`.split(' ').map(n => n[0]).join('');
   }
 }

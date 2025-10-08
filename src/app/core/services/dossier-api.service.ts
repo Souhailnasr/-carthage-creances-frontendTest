@@ -20,6 +20,23 @@ export class DossierApiService {
 
   constructor(private http: HttpClient) { }
 
+  // ==================== TYPES POUR RECHERCHE AVANCÉE ====================
+
+  /**
+   * Paramètres de recherche/filtrage combinés pour dossiers
+   */
+  public static readonly DEFAULT_PAGE_SIZE = 10;
+
+  private buildSearchParams(params: AdvancedSearchParams): HttpParams {
+    let httpParams = new HttpParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value === undefined || value === null || value === '') return;
+      // cast sécurisée en string
+      httpParams = httpParams.set(key, String(value));
+    });
+    return httpParams;
+  }
+
   // ==================== CRUD OPERATIONS ====================
 
   /**
@@ -27,6 +44,15 @@ export class DossierApiService {
    */
   createDossier(dossier: DossierRequest): Observable<DossierApi> {
     return this.http.post<DossierApi>(this.apiUrl, dossier);
+  }
+
+  /**
+   * Nouvelle création: POST /create?isChef=
+   */
+  create(dossier: DossierRequest, isChef: boolean): Observable<DossierApi> {
+    return this.http.post<DossierApi>(`${this.apiUrl}/create`, dossier, {
+      params: { isChef: String(isChef) }
+    });
   }
 
   /**
@@ -51,6 +77,40 @@ export class DossierApiService {
   }
 
   /**
+   * Nouvelle création avec fichiers: /create?isChef=
+   * FormData keys: dossier(json), contratSigne, pouvoir
+   */
+  createWithFiles(
+    dossier: DossierRequest,
+    contratSigne: File | undefined,
+    pouvoir: File | undefined,
+    isChef: boolean
+  ): Observable<DossierApi> {
+    const formData = new FormData();
+    // Champs simples attendus par le DTO backend
+    if (dossier.titre !== undefined) formData.append('titre', String(dossier.titre));
+    if (dossier.description !== undefined) formData.append('description', String(dossier.description));
+    if (dossier.numeroDossier !== undefined) formData.append('numeroDossier', String(dossier.numeroDossier));
+    if (dossier.montantCreance !== undefined) formData.append('montantCreance', String(dossier.montantCreance as any));
+    if (dossier.typeDocumentJustificatif !== undefined) formData.append('typeDocumentJustificatif', String(dossier.typeDocumentJustificatif));
+    if (dossier.urgence !== undefined) formData.append('urgence', String(dossier.urgence));
+    if ((dossier as any).dossierStatus !== undefined) formData.append('dossierStatus', String((dossier as any).dossierStatus));
+    if ((dossier as any).statut !== undefined) formData.append('statut', String((dossier as any).statut));
+    if ((dossier as any).nomCreancier !== undefined) formData.append('nomCreancier', String((dossier as any).nomCreancier));
+    if ((dossier as any).nomDebiteur !== undefined) formData.append('nomDebiteur', String((dossier as any).nomDebiteur));
+    // Optionnel: agentCreateurId si disponible
+    if ((dossier as any).agentCreateurId !== undefined && (dossier as any).agentCreateurId !== null) {
+      formData.append('agentCreateurId', String((dossier as any).agentCreateurId));
+    }
+
+    // Fichiers (clés conformes au DTO: contratSigneFile, pouvoirFile)
+    if (contratSigne) formData.append('contratSigneFile', contratSigne);
+    if (pouvoir) formData.append('pouvoirFile', pouvoir);
+
+    return this.http.post<DossierApi>(`${this.apiUrl}/create`, formData, { params: { isChef: String(isChef) } });
+  }
+
+  /**
    * Récupère un dossier par ID
    */
   getDossierById(id: number): Observable<DossierApi> {
@@ -62,6 +122,25 @@ export class DossierApiService {
    */
   getAllDossiers(): Observable<DossierApi[]> {
     return this.http.get<DossierApi[]>(this.apiUrl);
+  }
+
+  /**
+   * Liste filtrée: GET /?role=&userId=
+   */
+  list(role?: 'CHEF' | 'AGENT', userId?: number): Observable<DossierApi[]> {
+    const params: any = {};
+    if (role) params.role = role;
+    if (userId !== undefined) params.userId = String(userId);
+    return this.http.get<DossierApi[]>(this.apiUrl, { params });
+  }
+
+  /**
+   * Récupère les dossiers par statut
+   */
+  getDossiersByStatut(statut: DossierStatus | string | undefined): Observable<DossierApi[]> {
+    const status: string | undefined = typeof statut === 'string' ? statut : (statut as DossierStatus | undefined);
+    const safe = status ?? '';
+    return this.http.get<DossierApi[]>(`${this.apiUrl}/statut/${safe}`);
   }
 
   /**
@@ -142,6 +221,13 @@ export class DossierApiService {
     });
   }
 
+  /**
+   * Recherche simplifiée: GET /search?term=
+   */
+  search(term: string): Observable<DossierApi[]> {
+    return this.http.get<DossierApi[]>(`${this.apiUrl}/search`, { params: { term } });
+  }
+
   // ==================== SPECIAL OPERATIONS ====================
 
   /**
@@ -163,6 +249,52 @@ export class DossierApiService {
    */
   getRecentDossiers(): Observable<DossierApi[]> {
     return this.http.get<DossierApi[]>(`${this.apiUrl}/recent`);
+  }
+
+  /**
+   * Téléverse un fichier PDF (contrat ou pouvoir) pour un dossier existant
+   */
+  uploadPdf(
+    dossierId: number,
+    type: 'contratSigne' | 'pouvoir',
+    file: File
+  ): Observable<DossierApi> {
+    const formData = new FormData();
+    formData.append(type, file);
+    return this.http.post<DossierApi>(`${this.apiUrl}/${dossierId}/upload-${type}`, formData);
+  }
+
+  /**
+   * Uploads dédiés: POST /{id}/upload/contrat|pouvoir avec clé 'file'
+   */
+  uploadContrat(dossierId: number, file: File): Observable<DossierApi> {
+    const fd = new FormData();
+    fd.append('file', file);
+    return this.http.post<DossierApi>(`${this.apiUrl}/${dossierId}/upload/contrat`, fd);
+  }
+
+  uploadPouvoir(dossierId: number, file: File): Observable<DossierApi> {
+    const fd = new FormData();
+    fd.append('file', file);
+    return this.http.post<DossierApi>(`${this.apiUrl}/${dossierId}/upload/pouvoir`, fd);
+  }
+
+  /**
+   * Supprime un fichier PDF (contrat ou pouvoir) d'un dossier
+   */
+  deletePdf(
+    dossierId: number,
+    type: 'contratSigne' | 'pouvoir'
+  ): Observable<DossierApi> {
+    return this.http.delete<DossierApi>(`${this.apiUrl}/${dossierId}/delete-${type}`);
+  }
+
+  deleteContrat(dossierId: number): Observable<DossierApi> {
+    return this.http.delete<DossierApi>(`${this.apiUrl}/${dossierId}/upload/contrat`);
+  }
+
+  deletePouvoir(dossierId: number): Observable<DossierApi> {
+    return this.http.delete<DossierApi>(`${this.apiUrl}/${dossierId}/upload/pouvoir`);
   }
 
   /**
@@ -196,21 +328,42 @@ export class DossierApiService {
   }
 
   /**
+   * Filtrage par statut de validation: GET /status/{statut}
+   */
+  byValidationStatut(statut: 'EN_ATTENTE' | 'VALIDE' | 'REJETE'): Observable<DossierApi[]> {
+    return this.http.get<DossierApi[]>(`${this.apiUrl}/status/${statut}`);
+  }
+
+  /**
    * Valide un dossier
    */
   validerDossier(dossierId: number, chefId: number): Observable<DossierApi> {
-    return this.http.post<DossierApi>(`${this.apiUrl}/${dossierId}/valider`, null, {
+    return this.http.put<DossierApi>(`${this.apiUrl}/${dossierId}/valider`, null, {
       params: { chefId: chefId.toString() }
     });
+  }
+
+  /**
+   * Alias attendu par certains composants (validateDossier)
+   */
+  validateDossier(dossierId: number, chefId: number): Observable<DossierApi> {
+    return this.validerDossier(dossierId, chefId);
   }
 
   /**
    * Rejette un dossier
    */
   rejeterDossier(dossierId: number, commentaire: string): Observable<DossierApi> {
-    return this.http.post<DossierApi>(`${this.apiUrl}/${dossierId}/rejeter`, null, {
+    return this.http.put<DossierApi>(`${this.apiUrl}/${dossierId}/rejeter`, null, {
       params: { commentaire }
     });
+  }
+
+  /**
+   * Alias attendu par certains composants (rejectDossier)
+   */
+  rejectDossier(dossierId: number, commentaire: string): Observable<DossierApi> {
+    return this.rejeterDossier(dossierId, commentaire);
   }
 
   // ==================== STATISTIQUES ====================
@@ -241,6 +394,16 @@ export class DossierApiService {
    */
   countDossiersCreesCeMois(): Observable<number> {
     return this.http.get<number>(`${this.apiUrl}/statistiques/ce-mois`);
+  }
+
+  /**
+   * Statistiques unifiées: GET /stats?role=&agentId=
+   */
+  stats(role?: 'CHEF' | 'AGENT', agentId?: number): Observable<any> {
+    const params: any = {};
+    if (role) params.role = role;
+    if (agentId !== undefined) params.agentId = String(agentId);
+    return this.http.get<any>(`${this.apiUrl}/stats`, { params });
   }
 
   /**
@@ -290,4 +453,56 @@ export class DossierApiService {
       params: { minAmount: minAmount.toString(), maxAmount: maxAmount.toString() }
     });
   }
+
+  /**
+   * Recherche avancée combinable via query params optionnels
+   */
+  searchAdvanced(params: AdvancedSearchParams): Observable<DossiersResponse> {
+    const httpParams = this.buildSearchParams(params);
+    return this.http.get<DossiersResponse>(`${this.apiUrl}/search/advanced`, { params: httpParams });
+  }
+
+  /**
+   * Méthode conviviale pour effectuer une recherche combinée avec pagination/tri
+   */
+  combinedSearch(options: {
+    query?: string;
+    filters?: Omit<AdvancedSearchParams, 'page' | 'size' | 'sort' | 'searchTerm'>;
+    page?: number;
+    size?: number;
+    sort?: string;
+  }): Observable<DossiersResponse> {
+    const { query, filters = {}, page = 0, size = DossierApiService.DEFAULT_PAGE_SIZE, sort } = options;
+    const params: AdvancedSearchParams = {
+      ...filters,
+      page,
+      size,
+      sort,
+      // autoriser aussi une clé générique "searchTerm" côté backend si supportée
+      searchTerm: query
+    };
+    return this.searchAdvanced(params);
+  }
+}
+
+// Types exportés pour les appels avancés
+export interface AdvancedSearchParams {
+  numero?: string;
+  titre?: string;
+  description?: string;
+  searchTerm?: string;
+  agentId?: number;
+  creancierId?: number;
+  debiteurId?: number;
+  minMontant?: number;
+  maxMontant?: number;
+  urgence?: Urgence;
+  dateCreationDebut?: string; // ISO date
+  dateCreationFin?: string;   // ISO date
+  dateClotureDebut?: string;  // ISO date
+  dateClotureFin?: string;    // ISO date
+  statut?: DossierStatus | string;
+  page?: number;              // 0-based
+  size?: number;              // page size
+  sort?: string;              // e.g. "dateCreation,desc"
 }

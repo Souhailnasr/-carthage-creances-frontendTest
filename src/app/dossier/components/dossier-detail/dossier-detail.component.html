@@ -151,6 +151,20 @@
             {{ dossier.contratSigne ? 'Oui' : 'Non' }}
           </span>
         </div>
+        <div class="document-item" *ngIf="canManageFiles()">
+          <label>Gérer Contrat (PDF)</label>
+          <div class="actions">
+            <input type="file" accept="application/pdf" (change)="onUploadContrat($event)" />
+            <button class="btn btn-danger" (click)="deleteContrat()">Supprimer</button>
+          </div>
+        </div>
+        <div class="document-item" *ngIf="canManageFiles()">
+          <label>Gérer Pouvoir (PDF)</label>
+          <div class="actions">
+            <input type="file" accept="application/pdf" (change)="onUploadPouvoir($event)" />
+            <button class="btn btn-danger" (click)="deletePouvoir()">Supprimer</button>
+          </div>
+        </div>
         <div class="document-item" *ngIf="dossier.valide">
           <label>Date de Validation</label>
           <span>{{ dossier.dateValidation | date:'dd/MM/yyyy HH:mm' }}</span>

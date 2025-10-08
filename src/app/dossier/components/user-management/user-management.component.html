@@ -112,7 +112,12 @@
 
   <!-- Tableau des utilisateurs -->
   <div class="table-container">
-    <table class="users-table">
+    <div class="loading-spinner" *ngIf="isLoading">
+      <i class="fas fa-spinner fa-spin"></i>
+      <p>Chargement des utilisateurs...</p>
+    </div>
+    
+    <table class="users-table" *ngIf="!isLoading">
       <thead>
         <tr>
           <th>Avatar</th>
@@ -125,30 +130,30 @@
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let user of filteredUsers">
+        <tr *ngFor="let utilisateur of filteredUtilisateurs">
           <td>
             <div class="user-avatar">
-              <span class="avatar-text">{{ getUserInitials(user) }}</span>
+              <span class="avatar-text">{{ getUserInitials(utilisateur) }}</span>
             </div>
           </td>
-          <td>{{ user.nom }}</td>
-          <td>{{ user.prenom }}</td>
-          <td>{{ user.email }}</td>
+          <td>{{ utilisateur.nom }}</td>
+          <td>{{ utilisateur.prenom }}</td>
+          <td>{{ utilisateur.email }}</td>
           <td>
             <span class="role-badge">
-              {{ getRoleDisplayName(user.role) }}
+              {{ getRoleDisplayName(utilisateur.roleUtilisateur || utilisateur.role || '') }}
             </span>
           </td>
           <td>
-            <span class="status-badge" [ngClass]="user.actif ? 'active' : 'inactive'">
-              {{ user.actif ? 'Actif' : 'Inactif' }}
+            <span class="status-badge" [ngClass]="utilisateur.actif ? 'active' : 'inactive'">
+              {{ utilisateur.actif ? 'Actif' : 'Inactif' }}
             </span>
           </td>
           <td class="actions">
-            <button class="btn btn-sm btn-warning" (click)="showEditUserForm(user)" title="Modifier">
+            <button class="btn btn-sm btn-warning" (click)="showEditUserForm(utilisateur)" title="Modifier">
               <i class="fas fa-edit"></i>
             </button>
-            <button class="btn btn-sm btn-danger" (click)="deleteUser(user)" title="Supprimer">
+            <button class="btn btn-sm btn-danger" (click)="deleteUser(utilisateur)" title="Supprimer">
               <i class="fas fa-trash"></i>
             </button>
           </td>
@@ -156,7 +161,7 @@
       </tbody>
     </table>
 
-    <div *ngIf="filteredUsers.length === 0" class="no-data">
+    <div *ngIf="!isLoading && filteredUtilisateurs.length === 0" class="no-data">
       <i class="fas fa-users"></i>
       <p>Aucun utilisateur trouvé</p>
     </div>

@@ -1,84 +1,69 @@
 <div class="avocat-list-container">
   <div class="header">
-    <h2>Liste des Avocats</h2>
-    <div class="header-actions">
-      <div class="search-box">
-        <input
-          type="text"
-          [(ngModel)]="searchTerm"
-          (input)="onSearch()"
-          placeholder="Rechercher un avocat..."
-          class="search-input">
-        <i class="fas fa-search search-icon"></i>
+    <h1>Liste des Avocats</h1>
+    <a routerLink="/juridique/avocats/add" class="btn btn-primary">
+      <i class="fas fa-user-plus"></i> Ajouter un Avocat
+    </a>
+  </div>
+
+  <!-- Search Bar -->
+  <div class="search-section">
+    <div class="search-bar">
+      <div class="search-input-group">
+        <i class="fas fa-search"></i>
+        <input 
+          type="text" 
+          [(ngModel)]="searchTerm" 
+          (input)="onSearch()" 
+          placeholder="Rechercher par nom, email ou téléphone..."
+          class="search-input"
+        >
       </div>
-      <button
-        *ngIf="roleService.isChefJuridique() || roleService.isSuperAdmin()"
-        routerLink="/juridique/avocats/ajouter"
-        class="btn btn-primary">
-        <i class="fas fa-plus"></i>
-        Ajouter un Avocat
-      </button>
     </div>
   </div>
 
-  <div class="table-container">
-    <table class="avocat-table">
-      <thead>
-        <tr>
-          <th>Nom</th>
-          <th>Prénom</th>
-          <th>Email</th>
-          <th>Téléphone</th>
-          <th>Spécialité</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let avocat of getPaginatedAvocats()">
-          <td>{{ avocat.nom }}</td>
-          <td>{{ avocat.prenom }}</td>
-          <td>{{ avocat.email }}</td>
-          <td>{{ avocat.telephone }}</td>
-          <td>{{ avocat.specialite }}</td>
-          <td class="actions">
-            <button
-              *ngIf="roleService.isChefJuridique() || roleService.isSuperAdmin()"
-              routerLink="/juridique/avocats/modifier/{{ avocat.id }}"
-              class="btn btn-sm btn-edit">
-              <i class="fas fa-edit"></i>
-            </button>
-            <button
-              *ngIf="roleService.isChefJuridique() || roleService.isSuperAdmin()"
-              (click)="deleteAvocat(avocat.id)"
-              class="btn btn-sm btn-delete">
-              <i class="fas fa-trash"></i>
-            </button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-
-    <div *ngIf="filteredAvocats.length === 0" class="no-data">
-      <i class="fas fa-user-tie"></i>
-      <p>Aucun avocat trouvé</p>
+  <!-- Avocats List -->
+  <div class="avocats-section">
+    <div class="loading-spinner" *ngIf="isLoading">
+      <i class="fas fa-spinner fa-spin"></i>
+      <p>Chargement des avocats...</p>
     </div>
-  </div>
+    
+    <div class="avocats-grid" *ngIf="!isLoading && filteredAvocats.length > 0; else noAvocats">
+      <div class="avocat-card" *ngFor="let avocat of filteredAvocats">
+        <div class="avocat-avatar">
+          <span class="avatar-text">{{ getAvocatInitials(avocat) }}</span>
+        </div>
+        <div class="avocat-info">
+          <h3 class="avocat-name">{{ avocat.prenom }} {{ avocat.nom }}</h3>
+          <p class="avocat-email">{{ avocat.email }}</p>
+          <p class="avocat-phone" *ngIf="avocat.telephone">
+            <i class="fas fa-phone"></i> {{ avocat.telephone }}
+          </p>
+          <p class="avocat-address" *ngIf="avocat.adresse">
+            <i class="fas fa-map-marker-alt"></i> {{ avocat.adresse }}
+          </p>
+        </div>
+        <div class="avocat-actions">
+          <a [routerLink]="['/juridique/avocats/edit', avocat.id]" class="btn btn-sm btn-outline-primary">
+            <i class="fas fa-edit"></i> Modifier
+          </a>
+          <button class="btn btn-sm btn-outline-danger" (click)="deleteAvocat(avocat)">
+            <i class="fas fa-trash"></i> Supprimer
+          </button>
+        </div>
+      </div>
+    </div>
 
-  <div *ngIf="totalPages > 1" class="pagination">
-    <button
-      (click)="onPageChange(currentPage - 1)"
-      [disabled]="currentPage === 1"
-      class="btn btn-sm">
-      <i class="fas fa-chevron-left"></i>
-    </button>
-    <span class="page-info">
-      Page {{ currentPage }} sur {{ totalPages }}
-    </span>
-    <button
-      (click)="onPageChange(currentPage + 1)"
-      [disabled]="currentPage === totalPages"
-      class="btn btn-sm">
-      <i class="fas fa-chevron-right"></i>
-    </button>
+    <ng-template #noAvocats>
+      <div class="no-avocats">
+        <i class="fas fa-user-tie"></i>
+        <h3>Aucun avocat trouvé</h3>
+        <p>Commencez par ajouter un nouvel avocat.</p>
+        <a routerLink="/juridique/avocats/add" class="btn btn-primary">
+          <i class="fas fa-user-plus"></i> Ajouter un Avocat
+        </a>
+      </div>
+    </ng-template>
   </div>
 </div>

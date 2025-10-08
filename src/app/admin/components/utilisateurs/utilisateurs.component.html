@@ -1,0 +1,149 @@
+<div class="user-management-container">
+  <div class="header">
+    <h1>Gestion des Utilisateurs</h1>
+    <button class="btn btn-primary" (click)="showCreateUserForm()">
+      <i class="fas fa-user-plus"></i> Ajouter un Utilisateur
+    </button>
+  </div>
+
+  <!-- Formulaire de création/édition -->
+  <div class="form-container" *ngIf="showCreateForm">
+    <div class="form-header">
+      <h2>{{ isEditMode ? 'Modifier l\'Utilisateur' : 'Nouvel Utilisateur' }}</h2>
+      <button class="btn btn-secondary" (click)="cancelForm()">
+        <i class="fas fa-times"></i> Annuler
+      </button>
+    </div>
+
+    <form [formGroup]="userForm" (ngSubmit)="onSubmit()" class="user-form">
+      <div class="form-grid">
+        <app-form-input label="Nom" [control]="nomControl" id="nom"></app-form-input>
+        <app-form-input label="Prénom" [control]="prenomControl" id="prenom"></app-form-input>
+        <app-form-input label="Email" [control]="emailControl" type="email" id="email"></app-form-input>
+        
+        <!-- Mot de passe avec visibilité -->
+        <div class="form-group password-group">
+          <label for="motDePasse">Mot de passe</label>
+          <div class="password-input-wrapper">
+            <input 
+              [type]="getPasswordFieldType()" 
+              id="motDePasse" 
+              formControlName="motDePasse"
+              class="form-control"
+              [class.is-invalid]="motDePasseControl.invalid && motDePasseControl.touched"
+              placeholder="Entrez le mot de passe">
+            <button type="button" class="password-toggle" (click)="togglePasswordVisibility()">
+              <i class="fas" [class.fa-eye]="!showPassword" [class.fa-eye-slash]="showPassword"></i>
+            </button>
+          </div>
+          <div class="invalid-feedback" *ngIf="motDePasseControl.invalid && motDePasseControl.touched">
+            <div *ngIf="motDePasseControl.errors?.['required']">Le mot de passe est requis</div>
+            <div *ngIf="motDePasseControl.errors?.['minlength']">Le mot de passe doit contenir au moins 6 caractères</div>
+          </div>
+        </div>
+
+        <!-- Confirmation mot de passe -->
+        <div class="form-group password-group">
+          <label for="confirmPassword">Confirmer le mot de passe</label>
+          <div class="password-input-wrapper">
+            <input 
+              [type]="getConfirmPasswordFieldType()" 
+              id="confirmPassword" 
+              formControlName="confirmPassword"
+              class="form-control"
+              [class.is-invalid]="confirmPasswordControl.invalid && confirmPasswordControl.touched"
+              placeholder="Confirmez le mot de passe">
+            <button type="button" class="password-toggle" (click)="toggleConfirmPasswordVisibility()">
+              <i class="fas" [class.fa-eye]="!showConfirmPassword" [class.fa-eye-slash]="showConfirmPassword"></i>
+            </button>
+          </div>
+          <div class="invalid-feedback" *ngIf="confirmPasswordControl.invalid && confirmPasswordControl.touched">
+            <div *ngIf="confirmPasswordControl.errors?.['required']">La confirmation du mot de passe est requise</div>
+            <div *ngIf="confirmPasswordControl.errors?.['passwordMismatch']">Les mots de passe ne correspondent pas</div>
+          </div>
+        </div>
+
+        <!-- Rôle -->
+        <div class="form-group">
+          <label for="role">Rôle</label>
+          <select id="role" formControlName="role" class="form-control" 
+                  [class.is-invalid]="roleControl.invalid && roleControl.touched">
+            <option value="">Sélectionnez un rôle</option>
+            <option value="SUPER_ADMIN">Super Administrateur</option>
+            <option value="CHEF_DOSSIER">Chef de Dossier</option>
+            <option value="AGENT_DOSSIER">Agent de Dossier</option>
+            <option value="CHEF_JURIDIQUE">Chef Juridique</option>
+            <option value="AGENT_JURIDIQUE">Agent Juridique</option>
+            <option value="CHEF_FINANCE">Chef Finance</option>
+            <option value="AGENT_FINANCE">Agent Finance</option>
+            <option value="CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE">Chef Département Recouvrement Amiable</option>
+            <option value="AGENT_RECOUVREMENT_AMIABLE">Agent Recouvrement Amiable</option>
+          </select>
+          <div class="invalid-feedback" *ngIf="roleControl.invalid && roleControl.touched">
+            Le rôle est requis
+          </div>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" (click)="cancelForm()">Annuler</button>
+        <button type="submit" class="btn btn-primary" [disabled]="userForm.invalid">
+          {{ isEditMode ? 'Mettre à jour' : 'Créer' }}
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Barre de recherche -->
+  <div class="search-container">
+    <div class="search-input-wrapper">
+      <i class="fas fa-search search-icon"></i>
+      <input 
+        type="text" 
+        [(ngModel)]="searchTerm" 
+        (input)="onSearch()"
+        placeholder="Rechercher par nom, email ou rôle..."
+        class="search-input">
+    </div>
+  </div>
+
+  <!-- Liste des utilisateurs -->
+  <div class="users-list">
+    <div class="loading-spinner" *ngIf="isLoading">
+      <i class="fas fa-spinner fa-spin"></i>
+      <p>Chargement des utilisateurs...</p>
+    </div>
+    
+    <div class="users-grid" *ngIf="!isLoading && filteredUtilisateurs.length > 0; else noUsers">
+      <div class="user-card" *ngFor="let utilisateur of filteredUtilisateurs">
+        <div class="user-avatar">
+          <span class="avatar-text">{{ getUserInitials(utilisateur) }}</span>
+        </div>
+        <div class="user-info">
+          <h3 class="user-name">{{ utilisateur.prenom }} {{ utilisateur.nom }}</h3>
+          <p class="user-email">{{ utilisateur.email }}</p>
+          <span class="user-role" [class]="'role-' + (utilisateur.roleUtilisateur || utilisateur.role || '').toLowerCase().replace('_', '-')">
+            {{ getRoleDisplayName(utilisateur.roleUtilisateur || utilisateur.role || '') }}
+          </span>
+        </div>
+        <div class="user-actions">
+          <button class="btn btn-sm btn-outline-primary" (click)="showEditUserForm(utilisateur)">
+            <i class="fas fa-edit"></i> Modifier
+          </button>
+          <button class="btn btn-sm btn-outline-danger" (click)="deleteUser(utilisateur)">
+            <i class="fas fa-trash"></i> Supprimer
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <ng-template #noUsers>
+      <div class="no-users">
+        <i class="fas fa-users"></i>
+        <h3>Aucun utilisateur trouvé</h3>
+        <p *ngIf="searchTerm">Aucun utilisateur ne correspond à votre recherche.</p>
+        <p *ngIf="!searchTerm">Aucun utilisateur n'a encore été créé.</p>
+      </div>
+    </ng-template>
+  </div>
+</div>

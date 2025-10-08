@@ -1,0 +1,271 @@
+.juridique-sidebar {
+  width: 280px;
+  height: 100vh;
+  background: linear-gradient(180deg, #2c3e50 0%, #34495e 100%);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  transition: width 0.3s ease;
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 1000;
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+
+  &.collapsed {
+    width: 70px;
+
+    .app-name,
+    .user-info,
+    .nav-link span,
+    .action-btn span,
+    .expand-icon {
+      display: none;
+    }
+
+    .nav-sublist {
+      display: none !important;
+    }
+  }
+
+  .sidebar-header {
+    padding: 1.5rem 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    .logo-section {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+
+      .logo-icon {
+        font-size: 1.8rem;
+        color: #6f42c1;
+      }
+
+      .app-name {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: white;
+      }
+    }
+
+    .collapse-btn {
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      color: white;
+      padding: 0.5rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.2);
+      }
+    }
+  }
+
+  .user-profile {
+    padding: 1.5rem 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+
+    .user-avatar {
+      width: 50px;
+      height: 50px;
+      background: linear-gradient(135deg, #6f42c1, #8e44ad);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+
+      .avatar-text {
+        font-weight: bold;
+        font-size: 1.1rem;
+        color: white;
+      }
+    }
+
+    .user-info {
+      .user-name {
+        margin: 0 0 0.25rem 0;
+        font-size: 1rem;
+        font-weight: 600;
+        color: white;
+      }
+
+      .user-role {
+        margin: 0;
+        font-size: 0.85rem;
+        color: rgba(255, 255, 255, 0.7);
+      }
+    }
+  }
+
+  .sidebar-nav {
+    flex: 1;
+    padding: 1rem 0;
+    overflow-y: auto;
+
+    .nav-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+
+      .nav-item {
+        margin-bottom: 0.25rem;
+
+        &.active > .nav-link {
+          background: rgba(111, 66, 193, 0.2);
+          border-right: 3px solid #6f42c1;
+        }
+
+        .nav-link {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+          padding: 0.75rem 1rem;
+          color: rgba(255, 255, 255, 0.8);
+          text-decoration: none;
+          transition: all 0.3s ease;
+          cursor: pointer;
+
+          &:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+          }
+
+          i {
+            font-size: 1.1rem;
+            width: 20px;
+            text-align: center;
+          }
+
+          .expand-icon {
+            margin-left: auto;
+            transition: transform 0.3s ease;
+
+            &.rotated {
+              transform: rotate(180deg);
+            }
+          }
+        }
+
+        .nav-group {
+          .nav-group-header {
+            font-weight: 500;
+          }
+
+          .nav-sublist {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            background: rgba(0, 0, 0, 0.2);
+
+            .nav-subitem {
+              &.active > .nav-sublink {
+                background: rgba(111, 66, 193, 0.4);
+                color: white;
+                font-weight: 600;
+                
+                i {
+                  color: #5a35a0;
+                }
+              }
+
+              .nav-sublink {
+                display: flex;
+                align-items: center;
+                gap: 0.75rem;
+                padding: 0.5rem 1rem 0.5rem 3rem;
+                color: rgba(255, 255, 255, 0.9);
+                text-decoration: none;
+                transition: all 0.3s ease;
+                font-size: 0.9rem;
+                font-weight: 500;
+
+                &:hover {
+                  background: rgba(255, 255, 255, 0.15);
+                  color: white;
+                }
+
+                i {
+                  font-size: 0.9rem;
+                  width: 16px;
+                  text-align: center;
+                  color: #3498db;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  .sidebar-actions {
+    padding: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+
+    .action-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem 1rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-size: 0.9rem;
+      font-weight: 500;
+
+      i {
+        font-size: 1rem;
+        width: 20px;
+        text-align: center;
+      }
+
+      &.profile-btn {
+        background: rgba(52, 152, 219, 0.2);
+        color: #3498db;
+
+        &:hover {
+          background: rgba(52, 152, 219, 0.3);
+        }
+      }
+
+      &.logout-btn {
+        background: rgba(231, 76, 60, 0.2);
+        color: #e74c3c;
+
+        &:hover {
+          background: rgba(231, 76, 60, 0.3);
+        }
+      }
+    }
+  }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .juridique-sidebar {
+    width: 100%;
+    height: auto;
+    position: relative;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+
+    &.collapsed {
+      transform: translateX(0);
+      width: 100%;
+    }
+  }
+}

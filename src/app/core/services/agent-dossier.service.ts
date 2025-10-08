@@ -4,6 +4,7 @@ import { tap, map } from 'rxjs/operators';
 import { DossierApiService } from './dossier-api.service';
 import { DossierApi, DossierRequest } from '../../shared/models/dossier-api.model';
 import { AuthService } from './auth.service';
+import { Role } from '../../shared/models/enums.model';
 
 @Injectable({
   providedIn: 'root'
@@ -78,16 +79,16 @@ export class AgentDossierService {
   /**
    * Crée un nouveau dossier
    */
-  creerDossier(dossierRequest: DossierRequest): Observable<DossierApi> {
+  creerDossier(dossierRequest: DossierRequest, isChefOverride?: boolean): Observable<DossierApi> {
     const currentUser = this.authService.getCurrentUser();
-    if (!currentUser) {
-      throw new Error('Utilisateur non connecté');
-    }
+    // Pas d'auth obligatoire: ne pas forcer l'agentCreateurId si inexistant
 
-    // Ajouter l'agent créateur
-    dossierRequest.agentCreateurId = parseInt(currentUser.id);
+    // Si chef, le backend valide automatiquement (isChef=true)
+    const isChef: boolean = typeof isChefOverride === 'boolean'
+      ? isChefOverride
+      : !!(currentUser && (currentUser.role === Role.CHEF_DEPARTEMENT_DOSSIER || currentUser.role === Role.SUPER_ADMIN));
 
-    return this.dossierApiService.createDossier(dossierRequest).pipe(
+    return this.dossierApiService.create(dossierRequest, isChef).pipe(
       tap(nouveauDossier => {
         // Ajouter à la liste locale
         const dossiers = this.mesDossiersSubject.value;
@@ -104,17 +105,17 @@ export class AgentDossierService {
   creerDossierAvecFichiers(
     dossierRequest: DossierRequest,
     contratSigne?: File,
-    pouvoir?: File
+    pouvoir?: File,
+    isChefOverride?: boolean
   ): Observable<DossierApi> {
     const currentUser = this.authService.getCurrentUser();
-    if (!currentUser) {
-      throw new Error('Utilisateur non connecté');
-    }
+    // Ne pas envoyer agentCreateurId si non nécessaire (pas d'auth)
 
-    // Ajouter l'agent créateur
-    dossierRequest.agentCreateurId = parseInt(currentUser.id);
+    const isChef: boolean = typeof isChefOverride === 'boolean'
+      ? isChefOverride
+      : !!(currentUser && (currentUser.role === Role.CHEF_DEPARTEMENT_DOSSIER || currentUser.role === Role.SUPER_ADMIN));
 
-    return this.dossierApiService.createDossierWithFiles(dossierRequest, contratSigne, pouvoir).pipe(
+    return this.dossierApiService.createWithFiles(dossierRequest, contratSigne, pouvoir, isChef).pipe(
       tap(nouveauDossier => {
         // Ajouter à la liste locale
         const dossiers = this.mesDossiersSubject.value;

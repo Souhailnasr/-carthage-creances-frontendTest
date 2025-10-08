@@ -1,10 +1,10 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { UtilisateursComponent } from './components/utilisateurs/utilisateurs.component';
-import { ParametresComponent } from './components/parametres/parametres.component';
 import { RouterModule, Routes } from '@angular/router';
 import { AuthGuard } from '../core/guards';
 import { Role } from '../shared/models';
+import { UtilisateursComponent } from './components/utilisateurs/utilisateurs.component';
+import { ParametresComponent } from './components/parametres/parametres.component';
 
 const routes: Routes = [
   {
@@ -26,9 +26,7 @@ const routes: Routes = [
   declarations: [],
   imports: [
     CommonModule,
-    RouterModule.forChild(routes),
-    UtilisateursComponent,
-    ParametresComponent
+    RouterModule.forChild(routes)
   ]
 })
 export class AdminModule { }

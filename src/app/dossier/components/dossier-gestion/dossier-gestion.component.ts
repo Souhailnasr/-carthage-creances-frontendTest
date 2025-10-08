@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormControl, FormsModule } from '@angular/forms';
 import { Subject, takeUntil, Observable } from 'rxjs';
-import { Dossier, TypeDocumentJustificatif, UrgenceDossier, StatutDossier, Role } from '../../../shared/models';
+import { Dossier, TypeDocumentJustificatif, UrgenceDossier, StatutDossier } from '../../../shared/models';
 import { FormInputComponent } from '../../../shared/components/form-input/form-input.component';
 import { ToastService } from '../../../core/services/toast.service';
 import { AuthService } from '../../../core/services/auth.service';
@@ -12,6 +12,7 @@ import { ChefDossierService } from '../../../core/services/chef-dossier.service'
 import { CreancierApiService } from '../../../core/services/creancier-api.service';
 import { DebiteurApiService } from '../../../core/services/debiteur-api.service';
 import { DossierApi, DossierRequest, Urgence, DossierStatus, TypeDocumentJustificatif as ApiTypeDocument, CreancierApi, DebiteurApi } from '../../../shared/models/dossier-api.model';
+import { Role } from '../../../shared/models/enums.model';
 
 @Component({
   selector: 'app-dossier-gestion',
@@ -23,6 +24,7 @@ import { DossierApi, DossierRequest, Urgence, DossierStatus, TypeDocumentJustifi
 export class DossierGestionComponent implements OnInit, OnDestroy {
   dossiers: Dossier[] = [];
   filteredDossiers: Dossier[] = [];
+  pagedDossiers: Dossier[] = [];
   searchTerm: string = '';
   showCreateForm: boolean = false;
   dossierForm!: FormGroup;
@@ -31,9 +33,29 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
   currentUser: any = null;
   private destroy$ = new Subject<void>();
 
+  // Fichiers sélectionnés
+  selectedContratFile?: File;
+  selectedPouvoirFile?: File;
+
+  // Filtres avancés (UI)
+  filters: any = {
+    minMontant: undefined,
+    maxMontant: undefined,
+    urgence: '',
+    dateCreationDebut: '',
+    dateCreationFin: ''
+  };
+
   // Enums pour les options
   typeDocumentOptions = Object.values(TypeDocumentJustificatif);
   urgenceOptions = Object.values(UrgenceDossier);
+
+  // Sorting & pagination
+  sortKey: 'dateCreation' | 'montantCreance' | 'statut' = 'dateCreation';
+  sortDir: 'asc' | 'desc' = 'desc';
+  pageSize = 10;
+  pageIndex = 0;
+  totalPages = 1;
 
   // Getters pour les contrôles de formulaire
   get titreControl(): FormControl { return this.dossierForm.get('titre') as FormControl; }
@@ -80,7 +102,8 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
       nomCreancier: ['', Validators.required],
       nomDebiteur: ['', Validators.required],
       pouvoir: [false],
-      contratSigne: [false]
+      contratSigne: [false],
+      isChef: [false]
     });
   }
 
@@ -180,6 +203,7 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
       // Pour les chefs, montrer tous les dossiers
       this.filteredDossiers = [...this.dossiers];
     }
+    this.applySortingAndPaging();
   }
 
   /**
@@ -227,9 +251,7 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
         return UrgenceDossier.FAIBLE;
       case Urgence.MOYENNE:
         return UrgenceDossier.MOYENNE;
-      case Urgence.ELEVEE:
-        return UrgenceDossier.TRES_URGENT; // Fallback
-      case Urgence.CRITIQUE:
+      case Urgence.TRES_URGENT:
         return UrgenceDossier.TRES_URGENT;
       default:
         return UrgenceDossier.MOYENNE;
@@ -265,6 +287,73 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
         dossier.creancier.nom.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
         dossier.debiteur.nom.toLowerCase().includes(this.searchTerm.toLowerCase())
       );
+      this.applySortingAndPaging();
+    }
+  }
+
+  applyAdvancedFilters(): void {
+    const baseDossiers = this.currentUser?.role === 'AGENT_DOSSIER' 
+      ? this.dossiers.filter(dossier => dossier.agentResponsable === this.currentUser.getFullName())
+      : this.dossiers;
+
+    this.filteredDossiers = baseDossiers.filter(dossier => {
+      if (this.filters.minMontant !== undefined && this.filters.minMontant !== '' && dossier.montantCreance < Number(this.filters.minMontant)) {
+        return false;
+      }
+      if (this.filters.maxMontant !== undefined && this.filters.maxMontant !== '' && dossier.montantCreance > Number(this.filters.maxMontant)) {
+        return false;
+      }
+      if (this.filters.urgence && dossier.urgence !== this.filters.urgence) {
+        return false;
+      }
+      if (this.filters.dateCreationDebut) {
+        const d = new Date(dossier.dateCreation).getTime();
+        const start = new Date(this.filters.dateCreationDebut).getTime();
+        if (d < start) return false;
+      }
+      if (this.filters.dateCreationFin) {
+        const d = new Date(dossier.dateCreation).getTime();
+        const end = new Date(this.filters.dateCreationFin).getTime();
+        if (d > end) return false;
+      }
+      return true;
+    });
+    this.applySortingAndPaging();
+  }
+
+  applySortingAndPaging(): void {
+    const sorted = [...this.filteredDossiers].sort((a, b) => {
+      const dir = this.sortDir === 'asc' ? 1 : -1;
+      if (this.sortKey === 'dateCreation') {
+        return (new Date(a.dateCreation).getTime() - new Date(b.dateCreation).getTime()) * dir;
+      }
+      if (this.sortKey === 'montantCreance') {
+        return (a.montantCreance - b.montantCreance) * dir;
+      }
+      if (this.sortKey === 'statut') {
+        return (a.statut > b.statut ? 1 : a.statut < b.statut ? -1 : 0) * dir;
+      }
+      return 0;
+    });
+
+    this.totalPages = Math.max(1, Math.ceil(sorted.length / this.pageSize));
+    if (this.pageIndex >= this.totalPages) this.pageIndex = this.totalPages - 1;
+    const start = this.pageIndex * this.pageSize;
+    const end = start + this.pageSize;
+    this.pagedDossiers = sorted.slice(start, end);
+  }
+
+  nextPage(): void {
+    if (this.pageIndex + 1 < this.totalPages) {
+      this.pageIndex++;
+      this.applySortingAndPaging();
+    }
+  }
+
+  prevPage(): void {
+    if (this.pageIndex > 0) {
+      this.pageIndex--;
+      this.applySortingAndPaging();
     }
   }
 
@@ -317,20 +406,39 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: ({ creancierId, debiteurId }: { creancierId: number, debiteurId: number }) => {
-          const dossierRequest: DossierRequest = {
+          // Adapter au contrat backend: creancier/debiteur en objets avec id uniquement
+          const dossierRequest: any = {
             titre: formValue.titre,
             description: formValue.description,
             numeroDossier: formValue.numeroDossier,
             montantCreance: formValue.montantCreance,
             typeDocumentJustificatif: this.convertLocalTypeDocumentToApi(formValue.typeDocumentJustificatif),
             urgence: this.convertLocalUrgenceToApi(formValue.urgence),
+            // Pour compat DTO backend (noms) et pour logs côté service si besoin
+            nomCreancier: formValue.nomCreancier,
+            nomDebiteur: formValue.nomDebiteur,
+            // Si le backend accepte aussi des IDs ou objets, ils sont disponibles côté service si nécessaire
             creancierId: creancierId,
             debiteurId: debiteurId,
             contratSigne: formValue.contratSigne ? 'uploaded' : undefined,
             pouvoir: formValue.pouvoir ? 'uploaded' : undefined
           };
 
-          this.agentDossierService.creerDossier(dossierRequest)
+          const current = this.authService.getCurrentUser();
+          // Sans auth, on laisse la case isChef décider; sinon on autorise aussi par rôle
+          const isChef: boolean = !!formValue.isChef || !!(current && (current.role === Role.CHEF_DEPARTEMENT_DOSSIER || current.role === Role.SUPER_ADMIN));
+
+          const hasFiles = !!this.selectedContratFile || !!this.selectedPouvoirFile;
+          const create$ = hasFiles
+            ? this.agentDossierService.creerDossierAvecFichiers(
+                dossierRequest,
+                this.selectedContratFile,
+                this.selectedPouvoirFile,
+                isChef
+              )
+            : this.agentDossierService.creerDossier(dossierRequest, isChef as boolean);
+
+          create$
             .pipe(takeUntil(this.destroy$))
             .subscribe({
               next: (nouveauDossier) => {
@@ -340,13 +448,15 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
               },
               error: (error) => {
                 console.error('Erreur lors de la création du dossier:', error);
-                this.toastService.error('Erreur lors de la création du dossier.');
+                const msg = typeof error === 'string' ? error : 'Erreur lors de la création du dossier.';
+                this.toastService.error(msg);
               }
             });
         },
         error: (error: any) => {
           console.error('Erreur lors de la recherche des créanciers/débiteurs:', error);
-          this.toastService.error('Erreur lors de la recherche des créanciers/débiteurs.');
+          const msg = typeof error === 'string' ? error : 'Erreur lors de la recherche des créanciers/débiteurs.';
+          this.toastService.error(msg);
         }
       });
   }
@@ -358,24 +468,42 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: (creanciers) => {
-            if (creanciers.length === 0) {
+            if (!nomCreancier || !nomCreancier.trim()) {
+              observer.error('Nom du créancier est requis');
+              return;
+            }
+            const normalized = nomCreancier.trim().toLowerCase();
+            const matchCreancier = (creanciers || []).find((c: any) =>
+              (c.nom + ' ' + (c.prenom || '')).trim().toLowerCase() === normalized ||
+              c.nom?.trim().toLowerCase() === normalized
+            );
+            if (!matchCreancier) {
               observer.error('Créancier non trouvé: ' + nomCreancier);
               return;
             }
 
-            const creancierId = creanciers[0].id;
+            const creancierId = matchCreancier.id;
 
             // Rechercher le débiteur
             this.debiteurApiService.searchDebiteurByName(nomDebiteur)
               .pipe(takeUntil(this.destroy$))
               .subscribe({
                 next: (debiteurs) => {
-                  if (debiteurs.length === 0) {
+                  if (!nomDebiteur || !nomDebiteur.trim()) {
+                    observer.error('Nom du débiteur est requis');
+                    return;
+                  }
+                  const normDeb = nomDebiteur.trim().toLowerCase();
+                  const matchDebiteur = (debiteurs || []).find((d: any) =>
+                    (d.nom + ' ' + (d.prenom || '')).trim().toLowerCase() === normDeb ||
+                    d.nom?.trim().toLowerCase() === normDeb
+                  );
+                  if (!matchDebiteur) {
                     observer.error('Débiteur non trouvé: ' + nomDebiteur);
                     return;
                   }
 
-                  const debiteurId = debiteurs[0].id;
+                  const debiteurId = matchDebiteur.id;
                   observer.next({ creancierId, debiteurId });
                   observer.complete();
                 },
@@ -424,7 +552,7 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
       case UrgenceDossier.MOYENNE:
         return Urgence.MOYENNE;
       case UrgenceDossier.TRES_URGENT:
-        return Urgence.CRITIQUE;
+        return Urgence.TRES_URGENT;
       default:
         return Urgence.MOYENNE;
     }
@@ -450,6 +578,8 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
     this.isEditMode = false;
     this.editingDossier = null;
     this.initializeForm();
+    this.selectedContratFile = undefined;
+    this.selectedPouvoirFile = undefined;
   }
 
   getUrgenceClass(urgence: UrgenceDossier): string {

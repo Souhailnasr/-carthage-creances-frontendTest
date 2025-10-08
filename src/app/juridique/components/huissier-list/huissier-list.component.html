@@ -1,84 +1,69 @@
 <div class="huissier-list-container">
   <div class="header">
-    <h2>Liste des Huissiers</h2>
-    <div class="header-actions">
-      <div class="search-box">
-        <input
-          type="text"
-          [(ngModel)]="searchTerm"
-          (input)="onSearch()"
-          placeholder="Rechercher un huissier..."
-          class="search-input">
-        <i class="fas fa-search search-icon"></i>
+    <h1>Liste des Huissiers</h1>
+    <a routerLink="/juridique/huissiers/add" class="btn btn-primary">
+      <i class="fas fa-user-plus"></i> Ajouter un Huissier
+    </a>
+  </div>
+
+  <!-- Search Bar -->
+  <div class="search-section">
+    <div class="search-bar">
+      <div class="search-input-group">
+        <i class="fas fa-search"></i>
+        <input 
+          type="text" 
+          [(ngModel)]="searchTerm" 
+          (input)="onSearch()" 
+          placeholder="Rechercher par nom, email ou téléphone..."
+          class="search-input"
+        >
       </div>
-      <button
-        *ngIf="roleService.isChefJuridique() || roleService.isSuperAdmin()"
-        routerLink="/juridique/huissiers/ajouter"
-        class="btn btn-primary">
-        <i class="fas fa-plus"></i>
-        Ajouter un Huissier
-      </button>
     </div>
   </div>
 
-  <div class="table-container">
-    <table class="huissier-table">
-      <thead>
-        <tr>
-          <th>Nom</th>
-          <th>Prénom</th>
-          <th>Email</th>
-          <th>Téléphone</th>
-          <th>Spécialité</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let huissier of getPaginatedHuissiers()">
-          <td>{{ huissier.nom }}</td>
-          <td>{{ huissier.prenom }}</td>
-          <td>{{ huissier.email }}</td>
-          <td>{{ huissier.telephone }}</td>
-          <td>{{ huissier.specialite }}</td>
-          <td class="actions">
-            <button
-              *ngIf="roleService.isChefJuridique() || roleService.isSuperAdmin()"
-              routerLink="/juridique/huissiers/modifier/{{ huissier.id }}"
-              class="btn btn-sm btn-edit">
-              <i class="fas fa-edit"></i>
-            </button>
-            <button
-              *ngIf="roleService.isChefJuridique() || roleService.isSuperAdmin()"
-              (click)="deleteHuissier(huissier.id)"
-              class="btn btn-sm btn-delete">
-              <i class="fas fa-trash"></i>
-            </button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-
-    <div *ngIf="filteredHuissiers.length === 0" class="no-data">
-      <i class="fas fa-balance-scale"></i>
-      <p>Aucun huissier trouvé</p>
+  <!-- Huissiers List -->
+  <div class="huissiers-section">
+    <div class="loading-spinner" *ngIf="isLoading">
+      <i class="fas fa-spinner fa-spin"></i>
+      <p>Chargement des huissiers...</p>
     </div>
-  </div>
+    
+    <div class="huissiers-grid" *ngIf="!isLoading && filteredHuissiers.length > 0; else noHuissiers">
+      <div class="huissier-card" *ngFor="let huissier of filteredHuissiers">
+        <div class="huissier-avatar">
+          <span class="avatar-text">{{ getHuissierInitials(huissier) }}</span>
+        </div>
+        <div class="huissier-info">
+          <h3 class="huissier-name">{{ huissier.prenom }} {{ huissier.nom }}</h3>
+          <p class="huissier-email">{{ huissier.email }}</p>
+          <p class="huissier-phone" *ngIf="huissier.telephone">
+            <i class="fas fa-phone"></i> {{ huissier.telephone }}
+          </p>
+          <p class="huissier-address" *ngIf="huissier.adresse">
+            <i class="fas fa-map-marker-alt"></i> {{ huissier.adresse }}
+          </p>
+        </div>
+        <div class="huissier-actions">
+          <a [routerLink]="['/juridique/huissiers/edit', huissier.id]" class="btn btn-sm btn-outline-primary">
+            <i class="fas fa-edit"></i> Modifier
+          </a>
+          <button class="btn btn-sm btn-outline-danger" (click)="deleteHuissier(huissier)">
+            <i class="fas fa-trash"></i> Supprimer
+          </button>
+        </div>
+      </div>
+    </div>
 
-  <div *ngIf="totalPages > 1" class="pagination">
-    <button
-      (click)="onPageChange(currentPage - 1)"
-      [disabled]="currentPage === 1"
-      class="btn btn-sm">
-      <i class="fas fa-chevron-left"></i>
-    </button>
-    <span class="page-info">
-      Page {{ currentPage }} sur {{ totalPages }}
-    </span>
-    <button
-      (click)="onPageChange(currentPage + 1)"
-      [disabled]="currentPage === totalPages"
-      class="btn btn-sm">
-      <i class="fas fa-chevron-right"></i>
-    </button>
+    <ng-template #noHuissiers>
+      <div class="no-huissiers">
+        <i class="fas fa-balance-scale"></i>
+        <h3>Aucun huissier trouvé</h3>
+        <p>Commencez par ajouter un nouvel huissier.</p>
+        <a routerLink="/juridique/huissiers/add" class="btn btn-primary">
+          <i class="fas fa-user-plus"></i> Ajouter un Huissier
+        </a>
+      </div>
+    </ng-template>
   </div>
 </div>

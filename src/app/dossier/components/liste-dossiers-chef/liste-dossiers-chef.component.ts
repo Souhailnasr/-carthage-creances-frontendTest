@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Subject, takeUntil } from 'rxjs';
 import { DossierApiService } from '../../../core/services/dossier-api.service';
+import { DossierService } from '../../../core/services/dossier.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { DossierApi, DossierStatus } from '../../../shared/models/dossier-api.model';
@@ -19,10 +20,12 @@ export class ListeDossiersChefComponent implements OnInit, OnDestroy {
   error: string | null = null;
   currentUser: any = null;
   validatingDossierId: number | null = null;
+  rejectingDossierId: number | null = null;
   private destroy$ = new Subject<void>();
 
   constructor(
     private dossierApiService: DossierApiService,
+    private dossierService: DossierService,
     private authService: AuthService,
     private toastService: ToastService
   ) {}
@@ -49,15 +52,11 @@ export class ListeDossiersChefComponent implements OnInit, OnDestroy {
     this.loading = true;
     this.error = null;
 
-    // Charger les dossiers avec statut EN_ATTENTE_VALIDATION
-    this.dossierApiService.getDossiersByStatut('ENCOURSDETRAITEMENT')
+    this.dossierService.loadEnAttente()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (dossiers) => {
-          // Filtrer pour ne garder que ceux en attente de validation
-          this.dossiers = dossiers.filter(dossier => 
-            dossier.dossierStatus === DossierStatus.ENCOURSDETRAITEMENT
-          );
+          this.dossiers = dossiers.filter(d => d.dossierStatus === DossierStatus.ENCOURSDETRAITEMENT);
           this.loading = false;
         },
         error: (error) => {
@@ -80,7 +79,7 @@ export class ListeDossiersChefComponent implements OnInit, OnDestroy {
     this.validatingDossierId = dossierId;
     const chefId = parseInt(this.currentUser.id);
 
-    this.dossierApiService.validateDossier(dossierId, chefId)
+    this.dossierService.validate(dossierId, chefId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (dossierValide) => {
@@ -102,6 +101,32 @@ export class ListeDossiersChefComponent implements OnInit, OnDestroy {
    */
   isDossierValidating(dossierId: number): boolean {
     return this.validatingDossierId === dossierId;
+  }
+
+  promptReject(dossierId: number): void {
+    const commentaire = window.prompt('Motif de rejet (optionnel) :', '');
+    if (commentaire === null) {
+      return;
+    }
+    this.rejectDossier(dossierId, commentaire || '');
+  }
+
+  private rejectDossier(dossierId: number, commentaire: string): void {
+    this.rejectingDossierId = dossierId;
+    this.dossierService.reject(dossierId, commentaire)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.toastService.success('Dossier rejeté avec succès');
+          this.rejectingDossierId = null;
+          this.loadDossiers();
+        },
+        error: (error) => {
+          console.error('Erreur lors du rejet du dossier:', error);
+          this.toastService.error('Erreur lors du rejet du dossier');
+          this.rejectingDossierId = null;
+        }
+      });
   }
 
   /**

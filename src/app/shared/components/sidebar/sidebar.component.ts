@@ -108,13 +108,6 @@ export class SidebarComponent implements OnInit, OnDestroy {
         }
       ]
     },
-    // Ajout: Gestion des Utilisateurs pour Chef Juridique
-    {
-      label: 'Gestion des Utilisateurs',
-      icon: 'fas fa-users-cog',
-      route: '/admin/utilisateurs',
-      roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE]
-    },
     {
       label: 'Gestion Finance',
       icon: 'fas fa-chart-line',

@@ -3,7 +3,10 @@ import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
 import { Dossier, StatutDossier, UrgenceDossier, TypeDocumentJustificatif, Creancier, Debiteur } from '../../../shared/models';
+import { Role } from '../../../shared/models/enums.model';
 import { ToastService } from '../../../core/services/toast.service';
+import { DossierService } from '../../../core/services/dossier.service';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-dossier-detail',
@@ -19,7 +22,9 @@ export class DossierDetailComponent implements OnInit, OnDestroy {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private toastService: ToastService
+    private toastService: ToastService,
+    private dossierService: DossierService,
+    private authService: AuthService
   ) { }
 
   ngOnInit(): void {
@@ -239,5 +244,56 @@ export class DossierDetailComponent implements OnInit, OnDestroy {
         queryParams: { edit: this.dossier.id } 
       });
     }
+  }
+
+  // Gestion des fichiers PDF
+  canManageFiles(): boolean {
+    const user = this.authService.getCurrentUser();
+    if (!user || !this.dossier) return false;
+    // Agents: uniquement leurs dossiers; Chefs: tous
+    if (user.role === Role.CHEF_DEPARTEMENT_DOSSIER || user.role === Role.SUPER_ADMIN) return true;
+    return this.dossier.agentResponsable === user.getFullName();
+  }
+
+  onUploadContrat(event: any): void {
+    const file: File | undefined = event?.target?.files?.[0];
+    if (!file || !this.dossier) return;
+    this.dossierService.uploadPdf(parseInt(this.dossier.id), 'contratSigne', file)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => this.toastService.success('Contrat signé téléversé.'),
+        error: () => this.toastService.error('Erreur lors du téléversement du contrat.')
+      });
+  }
+
+  onUploadPouvoir(event: any): void {
+    const file: File | undefined = event?.target?.files?.[0];
+    if (!file || !this.dossier) return;
+    this.dossierService.uploadPdf(parseInt(this.dossier.id), 'pouvoir', file)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => this.toastService.success('Pouvoir téléversé.'),
+        error: () => this.toastService.error('Erreur lors du téléversement du pouvoir.')
+      });
+  }
+
+  deleteContrat(): void {
+    if (!this.dossier) return;
+    this.dossierService.deletePdf(parseInt(this.dossier.id), 'contratSigne')
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => this.toastService.success('Contrat supprimé.'),
+        error: () => this.toastService.error('Erreur lors de la suppression du contrat.')
+      });
+  }
+
+  deletePouvoir(): void {
+    if (!this.dossier) return;
+    this.dossierService.deletePdf(parseInt(this.dossier.id), 'pouvoir')
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => this.toastService.success('Pouvoir supprimé.'),
+        error: () => this.toastService.error('Erreur lors de la suppression du pouvoir.')
+      });
   }
 }

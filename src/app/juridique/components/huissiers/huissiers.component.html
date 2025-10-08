@@ -1,0 +1,32 @@
+<div class="huissiers-management-container">
+  <div class="page-header">
+    <div class="header-content">
+      <div class="title-section">
+        <i class="fas fa-balance-scale header-icon"></i>
+        <h1>Gestion des Huissiers</h1>
+        <p>Gérez les huissiers et leurs informations professionnelles</p>
+      </div>
+      <button 
+        class="btn btn-primary add-button" 
+        (click)="showCreateForm()"
+        *ngIf="!showForm">
+        <i class="fas fa-plus"></i>
+        Ajouter un Huissier
+      </button>
+    </div>
+  </div>
+
+  <!-- Formulaire d'ajout/modification -->
+  <app-huissier-form 
+    *ngIf="showForm"
+    [huissier]="editingHuissier"
+    [isEditMode]="isEditMode"
+    (huissierSaved)="onHuissierSaved($event)"
+    (formCancelled)="onFormCancelled()">
+  </app-huissier-form>
+
+  <!-- Liste des huissiers -->
+  <app-huissier-list 
+    *ngIf="!showForm">
+  </app-huissier-list>
+</div>

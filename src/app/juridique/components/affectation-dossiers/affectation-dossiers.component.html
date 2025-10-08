@@ -1,0 +1,124 @@
+<div class="affectation-dossiers-container">
+  <div class="header">
+    <h1>Affectation des Dossiers</h1>
+    <p class="subtitle">Gérer l'affectation des dossiers de recouvrement juridique</p>
+  </div>
+
+  <!-- Search Bar -->
+  <div class="search-section">
+    <div class="search-bar">
+      <div class="search-input-group">
+        <i class="fas fa-search"></i>
+        <input 
+          type="text" 
+          [(ngModel)]="searchTerm" 
+          (input)="onSearch()" 
+          placeholder="Rechercher par numéro de dossier, créancier ou débiteur..."
+          class="search-input"
+        >
+      </div>
+    </div>
+  </div>
+
+  <!-- Dossiers List -->
+  <div class="dossiers-section">
+    <div class="loading-spinner" *ngIf="isLoading">
+      <i class="fas fa-spinner fa-spin"></i>
+      <p>Chargement des dossiers...</p>
+    </div>
+    
+    <div class="dossiers-grid" *ngIf="!isLoading && filteredDossiers.length > 0; else noDossiers">
+      <div class="dossier-card" *ngFor="let dossier of filteredDossiers">
+        <div class="dossier-header">
+          <h3 class="dossier-number">{{ dossier.numeroDossier }}</h3>
+          <span class="dossier-status" [class]="'status-' + dossier.dossierStatus.toLowerCase()">
+            {{ dossier.dossierStatus }}
+          </span>
+        </div>
+        
+        <div class="dossier-info">
+          <div class="info-row">
+            <i class="fas fa-user"></i>
+            <span><strong>Créancier:</strong> {{ dossier.creancier.nom }}</span>
+          </div>
+          <div class="info-row">
+            <i class="fas fa-user"></i>
+            <span><strong>Débiteur:</strong> {{ dossier.debiteur.nom }}</span>
+          </div>
+          <div class="info-row" *ngIf="dossier.montantCreance">
+            <i class="fas fa-money-bill-wave"></i>
+            <span><strong>Montant:</strong> {{ dossier.montantCreance | currency:'TND':'symbol':'1.2-2' }}</span>
+          </div>
+          <div class="info-row" *ngIf="dossier.dateCreation">
+            <i class="fas fa-calendar"></i>
+            <span><strong>Date création:</strong> {{ dossier.dateCreation | date:'dd/MM/yyyy' }}</span>
+          </div>
+        </div>
+
+        <div class="dossier-actions">
+          <button class="btn btn-primary" (click)="showAssignmentModal(dossier)">
+            <i class="fas fa-user-plus"></i> Affecter
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <ng-template #noDossiers>
+      <div class="no-dossiers">
+        <i class="fas fa-folder-open"></i>
+        <h3>Aucun dossier trouvé</h3>
+        <p>Aucun dossier n'est actuellement assigné au recouvrement juridique.</p>
+      </div>
+    </ng-template>
+  </div>
+
+  <!-- Assignment Modal -->
+  <div class="modal-overlay" *ngIf="showAssignmentForm" (click)="cancelAssignment()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>Affecter le Dossier</h2>
+        <button class="close-btn" (click)="cancelAssignment()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="dossier-info-modal">
+          <h3>{{ selectedDossier?.numeroDossier }}</h3>
+          <p><strong>Créancier:</strong> {{ selectedDossier?.creancier?.nom }}</p>
+          <p><strong>Débiteur:</strong> {{ selectedDossier?.debiteur?.nom }}</p>
+        </div>
+
+        <form [formGroup]="assignmentForm" (ngSubmit)="onSubmitAssignment()" class="assignment-form">
+          <div class="form-group">
+            <label for="assigneeType">Type d'affectation</label>
+            <select id="assigneeType" formControlName="assigneeType" class="form-control" (change)="onAssigneeTypeChange()">
+              <option value="avocat">Avocat</option>
+              <option value="huissier">Huissier</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="assigneeId">Sélectionner</label>
+            <select id="assigneeId" formControlName="assigneeId" class="form-control">
+              <option value="">Choisir...</option>
+              <option *ngFor="let option of getAssigneeOptions()" [value]="option.id">
+                {{ option.name }} ({{ option.email }})
+              </option>
+            </select>
+            <div class="form-error" *ngIf="assignmentForm.get('assigneeId')?.invalid && assignmentForm.get('assigneeId')?.touched">
+              <small>Veuillez sélectionner un {{ assignmentForm.get('assigneeType')?.value }}</small>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" (click)="cancelAssignment()">Annuler</button>
+            <button type="submit" class="btn btn-primary" [disabled]="assignmentForm.invalid">
+              <i class="fas fa-check"></i> Affecter
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>

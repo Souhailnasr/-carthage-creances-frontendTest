@@ -1,0 +1,108 @@
+<div class="juridique-dashboard">
+  <div class="dashboard-header">
+    <h1>Tableau de Bord Juridique</h1>
+    <p class="subtitle">Vue d'ensemble des activités juridiques</p>
+  </div>
+
+  <!-- Statistics Cards -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon">
+        <i class="fas fa-folder-open"></i>
+      </div>
+      <div class="stat-content">
+        <h3>{{ totalDossiers }}</h3>
+        <p>Dossiers Juridiques</p>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon">
+        <i class="fas fa-user-tie"></i>
+      </div>
+      <div class="stat-content">
+        <h3>{{ totalAvocats }}</h3>
+        <p>Avocats</p>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon">
+        <i class="fas fa-balance-scale"></i>
+      </div>
+      <div class="stat-content">
+        <h3>{{ totalHuissiers }}</h3>
+        <p>Huissiers</p>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon">
+        <i class="fas fa-gavel"></i>
+      </div>
+      <div class="stat-content">
+        <h3>{{ totalAudiences }}</h3>
+        <p>Audiences</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Performance Statistics -->
+  <div class="performance-section">
+    <h2>Statistiques de Performance</h2>
+    <div class="performance-grid">
+      <div class="performance-card">
+        <h3>Agents Juridiques</h3>
+        <div class="agent-stats">
+          <div class="agent-item" *ngFor="let agent of agentsJuridiques">
+            <div class="agent-info">
+              <span class="agent-name">{{ agent.prenom }} {{ agent.nom }}</span>
+              <span class="agent-email">{{ agent.email }}</span>
+            </div>
+            <div class="agent-performance">
+              <div class="performance-metric">
+                <span class="metric-label">Dossiers traités:</span>
+                <span class="metric-value">{{ getAgentPerformance(agent.id) }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="performance-card">
+        <h3>Décisions par Type</h3>
+        <div class="decision-stats">
+          <div class="decision-item">
+            <span class="decision-type positive">Positives</span>
+            <span class="decision-count">{{ decisionsPositives }}</span>
+          </div>
+          <div class="decision-item">
+            <span class="decision-type negative">Négatives</span>
+            <span class="decision-count">{{ decisionsNegatives }}</span>
+          </div>
+          <div class="decision-item">
+            <span class="decision-type rapporter">Rapporter</span>
+            <span class="decision-count">{{ decisionsRapporter }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Activities -->
+  <div class="recent-activities">
+    <h2>Activités Récentes</h2>
+    <div class="activities-list">
+      <div class="activity-item" *ngFor="let activity of recentActivities">
+        <div class="activity-icon">
+          <i class="fas" [ngClass]="getActivityIcon(activity.type)"></i>
+        </div>
+        <div class="activity-content">
+          <h4>{{ activity.title }}</h4>
+          <p>{{ activity.description }}</p>
+          <span class="activity-date">{{ activity.date | date:'dd/MM/yyyy HH:mm' }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

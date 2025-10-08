@@ -1,0 +1,32 @@
+<div class="avocats-management-container">
+  <div class="page-header">
+    <div class="header-content">
+      <div class="title-section">
+        <i class="fas fa-gavel header-icon"></i>
+        <h1>Gestion des Avocats</h1>
+        <p>Gérez les avocats et leurs informations professionnelles</p>
+      </div>
+      <button 
+        class="btn btn-primary add-button" 
+        (click)="showCreateForm()"
+        *ngIf="!showForm">
+        <i class="fas fa-plus"></i>
+        Ajouter un Avocat
+      </button>
+    </div>
+  </div>
+
+  <!-- Formulaire d'ajout/modification -->
+  <app-avocat-form 
+    *ngIf="showForm"
+    [avocat]="editingAvocat"
+    [isEditMode]="isEditMode"
+    (avocatSaved)="onAvocatSaved($event)"
+    (formCancelled)="onFormCancelled()">
+  </app-avocat-form>
+
+  <!-- Liste des avocats -->
+  <app-avocat-list 
+    *ngIf="!showForm">
+  </app-avocat-list>
+</div>

@@ -1,27 +1,36 @@
 <div class="huissier-form-container">
   <div class="header">
-    <h2>{{ isEditMode ? 'Modifier' : 'Ajouter' }} un Huissier</h2>
-    <button class="btn btn-back" (click)="onCancel()">
-      <i class="fas fa-arrow-left"></i> Retour
-    </button>
+    <h1>{{ isEditMode ? 'Modifier un Huissier' : 'Ajouter un nouvel Huissier' }}</h1>
   </div>
 
   <form [formGroup]="huissierForm" (ngSubmit)="onSubmit()" class="huissier-form">
     <div class="form-grid">
-      <app-form-input label="Nom" [control]="nomControl" id="huissierNom"></app-form-input>
-      <app-form-input label="Prénom" [control]="prenomControl" id="huissierPrenom"></app-form-input>
-      <app-form-input label="Email" [control]="emailControl" type="email" id="huissierEmail"></app-form-input>
-      <app-form-input label="Téléphone" [control]="telephoneControl" type="tel" id="huissierTelephone"></app-form-input>
-      <app-form-input label="Spécialité" [control]="specialiteControl" id="huissierSpecialite"></app-form-input>
-      <app-form-input label="Adresse" [control]="adresseControl" id="huissierAdresse"></app-form-input>
+      <div class="form-group">
+        <label for="nom">Nom *</label>
+        <input type="text" id="nom" formControlName="nom" class="form-control" placeholder="Entrez le nom">
+      </div>
+      <div class="form-group">
+        <label for="prenom">Prénom *</label>
+        <input type="text" id="prenom" formControlName="prenom" class="form-control" placeholder="Entrez le prénom">
+      </div>
+      <div class="form-group">
+        <label for="email">Email *</label>
+        <input type="email" id="email" formControlName="email" class="form-control" placeholder="Entrez l'email">
+      </div>
+      <div class="form-group">
+        <label for="telephone">Téléphone</label>
+        <input type="tel" id="telephone" formControlName="telephone" class="form-control" placeholder="Entrez le téléphone">
+      </div>
+      <div class="form-group">
+        <label for="adresse">Adresse</label>
+        <textarea id="adresse" formControlName="adresse" class="form-control" rows="3" placeholder="Entrez l'adresse"></textarea>
+      </div>
     </div>
 
     <div class="form-actions">
+      <button type="button" class="btn btn-secondary" (click)="onCancel()">Annuler</button>
       <button type="submit" class="btn btn-primary" [disabled]="huissierForm.invalid">
-        <i class="fas fa-save"></i> {{ isEditMode ? 'Modifier' : 'Enregistrer' }} le Huissier
-      </button>
-      <button type="button" class="btn btn-secondary" (click)="onCancel()">
-        <i class="fas fa-times"></i> Annuler
+        {{ isEditMode ? 'Modifier' : 'Ajouter' }}
       </button>
     </div>
   </form>

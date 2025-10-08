@@ -1,27 +1,122 @@
 <div class="avocat-form-container">
-  <div class="header">
-    <h2>{{ isEditMode ? 'Modifier' : 'Ajouter' }} un Avocat</h2>
-    <button class="btn btn-back" (click)="onCancel()">
-      <i class="fas fa-arrow-left"></i> Retour
+  <div class="form-header">
+    <h3>{{ isEditMode ? 'Modifier l\'Avocat' : 'Nouvel Avocat' }}</h3>
+    <button type="button" class="btn btn-secondary" (click)="onCancel()">
+      <i class="fas fa-times"></i> Annuler
     </button>
   </div>
 
   <form [formGroup]="avocatForm" (ngSubmit)="onSubmit()" class="avocat-form">
     <div class="form-grid">
-      <app-form-input label="Nom" [control]="nomControl" id="avocatNom"></app-form-input>
-      <app-form-input label="Prénom" [control]="prenomControl" id="avocatPrenom"></app-form-input>
-      <app-form-input label="Email" [control]="emailControl" type="email" id="avocatEmail"></app-form-input>
-      <app-form-input label="Téléphone" [control]="telephoneControl" type="tel" id="avocatTelephone"></app-form-input>
-      <app-form-input label="Spécialité" [control]="specialiteControl" id="avocatSpecialite"></app-form-input>
-      <app-form-input label="Adresse" [control]="adresseControl" id="avocatAdresse"></app-form-input>
+      <!-- Nom -->
+      <div class="form-group">
+        <label for="nom">Nom *</label>
+        <input 
+          type="text" 
+          id="nom" 
+          formControlName="nom"
+          class="form-control"
+          [class.is-invalid]="nomControl.invalid && nomControl.touched"
+          placeholder="Entrez le nom">
+        <div class="invalid-feedback" *ngIf="getFieldError('nom')">
+          {{ getFieldError('nom') }}
+        </div>
+      </div>
+
+      <!-- Prénom -->
+      <div class="form-group">
+        <label for="prenom">Prénom *</label>
+        <input 
+          type="text" 
+          id="prenom" 
+          formControlName="prenom"
+          class="form-control"
+          [class.is-invalid]="prenomControl.invalid && prenomControl.touched"
+          placeholder="Entrez le prénom">
+        <div class="invalid-feedback" *ngIf="getFieldError('prenom')">
+          {{ getFieldError('prenom') }}
+        </div>
+      </div>
+
+      <!-- Email -->
+      <div class="form-group">
+        <label for="email">Email *</label>
+        <input 
+          type="email" 
+          id="email" 
+          formControlName="email"
+          class="form-control"
+          [class.is-invalid]="emailControl.invalid && emailControl.touched"
+          placeholder="Entrez l'email">
+        <div class="invalid-feedback" *ngIf="getFieldError('email')">
+          {{ getFieldError('email') }}
+        </div>
+      </div>
+
+      <!-- Téléphone -->
+      <div class="form-group">
+        <label for="telephone">Téléphone</label>
+        <input 
+          type="tel" 
+          id="telephone" 
+          formControlName="telephone"
+          class="form-control"
+          [class.is-invalid]="telephoneControl.invalid && telephoneControl.touched"
+          placeholder="Entrez le numéro de téléphone">
+        <div class="invalid-feedback" *ngIf="getFieldError('telephone')">
+          {{ getFieldError('telephone') }}
+        </div>
+      </div>
+
+      <!-- Numéro d'ordre -->
+      <div class="form-group">
+        <label for="numeroOrdre">Numéro d'Ordre *</label>
+        <input 
+          type="text" 
+          id="numeroOrdre" 
+          formControlName="numeroOrdre"
+          class="form-control"
+          [class.is-invalid]="numeroOrdreControl.invalid && numeroOrdreControl.touched"
+          placeholder="Entrez le numéro d'ordre">
+        <div class="invalid-feedback" *ngIf="getFieldError('numeroOrdre')">
+          {{ getFieldError('numeroOrdre') }}
+        </div>
+      </div>
+
+      <!-- Spécialité -->
+      <div class="form-group">
+        <label for="specialite">Spécialité</label>
+        <input 
+          type="text" 
+          id="specialite" 
+          formControlName="specialite"
+          class="form-control"
+          placeholder="Entrez la spécialité">
+      </div>
+
+      <!-- Adresse -->
+      <div class="form-group full-width">
+        <label for="adresse">Adresse</label>
+        <textarea 
+          id="adresse" 
+          formControlName="adresse"
+          class="form-control"
+          rows="3"
+          placeholder="Entrez l'adresse complète"></textarea>
+      </div>
     </div>
 
     <div class="form-actions">
-      <button type="submit" class="btn btn-primary" [disabled]="avocatForm.invalid">
-        <i class="fas fa-save"></i> {{ isEditMode ? 'Modifier' : 'Enregistrer' }} l'Avocat
-      </button>
       <button type="button" class="btn btn-secondary" (click)="onCancel()">
-        <i class="fas fa-times"></i> Annuler
+        Annuler
+      </button>
+      <button 
+        type="submit" 
+        class="btn btn-primary" 
+        [disabled]="avocatForm.invalid || isLoading">
+        <i class="fas fa-spinner fa-spin" *ngIf="isLoading"></i>
+        <i class="fas fa-save" *ngIf="!isLoading"></i>
+        {{ isEditMode ? 'Mettre à jour' : 'Créer' }}
       </button>
     </div>
   </form>

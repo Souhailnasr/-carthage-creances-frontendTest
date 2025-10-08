@@ -1,20 +1,15 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { JuridiqueRoutingModule } from './routing/juridique-routing.module';
-import { AvocatListComponent } from './components/avocat-list/avocat-list.component';
-import { AvocatFormComponent } from './components/avocat-form/avocat-form.component';
-import { HuissierListComponent } from './components/huissier-list/huissier-list.component';
-import { HuissierFormComponent } from './components/huissier-form/huissier-form.component';
+import { RouterModule } from '@angular/router';
+import { juridiqueRoutes } from './juridique-routes';
+import { JuridiqueLayoutComponent } from './components/juridique-layout/juridique-layout.component';
 
 @NgModule({
   declarations: [],
   imports: [
     CommonModule,
-    JuridiqueRoutingModule,
-    AvocatListComponent,
-    AvocatFormComponent,
-    HuissierListComponent,
-    HuissierFormComponent
+    RouterModule.forChild(juridiqueRoutes),
+    JuridiqueLayoutComponent
   ]
 })
 export class JuridiqueModule { }

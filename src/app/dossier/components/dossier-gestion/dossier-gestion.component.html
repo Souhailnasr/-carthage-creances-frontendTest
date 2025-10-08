@@ -65,6 +65,30 @@
             Contrat Signé
           </label>
         </div>
+
+        <!-- Uploads PDF -->
+        <div class="form-group full-width">
+          <label>Pièces jointes (PDF)</label>
+          <div style="display:flex; gap:16px; flex-wrap:wrap;">
+            <div>
+              <small>Contrat (PDF)</small>
+              <input type="file" accept="application/pdf" (change)="selectedContratFile = $any($event.target).files?.[0]" />
+            </div>
+            <div>
+              <small>Pouvoir (PDF)</small>
+              <input type="file" accept="application/pdf" (change)="selectedPouvoirFile = $any($event.target).files?.[0]" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Option visible uniquement pour les chefs (le code ts forcerait aussi automatiquement) -->
+        <div class="form-group checkbox-group" *ngIf="currentUser?.role === 'CHEF_DEPARTEMENT_DOSSIER' || currentUser?.role === 'SUPER_ADMIN'">
+          <label class="checkbox-label" title="Si activée, le dossier sera validé automatiquement à la création.">
+            <input type="checkbox" formControlName="isChef">
+            <span class="checkmark"></span>
+            Créer en tant que Chef
+          </label>
+        </div>
       </div>
 
       <div class="form-actions">
@@ -90,10 +114,62 @@
         class="search-input"
       >
     </div>
+    <!-- Filtres avancés -->
+    <div class="filters">
+      <div class="filter-group">
+        <label>Montant min</label>
+        <input type="number" [(ngModel)]="filters.minMontant" (change)="applyAdvancedFilters()" />
+      </div>
+      <div class="filter-group">
+        <label>Montant max</label>
+        <input type="number" [(ngModel)]="filters.maxMontant" (change)="applyAdvancedFilters()" />
+      </div>
+      <div class="filter-group">
+        <label>Urgence</label>
+        <select [(ngModel)]="filters.urgence" (change)="applyAdvancedFilters()">
+          <option value="">Toutes</option>
+          <option *ngFor="let u of urgenceOptions" [value]="u">{{ getUrgenceLabel(u) }}</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Date création (début)</label>
+        <input type="date" [(ngModel)]="filters.dateCreationDebut" (change)="applyAdvancedFilters()" />
+      </div>
+      <div class="filter-group">
+        <label>Date création (fin)</label>
+        <input type="date" [(ngModel)]="filters.dateCreationFin" (change)="applyAdvancedFilters()" />
+      </div>
+    </div>
   </div>
 
   <!-- Tableau des dossiers -->
   <div class="table-container">
+    <!-- Controls: sorting & pagination -->
+    <div class="table-controls">
+      <div class="sort-controls">
+        <label>Trier par</label>
+        <select [(ngModel)]="sortKey" (change)="applySortingAndPaging()">
+          <option value="dateCreation">Date création</option>
+          <option value="montantCreance">Montant</option>
+          <option value="statut">Statut</option>
+        </select>
+        <select [(ngModel)]="sortDir" (change)="applySortingAndPaging()">
+          <option value="desc">Desc</option>
+          <option value="asc">Asc</option>
+        </select>
+      </div>
+      <div class="pagination-controls">
+        <label>Par page</label>
+        <select [(ngModel)]="pageSize" (change)="applySortingAndPaging()">
+          <option [value]="5">5</option>
+          <option [value]="10">10</option>
+          <option [value]="20">20</option>
+        </select>
+        <button class="btn" (click)="prevPage()" [disabled]="pageIndex===0">Préc</button>
+        <span>{{ pageIndex+1 }} / {{ totalPages }}</span>
+        <button class="btn" (click)="nextPage()" [disabled]="pageIndex+1>=totalPages">Suiv</button>
+      </div>
+    </div>
     <table class="dossiers-table">
       <thead>
         <tr>
@@ -111,7 +187,7 @@
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let dossier of filteredDossiers">
+        <tr *ngFor="let dossier of pagedDossiers">
           <td>{{ dossier.id }}</td>
           <td>{{ dossier.numeroDossier }}</td>
           <td>{{ dossier.titre }}</td>
@@ -126,9 +202,7 @@
           <td>{{ dossier.getFormattedDate() }}</td>
           <td>{{ dossier.agentCreateur }}</td>
           <td>
-            <span class="status-badge" [ngClass]="getValidationClass(dossier)">
-              {{ getValidationStatus(dossier) }}
-            </span>
+            <span class="status-badge" [ngClass]="getValidationClass(dossier)">{{ getValidationStatus(dossier) }}</span>
           </td>
           <td class="actions">
             <button class="btn btn-sm btn-info" (click)="viewDossierDetails(dossier)" title="Voir détails">
