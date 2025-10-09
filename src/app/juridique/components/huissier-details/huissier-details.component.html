@@ -1,0 +1,230 @@
+<div class="huissier-details-container">
+  <!-- Header -->
+  <div class="header-section">
+    <div class="title-section">
+      <h1 class="page-title">
+        <mat-icon>gavel</mat-icon>
+        Détails du huissier
+      </h1>
+      <p class="page-subtitle">Informations complètes sur le huissier</p>
+    </div>
+    <div class="action-buttons">
+      <button mat-stroked-button (click)="onBack()" [disabled]="isLoading">
+        <mat-icon>arrow_back</mat-icon>
+        Retour à la liste
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading spinner -->
+  <div *ngIf="isLoading" class="loading-container">
+    <mat-spinner diameter="50"></mat-spinner>
+    <p>Chargement des détails...</p>
+  </div>
+
+  <!-- Contenu principal -->
+  <div *ngIf="!isLoading && huissier" class="content-container">
+    
+    <!-- Carte principale avec avatar et actions -->
+    <mat-card class="main-card">
+      <mat-card-content>
+        <div class="profile-header">
+          <div class="avatar-section">
+            <div class="avatar-large">
+              {{ getHuissierInitials() }}
+            </div>
+            <div class="status-badge">
+              <mat-chip [color]="getStatusColor()" selected>
+                <mat-icon>{{ getStatusIcon() }}</mat-icon>
+                {{ getStatusText() }}
+              </mat-chip>
+            </div>
+          </div>
+          
+          <div class="profile-info">
+            <h2 class="huissier-name">{{ getHuissierFullName() }}</h2>
+            <p class="huissier-title" *ngIf="huissier.specialite">{{ huissier.specialite }}</p>
+            <p class="huissier-number" *ngIf="huissier.numeroOrdre">N° Ordre: {{ huissier.numeroOrdre }}</p>
+          </div>
+
+          <div class="action-buttons">
+            <button mat-raised-button 
+                    color="primary" 
+                    (click)="onEdit()"
+                    [disabled]="isLoading">
+              <mat-icon>edit</mat-icon>
+              Modifier
+            </button>
+            
+            <button mat-stroked-button 
+                    color="warn"
+                    (click)="onDelete()"
+                    [disabled]="isLoading">
+              <mat-icon>delete</mat-icon>
+              Supprimer
+            </button>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Informations détaillées -->
+    <div class="details-grid">
+      
+      <!-- Informations personnelles -->
+      <mat-card class="info-card">
+        <mat-card-header>
+          <mat-card-title>
+            <mat-icon>person</mat-icon>
+            Informations personnelles
+          </mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <mat-list>
+            <mat-list-item>
+              <mat-icon matListItemIcon>person</mat-icon>
+              <div matListItemTitle>Nom complet</div>
+              <div matListItemLine>{{ getHuissierFullName() }}</div>
+            </mat-list-item>
+            
+            <mat-list-item *ngIf="huissier.email">
+              <mat-icon matListItemIcon>email</mat-icon>
+              <div matListItemTitle>Email</div>
+              <div matListItemLine>
+                <a [href]="'mailto:' + huissier.email" class="email-link">
+                  {{ huissier.email }}
+                </a>
+              </div>
+            </mat-list-item>
+            
+            <mat-list-item *ngIf="huissier.telephone">
+              <mat-icon matListItemIcon>phone</mat-icon>
+              <div matListItemTitle>Téléphone</div>
+              <div matListItemLine>
+                <a [href]="'tel:' + huissier.telephone" class="phone-link">
+                  {{ huissier.telephone }}
+                </a>
+              </div>
+            </mat-list-item>
+            
+            <mat-list-item *ngIf="huissier.adresse">
+              <mat-icon matListItemIcon>location_on</mat-icon>
+              <div matListItemTitle>Adresse</div>
+              <div matListItemLine>{{ huissier.adresse }}</div>
+            </mat-list-item>
+          </mat-list>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Informations professionnelles -->
+      <mat-card class="info-card">
+        <mat-card-header>
+          <mat-card-title>
+            <mat-icon>work</mat-icon>
+            Informations professionnelles
+          </mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <mat-list>
+            <mat-list-item *ngIf="huissier.specialite">
+              <mat-icon matListItemIcon>school</mat-icon>
+              <div matListItemTitle>Spécialité</div>
+              <div matListItemLine>
+                <mat-chip>{{ huissier.specialite }}</mat-chip>
+              </div>
+            </mat-list-item>
+            
+            <mat-list-item *ngIf="huissier.numeroOrdre">
+              <mat-icon matListItemIcon>badge</mat-icon>
+              <div matListItemTitle>Numéro d'ordre</div>
+              <div matListItemLine class="numero-ordre">{{ huissier.numeroOrdre }}</div>
+            </mat-list-item>
+            
+            <mat-list-item>
+              <mat-icon matListItemIcon>info</mat-icon>
+              <div matListItemTitle>Statut</div>
+              <div matListItemLine>
+                <mat-chip [color]="getStatusColor()" selected>
+                  <mat-icon>{{ getStatusIcon() }}</mat-icon>
+                  {{ getStatusText() }}
+                </mat-chip>
+              </div>
+            </mat-list-item>
+          </mat-list>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Informations système -->
+      <mat-card class="info-card">
+        <mat-card-header>
+          <mat-card-title>
+            <mat-icon>info</mat-icon>
+            Informations système
+          </mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <mat-list>
+            <mat-list-item *ngIf="huissier.id">
+              <mat-icon matListItemIcon>fingerprint</mat-icon>
+              <div matListItemTitle>ID</div>
+              <div matListItemLine>{{ huissier.id }}</div>
+            </mat-list-item>
+            
+            <mat-list-item *ngIf="huissier.dateCreation">
+              <mat-icon matListItemIcon>schedule</mat-icon>
+              <div matListItemTitle>Date de création</div>
+              <div matListItemLine>{{ formatDate(huissier.dateCreation) }}</div>
+            </mat-list-item>
+            
+            <mat-list-item *ngIf="huissier.dateModification">
+              <mat-icon matListItemIcon>update</mat-icon>
+              <div matListItemTitle>Dernière modification</div>
+              <div matListItemLine>{{ formatDate(huissier.dateModification) }}</div>
+            </mat-list-item>
+          </mat-list>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Actions rapides -->
+      <mat-card class="info-card">
+        <mat-card-header>
+          <mat-card-title>
+            <mat-icon>flash_on</mat-icon>
+            Actions rapides
+          </mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="quick-actions">
+            <button mat-stroked-button 
+                    (click)="onEdit()"
+                    [disabled]="isLoading"
+                    class="action-button">
+              <mat-icon>edit</mat-icon>
+              Modifier
+            </button>
+            
+            <button mat-stroked-button 
+                    color="warn"
+                    (click)="onDelete()"
+                    [disabled]="isLoading"
+                    class="action-button">
+              <mat-icon>delete</mat-icon>
+              Supprimer
+            </button>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
+
+  <!-- Message d'erreur si huissier non trouvé -->
+  <div *ngIf="!isLoading && !huissier" class="error-container">
+    <mat-icon>error</mat-icon>
+    <h3>Huissier non trouvé</h3>
+    <p>Le huissier demandé n'existe pas ou a été supprimé.</p>
+    <button mat-raised-button color="primary" (click)="onBack()">
+      <mat-icon>arrow_back</mat-icon>
+      Retour à la liste
+    </button>
+  </div>
+</div>

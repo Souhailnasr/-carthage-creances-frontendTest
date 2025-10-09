@@ -1,0 +1,442 @@
+.avocat-details-container {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+
+  .header-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 16px;
+
+    .title-section {
+      .page-title {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin: 0 0 8px 0;
+        font-size: 2rem;
+        font-weight: 600;
+        color: #1976d2;
+
+        mat-icon {
+          font-size: 2rem;
+          width: 2rem;
+          height: 2rem;
+        }
+      }
+
+      .page-subtitle {
+        margin: 0;
+        color: #666;
+        font-size: 1rem;
+      }
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+
+      button {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+    }
+  }
+
+  .loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px;
+    gap: 16px;
+
+    p {
+      margin: 0;
+      color: #666;
+    }
+  }
+
+  .content-container {
+    .main-card {
+      margin-bottom: 24px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      border-radius: 12px;
+
+      .profile-header {
+        display: flex;
+        align-items: center;
+        gap: 24px;
+        flex-wrap: wrap;
+
+        .avatar-section {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 12px;
+
+          .avatar-large {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #1976d2, #42a5f5);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 2.5rem;
+            box-shadow: 0 4px 12px rgba(25, 118, 210, 0.3);
+          }
+
+          .status-badge {
+            mat-chip {
+              font-weight: 500;
+            }
+          }
+        }
+
+        .profile-info {
+          flex: 1;
+          min-width: 250px;
+
+          .avocat-name {
+            margin: 0 0 8px 0;
+            font-size: 2rem;
+            font-weight: 600;
+            color: #333;
+          }
+
+          .avocat-title {
+            margin: 0 0 4px 0;
+            font-size: 1.125rem;
+            color: #1976d2;
+            font-weight: 500;
+          }
+
+          .avocat-number {
+            margin: 0;
+            font-size: 1rem;
+            color: #666;
+            font-family: 'Courier New', monospace;
+          }
+        }
+
+        .action-buttons {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          min-width: 200px;
+
+          button {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            justify-content: flex-start;
+            height: 44px;
+            font-weight: 500;
+
+            mat-icon {
+              font-size: 1.25rem;
+              width: 1.25rem;
+              height: 1.25rem;
+            }
+          }
+        }
+      }
+    }
+
+    .details-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      gap: 24px;
+
+      .info-card {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        border-radius: 12px;
+
+        mat-card-header {
+          mat-card-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #333;
+
+            mat-icon {
+              color: #1976d2;
+              font-size: 1.5rem;
+              width: 1.5rem;
+              height: 1.5rem;
+            }
+          }
+        }
+
+        mat-card-content {
+          mat-list {
+            mat-list-item {
+              padding: 12px 0;
+
+              mat-icon[matListItemIcon] {
+                color: #666;
+                font-size: 1.25rem;
+                width: 1.25rem;
+                height: 1.25rem;
+              }
+
+              div[matListItemTitle] {
+                font-weight: 500;
+                color: #333;
+                margin-bottom: 4px;
+              }
+
+              div[matListItemLine] {
+                color: #666;
+                font-size: 0.875rem;
+
+                &.numero-ordre {
+                  font-family: 'Courier New', monospace;
+                  background: #f5f5f5;
+                  padding: 4px 8px;
+                  border-radius: 4px;
+                  display: inline-block;
+                }
+
+                .email-link,
+                .phone-link {
+                  color: #1976d2;
+                  text-decoration: none;
+                  transition: color 0.2s;
+
+                  &:hover {
+                    color: #1565c0;
+                    text-decoration: underline;
+                  }
+                }
+              }
+            }
+          }
+
+          .quick-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+
+            .action-button {
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              justify-content: flex-start;
+              height: 44px;
+              font-weight: 500;
+
+              mat-icon {
+                font-size: 1.25rem;
+                width: 1.25rem;
+                height: 1.25rem;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  .error-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px;
+    gap: 16px;
+    text-align: center;
+
+    mat-icon {
+      font-size: 4rem;
+      width: 4rem;
+      height: 4rem;
+      color: #f44336;
+    }
+
+    h3 {
+      margin: 0;
+      color: #333;
+      font-size: 1.5rem;
+    }
+
+    p {
+      margin: 0;
+      color: #666;
+    }
+
+    button {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 16px;
+    }
+  }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .avocat-details-container {
+    padding: 16px;
+
+    .header-section {
+      flex-direction: column;
+      align-items: stretch;
+
+      .action-buttons {
+        justify-content: stretch;
+
+        button {
+          flex: 1;
+        }
+      }
+    }
+
+    .content-container {
+      .main-card .profile-header {
+        flex-direction: column;
+        text-align: center;
+
+        .profile-info {
+          min-width: unset;
+          width: 100%;
+
+          .avocat-name {
+            font-size: 1.5rem;
+          }
+        }
+
+        .action-buttons {
+          min-width: unset;
+          width: 100%;
+          flex-direction: row;
+          justify-content: center;
+
+          button {
+            flex: 1;
+            justify-content: center;
+          }
+        }
+      }
+
+      .details-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .avocat-details-container {
+    padding: 12px;
+
+    .header-section .title-section {
+      .page-title {
+        font-size: 1.5rem;
+      }
+
+      .page-subtitle {
+        font-size: 0.875rem;
+      }
+    }
+
+    .content-container {
+      .main-card .profile-header {
+        .avatar-section .avatar-large {
+          width: 80px;
+          height: 80px;
+          font-size: 1.5rem;
+        }
+
+        .action-buttons {
+          flex-direction: column;
+
+          button {
+            width: 100%;
+          }
+        }
+      }
+    }
+  }
+}
+
+// Animations
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.avocat-details-container {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.main-card {
+  animation: fadeIn 0.3s ease-out;
+  animation-delay: 0.1s;
+  animation-fill-mode: both;
+}
+
+.details-grid .info-card {
+  animation: fadeIn 0.3s ease-out;
+  animation-fill-mode: both;
+
+  &:nth-child(1) { animation-delay: 0.2s; }
+  &:nth-child(2) { animation-delay: 0.3s; }
+  &:nth-child(3) { animation-delay: 0.4s; }
+  &:nth-child(4) { animation-delay: 0.5s; }
+}
+
+// Material Design overrides
+.mat-mdc-card {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+}
+
+.mat-mdc-raised-button {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+}
+
+.mat-mdc-stroked-button {
+  border-radius: 8px;
+}
+
+.mat-mdc-chip {
+  border-radius: 16px;
+}
+
+// Hover effects
+.action-button:hover,
+button:hover {
+  transform: translateY(-1px);
+  transition: transform 0.2s ease;
+}
+
+// Focus styles
+button:focus {
+  outline: 2px solid rgba(25, 118, 210, 0.5);
+  outline-offset: 2px;
+}
+
+// Loading states
+button[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

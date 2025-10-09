@@ -3,10 +3,10 @@ export interface Huissier {
   nom: string;
   prenom: string;
   email: string;
-  telephone?: string;
-  adresse?: string;
-  numeroOrdre?: string;
-  actif: boolean;
+  telephone: string | null;
+  adresse: string | null;
+  specialite: string | null;
+  numeroOrdre: string | null;
   dateCreation?: string;
   dateModification?: string;
 }
@@ -15,10 +15,9 @@ export interface HuissierRequest {
   nom: string;
   prenom: string;
   email: string;
-  telephone?: string;
-  adresse?: string;
-  numeroOrdre?: string;
-  actif: boolean;
+  telephone: string; // 8 chiffres
+  adresse?: string | null;
+  specialite?: string | null;
 }
 
 export class HuissierModel implements Huissier {
@@ -26,31 +25,61 @@ export class HuissierModel implements Huissier {
   nom: string;
   prenom: string;
   email: string;
-  telephone?: string;
-  adresse?: string;
-  numeroOrdre?: string;
-  actif: boolean;
+  telephone: string | null;
+  adresse: string | null;
+  specialite: string | null;
+  numeroOrdre: string | null;
   dateCreation?: string;
   dateModification?: string;
 
-  constructor(data: Partial<Huissier> = {}) {
-    this.id = data.id;
-    this.nom = data.nom || '';
-    this.prenom = data.prenom || '';
-    this.email = data.email || '';
-    this.telephone = data.telephone;
-    this.adresse = data.adresse;
-    this.numeroOrdre = data.numeroOrdre;
-    this.actif = data.actif ?? true;
-    this.dateCreation = data.dateCreation;
-    this.dateModification = data.dateModification;
+  constructor(huissier: Partial<Huissier> = {}) {
+    this.id = huissier.id;
+    this.nom = huissier.nom || '';
+    this.prenom = huissier.prenom || '';
+    this.email = huissier.email || '';
+    this.telephone = huissier.telephone || null;
+    this.adresse = huissier.adresse || null;
+    this.specialite = huissier.specialite || null;
+    this.numeroOrdre = huissier.numeroOrdre || null;
+    this.dateCreation = huissier.dateCreation;
+    this.dateModification = huissier.dateModification;
   }
 
-  getFullName(): string {
-    return `${this.prenom} ${this.nom}`;
+  get fullName(): string {
+    return `${this.prenom} ${this.nom}`.trim();
   }
 
-  getInitials(): string {
-    return `${this.prenom.charAt(0)}${this.nom.charAt(0)}`.toUpperCase();
+  get initials(): string {
+    const firstInitial = this.prenom ? this.prenom.charAt(0).toUpperCase() : '';
+    const lastInitial = this.nom ? this.nom.charAt(0).toUpperCase() : '';
+    return `${firstInitial}${lastInitial}`;
+  }
+
+  get displayPhone(): string {
+    if (!this.telephone) return 'Non renseigné';
+    return this.telephone;
+  }
+
+  get displayAddress(): string {
+    return this.adresse || 'Non renseignée';
+  }
+
+  get displaySpecialty(): string {
+    return this.specialite || 'Non renseignée';
+  }
+
+  toRequest(): HuissierRequest {
+    return {
+      nom: this.nom,
+      prenom: this.prenom,
+      email: this.email,
+      telephone: (this.telephone || '').replace(/\D/g, ''), // Clean phone for backend
+      adresse: this.adresse,
+      specialite: this.specialite,
+    };
+  }
+
+  static fromPartial(partial: Partial<Huissier>): HuissierModel {
+    return new HuissierModel(partial);
   }
 }

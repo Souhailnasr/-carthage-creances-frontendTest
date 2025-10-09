@@ -1,37 +1,168 @@
 <div class="huissier-form-container">
-  <div class="header">
-    <h1>{{ isEditMode ? 'Modifier un Huissier' : 'Ajouter un nouvel Huissier' }}</h1>
-  </div>
-
-  <form [formGroup]="huissierForm" (ngSubmit)="onSubmit()" class="huissier-form">
-    <div class="form-grid">
-      <div class="form-group">
-        <label for="nom">Nom *</label>
-        <input type="text" id="nom" formControlName="nom" class="form-control" placeholder="Entrez le nom">
-      </div>
-      <div class="form-group">
-        <label for="prenom">Prénom *</label>
-        <input type="text" id="prenom" formControlName="prenom" class="form-control" placeholder="Entrez le prénom">
-      </div>
-      <div class="form-group">
-        <label for="email">Email *</label>
-        <input type="email" id="email" formControlName="email" class="form-control" placeholder="Entrez l'email">
-      </div>
-      <div class="form-group">
-        <label for="telephone">Téléphone</label>
-        <input type="tel" id="telephone" formControlName="telephone" class="form-control" placeholder="Entrez le téléphone">
-      </div>
-      <div class="form-group">
-        <label for="adresse">Adresse</label>
-        <textarea id="adresse" formControlName="adresse" class="form-control" rows="3" placeholder="Entrez l'adresse"></textarea>
+  <!-- Header -->
+  <div class="header-section">
+    <div class="title-section">
+      <div class="title-wrapper">
+        <div class="icon-container">
+          <mat-icon>gavel</mat-icon>
+        </div>
+        <div class="text-content">
+          <h1 class="page-title">{{ pageTitle }}</h1>
+          <p class="page-subtitle">
+            {{ isEditMode ? 'Modifiez les informations du huissier' : 'Renseignez les informations du nouveau huissier' }}
+          </p>
+        </div>
       </div>
     </div>
-
-    <div class="form-actions">
-      <button type="button" class="btn btn-secondary" (click)="onCancel()">Annuler</button>
-      <button type="submit" class="btn btn-primary" [disabled]="huissierForm.invalid">
-        {{ isEditMode ? 'Modifier' : 'Ajouter' }}
+    <div class="action-buttons">
+      <button mat-stroked-button (click)="onCancel()" [disabled]="isSubmitting" class="back-button">
+        <mat-icon>arrow_back</mat-icon>
+        <span>Retour</span>
       </button>
     </div>
-  </form>
+  </div>
+
+  <!-- Loading Spinner -->
+  <div *ngIf="isLoading" class="loading-container">
+    <mat-spinner diameter="50"></mat-spinner>
+    <p>Chargement des données...</p>
+  </div>
+
+  <!-- Form -->
+  <div *ngIf="!isLoading" class="form-container">
+    <form [formGroup]="huissierForm" (ngSubmit)="onSubmit()" class="huissier-form">
+      
+      <!-- Informations personnelles -->
+      <mat-card class="form-card personal-info-card">
+        <mat-card-header>
+          <mat-card-title>
+            <div class="card-title-wrapper">
+              <div class="card-icon">
+                <mat-icon>person</mat-icon>
+              </div>
+              <span>Informations personnelles</span>
+            </div>
+          </mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="form-row">
+            <mat-form-field appearance="outline" class="form-field">
+              <mat-label>Nom *</mat-label>
+              <input matInput 
+                     formControlName="nom" 
+                     placeholder="Nom de famille"
+                     [class.mat-form-field-invalid]="isFieldInvalid('nom')">
+              <mat-error *ngIf="getFieldError('nom')">
+                {{ getFieldError('nom') }}
+              </mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="form-field">
+              <mat-label>Prénom *</mat-label>
+              <input matInput 
+                     formControlName="prenom" 
+                     placeholder="Prénom"
+                     [class.mat-form-field-invalid]="isFieldInvalid('prenom')">
+              <mat-error *ngIf="getFieldError('prenom')">
+                {{ getFieldError('prenom') }}
+              </mat-error>
+            </mat-form-field>
+          </div>
+
+          <div class="form-row">
+            <mat-form-field appearance="outline" class="form-field">
+              <mat-label>Email *</mat-label>
+              <input matInput 
+                     type="email" 
+                     formControlName="email" 
+                     placeholder="exemple@email.com"
+                     [class.mat-form-field-invalid]="isFieldInvalid('email')">
+              <mat-icon matSuffix>email</mat-icon>
+              <mat-error *ngIf="getFieldError('email')">
+                {{ getFieldError('email') }}
+              </mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="form-field">
+              <mat-label>Téléphone *</mat-label>
+              <input matInput 
+                     formControlName="telephone" 
+                     placeholder="12345678"
+                     maxlength="8"
+                     [class.mat-form-field-invalid]="isFieldInvalid('telephone')">
+              <mat-icon matSuffix>phone</mat-icon>
+              <mat-hint>8 chiffres exactement</mat-hint>
+              <mat-error *ngIf="getFieldError('telephone')">
+                {{ getFieldError('telephone') }}
+              </mat-error>
+            </mat-form-field>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Informations professionnelles -->
+      <mat-card class="form-card professional-info-card">
+        <mat-card-header>
+          <mat-card-title>
+            <div class="card-title-wrapper">
+              <div class="card-icon">
+                <mat-icon>work</mat-icon>
+              </div>
+              <span>Informations professionnelles</span>
+            </div>
+          </mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="form-row">
+            <mat-form-field appearance="outline" class="form-field">
+              <mat-label>Spécialité</mat-label>
+              <mat-select formControlName="specialite">
+                <mat-option value="">Sélectionner une spécialité</mat-option>
+                <mat-option *ngFor="let specialty of specialties" [value]="specialty">
+                  {{ specialty }}
+                </mat-option>
+              </mat-select>
+              <mat-icon matSuffix>school</mat-icon>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="form-field">
+              <mat-label>Adresse</mat-label>
+              <textarea matInput 
+                        formControlName="adresse" 
+                        placeholder="Adresse complète"
+                        rows="3"
+                        [class.mat-form-field-invalid]="isFieldInvalid('adresse')">
+              </textarea>
+              <mat-icon matSuffix>location_on</mat-icon>
+              <mat-error *ngIf="getFieldError('adresse')">
+                {{ getFieldError('adresse') }}
+              </mat-error>
+            </mat-form-field>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Actions -->
+      <div class="form-actions">
+        <button mat-stroked-button 
+                type="button" 
+                (click)="onCancel()"
+                [disabled]="isSubmitting"
+                class="cancel-button">
+          <mat-icon>cancel</mat-icon>
+          <span>Annuler</span>
+        </button>
+        
+        <button mat-raised-button 
+                type="submit" 
+                color="primary"
+                [disabled]="huissierForm.invalid || isSubmitting"
+                class="submit-button">
+          <mat-spinner *ngIf="isSubmitting" diameter="20" class="button-spinner"></mat-spinner>
+          <mat-icon *ngIf="!isSubmitting">{{ isEditMode ? 'save' : 'add' }}</mat-icon>
+          <span>{{ submitButtonText }}</span>
+        </button>
+      </div>
+    </form>
+  </div>
 </div>

@@ -1,0 +1,234 @@
+<div class="avocat-details-container">
+  <!-- Header -->
+  <div class="header-section">
+    <div class="title-section">
+      <h1 class="page-title">
+        <mat-icon>gavel</mat-icon>
+        Détails de l'avocat
+      </h1>
+      <p class="page-subtitle">Informations complètes sur l'avocat</p>
+    </div>
+    <div class="action-buttons">
+      <button mat-stroked-button (click)="onBack()" [disabled]="isLoading">
+        <mat-icon>arrow_back</mat-icon>
+        Retour à la liste
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading spinner -->
+  <div *ngIf="isLoading" class="loading-container">
+    <mat-spinner diameter="50"></mat-spinner>
+    <p>Chargement des détails...</p>
+  </div>
+
+  <!-- Contenu principal -->
+  <div *ngIf="!isLoading && avocat" class="content-container">
+    
+    <!-- Carte principale avec avatar et actions -->
+    <mat-card class="main-card">
+      <mat-card-content>
+        <div class="profile-header">
+          <div class="avatar-section">
+            <div class="avatar-large">
+              {{ getAvocatInitials() }}
+            </div>
+            <div class="status-badge">
+              <mat-chip [color]="getStatusColor()" selected>
+                <mat-icon>{{ getStatusIcon() }}</mat-icon>
+                {{ getStatusText() }}
+              </mat-chip>
+            </div>
+          </div>
+          
+          <div class="profile-info">
+            <h2 class="avocat-name">{{ getAvocatFullName() }}</h2>
+            <p class="avocat-title" *ngIf="avocat.specialite">{{ avocat.specialite }}</p>
+            <p class="avocat-number" *ngIf="avocat.numeroOrdre">N° Ordre: {{ avocat.numeroOrdre }}</p>
+          </div>
+
+          <div class="action-buttons">
+            <button mat-raised-button 
+                    color="primary" 
+                    (click)="onEdit()"
+                    [disabled]="isLoading">
+              <mat-icon>edit</mat-icon>
+              Modifier
+            </button>
+            
+            <!-- Action Activer/Désactiver retirée (non gérée par backend) -->
+            
+            <button mat-stroked-button 
+                    color="warn"
+                    (click)="onDelete()"
+                    [disabled]="isLoading">
+              <mat-icon>delete</mat-icon>
+              Supprimer
+            </button>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Informations détaillées -->
+    <div class="details-grid">
+      
+      <!-- Informations personnelles -->
+      <mat-card class="info-card">
+        <mat-card-header>
+          <mat-card-title>
+            <mat-icon>person</mat-icon>
+            Informations personnelles
+          </mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <mat-list>
+            <mat-list-item>
+              <mat-icon matListItemIcon>person</mat-icon>
+              <div matListItemTitle>Nom complet</div>
+              <div matListItemLine>{{ getAvocatFullName() }}</div>
+            </mat-list-item>
+            
+            <mat-list-item *ngIf="avocat.email">
+              <mat-icon matListItemIcon>email</mat-icon>
+              <div matListItemTitle>Email</div>
+              <div matListItemLine>
+                <a [href]="'mailto:' + avocat.email" class="email-link">
+                  {{ avocat.email }}
+                </a>
+              </div>
+            </mat-list-item>
+            
+            <mat-list-item *ngIf="avocat.telephone">
+              <mat-icon matListItemIcon>phone</mat-icon>
+              <div matListItemTitle>Téléphone</div>
+              <div matListItemLine>
+                <a [href]="'tel:' + avocat.telephone" class="phone-link">
+                  {{ avocat.telephone }}
+                </a>
+              </div>
+            </mat-list-item>
+            
+            <mat-list-item *ngIf="avocat.adresse">
+              <mat-icon matListItemIcon>location_on</mat-icon>
+              <div matListItemTitle>Adresse</div>
+              <div matListItemLine>{{ avocat.adresse }}</div>
+            </mat-list-item>
+          </mat-list>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Informations professionnelles -->
+      <mat-card class="info-card">
+        <mat-card-header>
+          <mat-card-title>
+            <mat-icon>work</mat-icon>
+            Informations professionnelles
+          </mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <mat-list>
+            <mat-list-item *ngIf="avocat.specialite">
+              <mat-icon matListItemIcon>school</mat-icon>
+              <div matListItemTitle>Spécialité</div>
+              <div matListItemLine>
+                <mat-chip>{{ avocat.specialite }}</mat-chip>
+              </div>
+            </mat-list-item>
+            
+            <mat-list-item *ngIf="avocat.numeroOrdre">
+              <mat-icon matListItemIcon>badge</mat-icon>
+              <div matListItemTitle>Numéro d'ordre</div>
+              <div matListItemLine class="numero-ordre">{{ avocat.numeroOrdre }}</div>
+            </mat-list-item>
+            
+            <mat-list-item>
+              <mat-icon matListItemIcon>info</mat-icon>
+              <div matListItemTitle>Statut</div>
+              <div matListItemLine>
+                <mat-chip [color]="getStatusColor()" selected>
+                  <mat-icon>{{ getStatusIcon() }}</mat-icon>
+                  {{ getStatusText() }}
+                </mat-chip>
+              </div>
+            </mat-list-item>
+          </mat-list>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Informations système -->
+      <mat-card class="info-card">
+        <mat-card-header>
+          <mat-card-title>
+            <mat-icon>info</mat-icon>
+            Informations système
+          </mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <mat-list>
+            <mat-list-item *ngIf="avocat.id">
+              <mat-icon matListItemIcon>fingerprint</mat-icon>
+              <div matListItemTitle>ID</div>
+              <div matListItemLine>{{ avocat.id }}</div>
+            </mat-list-item>
+            
+            <mat-list-item *ngIf="avocat.dateCreation">
+              <mat-icon matListItemIcon>schedule</mat-icon>
+              <div matListItemTitle>Date de création</div>
+              <div matListItemLine>{{ formatDate(avocat.dateCreation) }}</div>
+            </mat-list-item>
+            
+            <mat-list-item *ngIf="avocat.dateModification">
+              <mat-icon matListItemIcon>update</mat-icon>
+              <div matListItemTitle>Dernière modification</div>
+              <div matListItemLine>{{ formatDate(avocat.dateModification) }}</div>
+            </mat-list-item>
+          </mat-list>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Actions rapides -->
+      <mat-card class="info-card">
+        <mat-card-header>
+          <mat-card-title>
+            <mat-icon>flash_on</mat-icon>
+            Actions rapides
+          </mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="quick-actions">
+            <button mat-stroked-button 
+                    (click)="onEdit()"
+                    [disabled]="isLoading"
+                    class="action-button">
+              <mat-icon>edit</mat-icon>
+              Modifier
+            </button>
+            
+            <!-- Bouton Activer/Désactiver retiré (non géré par backend) -->
+            
+            <button mat-stroked-button 
+                    color="warn"
+                    (click)="onDelete()"
+                    [disabled]="isLoading"
+                    class="action-button">
+              <mat-icon>delete</mat-icon>
+              Supprimer
+            </button>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
+
+  <!-- Message d'erreur si avocat non trouvé -->
+  <div *ngIf="!isLoading && !avocat" class="error-container">
+    <mat-icon>error</mat-icon>
+    <h3>Avocat non trouvé</h3>
+    <p>L'avocat demandé n'existe pas ou a été supprimé.</p>
+    <button mat-raised-button color="primary" (click)="onBack()">
+      <mat-icon>arrow_back</mat-icon>
+      Retour à la liste
+    </button>
+  </div>
+</div>

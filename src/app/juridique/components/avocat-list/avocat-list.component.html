@@ -1,69 +1,230 @@
 <div class="avocat-list-container">
-  <div class="header">
-    <h1>Liste des Avocats</h1>
-    <a routerLink="/juridique/avocats/add" class="btn btn-primary">
-      <i class="fas fa-user-plus"></i> Ajouter un Avocat
-    </a>
-  </div>
-
-  <!-- Search Bar -->
-  <div class="search-section">
-    <div class="search-bar">
-      <div class="search-input-group">
-        <i class="fas fa-search"></i>
-        <input 
-          type="text" 
-          [(ngModel)]="searchTerm" 
-          (input)="onSearch()" 
-          placeholder="Rechercher par nom, email ou téléphone..."
-          class="search-input"
-        >
-      </div>
+  <!-- Header avec titre et bouton d'ajout -->
+  <div class="header-section">
+    <div class="title-section">
+      <h1 class="page-title">
+        <mat-icon>gavel</mat-icon>
+        Gestion des Avocats
+      </h1>
+      <p class="page-subtitle">Gérez la liste des avocats et leurs informations</p>
+    </div>
+    <div class="action-buttons">
+      <button mat-raised-button color="primary" routerLink="/juridique/avocats/add">
+        <mat-icon>add</mat-icon>
+        Ajouter un avocat
+      </button>
+      <button mat-stroked-button (click)="exportToCSV()" [disabled]="dataSource.data.length === 0">
+        <mat-icon>download</mat-icon>
+        Exporter CSV
+      </button>
     </div>
   </div>
 
-  <!-- Avocats List -->
-  <div class="avocats-section">
-    <div class="loading-spinner" *ngIf="isLoading">
-      <i class="fas fa-spinner fa-spin"></i>
-      <p>Chargement des avocats...</p>
-    </div>
-    
-    <div class="avocats-grid" *ngIf="!isLoading && filteredAvocats.length > 0; else noAvocats">
-      <div class="avocat-card" *ngFor="let avocat of filteredAvocats">
-        <div class="avocat-avatar">
-          <span class="avatar-text">{{ getAvocatInitials(avocat) }}</span>
-        </div>
-        <div class="avocat-info">
-          <h3 class="avocat-name">{{ avocat.prenom }} {{ avocat.nom }}</h3>
-          <p class="avocat-email">{{ avocat.email }}</p>
-          <p class="avocat-phone" *ngIf="avocat.telephone">
-            <i class="fas fa-phone"></i> {{ avocat.telephone }}
-          </p>
-          <p class="avocat-address" *ngIf="avocat.adresse">
-            <i class="fas fa-map-marker-alt"></i> {{ avocat.adresse }}
-          </p>
-        </div>
-        <div class="avocat-actions">
-          <a [routerLink]="['/juridique/avocats/edit', avocat.id]" class="btn btn-sm btn-outline-primary">
-            <i class="fas fa-edit"></i> Modifier
-          </a>
-          <button class="btn btn-sm btn-outline-danger" (click)="deleteAvocat(avocat)">
-            <i class="fas fa-trash"></i> Supprimer
+  <!-- Section de recherche et filtres -->
+  <mat-card class="search-card">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>search</mat-icon>
+        Recherche et Filtres
+      </mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <form [formGroup]="searchForm" class="search-form">
+        <div class="search-row">
+          <!-- Recherche globale -->
+          <mat-form-field appearance="outline" class="search-field">
+            <mat-label>Recherche globale</mat-label>
+            <input matInput 
+                   formControlName="searchTerm"
+                   placeholder="Nom, prénom, email, téléphone..."
+                   autocomplete="off">
+            <mat-icon matSuffix>search</mat-icon>
+          </mat-form-field>
+
+          <!-- Filtre par spécialité -->
+          <mat-form-field appearance="outline" class="filter-field">
+            <mat-label>Spécialité</mat-label>
+            <mat-select formControlName="specialty">
+              <mat-option value="">Toutes les spécialités</mat-option>
+              <mat-option *ngFor="let specialty of specialties" [value]="specialty">
+                {{ specialty }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <!-- Filtre actif/inactif -->
+          <div class="checkbox-field">
+            <mat-checkbox formControlName="showOnlyActive">
+              Afficher uniquement les avocats actifs
+            </mat-checkbox>
+          </div>
+
+          <!-- Bouton de réinitialisation -->
+          <button mat-stroked-button type="button" (click)="clearSearch()" class="clear-button">
+            <mat-icon>clear</mat-icon>
+            Réinitialiser
           </button>
         </div>
-      </div>
-    </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
 
-    <ng-template #noAvocats>
-      <div class="no-avocats">
-        <i class="fas fa-user-tie"></i>
-        <h3>Aucun avocat trouvé</h3>
-        <p>Commencez par ajouter un nouvel avocat.</p>
-        <a routerLink="/juridique/avocats/add" class="btn btn-primary">
-          <i class="fas fa-user-plus"></i> Ajouter un Avocat
-        </a>
+  <!-- Tableau des avocats -->
+  <mat-card class="table-card">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>list</mat-icon>
+        Liste des Avocats
+        <span class="count-badge">{{ totalElements }} avocat(s)</span>
+      </mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <!-- Loading spinner -->
+      <div *ngIf="isLoading" class="loading-container">
+        <mat-spinner diameter="50"></mat-spinner>
+        <p>Chargement des avocats...</p>
       </div>
-    </ng-template>
-  </div>
+
+      <!-- Message si aucun résultat -->
+      <div *ngIf="!isLoading && dataSource.data.length === 0" class="no-data-container">
+        <mat-icon>inbox</mat-icon>
+        <h3>Aucun avocat trouvé</h3>
+        <p>Il n'y a aucun avocat correspondant à vos critères de recherche.</p>
+        <button mat-raised-button color="primary" routerLink="/juridique/avocats/add">
+          <mat-icon>add</mat-icon>
+          Ajouter le premier avocat
+        </button>
+      </div>
+
+      <!-- Tableau -->
+      <div *ngIf="!isLoading && dataSource.data.length > 0" class="table-container">
+        <table mat-table [dataSource]="dataSource" matSort class="avocats-table">
+          
+          <!-- Colonne de sélection -->
+          <ng-container matColumnDef="select">
+            <th mat-header-cell *matHeaderCellDef>
+              <mat-checkbox (change)="$event ? masterToggle() : null"
+                           [checked]="selection.hasValue() && isAllSelected()"
+                           [indeterminate]="selection.hasValue() && !isAllSelected()">
+              </mat-checkbox>
+            </th>
+            <td mat-cell *matCellDef="let row">
+              <mat-checkbox (click)="$event.stopPropagation()"
+                           (change)="$event ? selection.toggle(row) : null"
+                           [checked]="selection.isSelected(row)">
+              </mat-checkbox>
+            </td>
+          </ng-container>
+
+          <!-- Colonne Nom -->
+          <ng-container matColumnDef="nom">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Nom</th>
+            <td mat-cell *matCellDef="let avocat">
+              <div class="name-cell">
+                <div class="avatar">{{ getAvocatInitials(avocat) }}</div>
+                <div class="name-info">
+                  <span class="name">{{ avocat.nom }}</span>
+                </div>
+              </div>
+            </td>
+          </ng-container>
+
+          <!-- Colonne Prénom -->
+          <ng-container matColumnDef="prenom">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Prénom</th>
+            <td mat-cell *matCellDef="let avocat">
+              <span class="prenom">{{ avocat.prenom }}</span>
+            </td>
+          </ng-container>
+
+          <!-- Colonne Email -->
+          <ng-container matColumnDef="email">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Email</th>
+            <td mat-cell *matCellDef="let avocat">
+              <a [href]="'mailto:' + avocat.email" class="email-link">
+                <mat-icon>email</mat-icon>
+                {{ avocat.email }}
+              </a>
+            </td>
+          </ng-container>
+
+          <!-- Colonne Téléphone -->
+          <ng-container matColumnDef="telephone">
+            <th mat-header-cell *matHeaderCellDef>Téléphone</th>
+            <td mat-cell *matCellDef="let avocat">
+              <span *ngIf="avocat.telephone" class="phone">
+                <mat-icon>phone</mat-icon>
+                {{ avocat.telephone }}
+              </span>
+              <span *ngIf="!avocat.telephone" class="no-phone">
+                <mat-icon>phone_disabled</mat-icon>
+                Non renseigné
+              </span>
+            </td>
+          </ng-container>
+
+          <!-- Colonne Spécialité -->
+          <ng-container matColumnDef="specialite">
+            <th mat-header-cell *matHeaderCellDef>Spécialité</th>
+            <td mat-cell *matCellDef="let avocat">
+              <mat-chip-set *ngIf="avocat.specialite" class="specialty-chip">
+                <mat-chip>{{ avocat.specialite }}</mat-chip>
+              </mat-chip-set>
+              <span *ngIf="!avocat.specialite" class="no-specialty">Non renseignée</span>
+            </td>
+          </ng-container>
+
+          <!-- Colonne Numéro Ordre -->
+          <ng-container matColumnDef="numeroOrdre">
+            <th mat-header-cell *matHeaderCellDef>N° Ordre</th>
+            <td mat-cell *matCellDef="let avocat">
+              <span *ngIf="avocat.numeroOrdre" class="numero-ordre">{{ avocat.numeroOrdre }}</span>
+              <span *ngIf="!avocat.numeroOrdre" class="no-numero">Non renseigné</span>
+            </td>
+          </ng-container>
+
+          <!-- Colonne Statut -->
+          <!-- Colonne Statut retirée (non gérée par le backend actuel) -->
+
+          <!-- Colonne Actions -->
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef>Actions</th>
+            <td mat-cell *matCellDef="let avocat">
+              <div class="action-buttons">
+                <button mat-icon-button 
+                        [matTooltip]="'Voir les détails'"
+                        [routerLink]="['/juridique/avocats', avocat.id]">
+                  <mat-icon>visibility</mat-icon>
+                </button>
+                <button mat-icon-button 
+                        [matTooltip]="'Modifier'"
+                        [routerLink]="['/juridique/avocats/edit', avocat.id]">
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <!-- Action Activer/Désactiver retirée -->
+                <button mat-icon-button 
+                        [matTooltip]="'Supprimer'"
+                        (click)="deleteAvocat(avocat)"
+                        color="warn">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </div>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;" 
+              class="avocat-row"
+              [class.inactive]="!row.actif"></tr>
+        </table>
+
+        <!-- Pagination -->
+        <mat-paginator [pageSizeOptions]="pageSizeOptions"
+                       [pageSize]="pageSize"
+                       showFirstLastButtons
+                       aria-label="Sélectionner la page des avocats">
+        </mat-paginator>
+      </div>
+    </mat-card-content>
+  </mat-card>
 </div>

@@ -1,276 +1,344 @@
 .avocat-list-container {
-  padding: 2rem;
-  background-color: #f4f7f6;
-  min-height: calc(100vh - 60px);
-  font-family: 'Roboto', sans-serif;
-  color: #333;
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
 
-  .header {
+  .header-section {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    margin-bottom: 2rem;
-    background-color: #fff;
-    padding: 1.5rem;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    align-items: flex-start;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 16px;
 
-    h1 {
-      margin: 0;
-      color: #2c3e50;
-      font-size: 2rem;
-      font-weight: 700;
-    }
-
-    .btn {
-      padding: 0.75rem 1.5rem;
-      border-radius: 5px;
-      cursor: pointer;
-      font-size: 1rem;
-      transition: background-color 0.3s ease;
-      text-decoration: none;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-
-      &-primary {
-        background-color: #6f42c1;
-        color: white;
-        border: none;
-
-        &:hover {
-          background-color: #5a35a0;
-        }
-      }
-    }
-  }
-
-  .search-section {
-    margin-bottom: 2rem;
-
-    .search-bar {
-      background-color: #fff;
-      padding: 1.5rem;
-      border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-
-      .search-input-group {
-        position: relative;
+    .title-section {
+      .page-title {
         display: flex;
         align-items: center;
+        gap: 12px;
+        margin: 0 0 8px 0;
+        font-size: 2rem;
+        font-weight: 600;
+        color: #1976d2;
 
-        i {
-          position: absolute;
-          left: 1rem;
-          color: #6c757d;
-          z-index: 1;
+        mat-icon {
+          font-size: 2rem;
+          width: 2rem;
+          height: 2rem;
+        }
+      }
+
+      .page-subtitle {
+        margin: 0;
+        color: #666;
+        font-size: 1rem;
+      }
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+
+      button {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+    }
+  }
+
+  .search-card {
+    margin-bottom: 24px;
+    background: #fff;
+
+    .search-form {
+      .search-row {
+        display: flex;
+        gap: 16px;
+        align-items: flex-end;
+        flex-wrap: wrap;
+
+        .search-field {
+          flex: 2;
+          min-width: 300px;
         }
 
-        .search-input {
-          width: 100%;
-          padding: 0.75rem 1rem 0.75rem 3rem;
-          border: 2px solid #e9ecef;
-          border-radius: 8px;
-          font-size: 1rem;
-          transition: border-color 0.3s ease;
+        .filter-field {
+          flex: 1;
+          min-width: 200px;
+        }
 
-          &:focus {
-            outline: none;
-            border-color: #6f42c1;
-          }
+        .checkbox-field {
+          display: flex;
+          align-items: center;
+          min-width: 250px;
+        }
+
+        .clear-button {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          white-space: nowrap;
         }
       }
     }
   }
 
-  .avocats-section {
-    .loading-spinner {
+  .table-card {
+    background: #fff;
+    .count-badge {
+      background: #e3f2fd;
+      color: #1976d2;
+      padding: 4px 12px;
+      border-radius: 16px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      margin-left: 12px;
+    }
+
+    .loading-container {
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 4rem;
-      background-color: #fff;
-      border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      padding: 48px;
+      gap: 16px;
 
-      i {
-        font-size: 2rem;
-        color: #6f42c1;
-        margin-bottom: 1rem;
+      p {
+        margin: 0;
+        color: #666;
+      }
+    }
+
+    .no-data-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 48px;
+      gap: 16px;
+      text-align: center;
+
+      mat-icon {
+        font-size: 4rem;
+        width: 4rem;
+        height: 4rem;
+        color: #ccc;
+      }
+
+      h3 {
+        margin: 0;
+        color: #666;
       }
 
       p {
         margin: 0;
-        color: #6c757d;
-        font-size: 1.1rem;
+        color: #999;
       }
     }
 
-    .avocats-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-      gap: 1.5rem;
+    .table-container {
+      overflow-x: auto;
 
-      .avocat-card {
-        background-color: #fff;
-        border-radius: 12px;
-        padding: 1.5rem;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-        border: 1px solid #e9ecef;
+      .avocats-table {
+        width: 100%;
+        min-width: 800px;
 
-        &:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-        }
-
-        .avocat-avatar {
-          width: 60px;
-          height: 60px;
-          background: linear-gradient(135deg, #6f42c1, #8e44ad);
-          border-radius: 50%;
+        .name-cell {
           display: flex;
           align-items: center;
-          justify-content: center;
-          margin-bottom: 1rem;
+          gap: 12px;
 
-          .avatar-text {
-            font-weight: bold;
-            font-size: 1.2rem;
+          .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #1976d2, #42a5f5);
             color: white;
-          }
-        }
-
-        .avocat-info {
-          margin-bottom: 1.5rem;
-
-          .avocat-name {
-            margin: 0 0 0.5rem 0;
-            color: #2c3e50;
-            font-size: 1.2rem;
-            font-weight: 600;
-          }
-
-          .avocat-email {
-            margin: 0 0 0.5rem 0;
-            color: #6c757d;
-            font-size: 0.9rem;
-          }
-
-          .avocat-phone,
-          .avocat-address {
-            margin: 0 0 0.25rem 0;
-            color: #6c757d;
-            font-size: 0.85rem;
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.875rem;
+          }
 
-            i {
-              width: 12px;
-              color: #6f42c1;
+          .name-info {
+            .name {
+              font-weight: 500;
             }
           }
         }
 
-        .avocat-actions {
+        .email-link {
           display: flex;
-          gap: 0.5rem;
-
-          .btn {
-            padding: 0.5rem 1rem;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 0.85rem;
-            transition: all 0.3s ease;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.25rem;
-            border: 1px solid;
-
-            &-sm {
-              padding: 0.4rem 0.8rem;
-              font-size: 0.8rem;
-            }
-
-            &-outline-primary {
-              background-color: transparent;
-              color: #6f42c1;
-              border-color: #6f42c1;
-
-              &:hover {
-                background-color: #6f42c1;
-                color: white;
-              }
-            }
-
-            &-outline-danger {
-              background-color: transparent;
-              color: #dc3545;
-              border-color: #dc3545;
-
-              &:hover {
-                background-color: #dc3545;
-                color: white;
-              }
-            }
-          }
-        }
-      }
-    }
-
-    .no-avocats {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 4rem;
-      background-color: #fff;
-      border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-
-      i {
-        font-size: 4rem;
-        color: #6f42c1;
-        margin-bottom: 1.5rem;
-      }
-
-      h3 {
-        margin: 0 0 0.5rem 0;
-        color: #2c3e50;
-        font-size: 1.5rem;
-        font-weight: 600;
-      }
-
-      p {
-        margin: 0 0 2rem 0;
-        color: #6c757d;
-        font-size: 1.1rem;
-      }
-
-      .btn {
-        padding: 0.75rem 1.5rem;
-        border-radius: 5px;
-        cursor: pointer;
-        font-size: 1rem;
-        transition: background-color 0.3s ease;
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-
-        &-primary {
-          background-color: #6f42c1;
-          color: white;
-          border: none;
+          align-items: center;
+          gap: 8px;
+          color: #1976d2;
+          text-decoration: none;
+          transition: color 0.2s;
 
           &:hover {
-            background-color: #5a35a0;
+            color: #1565c0;
+            text-decoration: underline;
+          }
+
+          mat-icon {
+            font-size: 1rem;
+            width: 1rem;
+            height: 1rem;
+          }
+        }
+
+        .phone {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          color: #4caf50;
+
+          mat-icon {
+            font-size: 1rem;
+            width: 1rem;
+            height: 1rem;
+          }
+        }
+
+        .no-phone {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          color: #999;
+
+          mat-icon {
+            font-size: 1rem;
+            width: 1rem;
+            height: 1rem;
+          }
+        }
+
+        .specialty-chip {
+          mat-chip {
+            font-size: 0.75rem;
+            height: 24px;
+          }
+        }
+
+        .no-specialty {
+          color: #999;
+          font-style: italic;
+        }
+
+        .numero-ordre {
+          font-family: 'Courier New', monospace;
+          background: #f5f5f5;
+          padding: 2px 8px;
+          border-radius: 4px;
+          font-size: 0.875rem;
+        }
+
+        .no-numero {
+          color: #999;
+          font-style: italic;
+        }
+
+        .action-buttons {
+          display: flex;
+          gap: 4px;
+
+          button {
+            width: 36px;
+            height: 36px;
+            line-height: 36px;
+
+            mat-icon {
+              font-size: 1.125rem;
+              width: 1.125rem;
+              height: 1.125rem;
+            }
+          }
+        }
+
+        .avocat-row {
+          transition: background-color 0.2s;
+
+          &:hover {
+            background-color: #f5f5f5;
+          }
+
+          &.inactive {
+            opacity: 0.6;
+            background-color: #fafafa;
           }
         }
       }
     }
   }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .avocat-list-container {
+    padding: 16px;
+
+    .header-section {
+      flex-direction: column;
+      align-items: stretch;
+
+      .action-buttons {
+        justify-content: stretch;
+
+        button {
+          flex: 1;
+        }
+      }
+    }
+
+    .search-card .search-form .search-row {
+      flex-direction: column;
+      align-items: stretch;
+
+      .search-field,
+      .filter-field,
+      .checkbox-field,
+      .clear-button {
+        min-width: unset;
+        width: 100%;
+      }
+    }
+
+    .table-container {
+      .avocats-table {
+        min-width: 600px;
+      }
+    }
+  }
+}
+
+// Material Design overrides
+.mat-mdc-card {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+}
+
+.mat-mdc-form-field {
+  .mat-mdc-text-field-wrapper {
+    border-radius: 8px;
+  }
+}
+
+.mat-mdc-button {
+  border-radius: 8px;
+}
+
+.mat-mdc-raised-button {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.mat-mdc-chip {
+  border-radius: 16px;
+}
+
+.mat-mdc-paginator {
+  border-top: 1px solid #e0e0e0;
+  background: #fafafa;
 }

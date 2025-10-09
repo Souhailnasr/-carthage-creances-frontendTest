@@ -3,24 +3,22 @@ export interface Avocat {
   nom: string;
   prenom: string;
   email: string;
-  telephone?: string;
-  adresse?: string;
-  specialite?: string;
-  numeroOrdre?: string;
+  telephone?: string | null;
+  adresse?: string | null;
+  specialite?: string | null;
+  numeroOrdre?: string | null;
   actif: boolean;
-  dateCreation?: string;
-  dateModification?: string;
+  dateCreation?: string | null;
+  dateModification?: string | null;
 }
 
 export interface AvocatRequest {
   nom: string;
   prenom: string;
   email: string;
-  telephone?: string;
-  adresse?: string;
-  specialite?: string;
-  numeroOrdre?: string;
-  actif: boolean;
+  telephone: string; // exactly 8 digits required by backend
+  adresse?: string | null;
+  specialite?: string | null;
 }
 
 export class AvocatModel implements Avocat {
@@ -28,13 +26,13 @@ export class AvocatModel implements Avocat {
   nom: string;
   prenom: string;
   email: string;
-  telephone?: string;
-  adresse?: string;
-  specialite?: string;
-  numeroOrdre?: string;
+  telephone?: string | null;
+  adresse?: string | null;
+  specialite?: string | null;
+  numeroOrdre?: string | null;
   actif: boolean;
-  dateCreation?: string;
-  dateModification?: string;
+  dateCreation?: string | null;
+  dateModification?: string | null;
 
   constructor(data: Partial<Avocat> = {}) {
     this.id = data.id;
@@ -56,5 +54,21 @@ export class AvocatModel implements Avocat {
 
   getInitials(): string {
     return `${this.prenom.charAt(0)}${this.nom.charAt(0)}`.toUpperCase();
+  }
+
+  toRequest(): AvocatRequest {
+    return {
+      nom: this.nom.trim(),
+      prenom: this.prenom.trim(),
+      email: this.email.trim().toLowerCase(),
+      telephone: (this.telephone || '').replace(/\D/g, ''),
+      adresse: this.adresse?.trim() || null,
+      specialite: this.specialite?.trim() || null,
+      
+    };
+  }
+
+  static fromPartial(data: Partial<Avocat>): AvocatModel {
+    return new AvocatModel(data);
   }
 }

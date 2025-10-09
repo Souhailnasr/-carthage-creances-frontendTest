@@ -1,1 +1,18 @@
-/* You can add global styles to this file, and also import other style files */
+/* Angular Material prebuilt theme */
+@use '@angular/material' as mat;
+@import '@angular/material/prebuilt-themes/indigo-pink.css';
+
+/* Global font for Material */
+html, body { height: 100%; }
+body {
+  margin: 0;
+  font-family: Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background-color: #f5f7f9;
+  color: #1f2937;
+}
+
+/* Normalize mat-card headings inside our pages */
+.mat-mdc-card-title, .mat-mdc-card-subtitle { letter-spacing: .2px; }
+
+/* Fix Material icon baseline in buttons */
+.mat-icon { vertical-align: middle; }

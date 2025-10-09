@@ -1,144 +1,166 @@
 .avocat-form-container {
-  background: white;
-  border-radius: 12px;
-  padding: 2rem;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  margin-bottom: 2rem;
+  padding: 24px;
+  max-width: 1000px;
+  margin: 0 auto;
 
-  .form-header {
+  .header-section {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    margin-bottom: 2rem;
-    padding-bottom: 1rem;
-    border-bottom: 2px solid #ecf0f1;
+    align-items: flex-start;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 16px;
 
-    h3 {
-      margin: 0;
-      color: #2c3e50;
-      font-size: 1.5rem;
-      font-weight: 600;
+    .title-section {
+      .page-title {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin: 0 0 8px 0;
+        font-size: 2rem;
+        font-weight: 600;
+        color: #1976d2;
+
+        mat-icon {
+          font-size: 2rem;
+          width: 2rem;
+          height: 2rem;
+        }
+      }
+
+      .page-subtitle {
+        margin: 0;
+        color: #666;
+        font-size: 1rem;
+      }
     }
 
-    .btn-secondary {
-      background: #95a5a6;
-      color: white;
-      padding: 0.5rem 1rem;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
+    .action-buttons {
       display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      transition: background-color 0.3s ease;
+      gap: 12px;
+      flex-wrap: wrap;
 
-      &:hover {
-        background: #7f8c8d;
+      button {
+        display: flex;
+        align-items: center;
+        gap: 8px;
       }
     }
   }
 
-  .avocat-form {
-    .form-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 1.5rem;
-      margin-bottom: 2rem;
+  .form-card {
+    position: relative;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    background: #fff;
 
-      .full-width {
-        grid-column: 1 / -1;
-      }
-    }
-
-    .form-group {
+    .loading-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(255, 255, 255, 0.9);
       display: flex;
       flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      z-index: 10;
+      border-radius: 12px;
 
-      label {
-        margin-bottom: 0.5rem;
+      p {
+        margin: 0;
+        color: #666;
         font-weight: 500;
-        color: #2c3e50;
-        font-size: 0.9rem;
-      }
-
-      .form-control {
-        padding: 0.75rem;
-        border: 2px solid #ecf0f1;
-        border-radius: 8px;
-        font-size: 1rem;
-        transition: border-color 0.3s ease, box-shadow 0.3s ease;
-
-        &:focus {
-          outline: none;
-          border-color: #6f42c1;
-          box-shadow: 0 0 0 3px rgba(111, 66, 193, 0.1);
-        }
-
-        &.is-invalid {
-          border-color: #e74c3c;
-        }
-
-        &::placeholder {
-          color: #bdc3c7;
-        }
-      }
-
-      textarea.form-control {
-        resize: vertical;
-        min-height: 80px;
-      }
-
-      .invalid-feedback {
-        color: #e74c3c;
-        font-size: 0.875rem;
-        margin-top: 0.25rem;
-        display: block;
       }
     }
 
-    .form-actions {
-      display: flex;
-      gap: 1rem;
-      justify-content: flex-end;
-      padding-top: 1rem;
-      border-top: 2px solid #ecf0f1;
+    .avocat-form {
+      .form-section {
+        margin-bottom: 32px;
 
-      .btn {
-        padding: 0.75rem 1.5rem;
-        border: none;
-        border-radius: 8px;
-        font-weight: 500;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        font-size: 1rem;
+        &:last-of-type {
+          margin-bottom: 24px;
+        }
 
-        &.btn-primary {
-          background: #6f42c1;
-          color: white;
+        .section-title {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin: 0 0 20px 0;
+          font-size: 1.25rem;
+          font-weight: 600;
+          color: #1f2937;
+          padding-bottom: 8px;
+          border-bottom: 2px solid #e0e0e0;
 
-          &:hover:not(:disabled) {
-            background: #5a2d91;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(111, 66, 193, 0.3);
-          }
-
-          &:disabled {
-            background: #bdc3c7;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
+          mat-icon {
+            color: #1976d2;
+            font-size: 1.5rem;
+            width: 1.5rem;
+            height: 1.5rem;
           }
         }
 
-        &.btn-secondary {
-          background: #95a5a6;
-          color: white;
+        .form-row {
+          display: flex;
+          gap: 16px;
+          margin-bottom: 16px;
+          flex-wrap: wrap;
 
-          &:hover {
-            background: #7f8c8d;
+          &.full-width {
+            .form-field {
+              flex: 1;
+              min-width: 100%;
+            }
+          }
+
+          .form-field {
+            flex: 1;
+            min-width: 250px;
+
+            &.email-field {
+              flex: 1.2;
+            }
+
+            .mat-mdc-form-field-subscript-wrapper { margin-top: 2px; }
+          }
+
+          /* removed checkbox block (actif) as not required by backend */
+        }
+      }
+
+      .form-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 16px;
+        padding-top: 24px;
+        border-top: 1px solid #e0e0e0;
+        margin-top: 24px;
+
+        button {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          min-width: 120px;
+          height: 44px;
+
+          &[type="submit"] {
+            background: linear-gradient(135deg, #1976d2, #42a5f5);
+            color: white;
+            font-weight: 600;
+
+            &:disabled {
+              background: #ccc;
+              color: #666;
+            }
+          }
+
+          mat-icon {
+            font-size: 1.25rem;
+            width: 1.25rem;
+            height: 1.25rem;
           }
         }
       }
@@ -146,25 +168,164 @@
   }
 }
 
+// Styles pour les erreurs et hints
+.error-hint {
+  color: #f44336 !important;
+  font-size: 0.75rem;
+}
+
+.mat-mdc-form-field-error {
+  color: #f44336;
+  font-size: 0.75rem;
+  margin-top: 4px;
+}
+
+.mat-mdc-form-field-hint {
+  color: #666;
+  font-size: 0.75rem;
+}
+
+// Styles pour les champs de formulaire
+.mat-mdc-form-field {
+  .mat-mdc-text-field-wrapper {
+    border-radius: 8px;
+    transition: all 0.2s ease;
+
+    &:hover {
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    &.mdc-text-field--focused {
+      box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.2);
+    }
+  }
+
+  .mat-mdc-form-field-outline {
+    border-radius: 8px;
+  }
+
+  .mat-mdc-form-field-outline-thick {
+    border-width: 2px;
+  }
+}
+
+// Styles pour les selects
+.mat-mdc-select {
+  .mat-mdc-select-trigger {
+    border-radius: 8px;
+  }
+}
+
+// Styles pour les textareas
+.mat-mdc-form-field textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
 // Responsive design
 @media (max-width: 768px) {
   .avocat-form-container {
-    padding: 1rem;
+    padding: 16px;
 
-    .form-header {
+    .header-section {
       flex-direction: column;
-      gap: 1rem;
-      text-align: center;
+      align-items: stretch;
+
+      .action-buttons {
+        justify-content: stretch;
+
+        button {
+          flex: 1;
+        }
+      }
     }
 
-    .avocat-form {
-      .form-grid {
-        grid-template-columns: 1fr;
+    .form-card .avocat-form {
+      .form-section .form-row {
+        flex-direction: column;
+
+        .form-field {
+          min-width: unset;
+          width: 100%;
+        }
       }
 
       .form-actions {
-        flex-direction: column;
+        flex-direction: column-reverse;
+
+        button {
+          width: 100%;
+        }
       }
     }
   }
+}
+
+@media (max-width: 480px) {
+  .avocat-form-container {
+    padding: 12px;
+
+    .header-section .title-section {
+      .page-title {
+        font-size: 1.5rem;
+      }
+
+      .page-subtitle {
+        font-size: 0.875rem;
+      }
+    }
+  }
+}
+
+// Animations
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.avocat-form-container {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.form-section {
+  animation: fadeIn 0.3s ease-out;
+  animation-fill-mode: both;
+
+  &:nth-child(1) { animation-delay: 0.1s; }
+  &:nth-child(2) { animation-delay: 0.2s; }
+  &:nth-child(3) { animation-delay: 0.3s; }
+}
+
+// Focus styles
+.mat-mdc-form-field:focus-within {
+  .mat-mdc-text-field-wrapper {
+    box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.2);
+  }
+}
+
+// Loading states
+.mat-mdc-button[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+// Material Design overrides
+.mat-mdc-card {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+}
+
+.mat-mdc-raised-button {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+}
+
+.mat-mdc-stroked-button {
+  border-radius: 8px;
 }

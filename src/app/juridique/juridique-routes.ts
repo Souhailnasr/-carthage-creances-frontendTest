@@ -5,8 +5,10 @@ import { JuridiqueUserManagementComponent } from './components/juridique-user-ma
 import { JuridiqueProfileComponent } from './components/juridique-profile/juridique-profile.component';
 import { AvocatFormComponent } from './components/avocat-form/avocat-form.component';
 import { AvocatListComponent } from './components/avocat-list/avocat-list.component';
+import { AvocatDetailsComponent } from './components/avocat-details/avocat-details.component';
 import { HuissierFormComponent } from './components/huissier-form/huissier-form.component';
 import { HuissierListComponent } from './components/huissier-list/huissier-list.component';
+import { HuissierDetailsComponent } from './components/huissier-details/huissier-details.component';
 import { AffectationDossiersComponent } from './components/affectation-dossiers/affectation-dossiers.component';
 import { GestionAudiencesComponent } from './components/gestion-audiences/gestion-audiences.component';
 import { TachesComponent } from '../shared/components/taches/taches.component';
@@ -42,6 +44,10 @@ export const juridiqueRoutes: Routes = [
         component: AvocatFormComponent
       },
       {
+        path: 'avocats/:id',
+        component: AvocatDetailsComponent
+      },
+      {
         path: 'huissiers',
         component: HuissierListComponent
       },
@@ -52,6 +58,10 @@ export const juridiqueRoutes: Routes = [
       {
         path: 'huissiers/edit/:id',
         component: HuissierFormComponent
+      },
+      {
+        path: 'huissiers/:id',
+        component: HuissierDetailsComponent
       },
       {
         path: 'affectation-dossiers',

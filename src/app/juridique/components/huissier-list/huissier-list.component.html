@@ -1,69 +1,241 @@
 <div class="huissier-list-container">
-  <div class="header">
-    <h1>Liste des Huissiers</h1>
-    <a routerLink="/juridique/huissiers/add" class="btn btn-primary">
-      <i class="fas fa-user-plus"></i> Ajouter un Huissier
-    </a>
+  <!-- Header -->
+  <div class="header-section">
+    <div class="title-section">
+      <h1 class="page-title">
+        <mat-icon>gavel</mat-icon>
+        Gestion des Huissiers
+      </h1>
+      <p class="page-subtitle">Liste et gestion des huissiers de justice</p>
+    </div>
+    <div class="action-buttons">
+      <button mat-raised-button color="primary" (click)="addHuissier()">
+        <mat-icon>add</mat-icon>
+        Ajouter un huissier
+      </button>
+    </div>
   </div>
 
-  <!-- Search Bar -->
-  <div class="search-section">
-    <div class="search-bar">
-      <div class="search-input-group">
-        <i class="fas fa-search"></i>
-        <input 
-          type="text" 
-          [(ngModel)]="searchTerm" 
-          (input)="onSearch()" 
-          placeholder="Rechercher par nom, email ou téléphone..."
-          class="search-input"
-        >
+  <!-- Search and Filters -->
+  <mat-card class="search-card">
+    <mat-card-content>
+      <form [formGroup]="searchForm" class="search-form">
+        <div class="search-row">
+          <mat-form-field appearance="outline" class="search-field">
+            <mat-label>Recherche globale</mat-label>
+            <input matInput 
+                   formControlName="searchTerm" 
+                   placeholder="Nom, prénom, email, spécialité...">
+            <mat-icon matSuffix>search</mat-icon>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="filter-field">
+            <mat-label>Spécialité</mat-label>
+            <mat-select formControlName="specialty">
+              <mat-option value="">Toutes les spécialités</mat-option>
+              <mat-option *ngFor="let specialty of specialties" [value]="specialty">
+                {{ specialty }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <div class="checkbox-filters">
+            <mat-checkbox formControlName="withDossiers">
+              Avec dossiers
+            </mat-checkbox>
+            <mat-checkbox formControlName="withoutDossiers">
+              Sans dossiers
+            </mat-checkbox>
+          </div>
+
+          <button mat-stroked-button type="button" (click)="clearFilters()">
+            <mat-icon>clear</mat-icon>
+            Effacer
+          </button>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Table Card -->
+  <mat-card class="table-card">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>list</mat-icon>
+        Liste des Huissiers
+        <span class="count-badge">{{ totalCount }} huissier(s)</span>
+      </mat-card-title>
+      <div class="table-actions">
+        <button mat-icon-button 
+                [matTooltip]="'Exporter en CSV'"
+                (click)="exportToCSV()"
+                [disabled]="dataSource.data.length === 0">
+          <mat-icon>download</mat-icon>
+        </button>
       </div>
-    </div>
-  </div>
+    </mat-card-header>
 
-  <!-- Huissiers List -->
-  <div class="huissiers-section">
-    <div class="loading-spinner" *ngIf="isLoading">
-      <i class="fas fa-spinner fa-spin"></i>
-      <p>Chargement des huissiers...</p>
-    </div>
-    
-    <div class="huissiers-grid" *ngIf="!isLoading && filteredHuissiers.length > 0; else noHuissiers">
-      <div class="huissier-card" *ngFor="let huissier of filteredHuissiers">
-        <div class="huissier-avatar">
-          <span class="avatar-text">{{ getHuissierInitials(huissier) }}</span>
-        </div>
-        <div class="huissier-info">
-          <h3 class="huissier-name">{{ huissier.prenom }} {{ huissier.nom }}</h3>
-          <p class="huissier-email">{{ huissier.email }}</p>
-          <p class="huissier-phone" *ngIf="huissier.telephone">
-            <i class="fas fa-phone"></i> {{ huissier.telephone }}
-          </p>
-          <p class="huissier-address" *ngIf="huissier.adresse">
-            <i class="fas fa-map-marker-alt"></i> {{ huissier.adresse }}
-          </p>
-        </div>
-        <div class="huissier-actions">
-          <a [routerLink]="['/juridique/huissiers/edit', huissier.id]" class="btn btn-sm btn-outline-primary">
-            <i class="fas fa-edit"></i> Modifier
-          </a>
-          <button class="btn btn-sm btn-outline-danger" (click)="deleteHuissier(huissier)">
-            <i class="fas fa-trash"></i> Supprimer
+    <mat-card-content>
+      <!-- Loading Spinner -->
+      <div *ngIf="isLoading" class="loading-container">
+        <mat-spinner diameter="50"></mat-spinner>
+        <p>Chargement des huissiers...</p>
+      </div>
+
+      <!-- Table -->
+      <div *ngIf="!isLoading" class="table-container">
+        <table mat-table [dataSource]="dataSource" matSort class="huissier-table">
+          
+          <!-- Selection Column -->
+          <ng-container matColumnDef="select">
+            <th mat-header-cell *matHeaderCellDef>
+              <mat-checkbox (change)="$event ? masterToggle() : null"
+                            [checked]="selection.hasValue() && isAllSelected()"
+                            [indeterminate]="selection.hasValue() && !isAllSelected()">
+              </mat-checkbox>
+            </th>
+            <td mat-cell *matCellDef="let row">
+              <mat-checkbox (click)="$event.stopPropagation()"
+                            (change)="$event ? selection.toggle(row) : null"
+                            [checked]="selection.isSelected(row)">
+              </mat-checkbox>
+            </td>
+          </ng-container>
+
+          <!-- Nom Column -->
+          <ng-container matColumnDef="nom">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Nom</th>
+            <td mat-cell *matCellDef="let huissier">
+              <div class="name-cell">
+                <span class="name-text">{{ huissier.nom }}</span>
+              </div>
+            </td>
+          </ng-container>
+
+          <!-- Prénom Column -->
+          <ng-container matColumnDef="prenom">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Prénom</th>
+            <td mat-cell *matCellDef="let huissier">
+              <div class="name-cell">
+                <span class="name-text">{{ huissier.prenom }}</span>
+              </div>
+            </td>
+          </ng-container>
+
+          <!-- Email Column -->
+          <ng-container matColumnDef="email">
+            <th mat-header-cell *matHeaderCellDef>Email</th>
+            <td mat-cell *matCellDef="let huissier">
+              <div class="email-cell">
+                <mat-icon class="email-icon">email</mat-icon>
+                <a [href]="'mailto:' + huissier.email" class="email-link">
+                  {{ huissier.email }}
+                </a>
+              </div>
+            </td>
+          </ng-container>
+
+          <!-- Téléphone Column -->
+          <ng-container matColumnDef="telephone">
+            <th mat-header-cell *matHeaderCellDef>Téléphone</th>
+            <td mat-cell *matCellDef="let huissier">
+              <div class="phone-cell">
+                <mat-icon class="phone-icon">phone</mat-icon>
+                <span *ngIf="huissier.telephone; else noPhone">
+                  <a [href]="'tel:' + huissier.telephone" class="phone-link">
+                    {{ huissier.telephone }}
+                  </a>
+                </span>
+                <ng-template #noPhone>
+                  <span class="no-data">Non renseigné</span>
+                </ng-template>
+              </div>
+            </td>
+          </ng-container>
+
+          <!-- Spécialité Column -->
+          <ng-container matColumnDef="specialite">
+            <th mat-header-cell *matHeaderCellDef>Spécialité</th>
+            <td mat-cell *matCellDef="let huissier">
+              <div class="specialty-cell">
+                <mat-chip *ngIf="huissier.specialite; else noSpecialty" 
+                          class="specialty-chip">
+                  {{ huissier.specialite }}
+                </mat-chip>
+                <ng-template #noSpecialty>
+                  <span class="no-data">Non renseignée</span>
+                </ng-template>
+              </div>
+            </td>
+          </ng-container>
+
+          <!-- N° Ordre Column -->
+          <ng-container matColumnDef="numeroOrdre">
+            <th mat-header-cell *matHeaderCellDef>N° Ordre</th>
+            <td mat-cell *matCellDef="let huissier">
+              <div class="numero-cell">
+                <span *ngIf="huissier.numeroOrdre; else noNumero" class="numero-text">
+                  {{ huissier.numeroOrdre }}
+                </span>
+                <ng-template #noNumero>
+                  <span class="no-data">Non renseigné</span>
+                </ng-template>
+              </div>
+            </td>
+          </ng-container>
+
+          <!-- Actions Column -->
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef>Actions</th>
+            <td mat-cell *matCellDef="let huissier">
+              <div class="actions-cell">
+                <button mat-icon-button 
+                        matTooltip="Voir les détails"
+                        (click)="viewHuissier(huissier)"
+                        color="primary">
+                  <mat-icon>visibility</mat-icon>
+                </button>
+                
+                <button mat-icon-button 
+                        matTooltip="Modifier"
+                        (click)="editHuissier(huissier)"
+                        color="accent">
+                  <mat-icon>edit</mat-icon>
+                </button>
+                
+                <button mat-icon-button 
+                        matTooltip="Supprimer"
+                        (click)="deleteHuissier(huissier)"
+                        color="warn">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </div>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;" 
+              class="huissier-row"
+              (click)="viewHuissier(row)"></tr>
+        </table>
+
+        <!-- No Data Message -->
+        <div *ngIf="dataSource.data.length === 0" class="no-data-container">
+          <mat-icon>inbox</mat-icon>
+          <h3>Aucun huissier trouvé</h3>
+          <p>Il n'y a aucun huissier correspondant à vos critères de recherche.</p>
+          <button mat-raised-button color="primary" (click)="addHuissier()">
+            <mat-icon>add</mat-icon>
+            Ajouter le premier huissier
           </button>
         </div>
       </div>
-    </div>
+    </mat-card-content>
 
-    <ng-template #noHuissiers>
-      <div class="no-huissiers">
-        <i class="fas fa-balance-scale"></i>
-        <h3>Aucun huissier trouvé</h3>
-        <p>Commencez par ajouter un nouvel huissier.</p>
-        <a routerLink="/juridique/huissiers/add" class="btn btn-primary">
-          <i class="fas fa-user-plus"></i> Ajouter un Huissier
-        </a>
-      </div>
-    </ng-template>
-  </div>
+    <!-- Paginator -->
+    <mat-paginator [pageSizeOptions]="[10, 25, 50, 100]" 
+                   showFirstLastButtons
+                   aria-label="Sélectionner la page des huissiers">
+    </mat-paginator>
+  </mat-card>
 </div>
