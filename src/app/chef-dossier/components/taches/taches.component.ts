@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { TacheUrgenteService, TacheUrgente } from '../../../core/services/tache-urgente.service';
-import { NotificationService } from '../../../core/services/notification.service';
+import { NotificationService, TypeNotification } from '../../../core/services/notification.service';
 import { interval, Subscription } from 'rxjs';
 
 @Component({
@@ -137,13 +137,10 @@ export class TachesComponent implements OnInit, OnDestroy {
 
   private createNotificationForAgent(agent: any, tache: TacheUrgente): void {
     const notification = {
-      id: Date.now(),
-      utilisateurId: agent.id,
-      type: 'TACHE_ASSIGNEE',
+      utilisateur: { id: agent.id },
+      type: TypeNotification.TACHE_URGENTE,
       titre: 'Nouvelle tâche assignée',
-      message: `Une nouvelle tâche "${tache.titre}" vous a été assignée par ${this.currentUser.getFullName()}`,
-      statut: 'NON_LUE',
-      dateCreation: new Date()
+      message: `Une nouvelle tâche "${tache.titre}" vous a été assignée par ${this.currentUser.getFullName()}`
     };
 
     this.notificationService.addNotification(notification);

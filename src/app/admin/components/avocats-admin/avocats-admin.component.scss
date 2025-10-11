@@ -1,0 +1,233 @@
+.avocats-admin-container {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  background: #f8f9fa;
+  min-height: 100vh;
+
+  .header {
+    text-align: center;
+    margin-bottom: 3rem;
+    padding: 2rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 16px;
+    color: white;
+
+    h1 {
+      margin: 0 0 0.5rem 0;
+      font-size: 2.5rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+
+      i {
+        font-size: 2.2rem;
+      }
+    }
+
+    p {
+      margin: 0;
+      font-size: 1.2rem;
+      opacity: 0.9;
+    }
+  }
+
+  .content {
+    .loading-spinner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 4rem 2rem;
+      color: #6b7280;
+
+      i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        color: #667eea;
+      }
+
+      p {
+        margin: 0;
+        font-size: 1.2rem;
+      }
+    }
+
+    .avocats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+      gap: 2rem;
+
+      .avocat-card {
+        background: white;
+        border-radius: 16px;
+        padding: 2rem;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 1.5rem;
+
+        &:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+        }
+
+        .avocat-avatar {
+          width: 80px;
+          height: 80px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          font-weight: 700;
+          font-size: 1.5rem;
+        }
+
+        .avocat-info {
+          flex: 1;
+
+          h3 {
+            margin: 0 0 0.5rem 0;
+            color: #1f2937;
+            font-size: 1.3rem;
+            font-weight: 600;
+          }
+
+          .avocat-email {
+            margin: 0 0 0.5rem 0;
+            color: #6b7280;
+            font-size: 1rem;
+          }
+
+          .avocat-specialite {
+            margin: 0 0 1rem 0;
+            color: #9ca3af;
+            font-size: 0.9rem;
+            font-style: italic;
+          }
+
+          .avocat-status {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+
+            &.active {
+              background: #d1fae5;
+              color: #065f46;
+            }
+          }
+        }
+
+        .avocat-actions {
+          display: flex;
+          gap: 0.75rem;
+
+          .btn {
+            padding: 0.75rem;
+            border: 2px solid;
+            border-radius: 10px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 45px;
+            height: 45px;
+
+            &.btn-outline-primary {
+              border-color: #667eea;
+              color: #667eea;
+              background: transparent;
+
+              &:hover {
+                background: #667eea;
+                color: white;
+                transform: translateY(-2px);
+              }
+            }
+
+            &.btn-outline-warning {
+              border-color: #f59e0b;
+              color: #f59e0b;
+              background: transparent;
+
+              &:hover {
+                background: #f59e0b;
+                color: white;
+                transform: translateY(-2px);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    .no-avocats {
+      text-align: center;
+      padding: 4rem 2rem;
+      color: #9ca3af;
+
+      i {
+        font-size: 4rem;
+        margin-bottom: 1.5rem;
+        color: #d1d5db;
+      }
+
+      h3 {
+        margin: 0 0 0.5rem 0;
+        color: #6b7280;
+        font-size: 1.5rem;
+      }
+
+      p {
+        margin: 0;
+        font-size: 1.1rem;
+      }
+    }
+  }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .avocats-admin-container {
+    padding: 1rem;
+
+    .header {
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+
+      h1 {
+        font-size: 2rem;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+
+      p {
+        font-size: 1rem;
+      }
+    }
+
+    .content {
+      .avocats-grid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+
+        .avocat-card {
+          padding: 1.5rem;
+        }
+      }
+    }
+  }
+}

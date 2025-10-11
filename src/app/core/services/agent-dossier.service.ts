@@ -35,7 +35,7 @@ export class AgentDossierService {
       throw new Error('Utilisateur non connecté');
     }
 
-    return this.dossierApiService.getDossiersCreesByAgent(parseInt(currentUser.id)).pipe(
+    return this.dossierApiService.getDossiersCreesByAgent(Number(currentUser.id)).pipe(
       tap(dossiers => {
         this.mesDossiersSubject.next(dossiers);
         console.log('Mes dossiers chargés:', dossiers);
@@ -59,7 +59,7 @@ export class AgentDossierService {
       throw new Error('Utilisateur non connecté');
     }
 
-    return this.dossierApiService.getDossiersByAgent(parseInt(currentUser.id)).pipe(
+    return this.dossierApiService.getDossiersByAgent(Number(currentUser.id)).pipe(
       tap(dossiers => {
         this.dossiersAssignesSubject.next(dossiers);
         console.log('Dossiers assignés chargés:', dossiers);
@@ -172,7 +172,7 @@ export class AgentDossierService {
       throw new Error('Utilisateur non connecté');
     }
 
-    const agentId = parseInt(currentUser.id);
+    const agentId = Number(currentUser.id);
     
     return this.dossierApiService.countDossiersCreesByAgent(agentId).pipe(
       tap(dossiersCrees => {

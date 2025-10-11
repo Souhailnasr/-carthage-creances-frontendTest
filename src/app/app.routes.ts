@@ -82,6 +82,16 @@ export const routes: Routes = [
     canActivate: [AuthGuard]
   },
   {
+    path: 'notifications',
+    loadComponent: () => import('./shared/components/notifications-page/notifications-page.component').then(m => m.NotificationsPageComponent),
+    canActivate: [AuthGuard]
+  },
+  {
+    path: 'send-notification',
+    loadComponent: () => import('./shared/components/send-notification/send-notification.component').then(m => m.SendNotificationComponent),
+    canActivate: [AuthGuard]
+  },
+  {
     path: 'unauthorized',
     loadComponent: () => import('./shared/components/unauthorized/unauthorized.component').then(m => m.UnauthorizedComponent)
   },

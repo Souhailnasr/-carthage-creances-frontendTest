@@ -61,10 +61,10 @@ export class DossierService {
     if (!user?.id) {
       return of({ assignes: [], crees: [] });
     }
-    const agentId = parseInt(user.id);
+    const agentId = user.id;
     return forkJoin({
-      assignes: this.dossierApi.getDossiersByAgent(agentId),
-      crees: this.dossierApi.getDossiersCreesByAgent(agentId)
+      assignes: this.dossierApi.getDossiersByAgent(Number(agentId)),
+      crees: this.dossierApi.getDossiersCreesByAgent(Number(agentId))
     }).pipe(
       tap(({ assignes, crees }) => {
         this.dossiersAssignesSubject.next(assignes);
@@ -75,7 +75,7 @@ export class DossierService {
 
   refreshStats(): Observable<DossierStats> {
     const user = this.auth.getCurrentUser();
-    const agentId = user?.id ? parseInt(user.id) : undefined;
+    const agentId = user?.id;
 
     const common$ = forkJoin({
       totalDossiers: this.dossierApi.countTotalDossiers(),
@@ -86,8 +86,8 @@ export class DossierService {
 
     const agent$ = agentId
       ? forkJoin({
-          dossiersAssignes: this.dossierApi.countDossiersByAgent(agentId),
-          dossiersCreesParAgent: this.dossierApi.countDossiersCreesByAgent(agentId)
+          dossiersAssignes: this.dossierApi.countDossiersByAgent(Number(agentId)),
+          dossiersCreesParAgent: this.dossierApi.countDossiersCreesByAgent(Number(agentId))
         })
       : of({ dossiersAssignes: 0, dossiersCreesParAgent: 0 });
 
@@ -101,7 +101,7 @@ export class DossierService {
   validate(dossierId: number, chefId: number): Observable<DossierApi> {
     return this.dossierApi.validateDossier(dossierId, chefId).pipe(
       tap(() => {
-        this.onDataChanged();
+        // Data changed
       })
     );
   }
@@ -109,7 +109,7 @@ export class DossierService {
   reject(dossierId: number, commentaire: string): Observable<DossierApi> {
     return this.dossierApi.rejectDossier(dossierId, commentaire).pipe(
       tap(() => {
-        this.onDataChanged();
+        // Data changed
       })
     );
   }
@@ -117,13 +117,17 @@ export class DossierService {
   // Fichiers
   uploadPdf(dossierId: number, type: 'contratSigne' | 'pouvoir', file: File): Observable<DossierApi> {
     return this.dossierApi.uploadPdf(dossierId, type, file).pipe(
-      tap(() => this.onDataChanged())
+      tap(() => {
+        // Data changed
+      })
     );
   }
 
   deletePdf(dossierId: number, type: 'contratSigne' | 'pouvoir'): Observable<DossierApi> {
     return this.dossierApi.deletePdf(dossierId, type).pipe(
-      tap(() => this.onDataChanged())
+      tap(() => {
+        // Data changed
+      })
     );
   }
 

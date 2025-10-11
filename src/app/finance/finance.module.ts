@@ -11,13 +11,13 @@ const routes: Routes = [
     path: 'dashboard',
     component: FinanceDashboardComponent,
     canActivate: [AuthGuard],
-    data: { allowedRoles: [Role.CHEF_FINANCE, Role.AGENT_FINANCE, Role.SUPER_ADMIN] }
+    data: { allowedRoles: [Role.CHEF_DEPARTEMENT_FINANCE, Role.AGENT_FINANCE, Role.SUPER_ADMIN] }
   },
   {
     path: 'rapports',
     component: RapportsComponent,
     canActivate: [AuthGuard],
-    data: { allowedRoles: [Role.CHEF_FINANCE, Role.AGENT_FINANCE, Role.SUPER_ADMIN] }
+    data: { allowedRoles: [Role.CHEF_DEPARTEMENT_FINANCE, Role.AGENT_FINANCE, Role.SUPER_ADMIN] }
   },
   { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
 ];

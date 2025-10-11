@@ -2,13 +2,16 @@
   <!-- Header -->
   <div class="header">
     <h1>Gestion des Créanciers</h1>
-    <button class="btn btn-primary" (click)="resetForm()">
+    <button class="btn btn-primary" (click)="showCreateForm()" *ngIf="!showForm">
       <i class="fas fa-plus"></i> Nouveau Créancier
+    </button>
+    <button class="btn btn-secondary" (click)="hideForm()" *ngIf="showForm">
+      <i class="fas fa-arrow-left"></i> Retour à la liste
     </button>
   </div>
 
   <!-- Formulaire -->
-  <div class="form-section">
+  <div class="form-section" *ngIf="showForm">
     <form [formGroup]="creancierForm" (ngSubmit)="onSubmit()" class="creancier-form">
       <div class="form-header">
         <h3>{{ isEditMode ? 'Modifier le Créancier' : 'Nouveau Créancier' }}</h3>
@@ -158,7 +161,7 @@
       </div>
 
       <div class="form-actions">
-        <button type="button" class="btn btn-secondary" (click)="resetForm()">
+        <button type="button" class="btn btn-secondary" (click)="hideForm()">
           <i class="fas fa-times"></i> Annuler
         </button>
         <button type="submit" class="btn btn-primary" [disabled]="creancierForm.invalid">
@@ -168,23 +171,25 @@
     </form>
   </div>
 
-  <!-- Recherche -->
-  <div class="search-section">
-    <div class="search-box">
-      <input 
-        type="text" 
-        [(ngModel)]="searchTerm"
-        (input)="searchCreanciers()"
-        placeholder="Rechercher par nom, prénom, email..."
-        class="search-input">
-      <button class="btn btn-outline-secondary" (click)="clearSearch()" *ngIf="searchTerm">
-        <i class="fas fa-times"></i>
-      </button>
+  <!-- Recherche et Liste -->
+  <div class="list-section" *ngIf="!showForm">
+    <!-- Recherche -->
+    <div class="search-section">
+      <div class="search-box">
+        <input 
+          type="text" 
+          [(ngModel)]="searchTerm"
+          (input)="searchCreanciers()"
+          placeholder="Rechercher par nom, prénom, email..."
+          class="search-input">
+        <button class="btn btn-outline-secondary" (click)="clearSearch()" *ngIf="searchTerm">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
     </div>
-  </div>
 
-  <!-- Liste des créanciers -->
-  <div class="creanciers-list">
+    <!-- Liste des créanciers -->
+    <div class="creanciers-list">
     <div class="list-header">
       <h3>Liste des Créanciers ({{ filteredCreanciers.length }})</h3>
     </div>
@@ -235,5 +240,6 @@
         <p>Commencez par créer votre premier créancier</p>
       </div>
     </ng-template>
+    </div>
   </div>
 </div>

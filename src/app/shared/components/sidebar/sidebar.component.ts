@@ -25,6 +25,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
   currentUser: User | null = null;
   currentRoute: string = '';
   isCollapsed: boolean = false;
+  expandedMenus: Set<string> = new Set();
   private destroy$ = new Subject<void>();
 
   menuItems: MenuItem[] = [
@@ -68,7 +69,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
       label: 'Gestion des Utilisateurs',
       icon: 'fas fa-user-cog',
       route: '/dossier/utilisateurs',
-      roles: [Role.SUPER_ADMIN, Role.CHEF_DOSSIER]
+      roles: [Role.CHEF_DEPARTEMENT_DOSSIER]
     },
     {
       label: 'Tâches',
@@ -79,32 +80,64 @@ export class SidebarComponent implements OnInit, OnDestroy {
     {
       label: 'Gestion Juridique',
       icon: 'fas fa-gavel',
+      route: '/admin/juridique',
+      roles: [Role.SUPER_ADMIN],
+      children: [
+        {
+          label: 'Vue d\'ensemble',
+          icon: 'fas fa-chart-pie',
+          route: '/admin/juridique',
+          roles: [Role.SUPER_ADMIN]
+        },
+        {
+          label: 'Avocats',
+          icon: 'fas fa-user-tie',
+          route: '/admin/juridique/avocats',
+          roles: [Role.SUPER_ADMIN]
+        },
+        {
+          label: 'Huissiers',
+          icon: 'fas fa-balance-scale',
+          route: '/admin/juridique/huissiers',
+          roles: [Role.SUPER_ADMIN]
+        },
+        {
+          label: 'Audiences',
+          icon: 'fas fa-gavel',
+          route: '/admin/juridique/audiences',
+          roles: [Role.SUPER_ADMIN]
+        }
+      ]
+    },
+    {
+      label: 'Gestion Juridique',
+      icon: 'fas fa-gavel',
       route: '/juridique',
-      roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE, Role.AGENT_RECOUVREMENT_JURIDIQUE],
+      roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE, Role.AGENT_RECOUVREMENT_JURIDIQUE],
       children: [
         {
           label: 'Avocats',
           icon: 'fas fa-user-tie',
           route: '/juridique/avocats',
-          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE, Role.AGENT_RECOUVREMENT_JURIDIQUE]
+          roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE, Role.AGENT_RECOUVREMENT_JURIDIQUE]
         },
         {
           label: 'Huissiers',
           icon: 'fas fa-balance-scale',
           route: '/juridique/huissiers',
-          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE, Role.AGENT_RECOUVREMENT_JURIDIQUE]
+          roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE, Role.AGENT_RECOUVREMENT_JURIDIQUE]
         },
         {
           label: 'Nouvel Avocat',
           icon: 'fas fa-user-plus',
           route: '/juridique/avocats/ajouter',
-          roles: [Role.SUPER_ADMIN, Role.CHEF_JURIDIQUE]
+          roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE]
         },
         {
           label: 'Nouvel Huissier',
           icon: 'fas fa-user-plus',
           route: '/juridique/huissiers/ajouter',
-          roles: [Role.SUPER_ADMIN, Role.CHEF_JURIDIQUE]
+          roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE]
         }
       ]
     },
@@ -147,6 +180,26 @@ export class SidebarComponent implements OnInit, OnDestroy {
           roles: [Role.SUPER_ADMIN]
         }
       ]
+    },
+    {
+      label: 'Notifications',
+      icon: 'fas fa-bell',
+      route: '/notifications',
+      roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER, Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE, Role.AGENT_RECOUVREMENT_JURIDIQUE, Role.CHEF_DEPARTEMENT_FINANCE, Role.AGENT_FINANCE, Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE, Role.AGENT_RECOUVREMENT_AMIABLE],
+      children: [
+        {
+          label: 'Mes Notifications',
+          icon: 'fas fa-bell',
+          route: '/notifications',
+          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER, Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE, Role.AGENT_RECOUVREMENT_JURIDIQUE, Role.CHEF_DEPARTEMENT_FINANCE, Role.AGENT_FINANCE, Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE, Role.AGENT_RECOUVREMENT_AMIABLE]
+        },
+        {
+          label: 'Envoyer Notification',
+          icon: 'fas fa-paper-plane',
+          route: '/send-notification',
+          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_DOSSIER, Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE, Role.CHEF_DEPARTEMENT_FINANCE, Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE]
+        }
+      ]
     }
   ];
 
@@ -169,6 +222,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
       .subscribe((event) => {
         if (event instanceof NavigationEnd) {
           this.currentRoute = event.url;
+          this.autoExpandActiveMenus();
         }
       });
   }
@@ -206,6 +260,37 @@ export class SidebarComponent implements OnInit, OnDestroy {
     return item.children.some(child => this.isActiveRoute(child.route));
   }
 
+  isMenuExpanded(item: MenuItem): boolean {
+    return this.expandedMenus.has(item.label);
+  }
+
+  toggleMenu(item: MenuItem): void {
+    if (this.expandedMenus.has(item.label)) {
+      this.expandedMenus.delete(item.label);
+    } else {
+      this.expandedMenus.add(item.label);
+    }
+  }
+
+  handleMenuClick(item: MenuItem): void {
+    if (item.children) {
+      // Si c'est un menu avec des enfants, toggle l'expansion
+      this.toggleMenu(item);
+    } else {
+      // Si c'est un menu simple, naviguer
+      this.navigateTo(item.route);
+    }
+  }
+
+  private autoExpandActiveMenus(): void {
+    // Auto-expandir les menus qui ont des enfants actifs
+    this.menuItems.forEach(item => {
+      if (item.children && this.hasActiveChild(item)) {
+        this.expandedMenus.add(item.label);
+      }
+    });
+  }
+
   navigateTo(route: string): void {
     this.router.navigate([route]);
   }
@@ -215,14 +300,14 @@ export class SidebarComponent implements OnInit, OnDestroy {
     
     const roleNames: { [key in Role]: string } = {
       [Role.SUPER_ADMIN]: 'Super Administrateur',
-      [Role.CHEF_DOSSIER]: 'Chef de Dossier',
-      [Role.AGENT_DOSSIER]: 'Agent de Dossier',
-      [Role.CHEF_JURIDIQUE]: 'Chef Juridique',
-      [Role.AGENT_JURIDIQUE]: 'Agent Juridique',
-      [Role.CHEF_FINANCE]: 'Chef Finance',
-      [Role.AGENT_FINANCE]: 'Agent Finance',
+      [Role.CHEF_DEPARTEMENT_DOSSIER]: 'Chef Département Dossier',
+      [Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE]: 'Chef Département Recouvrement Juridique',
+      [Role.AGENT_RECOUVREMENT_JURIDIQUE]: 'Agent Recouvrement Juridique',
+      [Role.CHEF_DEPARTEMENT_FINANCE]: 'Chef Département Finance',
+      [Role.AGENT_DOSSIER]: 'Agent Dossier',
       [Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE]: 'Chef Département Recouvrement Amiable',
-      [Role.AGENT_RECOUVREMENT_AMIABLE]: 'Agent Recouvrement Amiable'
+      [Role.AGENT_RECOUVREMENT_AMIABLE]: 'Agent Recouvrement Amiable',
+      [Role.AGENT_FINANCE]: 'Agent Finance'
     };
 
     return roleNames[this.currentUser.role] || this.currentUser.role;

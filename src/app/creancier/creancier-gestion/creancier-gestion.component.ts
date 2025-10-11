@@ -23,6 +23,7 @@ export class CreancierGestionComponent implements OnInit {
   editingCreancierId: number | null = null;
   searchTerm = '';
   currentUser: any;
+  showForm = false; // Nouvelle variable pour contrôler l'affichage du formulaire
 
   constructor(
     private creancierApiService: CreancierApiService,
@@ -129,7 +130,7 @@ export class CreancierGestionComponent implements OnInit {
     this.creancierApiService.createCreancier(creancierRequest).subscribe({
       next: (newCreancier) => {
         console.log('Créancier créé avec succès:', newCreancier);
-        this.resetForm();
+        this.hideForm();
         alert('Créancier créé avec succès !');
         // Recharger la liste depuis le backend pour s'assurer d'avoir les données à jour
         this.loadCreanciers();
@@ -162,7 +163,7 @@ export class CreancierGestionComponent implements OnInit {
           this.creanciers[index] = updatedCreancier;
           this.filteredCreanciers = [...this.creanciers];
         }
-        this.resetForm();
+        this.hideForm();
         console.log('Créancier mis à jour avec succès:', updatedCreancier);
       },
       error: (error) => {
@@ -173,7 +174,7 @@ export class CreancierGestionComponent implements OnInit {
           this.creanciers[index] = { ...this.creanciers[index], ...creancierData };
           this.filteredCreanciers = [...this.creanciers];
         }
-        this.resetForm();
+        this.hideForm();
       }
     });
   }
@@ -197,6 +198,7 @@ export class CreancierGestionComponent implements OnInit {
   }
 
   editCreancier(creancier: CreancierApi): void {
+    this.showForm = true;
     this.isEditMode = true;
     this.editingCreancierId = creancier.id;
     this.creancierForm.patchValue({
@@ -216,6 +218,21 @@ export class CreancierGestionComponent implements OnInit {
     this.creancierForm.reset();
     this.isEditMode = false;
     this.editingCreancierId = null;
+    this.showForm = false;
+  }
+
+  showCreateForm(): void {
+    this.showForm = true;
+    this.isEditMode = false;
+    this.editingCreancierId = null;
+    this.creancierForm.reset();
+  }
+
+  hideForm(): void {
+    this.showForm = false;
+    this.isEditMode = false;
+    this.editingCreancierId = null;
+    this.creancierForm.reset();
   }
 
   searchCreanciers(): void {

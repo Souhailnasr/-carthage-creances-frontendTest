@@ -58,6 +58,13 @@ export class UtilisateurService {
   }
 
   /**
+   * Alias pour getAllUtilisateurs (compatibilité)
+   */
+  getAllUsers(): Observable<Utilisateur[]> {
+    return this.getAllUtilisateurs();
+  }
+
+  /**
    * Obtenir un utilisateur par ID depuis l'API backend
    */
   getUtilisateurById(id: number): Observable<Utilisateur> {

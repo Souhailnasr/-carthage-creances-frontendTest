@@ -4,6 +4,53 @@
   min-height: 100vh;
 }
 
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 32px;
+  background: white;
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.header-left {
+  flex: 1;
+}
+
+.header-left h1 {
+  font-size: 28px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin: 0 0 8px 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header-left h1 i {
+  color: #667eea;
+  font-size: 24px;
+}
+
+.current-time {
+  color: #6c757d;
+  font-size: 16px;
+  margin: 0;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.notifications-header {
+  position: relative;
+  z-index: 1000;
+}
+
 .page-header {
   display: flex;
   justify-content: space-between;
@@ -804,6 +851,168 @@
   padding: 10px;
 }
 
+// Styles pour les tâches urgentes
+.urgent-tasks-section {
+  margin-top: 2rem;
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+  h3 {
+    margin: 0 0 20px 0;
+    color: #2c3e50;
+    font-size: 1.5rem;
+    font-weight: 600;
+  }
+}
+
+.tasks-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.task-card {
+  border: 1px solid #e1e5e9;
+  border-radius: 8px;
+  padding: 16px;
+  background: #f8f9fa;
+  transition: all 0.3s ease;
+
+  &:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+  }
+
+  &.urgence-tres-urgent {
+    border-left: 4px solid #dc3545;
+  }
+
+  &.urgence-moyenne {
+    border-left: 4px solid #ffc107;
+  }
+
+  &.urgence-faible {
+    border-left: 4px solid #28a745;
+  }
+}
+
+.task-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.task-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.task-info {
+  flex: 1;
+  min-width: 0;
+
+  h4 {
+    margin: 0 0 4px 0;
+    color: #2c3e50;
+    font-size: 1.1rem;
+    font-weight: 600;
+  }
+
+  p {
+    margin: 0;
+    color: #6c757d;
+    font-size: 0.9rem;
+    line-height: 1.4;
+  }
+}
+
+.task-urgency {
+  flex-shrink: 0;
+}
+
+.urgency-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+
+  &.urgence-tres-urgent {
+    background: #dc3545;
+    color: white;
+  }
+
+  &.urgence-moyenne {
+    background: #ffc107;
+    color: #212529;
+  }
+
+  &.urgence-faible {
+    background: #28a745;
+    color: white;
+  }
+}
+
+.task-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 12px;
+  border-top: 1px solid #e1e5e9;
+}
+
+.task-date {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #6c757d;
+  font-size: 0.9rem;
+
+  i {
+    color: #667eea;
+  }
+
+  .overdue {
+    color: #dc3545;
+    font-weight: 600;
+  }
+}
+
+.no-tasks {
+  text-align: center;
+  padding: 40px 20px;
+  color: #6c757d;
+
+  i {
+    font-size: 3rem;
+    color: #28a745;
+    margin-bottom: 16px;
+    display: block;
+  }
+
+  h4 {
+    margin: 0 0 8px 0;
+    color: #2c3e50;
+    font-size: 1.2rem;
+  }
+
+  p {
+    margin: 0;
+    font-size: 1rem;
+  }
+}
+
 // Responsive pour les notifications
 @media (max-width: 768px) {
   .notifications-fixed {
@@ -811,5 +1020,16 @@
     right: 10px;
     left: 10px;
     width: auto;
+  }
+
+  .task-header {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .task-footer {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
   }
 }

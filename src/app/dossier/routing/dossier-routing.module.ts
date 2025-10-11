@@ -17,55 +17,55 @@ const routes: Routes = [
     path: 'parties-prenantes',
     component: PartiePrenanteListComponent,
     canActivate: [AuthGuard],
-    data: { allowedRoles: [Role.CHEF_DOSSIER, Role.AGENT_DOSSIER, Role.SUPER_ADMIN] }
+    data: { allowedRoles: [Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER, Role.SUPER_ADMIN] }
   },
   {
     path: 'parties-prenantes/ajouter/:type',
     component: PartiePrenanteFormComponent,
     canActivate: [AuthGuard],
-    data: { allowedRoles: [Role.CHEF_DOSSIER, Role.AGENT_DOSSIER, Role.SUPER_ADMIN] }
+    data: { allowedRoles: [Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER, Role.SUPER_ADMIN] }
   },
   {
     path: 'parties-prenantes/modifier/:type/:id',
     component: PartiePrenanteFormComponent,
     canActivate: [AuthGuard],
-    data: { allowedRoles: [Role.CHEF_DOSSIER, Role.AGENT_DOSSIER, Role.SUPER_ADMIN] }
+    data: { allowedRoles: [Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER, Role.SUPER_ADMIN] }
   },
   {
     path: 'parties-prenantes/voir/:type/:id',
     component: PartiePrenanteDetailComponent,
     canActivate: [AuthGuard],
-    data: { allowedRoles: [Role.CHEF_DOSSIER, Role.AGENT_DOSSIER, Role.SUPER_ADMIN] }
+    data: { allowedRoles: [Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER, Role.SUPER_ADMIN] }
   },
   {
     path: 'gestion',
     component: DossierGestionComponent,
     canActivate: [AuthGuard],
-    data: { allowedRoles: [Role.CHEF_DOSSIER, Role.AGENT_DOSSIER, Role.SUPER_ADMIN] }
+    data: { allowedRoles: [Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER, Role.SUPER_ADMIN] }
   },
   {
     path: 'detail/:id',
     component: DossierDetailComponent,
     canActivate: [AuthGuard],
-    data: { allowedRoles: [Role.CHEF_DOSSIER, Role.AGENT_DOSSIER, Role.SUPER_ADMIN] }
+    data: { allowedRoles: [Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER, Role.SUPER_ADMIN] }
   },
   {
     path: 'enquete',
     component: EnquetePhaseComponent,
     canActivate: [AuthGuard],
-    data: { allowedRoles: [Role.CHEF_DOSSIER, Role.AGENT_DOSSIER, Role.SUPER_ADMIN] }
+    data: { allowedRoles: [Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER, Role.SUPER_ADMIN] }
   },
   {
     path: 'enquete-detail/:id',
     component: EnqueteDetailComponent,
     canActivate: [AuthGuard],
-    data: { allowedRoles: [Role.CHEF_DOSSIER, Role.AGENT_DOSSIER, Role.SUPER_ADMIN] }
+    data: { allowedRoles: [Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER, Role.SUPER_ADMIN] }
   },
   {
     path: 'utilisateurs',
     component: UserManagementComponent,
     canActivate: [AuthGuard, ChefDossierGuard],
-    data: { allowedRoles: [Role.CHEF_DOSSIER, Role.SUPER_ADMIN] }
+    data: { allowedRoles: [Role.CHEF_DEPARTEMENT_DOSSIER, Role.SUPER_ADMIN] }
   },
   {
     path: 'profil',

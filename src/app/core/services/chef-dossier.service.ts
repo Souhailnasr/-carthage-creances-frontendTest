@@ -70,7 +70,7 @@ export class ChefDossierService {
       throw new Error('Utilisateur non connecté');
     }
 
-    return this.dossierApiService.validerDossier(dossierId, parseInt(currentUser.id)).pipe(
+    return this.dossierApiService.validerDossier(dossierId, Number(currentUser.id)).pipe(
       tap(validatedDossier => {
         // Mettre à jour la liste locale
         const dossiers = this.dossiersEnAttenteSubject.value;

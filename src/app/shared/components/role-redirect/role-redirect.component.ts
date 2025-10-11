@@ -66,16 +66,14 @@ export class RoleRedirectComponent implements OnInit {
 
   private getRedirectUrlByRole(role: string): string {
     switch (role) {
+      case 'SUPER_ADMIN':
+        return '/admin/dashboard';
       case 'CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE':
         return '/juridique/dashboard';
       case 'CHEF_DEPARTEMENT_DOSSIER':
         return '/dossier/dashboard';
-      case 'AGENT_DOSSIER':
-        return '/dossier/dashboard';
       case 'AGENT_RECOUVREMENT_JURIDIQUE':
         return '/juridique/dashboard';
-      case 'SUPER_ADMIN':
-        return '/admin/dashboard';
       default:
         return '/dashboard';
     }

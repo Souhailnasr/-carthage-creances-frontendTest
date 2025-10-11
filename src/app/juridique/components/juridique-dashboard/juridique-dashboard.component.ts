@@ -105,7 +105,7 @@ export class JuridiqueDashboardComponent implements OnInit, OnDestroy {
       });
 
     // Load agents juridiques
-    this.utilisateurService.getUtilisateursByRole(Role.AGENT_JURIDIQUE)
+    this.utilisateurService.getUtilisateursByRole(Role.AGENT_RECOUVREMENT_JURIDIQUE)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (agents) => {

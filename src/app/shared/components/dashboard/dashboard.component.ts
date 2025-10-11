@@ -2,19 +2,17 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { AuthService } from '../../../core/services/auth.service';
 import { DossierService, DossierStats } from '../../../core/services/dossier.service';
 import { RoleService } from '../../../core/services/role.service';
 import { User, Role, Dossier, StatutDossier, Urgence } from '../../models';
 import { Subject, takeUntil } from 'rxjs';
 import { NotificationComponent } from '../notification/notification.component';
-import { TacheUrgenteComponent } from '../tache-urgente/tache-urgente.component';
 import { ApiDiagnosticComponent } from '../api-diagnostic/api-diagnostic.component';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, NotificationComponent, TacheUrgenteComponent, ApiDiagnosticComponent],
+  imports: [CommonModule, RouterModule, FormsModule, NotificationComponent, ApiDiagnosticComponent],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss']
 })
@@ -69,14 +67,23 @@ export class DashboardComponent implements OnInit, OnDestroy {
   searchTaskTerm: string = '';
 
   constructor(
-    private authService: AuthService,
     private dossierService: DossierService,
     public roleService: RoleService // Public to be accessible in template
   ) { }
 
   ngOnInit(): void {
-    this.currentUser = this.authService.getCurrentUser();
+    // Mock user pour les tests - Agent de Dossier
+    this.currentUser = {
+      id: 1,
+      nom: 'Ben Ali',
+      prenom: 'Ahmed',
+      email: 'ahmed.benali@test.com',
+      role: 'AGENT_DOSSIER',
+      getFullName: () => 'Ahmed Ben Ali'
+    } as any;
     this.loadStatistics();
+    this.loadAgentPerformance();
+    this.loadUrgentTasks();
   }
 
   loadStatistics(): void {
@@ -93,42 +100,58 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   loadUrgentTasks(): void {
-    // Simulation des tâches urgentes pour l'agent
-    this.urgentTasks = [
-      {
-        id: 1,
-        titre: 'Dossier Client ABC - Enquête urgente',
-        description: 'Compléter l\'enquête financière pour le dossier ABC avant le 25/01/2024',
-        urgence: 'TRES_URGENT',
-        dateEcheance: new Date('2024-01-25'),
-        type: 'ENQUETE',
-        dossierId: '1'
-      },
-      {
-        id: 2,
-        titre: 'Relance Client XYZ',
-        description: 'Effectuer une relance téléphonique pour le dossier XYZ',
-        urgence: 'MOYENNE',
-        dateEcheance: new Date('2024-01-30'),
-        type: 'RELANCE',
-        dossierId: '2'
-      },
-      {
-        id: 3,
-        titre: 'Nouveau dossier à traiter',
-        description: 'Analyser et traiter le nouveau dossier DEF assigné par le chef',
-        urgence: 'FAIBLE',
-        dateEcheance: new Date('2024-02-05'),
-        type: 'DOSSIER',
-        dossierId: '3'
-      }
-    ];
+    // Simulation des tâches urgentes pour l'agent connecté
+    if (this.currentUser?.role === 'AGENT_DOSSIER') {
+      // Tâches spécifiques à l'agent connecté
+      this.urgentTasks = [
+        {
+          id: 1,
+          titre: 'Dossier Client ABC - Enquête urgente',
+          description: 'Compléter l\'enquête financière pour le dossier ABC avant le 25/01/2024',
+          urgence: 'TRES_URGENT',
+          dateEcheance: new Date('2024-01-25'),
+          type: 'ENQUETE',
+          dossierId: '1'
+        },
+        {
+          id: 2,
+          titre: 'Relance Client XYZ',
+          description: 'Effectuer une relance téléphonique pour le dossier XYZ',
+          urgence: 'MOYENNE',
+          dateEcheance: new Date('2024-01-30'),
+          type: 'RELANCE',
+          dossierId: '2'
+        },
+        {
+          id: 3,
+          titre: 'Nouveau dossier à traiter',
+          description: 'Analyser et traiter le nouveau dossier DEF assigné par le chef',
+          urgence: 'FAIBLE',
+          dateEcheance: new Date('2024-02-05'),
+          type: 'DOSSIER',
+          dossierId: '3'
+        }
+      ];
+    } else {
+      // Pour les autres rôles, pas de tâches urgentes spécifiques
+      this.urgentTasks = [];
+    }
     this.filteredUrgentTasks = [...this.urgentTasks];
   }
 
   loadAgentPerformance(): void {
     // Simulation des données de performance - dans une vraie app, ceci viendrait d'une API
-    this.agentPerformance = [
+    const allAgentPerformance: Array<{
+      id: number;
+      nom: string;
+      prenom: string;
+      role: string;
+      dossiersTraites: number;
+      dossiersClotures: number;
+      tauxReussite: number;
+      montantRecupere: number;
+      performance: 'excellent' | 'bon' | 'moyen' | 'faible';
+    }> = [
       {
         id: 1,
         nom: 'Ben Ali',
@@ -138,7 +161,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         dossiersClotures: 38,
         tauxReussite: 84.4,
         montantRecupere: 125000,
-        performance: 'excellent'
+        performance: 'excellent' as const
       },
       {
         id: 2,
@@ -149,7 +172,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         dossiersClotures: 32,
         tauxReussite: 84.2,
         montantRecupere: 98000,
-        performance: 'excellent'
+        performance: 'excellent' as const
       },
       {
         id: 3,
@@ -160,7 +183,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         dossiersClotures: 25,
         tauxReussite: 78.1,
         montantRecupere: 87000,
-        performance: 'bon'
+        performance: 'bon' as const
       },
       {
         id: 4,
@@ -171,7 +194,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         dossiersClotures: 20,
         tauxReussite: 71.4,
         montantRecupere: 65000,
-        performance: 'bon'
+        performance: 'bon' as const
       },
       {
         id: 5,
@@ -182,7 +205,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         dossiersClotures: 16,
         tauxReussite: 64.0,
         montantRecupere: 52000,
-        performance: 'moyen'
+        performance: 'moyen' as const
       },
       {
         id: 6,
@@ -193,7 +216,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         dossiersClotures: 12,
         tauxReussite: 54.5,
         montantRecupere: 38000,
-        performance: 'moyen'
+        performance: 'moyen' as const
       },
       {
         id: 7,
@@ -204,7 +227,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         dossiersClotures: 8,
         tauxReussite: 44.4,
         montantRecupere: 25000,
-        performance: 'faible'
+        performance: 'faible' as const
       },
       {
         id: 8,
@@ -215,9 +238,20 @@ export class DashboardComponent implements OnInit, OnDestroy {
         dossiersClotures: 6,
         tauxReussite: 40.0,
         montantRecupere: 18000,
-        performance: 'faible'
+        performance: 'faible' as const
       }
     ];
+
+    // Filtrer selon le rôle de l'utilisateur
+    if (this.currentUser?.role === 'AGENT_DOSSIER') {
+      // L'agent ne voit que ses propres performances
+      this.agentPerformance = allAgentPerformance.filter(agent => 
+        Number(agent.id) === Number(this.currentUser!.id)
+      );
+    } else {
+      // Les autres rôles (chef, super admin) voient toutes les performances
+      this.agentPerformance = allAgentPerformance;
+    }
   }
 
   getPerformanceClass(performance: string): string {

@@ -5,49 +5,71 @@
 
 .notification-button {
   position: relative;
-  background: none;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border: none;
-  font-size: 1.2rem;
-  color: #333;
+  font-size: 1.1rem;
+  color: white;
   cursor: pointer;
-  padding: 8px;
+  padding: 12px;
   border-radius: 50%;
   transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
 
   &:hover {
-    background-color: #f8f9fa;
-    transform: scale(1.1);
+    background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  }
+
+  i {
+    font-size: 1.2rem;
   }
 }
 
 .notification-badge {
   position: absolute;
-  top: 0;
-  right: 0;
-  background-color: #dc3545;
+  top: -2px;
+  right: -2px;
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
   color: white;
   border-radius: 50%;
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   font-size: 0.7rem;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: bold;
+  border: 2px solid white;
+  box-shadow: 0 2px 6px rgba(255, 107, 107, 0.4);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 .notification-dropdown {
   position: absolute;
   top: 100%;
   right: 0;
-  width: 350px;
-  max-height: 500px;
+  width: 380px;
+  max-height: 600px;
   background: white;
   border: 1px solid #dee2e6;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-radius: 12px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
   z-index: 1000;
   overflow: hidden;
+  margin-top: 8px;
 }
 
 .notification-header {

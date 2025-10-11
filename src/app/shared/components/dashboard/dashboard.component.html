@@ -1,7 +1,15 @@
 <div class="dashboard-container">
   <div class="header">
-    <h1>Tableau de Bord</h1>
-    <p class="current-time">{{ getCurrentTime() }}</p>
+    <div class="header-left">
+      <h1>Tableau de Bord</h1>
+      <p class="current-time">{{ getCurrentTime() }}</p>
+    </div>
+    <div class="header-right">
+      <!-- Notifications - Position fixe en haut à droite -->
+      <div class="notifications-header">
+        <app-notification></app-notification>
+      </div>
+    </div>
   </div>
 
   <!-- User Info Card -->
@@ -109,8 +117,8 @@
   </div>
 
           <!-- Performance par Agent -->
-          <div class="agent-performance-section" *ngIf="roleService.canManageDossiers() && currentUser?.role !== 'AGENT_DOSSIER'">
-            <h3>Performance par Agent</h3>
+          <div class="agent-performance-section" *ngIf="roleService.canManageDossiers()">
+            <h3>{{ currentUser?.role === 'AGENT_DOSSIER' ? 'Mes Performances' : 'Performance par Agent' }}</h3>
             <div class="performance-table-container">
               <table class="performance-table">
                 <thead>
@@ -158,11 +166,41 @@
 
           <!-- Tâches Urgentes pour l'Agent -->
           <div class="urgent-tasks-section" *ngIf="currentUser?.role === 'AGENT_DOSSIER'">
-            <app-tache-urgente></app-tache-urgente>
+            <h3>Mes Tâches Urgentes</h3>
+            <div class="tasks-container">
+              <div class="task-card" *ngFor="let task of filteredUrgentTasks" [ngClass]="getUrgentTasksClass(task.urgence)">
+                <div class="task-header">
+                  <div class="task-icon">
+                    <i [class]="getTaskTypeIcon(task.type)"></i>
+                  </div>
+                  <div class="task-info">
+                    <h4>{{ task.titre }}</h4>
+                    <p>{{ task.description }}</p>
+                  </div>
+                  <div class="task-urgency">
+                    <span class="urgency-badge" [ngClass]="getUrgentTasksClass(task.urgence)">
+                      {{ getUrgentTasksLabel(task.urgence) }}
+                    </span>
+                  </div>
+                </div>
+                <div class="task-footer">
+                  <div class="task-date">
+                    <i class="fas fa-calendar"></i>
+                    <span>Échéance: {{ formatDateEcheance(task.dateEcheance) }}</span>
+                    <span class="overdue" *ngIf="isTaskOverdue(task.dateEcheance)">(En retard)</span>
+                  </div>
+                  <button class="btn btn-sm btn-primary" (click)="navigateToTask(task)">
+                    <i class="fas fa-eye"></i> Voir
+                  </button>
+                </div>
+              </div>
+              
+              <div class="no-tasks" *ngIf="filteredUrgentTasks.length === 0">
+                <i class="fas fa-check-circle"></i>
+                <h4>Aucune tâche urgente</h4>
+                <p>Vous n'avez aucune tâche urgente en cours</p>
+              </div>
+            </div>
           </div>
 
-<!-- Notifications - Position fixe en haut à gauche -->
-<div class="notifications-fixed">
-  <app-notification></app-notification>
-</div>
 </div>

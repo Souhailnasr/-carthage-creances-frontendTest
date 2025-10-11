@@ -1,0 +1,4 @@
+<div class="notification-badge" routerLink="/notifications">
+  <i class="fas fa-bell"></i>
+  <span class="badge" *ngIf="hasUnreadNotifications()">{{ getDisplayCount() }}</span>
+</div>

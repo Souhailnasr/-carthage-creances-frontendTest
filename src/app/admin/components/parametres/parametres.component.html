@@ -1,0 +1,356 @@
+<div class="parametres-container">
+  <!-- Header -->
+  <div class="header">
+    <h1>
+      <i class="fas fa-cog"></i>
+      Paramètres de l'Application
+    </h1>
+    <p>Configuration et gestion des paramètres système (accessible uniquement par Super Admin)</p>
+  </div>
+
+  <!-- Actions Bar -->
+  <div class="actions-bar">
+    <div class="actions-left">
+      <button class="btn btn-outline-primary" (click)="exportSettings()" [disabled]="isLoading">
+        <i class="fas fa-download"></i>
+        Exporter
+      </button>
+      <label class="btn btn-outline-secondary" [class.disabled]="isLoading">
+        <i class="fas fa-upload"></i>
+        Importer
+        <input type="file" accept=".json" (change)="importSettings($event)" style="display: none;">
+      </label>
+    </div>
+    <div class="actions-right">
+      <button class="btn btn-outline-warning" (click)="resetSettings()" [disabled]="isLoading">
+        <i class="fas fa-undo"></i>
+        Réinitialiser
+      </button>
+      <button class="btn btn-success" (click)="saveSettings()" [disabled]="!hasChanges || isLoading">
+        <i class="fas fa-save" *ngIf="!isLoading"></i>
+        <i class="fas fa-spinner fa-spin" *ngIf="isLoading"></i>
+        {{ isLoading ? 'Sauvegarde...' : 'Sauvegarder' }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Tabs Navigation -->
+  <div class="tabs-nav">
+    <button 
+      class="tab-btn" 
+      [class.active]="activeTab === 'general'"
+      (click)="setActiveTab('general')">
+      <i class="fas fa-cog"></i>
+      Général
+    </button>
+    <button 
+      class="tab-btn" 
+      [class.active]="activeTab === 'notifications'"
+      (click)="setActiveTab('notifications')">
+      <i class="fas fa-bell"></i>
+      Notifications
+    </button>
+    <button 
+      class="tab-btn" 
+      [class.active]="activeTab === 'security'"
+      (click)="setActiveTab('security')">
+      <i class="fas fa-shield-alt"></i>
+      Sécurité
+    </button>
+    <button 
+      class="tab-btn" 
+      [class.active]="activeTab === 'backup'"
+      (click)="setActiveTab('backup')">
+      <i class="fas fa-database"></i>
+      Sauvegarde
+    </button>
+  </div>
+
+  <!-- Content -->
+  <div class="content">
+    <!-- Loading Spinner -->
+    <div class="loading-spinner" *ngIf="isLoading">
+      <i class="fas fa-spinner fa-spin"></i>
+      <p>Chargement des paramètres...</p>
+    </div>
+
+    <!-- General Settings -->
+    <div class="tab-content" *ngIf="activeTab === 'general' && !isLoading">
+      <div class="settings-section">
+        <h3>
+          <i class="fas fa-info-circle"></i>
+          Informations Générales
+        </h3>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="appName">Nom de l'Application</label>
+            <input 
+              type="text" 
+              id="appName" 
+              [(ngModel)]="settings.general.appName" 
+              (ngModelChange)="onSettingChange()"
+              class="form-control">
+          </div>
+          <div class="form-group">
+            <label for="appVersion">Version</label>
+            <input 
+              type="text" 
+              id="appVersion" 
+              [(ngModel)]="settings.general.appVersion" 
+              (ngModelChange)="onSettingChange()"
+              class="form-control">
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h3>
+          <i class="fas fa-tools"></i>
+          Mode Maintenance
+        </h3>
+        <div class="toggle-group">
+          <label class="toggle-label">
+            <input 
+              type="checkbox" 
+              [(ngModel)]="settings.general.maintenanceMode" 
+              (ngModelChange)="onSettingChange()"
+              class="toggle-input">
+            <span class="toggle-slider"></span>
+            <span class="toggle-text">Activer le mode maintenance</span>
+          </label>
+          <p class="toggle-description">
+            En mode maintenance, seuls les administrateurs peuvent accéder au système.
+          </p>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h3>
+          <i class="fas fa-user-lock"></i>
+          Paramètres de Session
+        </h3>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="maxLoginAttempts">Tentatives de connexion max</label>
+            <input 
+              type="number" 
+              id="maxLoginAttempts" 
+              [(ngModel)]="settings.general.maxLoginAttempts" 
+              (ngModelChange)="onSettingChange()"
+              min="1" 
+              max="10"
+              class="form-control">
+          </div>
+          <div class="form-group">
+            <label for="sessionTimeout">Timeout de session (minutes)</label>
+            <input 
+              type="number" 
+              id="sessionTimeout" 
+              [(ngModel)]="settings.general.sessionTimeout" 
+              (ngModelChange)="onSettingChange()"
+              min="5" 
+              max="480"
+              class="form-control">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notifications Settings -->
+    <div class="tab-content" *ngIf="activeTab === 'notifications' && !isLoading">
+      <div class="settings-section">
+        <h3>
+          <i class="fas fa-envelope"></i>
+          Notifications Email
+        </h3>
+        <div class="toggle-group">
+          <label class="toggle-label">
+            <input 
+              type="checkbox" 
+              [(ngModel)]="settings.notifications.emailNotifications" 
+              (ngModelChange)="onSettingChange()"
+              class="toggle-input">
+            <span class="toggle-slider"></span>
+            <span class="toggle-text">Activer les notifications email</span>
+          </label>
+        </div>
+        <div class="form-group" *ngIf="settings.notifications.emailNotifications">
+          <label for="notificationEmail">Email de notification</label>
+          <input 
+            type="email" 
+            id="notificationEmail" 
+            [(ngModel)]="settings.notifications.notificationEmail" 
+            (ngModelChange)="onSettingChange()"
+            class="form-control">
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h3>
+          <i class="fas fa-sms"></i>
+          Notifications SMS
+        </h3>
+        <div class="toggle-group">
+          <label class="toggle-label">
+            <input 
+              type="checkbox" 
+              [(ngModel)]="settings.notifications.smsNotifications" 
+              (ngModelChange)="onSettingChange()"
+              class="toggle-input">
+            <span class="toggle-slider"></span>
+            <span class="toggle-text">Activer les notifications SMS</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h3>
+          <i class="fas fa-mobile-alt"></i>
+          Notifications Push
+        </h3>
+        <div class="toggle-group">
+          <label class="toggle-label">
+            <input 
+              type="checkbox" 
+              [(ngModel)]="settings.notifications.pushNotifications" 
+              (ngModelChange)="onSettingChange()"
+              class="toggle-input">
+            <span class="toggle-slider"></span>
+            <span class="toggle-text">Activer les notifications push</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Security Settings -->
+    <div class="tab-content" *ngIf="activeTab === 'security' && !isLoading">
+      <div class="settings-section">
+        <h3>
+          <i class="fas fa-key"></i>
+          Politique de Mots de Passe
+        </h3>
+        <div class="form-group">
+          <label for="passwordMinLength">Longueur minimale</label>
+          <input 
+            type="number" 
+            id="passwordMinLength" 
+            [(ngModel)]="settings.security.passwordMinLength" 
+            (ngModelChange)="onSettingChange()"
+            min="6" 
+            max="20"
+            class="form-control">
+        </div>
+        <div class="checkbox-group">
+          <label class="checkbox-label">
+            <input 
+              type="checkbox" 
+              [(ngModel)]="settings.security.requireUppercase" 
+              (ngModelChange)="onSettingChange()"
+              class="checkbox-input">
+            <span class="checkbox-text">Exiger des majuscules</span>
+          </label>
+          <label class="checkbox-label">
+            <input 
+              type="checkbox" 
+              [(ngModel)]="settings.security.requireNumbers" 
+              (ngModelChange)="onSettingChange()"
+              class="checkbox-input">
+            <span class="checkbox-text">Exiger des chiffres</span>
+          </label>
+          <label class="checkbox-label">
+            <input 
+              type="checkbox" 
+              [(ngModel)]="settings.security.requireSpecialChars" 
+              (ngModelChange)="onSettingChange()"
+              class="checkbox-input">
+            <span class="checkbox-text">Exiger des caractères spéciaux</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h3>
+          <i class="fas fa-shield-alt"></i>
+          Authentification à Deux Facteurs
+        </h3>
+        <div class="toggle-group">
+          <label class="toggle-label">
+            <input 
+              type="checkbox" 
+              [(ngModel)]="settings.security.twoFactorAuth" 
+              (ngModelChange)="onSettingChange()"
+              class="toggle-input">
+            <span class="toggle-slider"></span>
+            <span class="toggle-text">Activer l'authentification à deux facteurs</span>
+          </label>
+          <p class="toggle-description">
+            Les utilisateurs devront utiliser un code de vérification en plus de leur mot de passe.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Backup Settings -->
+    <div class="tab-content" *ngIf="activeTab === 'backup' && !isLoading">
+      <div class="settings-section">
+        <h3>
+          <i class="fas fa-database"></i>
+          Sauvegarde Automatique
+        </h3>
+        <div class="toggle-group">
+          <label class="toggle-label">
+            <input 
+              type="checkbox" 
+              [(ngModel)]="settings.backup.autoBackup" 
+              (ngModelChange)="onSettingChange()"
+              class="toggle-input">
+            <span class="toggle-slider"></span>
+            <span class="toggle-text">Activer la sauvegarde automatique</span>
+          </label>
+        </div>
+        <div class="form-grid" *ngIf="settings.backup.autoBackup">
+          <div class="form-group">
+            <label for="backupFrequency">Fréquence</label>
+            <select 
+              id="backupFrequency" 
+              [(ngModel)]="settings.backup.backupFrequency" 
+              (ngModelChange)="onSettingChange()"
+              class="form-control">
+              <option value="hourly">Toutes les heures</option>
+              <option value="daily">Quotidienne</option>
+              <option value="weekly">Hebdomadaire</option>
+              <option value="monthly">Mensuelle</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="backupRetention">Rétention (jours)</label>
+            <input 
+              type="number" 
+              id="backupRetention" 
+              [(ngModel)]="settings.backup.backupRetention" 
+              (ngModelChange)="onSettingChange()"
+              min="1" 
+              max="365"
+              class="form-control">
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h3>
+          <i class="fas fa-folder"></i>
+          Emplacement de Sauvegarde
+        </h3>
+        <div class="form-group">
+          <label for="backupLocation">Chemin de sauvegarde</label>
+          <input 
+            type="text" 
+            id="backupLocation" 
+            [(ngModel)]="settings.backup.backupLocation" 
+            (ngModelChange)="onSettingChange()"
+            class="form-control">
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

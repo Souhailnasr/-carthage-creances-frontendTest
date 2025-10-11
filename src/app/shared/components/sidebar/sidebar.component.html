@@ -36,18 +36,18 @@
           class="nav-link"
           [class.active]="isActiveRoute(item.route)"
           [class.has-active-child]="hasActiveChild(item)"
-          (click)="navigateTo(item.route)">
+          (click)="handleMenuClick(item)">
           <i [class]="item.icon"></i>
           <span class="nav-text" *ngIf="!isCollapsed">{{ item.label }}</span>
           <i 
             *ngIf="item.children && !isCollapsed" 
             class="fas fa-chevron-down expand-icon"
-            [class.rotated]="hasActiveChild(item)">
+            [class.rotated]="isMenuExpanded(item)">
           </i>
         </div>
 
         <!-- Sous-menu -->
-        <ul *ngIf="item.children && !isCollapsed" class="sub-nav" [class.expanded]="hasActiveChild(item)">
+        <ul *ngIf="item.children && !isCollapsed" class="sub-nav" [class.expanded]="isMenuExpanded(item)">
           <li *ngFor="let child of item.children" class="sub-nav-item">
             <div 
               *ngIf="isChildMenuItemVisible(child)"
@@ -63,15 +63,16 @@
     </ul>
   </nav>
 
-              <!-- Footer -->
-              <div class="sidebar-footer">
-                <button class="profile-btn" (click)="navigateTo('/dossier/profil')" [title]="isCollapsed ? 'Mon Profil' : ''">
-                  <i class="fas fa-user"></i>
-                  <span *ngIf="!isCollapsed">Mon Profil</span>
-                </button>
-                <button class="logout-btn" (click)="logout()" [title]="isCollapsed ? 'Déconnexion' : ''">
-                  <i class="fas fa-sign-out-alt"></i>
-                  <span *ngIf="!isCollapsed">Déconnexion</span>
-                </button>
-              </div>
+
+  <!-- Footer -->
+  <div class="sidebar-footer">
+    <button class="profile-btn" (click)="navigateTo('/dossier/profil')" [title]="isCollapsed ? 'Mon Profil' : ''">
+      <i class="fas fa-user"></i>
+      <span *ngIf="!isCollapsed">Mon Profil</span>
+    </button>
+    <button class="logout-btn" (click)="logout()" [title]="isCollapsed ? 'Déconnexion' : ''">
+      <i class="fas fa-sign-out-alt"></i>
+      <span *ngIf="!isCollapsed">Déconnexion</span>
+    </button>
+  </div>
 </div>

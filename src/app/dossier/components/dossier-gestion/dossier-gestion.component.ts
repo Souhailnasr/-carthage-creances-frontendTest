@@ -612,7 +612,7 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
   canValidateDossier(dossier: Dossier): boolean {
     // Seul le Chef de Dossier peut valider les dossiers créés par des agents
     return this.currentUser && 
-           this.currentUser.role === Role.CHEF_DOSSIER && 
+           this.currentUser.role === Role.CHEF_DEPARTEMENT_DOSSIER && 
            !dossier.valide && 
            dossier.agentCreateur !== this.currentUser.getFullName();
   }

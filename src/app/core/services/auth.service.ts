@@ -72,7 +72,7 @@ export class AuthService {
         if (user) {
           const response: LoginResponse = {
             token: 'mock-jwt-token-' + user.id,
-            user: new User(user),
+            user: new User({ ...user }),
             expiresIn: 3600
           };
           
@@ -181,4 +181,5 @@ export class AuthService {
       newPassword
     });
   }
+
 }

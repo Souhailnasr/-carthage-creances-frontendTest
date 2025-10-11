@@ -1,0 +1,76 @@
+<div class="notification-dropdown">
+  <!-- Trigger Button -->
+  <button class="notification-trigger" (click)="toggleDropdown()">
+    <i class="fas fa-bell"></i>
+    <span class="badge" *ngIf="hasUnreadNotifications()">{{ getDisplayCount() }}</span>
+  </button>
+
+  <!-- Dropdown Content -->
+  <div class="dropdown-content" [class.open]="isOpen">
+    <!-- Header -->
+    <div class="dropdown-header">
+      <h3>
+        <i class="fas fa-bell"></i>
+        Notifications
+      </h3>
+      <button class="mark-all-btn" (click)="markAllAsRead()" *ngIf="hasUnreadNotifications()">
+        <i class="fas fa-check-double"></i>
+        Tout marquer comme lu
+      </button>
+    </div>
+
+    <!-- Loading State -->
+    <div class="loading-state" *ngIf="isLoading">
+      <i class="fas fa-spinner fa-spin"></i>
+      <p>Chargement des notifications...</p>
+    </div>
+
+    <!-- Notifications List -->
+    <div class="notifications-list" *ngIf="!isLoading">
+      <div class="notification-item" 
+           *ngFor="let notification of notifications" 
+           [class.unread]="notification.statut === 'NON_LUE'"
+           (click)="markAsRead(notification)">
+        
+        <div class="notification-icon" [style.background-color]="getTypeColor(notification.type)">
+          <i [class]="getTypeIcon(notification.type)"></i>
+        </div>
+        
+        <div class="notification-content">
+          <div class="notification-header">
+            <h4 class="notification-title">{{ notification.titre }}</h4>
+            <span class="notification-time">{{ formatDate(notification.dateCreation) }}</span>
+          </div>
+          <p class="notification-message">{{ notification.message }}</p>
+          <div class="notification-meta">
+            <span class="notification-type">{{ getTypeDisplayName(notification.type) }}</span>
+            <span class="notification-status" [class.unread]="notification.statut === 'NON_LUE'">
+              {{ notification.statut === 'NON_LUE' ? 'Non lue' : 'Lue' }}
+            </span>
+          </div>
+        </div>
+        
+        <div class="notification-actions">
+          <button class="action-btn" *ngIf="notification.lienAction" [routerLink]="notification.lienAction">
+            <i class="fas fa-external-link-alt"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div class="empty-state" *ngIf="notifications.length === 0">
+        <i class="fas fa-bell-slash"></i>
+        <p>Aucune notification</p>
+        <small>Vous serez notifié des nouvelles activités</small>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="dropdown-footer" *ngIf="notifications.length > 0">
+      <button class="view-all-btn" routerLink="/notifications">
+        <i class="fas fa-list"></i>
+        Voir toutes les notifications
+      </button>
+    </div>
+  </div>
+</div>

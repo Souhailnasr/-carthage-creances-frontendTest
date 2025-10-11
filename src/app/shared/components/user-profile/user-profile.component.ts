@@ -122,12 +122,14 @@ export class UserProfileComponent implements OnInit, OnDestroy {
   getRoleDisplayName(role: Role | string): string {
     const roleNames: { [key: string]: string } = {
       [Role.SUPER_ADMIN]: 'Super Administrateur',
-      [Role.CHEF_DOSSIER]: 'Chef de Dossier',
+      [Role.CHEF_DEPARTEMENT_DOSSIER]: 'Chef Département Dossier',
       [Role.AGENT_DOSSIER]: 'Agent de Dossier',
-      [Role.CHEF_JURIDIQUE]: 'Chef Juridique',
-      [Role.AGENT_JURIDIQUE]: 'Agent Juridique',
-      [Role.CHEF_FINANCE]: 'Chef Finance',
-      [Role.AGENT_FINANCE]: 'Agent Finance'
+      [Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE]: 'Chef Département Recouvrement Juridique',
+      [Role.AGENT_RECOUVREMENT_JURIDIQUE]: 'Agent Recouvrement Juridique',
+      [Role.CHEF_DEPARTEMENT_FINANCE]: 'Chef Département Finance',
+      [Role.AGENT_FINANCE]: 'Agent Finance',
+      [Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE]: 'Chef Département Recouvrement Amiable',
+      [Role.AGENT_RECOUVREMENT_AMIABLE]: 'Agent Recouvrement Amiable'
     };
 
     return roleNames[role] || role;

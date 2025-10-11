@@ -90,19 +90,19 @@
 
   <!-- Barre de recherche et filtres -->
   <div class="search-container">
-    <div class="search-filters-row">
-      <!-- Type de recherche -->
-      <div class="search-type-selector">
-        <label for="searchType">Type de recherche:</label>
-        <select id="searchType" [(ngModel)]="searchType" (change)="onSearchTypeChange()" class="form-control">
-          <option value="all">Tout</option>
-          <option value="name">Nom/Prénom</option>
-          <option value="email">Email</option>
-          <option value="role">Rôle</option>
-        </select>
-      </div>
+    <!-- En-tête de recherche -->
+    <div class="search-header">
+      <h2 class="search-title">
+        <i class="fas fa-search"></i>
+        Recherche et Filtres
+      </h2>
+      <p class="search-description">
+        Trouvez rapidement les utilisateurs avec les filtres avancés
+      </p>
+    </div>
 
-      <!-- Barre de recherche -->
+    <!-- Recherche rapide -->
+    <div class="quick-search-row">
       <div class="search-input-wrapper">
         <i class="fas fa-search search-icon"></i>
         <input 
@@ -112,17 +112,104 @@
           [placeholder]="getSearchPlaceholder()"
           class="search-input">
       </div>
-
-      <!-- Filtre par rôle -->
-      <div class="role-filter-selector">
-        <label for="roleFilter">Filtrer par rôle:</label>
-        <select id="roleFilter" [(ngModel)]="selectedRole" (change)="onRoleFilterChange()" class="form-control">
-          <option value="">Tous les rôles</option>
-          <option *ngFor="let role of getAvailableRolesForFilter().slice(1)" [value]="role">
-            {{ getRoleDisplayName(role) }}
-          </option>
+      
+      <div class="search-type-selector">
+        <select id="searchType" [(ngModel)]="searchType" (change)="onSearchTypeChange()" class="form-control">
+          <option value="all">Tout</option>
+          <option value="name">Nom/Prénom</option>
+          <option value="email">Email</option>
+          <option value="role">Rôle</option>
+          <option value="department">Département</option>
         </select>
       </div>
+
+      <button class="btn btn-outline-secondary" (click)="toggleAdvancedFilters()">
+        <i class="fas fa-filter"></i>
+        Filtres avancés
+        <span class="filter-badge" *ngIf="getActiveFiltersCount() > 0">{{ getActiveFiltersCount() }}</span>
+      </button>
+
+      <button class="btn btn-outline-danger" (click)="clearAllFilters()" *ngIf="getActiveFiltersCount() > 0">
+        <i class="fas fa-times"></i>
+        Effacer tout
+      </button>
+    </div>
+
+    <!-- Filtres avancés -->
+    <div class="advanced-filters" *ngIf="showAdvancedFilters">
+      <div class="advanced-filters-header">
+        <h3 class="advanced-filters-title">
+          <i class="fas fa-sliders-h"></i>
+          Filtres Avancés
+        </h3>
+        <p class="advanced-filters-description">
+          Affinez votre recherche avec des critères spécifiques
+        </p>
+      </div>
+      
+      <div class="filters-grid">
+        <!-- Filtre par rôle -->
+        <div class="filter-group">
+          <label for="roleFilter">Rôle:</label>
+          <select id="roleFilter" [(ngModel)]="selectedRole" (change)="onRoleFilterChange()" class="form-control">
+            <option value="">Tous les rôles</option>
+            <option *ngFor="let role of getAvailableRolesForFilter().slice(1)" [value]="role">
+              {{ getRoleDisplayName(role) }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Filtre par département -->
+        <div class="filter-group">
+          <label for="departmentFilter">Département:</label>
+          <select id="departmentFilter" [(ngModel)]="selectedDepartment" (change)="onDepartmentFilterChange()" class="form-control">
+            <option *ngFor="let dept of getAvailableDepartments()" [value]="dept">
+              {{ getDepartmentDisplayName(dept) }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Filtre par statut -->
+        <div class="filter-group">
+          <label for="statusFilter">Statut:</label>
+          <select id="statusFilter" [(ngModel)]="selectedStatus" (change)="onStatusFilterChange()" class="form-control">
+            <option value="">Tous les statuts</option>
+            <option value="active">Actifs</option>
+            <option value="inactive">Inactifs</option>
+          </select>
+        </div>
+
+        <!-- Tri -->
+        <div class="filter-group">
+          <label for="sortBy">Trier par:</label>
+          <select id="sortBy" [(ngModel)]="sortBy" (change)="onSortChange()" class="form-control">
+            <option value="name">Nom</option>
+            <option value="email">Email</option>
+            <option value="role">Rôle</option>
+            <option value="department">Département</option>
+            <option value="date">Date de création</option>
+            <option value="status">Statut</option>
+          </select>
+        </div>
+
+        <!-- Ordre de tri -->
+        <div class="filter-group">
+          <label for="sortOrder">Ordre:</label>
+          <select id="sortOrder" [(ngModel)]="sortOrder" (change)="onSortOrderChange()" class="form-control">
+            <option value="asc">Croissant</option>
+            <option value="desc">Décroissant</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Statistiques des résultats -->
+    <div class="search-stats">
+      <span class="results-count">
+        <i class="fas fa-users"></i>
+        {{ getFilteredUsersCount() }} utilisateur(s) trouvé(s)
+        <span *ngIf="getActiveFiltersCount() > 0">sur {{ utilisateurs.length }} total</span>
+      </span>
     </div>
   </div>
 
@@ -144,6 +231,9 @@
           <span class="user-role" [class]="'role-' + (utilisateur.roleUtilisateur || utilisateur.role || '').toLowerCase().replace('_', '-')">
             {{ getRoleDisplayName(utilisateur.roleUtilisateur || utilisateur.role || '') }}
           </span>
+          <p class="user-department" *ngIf="utilisateur.departement">
+            <i class="fas fa-building"></i> {{ getDepartmentDisplayName(utilisateur.departement) }}
+          </p>
         </div>
         <div class="user-actions">
           <button class="btn btn-sm btn-outline-primary" (click)="showEditUserForm(utilisateur)">

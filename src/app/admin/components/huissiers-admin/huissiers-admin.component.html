@@ -1,0 +1,44 @@
+<div class="huissiers-admin-container">
+  <div class="header">
+    <h1>
+      <i class="fas fa-balance-scale"></i>
+      Gestion des Huissiers
+    </h1>
+    <p>Supervision et gestion des huissiers du système</p>
+  </div>
+
+  <div class="content">
+    <div class="loading-spinner" *ngIf="isLoading">
+      <i class="fas fa-spinner fa-spin"></i>
+      <p>Chargement des huissiers...</p>
+    </div>
+
+    <div class="huissiers-grid" *ngIf="!isLoading">
+      <div class="huissier-card" *ngFor="let huissier of huissiers">
+        <div class="huissier-avatar">
+          <span class="avatar-text">{{ getHuissierInitials(huissier) }}</span>
+        </div>
+        <div class="huissier-info">
+          <h3>{{ huissier.prenom }} {{ huissier.nom }}</h3>
+          <p class="huissier-email">{{ huissier.email }}</p>
+          <p class="huissier-specialite" *ngIf="huissier.specialite">{{ huissier.specialite }}</p>
+          <span class="huissier-status active">Actif</span>
+        </div>
+        <div class="huissier-actions">
+          <button class="btn btn-outline-primary" title="Voir détails">
+            <i class="fas fa-eye"></i>
+          </button>
+          <button class="btn btn-outline-warning" title="Modifier">
+            <i class="fas fa-edit"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="no-huissiers" *ngIf="!isLoading && huissiers.length === 0">
+      <i class="fas fa-balance-scale"></i>
+      <h3>Aucun huissier trouvé</h3>
+      <p>Il n'y a actuellement aucun huissier dans le système.</p>
+    </div>
+  </div>
+</div>

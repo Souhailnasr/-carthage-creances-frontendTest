@@ -11,13 +11,13 @@ const routes: Routes = [
     path: 'actions',
     component: ActionsAmiableComponent,
     canActivate: [AuthGuard],
-    data: { allowedRoles: [Role.CHEF_DOSSIER, Role.AGENT_DOSSIER, Role.SUPER_ADMIN] }
+    data: { allowedRoles: [Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER, Role.SUPER_ADMIN] }
   },
   {
     path: 'relances',
     component: RelancesComponent,
     canActivate: [AuthGuard],
-    data: { allowedRoles: [Role.CHEF_DOSSIER, Role.AGENT_DOSSIER, Role.SUPER_ADMIN] }
+    data: { allowedRoles: [Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER, Role.SUPER_ADMIN] }
   },
   { path: '', redirectTo: 'actions', pathMatch: 'full' }
 ];

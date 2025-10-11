@@ -23,6 +23,7 @@ export class DebiteurGestionComponent implements OnInit {
   editingDebiteurId: number | null = null;
   searchTerm = '';
   currentUser: any;
+  showForm = false; // Nouvelle variable pour contrôler l'affichage du formulaire
 
   constructor(
     private debiteurApiService: DebiteurApiService,
@@ -129,7 +130,7 @@ export class DebiteurGestionComponent implements OnInit {
     this.debiteurApiService.createDebiteur(debiteurRequest).subscribe({
       next: (newDebiteur) => {
         console.log('Débiteur créé avec succès:', newDebiteur);
-        this.resetForm();
+        this.hideForm();
         alert('Débiteur créé avec succès !');
         // Recharger la liste depuis le backend pour s'assurer d'avoir les données à jour
         this.loadDebiteurs();
@@ -163,7 +164,7 @@ export class DebiteurGestionComponent implements OnInit {
           this.debiteurs[index] = updatedDebiteur;
           this.filteredDebiteurs = [...this.debiteurs];
         }
-        this.resetForm();
+        this.hideForm();
         console.log('Débiteur mis à jour avec succès:', updatedDebiteur);
       },
       error: (error) => {
@@ -174,7 +175,7 @@ export class DebiteurGestionComponent implements OnInit {
           this.debiteurs[index] = { ...this.debiteurs[index], ...debiteurData };
           this.filteredDebiteurs = [...this.debiteurs];
         }
-        this.resetForm();
+        this.hideForm();
       }
     });
   }
@@ -198,6 +199,7 @@ export class DebiteurGestionComponent implements OnInit {
   }
 
   editDebiteur(debiteur: DebiteurApi): void {
+    this.showForm = true;
     this.isEditMode = true;
     this.editingDebiteurId = debiteur.id;
     this.debiteurForm.patchValue({
@@ -218,6 +220,21 @@ export class DebiteurGestionComponent implements OnInit {
     this.debiteurForm.reset();
     this.isEditMode = false;
     this.editingDebiteurId = null;
+    this.showForm = false;
+  }
+
+  showCreateForm(): void {
+    this.showForm = true;
+    this.isEditMode = false;
+    this.editingDebiteurId = null;
+    this.debiteurForm.reset();
+  }
+
+  hideForm(): void {
+    this.showForm = false;
+    this.isEditMode = false;
+    this.editingDebiteurId = null;
+    this.debiteurForm.reset();
   }
 
   searchDebiteurs(): void {

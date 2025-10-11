@@ -62,21 +62,28 @@
     <div class="demo-accounts">
       <h3>Comptes de démonstration</h3>
       <div class="demo-buttons">
+        <!-- Super Admin -->
         <button type="button" class="btn btn-demo" (click)="loginAsSuperAdmin()">
           <i class="fas fa-crown"></i>
           Super Admin
         </button>
-        <button type="button" class="btn btn-demo" (click)="loginAsChefJuridique()">
-          <i class="fas fa-gavel"></i>
-          Chef Juridique
-        </button>
+        
+        <!-- Chef de Dossier -->
         <button type="button" class="btn btn-demo" (click)="loginAsChefDossier()">
-          <i class="fas fa-folder-open"></i>
+          <i class="fas fa-user-tie"></i>
           Chef Dossier
         </button>
+        
+        <!-- Agent de Dossier -->
         <button type="button" class="btn btn-demo" (click)="loginAsAgentDossier()">
           <i class="fas fa-user"></i>
           Agent Dossier
+        </button>
+        
+        <!-- Chef Juridique -->
+        <button type="button" class="btn btn-demo" (click)="loginAsChefJuridique()">
+          <i class="fas fa-gavel"></i>
+          Chef Juridique
         </button>
       </div>
     </div>

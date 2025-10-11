@@ -22,7 +22,12 @@ export class UtilisateursComponent implements OnInit, OnDestroy {
   searchTerm: string = '';
   searchType: string = 'all'; // 'all', 'name', 'email', 'role'
   selectedRole: string = '';
+  selectedDepartment: string = '';
+  selectedStatus: string = ''; // 'all', 'active', 'inactive'
+  sortBy: string = 'name'; // 'name', 'role', 'department', 'email', 'date'
+  sortOrder: string = 'asc'; // 'asc', 'desc'
   showCreateForm: boolean = false;
+  showAdvancedFilters: boolean = false;
   userForm!: FormGroup;
   isEditMode: boolean = false;
   editingUser: Utilisateur | null = null;
@@ -66,7 +71,7 @@ export class UtilisateursComponent implements OnInit, OnDestroy {
       email: ['', [Validators.required, Validators.email]],
       motDePasse: ['', [Validators.required, Validators.minLength(6)]],
       confirmPassword: ['', Validators.required],
-      role: [Role.AGENT_DOSSIER, Validators.required]
+      role: ['AGENT_DOSSIER', Validators.required]
     }, { validators: this.passwordMatchValidator });
   }
 
@@ -96,7 +101,7 @@ export class UtilisateursComponent implements OnInit, OnDestroy {
           let filteredUsers = utilisateurs;
           
           // Si l'utilisateur connecté est un Chef Dossier, ne montrer que les Agents de Dossier
-          if (this.currentUser && this.currentUser.role === 'CHEF_DOSSIER') {
+          if (this.currentUser && (this.currentUser.role === 'CHEF_DEPARTEMENT_DOSSIER' || this.currentUser.roleUtilisateur === 'CHEF_DEPARTEMENT_DOSSIER')) {
             filteredUsers = utilisateurs.filter(user => 
               (user.roleUtilisateur || user.role) === 'AGENT_DOSSIER'
             );
@@ -107,6 +112,7 @@ export class UtilisateursComponent implements OnInit, OnDestroy {
           
           this.utilisateurs = filteredUsers;
           this.filteredUtilisateurs = [...filteredUsers];
+          this.applyFilters(); // Appliquer les filtres et le tri
           this.isLoading = false;
           console.log('✅ Utilisateurs chargés:', filteredUsers);
         },
@@ -119,27 +125,7 @@ export class UtilisateursComponent implements OnInit, OnDestroy {
   }
 
   onSearch(): void {
-    if (!this.searchTerm.trim()) {
-      this.filteredUtilisateurs = [...this.utilisateurs];
-    } else {
-      this.filteredUtilisateurs = this.utilisateurs.filter(utilisateur => {
-        const searchLower = this.searchTerm.toLowerCase();
-        
-        switch (this.searchType) {
-          case 'name':
-            return `${utilisateur.prenom} ${utilisateur.nom}`.toLowerCase().includes(searchLower);
-          case 'email':
-            return utilisateur.email.toLowerCase().includes(searchLower);
-          case 'role':
-            return (utilisateur.roleUtilisateur || utilisateur.role || '').toLowerCase().includes(searchLower);
-          case 'all':
-          default:
-            return `${utilisateur.prenom} ${utilisateur.nom}`.toLowerCase().includes(searchLower) ||
-                   utilisateur.email.toLowerCase().includes(searchLower) ||
-                   (utilisateur.roleUtilisateur || utilisateur.role || '').toLowerCase().includes(searchLower);
-        }
-      });
-    }
+    this.applyFilters();
   }
 
   onSearchTypeChange(): void {
@@ -148,13 +134,147 @@ export class UtilisateursComponent implements OnInit, OnDestroy {
   }
 
   onRoleFilterChange(): void {
-    if (!this.selectedRole) {
-      this.filteredUtilisateurs = [...this.utilisateurs];
-    } else {
-      this.filteredUtilisateurs = this.utilisateurs.filter(utilisateur =>
+    this.applyFilters();
+  }
+
+  onDepartmentFilterChange(): void {
+    this.applyFilters();
+  }
+
+  onStatusFilterChange(): void {
+    this.applyFilters();
+  }
+
+  onSortChange(): void {
+    this.applySorting();
+  }
+
+  onSortOrderChange(): void {
+    this.applySorting();
+  }
+
+  toggleAdvancedFilters(): void {
+    this.showAdvancedFilters = !this.showAdvancedFilters;
+  }
+
+  clearAllFilters(): void {
+    this.searchTerm = '';
+    this.selectedRole = '';
+    this.selectedDepartment = '';
+    this.selectedStatus = '';
+    this.sortBy = 'name';
+    this.sortOrder = 'asc';
+    this.applyFilters();
+  }
+
+  applyFilters(): void {
+    let filtered = [...this.utilisateurs];
+
+    // Filtre par rôle
+    if (this.selectedRole) {
+      filtered = filtered.filter(utilisateur =>
         (utilisateur.roleUtilisateur || utilisateur.role) === this.selectedRole
       );
     }
+
+    // Filtre par département
+    if (this.selectedDepartment) {
+      filtered = filtered.filter(utilisateur =>
+        utilisateur.departement === this.selectedDepartment
+      );
+    }
+
+    // Filtre par statut
+    if (this.selectedStatus) {
+      filtered = filtered.filter(utilisateur => {
+        if (this.selectedStatus === 'active') {
+          return utilisateur.actif === true;
+        } else if (this.selectedStatus === 'inactive') {
+          return utilisateur.actif === false;
+        }
+        return true;
+      });
+    }
+
+    // Recherche textuelle
+    if (this.searchTerm.trim()) {
+      const searchLower = this.searchTerm.toLowerCase();
+      filtered = filtered.filter(utilisateur => {
+        switch (this.searchType) {
+          case 'name':
+            return `${utilisateur.prenom} ${utilisateur.nom}`.toLowerCase().includes(searchLower);
+          case 'email':
+            return utilisateur.email.toLowerCase().includes(searchLower);
+          case 'role':
+            return (utilisateur.roleUtilisateur || utilisateur.role || '').toLowerCase().includes(searchLower);
+          case 'department':
+            return (utilisateur.departement || '').toLowerCase().includes(searchLower);
+          case 'all':
+          default:
+            return `${utilisateur.prenom} ${utilisateur.nom}`.toLowerCase().includes(searchLower) ||
+                   utilisateur.email.toLowerCase().includes(searchLower) ||
+                   (utilisateur.roleUtilisateur || utilisateur.role || '').toLowerCase().includes(searchLower) ||
+                   (utilisateur.departement || '').toLowerCase().includes(searchLower);
+        }
+      });
+    }
+
+    this.filteredUtilisateurs = filtered;
+    this.applySorting();
+  }
+
+  applySorting(): void {
+    if (!this.filteredUtilisateurs.length) return;
+
+    this.filteredUtilisateurs.sort((a, b) => {
+      let comparison = 0;
+      
+      switch (this.sortBy) {
+        case 'name':
+          comparison = `${a.prenom} ${a.nom}`.localeCompare(`${b.prenom} ${b.nom}`);
+          break;
+        case 'email':
+          comparison = a.email.localeCompare(b.email);
+          break;
+        case 'role':
+          comparison = (a.roleUtilisateur || a.role || '').localeCompare(b.roleUtilisateur || b.role || '');
+          break;
+        case 'department':
+          // Grouper par chef de département, puis par agents
+          const aRole = a.roleUtilisateur || a.role || '';
+          const bRole = b.roleUtilisateur || b.role || '';
+          
+          // Les chefs viennent en premier
+          const aIsChef = aRole.includes('CHEF');
+          const bIsChef = bRole.includes('CHEF');
+          
+          if (aIsChef && !bIsChef) {
+            comparison = -1;
+          } else if (!aIsChef && bIsChef) {
+            comparison = 1;
+          } else {
+            // Si les deux sont des chefs ou des agents, trier par nom
+            comparison = `${a.prenom} ${a.nom}`.localeCompare(`${b.prenom} ${b.nom}`);
+          }
+          break;
+        case 'date':
+          const aDate = new Date(a.dateCreation || 0);
+          const bDate = new Date(b.dateCreation || 0);
+          comparison = aDate.getTime() - bDate.getTime();
+          break;
+        case 'status':
+          // Actifs en premier
+          if (a.actif && !b.actif) comparison = -1;
+          else if (!a.actif && b.actif) comparison = 1;
+          else comparison = 0;
+          break;
+        default:
+          comparison = 0;
+      }
+      
+      // Appliquer l'ordre de tri (ascendant ou descendant)
+      return this.sortOrder === 'desc' ? -comparison : comparison;
+    });
   }
 
   showCreateUserForm(): void {
@@ -168,13 +288,16 @@ export class UtilisateursComponent implements OnInit, OnDestroy {
     this.showCreateForm = true;
     this.isEditMode = true;
     this.editingUser = utilisateur;
-    this.userForm.patchValue({
-      nom: utilisateur.nom,
-      prenom: utilisateur.prenom,
-      email: utilisateur.email,
-      motDePasse: '', // Ne pas pré-remplir le mot de passe
-      role: utilisateur.roleUtilisateur || utilisateur.role
-    });
+    
+    // En mode édition, rendre le mot de passe optionnel
+    this.userForm = this.fb.group({
+      nom: [utilisateur.nom, Validators.required],
+      prenom: [utilisateur.prenom, Validators.required],
+      email: [utilisateur.email, [Validators.required, Validators.email]],
+      motDePasse: ['', [Validators.minLength(6)]], // Optionnel en mode édition
+      confirmPassword: ['', []], // Optionnel en mode édition
+      role: [utilisateur.roleUtilisateur || utilisateur.role, Validators.required]
+    }, { validators: this.passwordMatchValidator });
   }
 
   onSubmit(): void {
@@ -191,12 +314,29 @@ export class UtilisateursComponent implements OnInit, OnDestroy {
       email: formValue.email,
       roleUtilisateur: formValue.role,
       motDePasse: formValue.motDePasse,
-      actif: true
+      actif: true,
+      departement: this.getDepartmentFromRole(formValue.role)
     };
     
     if (this.isEditMode && this.editingUser) {
-      // Mise à jour
-      this.utilisateurService.updateUtilisateur(this.editingUser.id!, utilisateurRequest)
+      // Mise à jour - ne pas envoyer le mot de passe s'il est vide
+      const updateRequest: UtilisateurRequest = {
+        nom: formValue.nom,
+        prenom: formValue.prenom,
+        email: formValue.email,
+        roleUtilisateur: formValue.role,
+        actif: this.editingUser.actif,
+        departement: this.getDepartmentFromRole(formValue.role)
+      };
+      
+      // Ajouter le mot de passe seulement s'il a été modifié
+      if (formValue.motDePasse && formValue.motDePasse.trim() !== '') {
+        updateRequest.motDePasse = formValue.motDePasse;
+      }
+      
+      console.log('🔄 Mise à jour utilisateur:', updateRequest);
+      
+      this.utilisateurService.updateUtilisateur(this.editingUser.id!, updateRequest)
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: () => {
@@ -206,7 +346,7 @@ export class UtilisateursComponent implements OnInit, OnDestroy {
           },
           error: (error) => {
             console.error('❌ Erreur lors de la mise à jour:', error);
-            this.toastService.error('Erreur lors de la mise à jour de l\'utilisateur');
+            this.toastService.error(`Erreur lors de la mise à jour: ${error.message}`);
           }
         });
     } else {
@@ -254,11 +394,11 @@ export class UtilisateursComponent implements OnInit, OnDestroy {
   getRoleDisplayName(role: string): string {
     const roleNames: { [key: string]: string } = {
       'SUPER_ADMIN': 'Super Administrateur',
-      'CHEF_DOSSIER': 'Chef de Dossier',
+      'CHEF_DEPARTEMENT_DOSSIER': 'Chef Département Dossier',
       'AGENT_DOSSIER': 'Agent de Dossier',
-      'CHEF_JURIDIQUE': 'Chef Juridique',
-      'AGENT_JURIDIQUE': 'Agent Juridique',
-      'CHEF_FINANCE': 'Chef Finance',
+      'CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE': 'Chef Département Recouvrement Juridique',
+      'AGENT_RECOUVREMENT_JURIDIQUE': 'Agent Recouvrement Juridique',
+      'CHEF_DEPARTEMENT_FINANCE': 'Chef Département Finance',
       'AGENT_FINANCE': 'Agent Finance',
       'CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE': 'Chef Département Recouvrement Amiable',
       'AGENT_RECOUVREMENT_AMIABLE': 'Agent Recouvrement Amiable'
@@ -289,18 +429,33 @@ export class UtilisateursComponent implements OnInit, OnDestroy {
 
   getAvailableRoles(): string[] {
     // Si l'utilisateur connecté est un Chef Dossier, ne peut créer que des Agents de Dossier
-    if (this.currentUser && this.currentUser.role === 'CHEF_DOSSIER') {
+    if (this.currentUser && (this.currentUser.role === 'CHEF_DEPARTEMENT_DOSSIER' || this.currentUser.roleUtilisateur === 'CHEF_DEPARTEMENT_DOSSIER')) {
       return ['AGENT_DOSSIER'];
     }
     
-    // Pour les autres rôles (Super Admin, etc.), tous les rôles sont disponibles
+    // Pour le Super Admin, tous les rôles sont disponibles
+    if (this.currentUser && (this.currentUser.role === 'SUPER_ADMIN' || this.currentUser.roleUtilisateur === 'SUPER_ADMIN')) {
+      return [
+        'SUPER_ADMIN',
+        'CHEF_DEPARTEMENT_DOSSIER',
+        'AGENT_DOSSIER',
+        'CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE',
+        'AGENT_RECOUVREMENT_JURIDIQUE',
+        'CHEF_DEPARTEMENT_FINANCE',
+        'AGENT_FINANCE',
+        'CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE',
+        'AGENT_RECOUVREMENT_AMIABLE'
+      ];
+    }
+    
+    // Pour les autres rôles, tous les rôles sont disponibles par défaut
     return [
       'SUPER_ADMIN',
-      'CHEF_DOSSIER',
+      'CHEF_DEPARTEMENT_DOSSIER',
       'AGENT_DOSSIER',
-      'CHEF_JURIDIQUE',
-      'AGENT_JURIDIQUE',
-      'CHEF_FINANCE',
+      'CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE',
+      'AGENT_RECOUVREMENT_JURIDIQUE',
+      'CHEF_DEPARTEMENT_FINANCE',
       'AGENT_FINANCE',
       'CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE',
       'AGENT_RECOUVREMENT_AMIABLE'
@@ -321,9 +476,63 @@ export class UtilisateursComponent implements OnInit, OnDestroy {
         return 'Rechercher par email...';
       case 'role':
         return 'Rechercher par rôle...';
+      case 'department':
+        return 'Rechercher par département...';
       case 'all':
       default:
-        return 'Rechercher par nom, email ou rôle...';
+        return 'Rechercher par nom, email, rôle ou département...';
     }
+  }
+
+  getActiveFiltersCount(): number {
+    let count = 0;
+    if (this.searchTerm.trim()) count++;
+    if (this.selectedRole) count++;
+    if (this.selectedDepartment) count++;
+    if (this.selectedStatus) count++;
+    return count;
+  }
+
+  getFilteredUsersCount(): number {
+    return this.filteredUtilisateurs.length;
+  }
+
+  getAvailableDepartments(): string[] {
+    const departments = new Set<string>();
+    this.utilisateurs.forEach(user => {
+      if (user.departement) {
+        departments.add(user.departement);
+      }
+    });
+    return ['', ...Array.from(departments).sort()]; // Ajouter une option vide pour "Tous les départements"
+  }
+
+  getDepartmentDisplayName(department: string): string {
+    if (!department) return 'Tous les départements';
+    
+    const departmentNames: { [key: string]: string } = {
+      'DOSSIER': 'Département Dossier',
+      'JURIDIQUE': 'Département Juridique',
+      'FINANCE': 'Département Finance',
+      'RECOUVREMENT_AMIABLE': 'Département Recouvrement Amiable'
+    };
+
+    return departmentNames[department] || department;
+  }
+
+  getDepartmentFromRole(role: string): string {
+    const roleToDepartment: { [key: string]: string } = {
+      'SUPER_ADMIN': 'ADMIN',
+      'CHEF_DEPARTEMENT_DOSSIER': 'DOSSIER',
+      'AGENT_DOSSIER': 'DOSSIER',
+      'CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE': 'JURIDIQUE',
+      'AGENT_RECOUVREMENT_JURIDIQUE': 'JURIDIQUE',
+      'CHEF_DEPARTEMENT_FINANCE': 'FINANCE',
+      'AGENT_FINANCE': 'FINANCE',
+      'CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE': 'RECOUVREMENT_AMIABLE',
+      'AGENT_RECOUVREMENT_AMIABLE': 'RECOUVREMENT_AMIABLE'
+    };
+
+    return roleToDepartment[role] || 'ADMIN';
   }
 }

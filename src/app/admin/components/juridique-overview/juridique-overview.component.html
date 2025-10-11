@@ -1,0 +1,170 @@
+<div class="juridique-overview-container">
+  <div class="header">
+    <h1>
+      <i class="fas fa-gavel"></i>
+      Gestion Juridique - Vue d'ensemble
+    </h1>
+    <p>Supervision des avocats, huissiers et audiences</p>
+  </div>
+
+  <!-- Statistiques -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon avocats">
+        <i class="fas fa-user-tie"></i>
+      </div>
+      <div class="stat-content">
+        <h3>Avocats</h3>
+        <p class="stat-value">{{ avocats.length }}</p>
+        <p class="stat-label">Total</p>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon huissiers">
+        <i class="fas fa-balance-scale"></i>
+      </div>
+      <div class="stat-content">
+        <h3>Huissiers</h3>
+        <p class="stat-value">{{ huissiers.length }}</p>
+        <p class="stat-label">Total</p>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon audiences">
+        <i class="fas fa-gavel"></i>
+      </div>
+      <div class="stat-content">
+        <h3>Audiences</h3>
+        <p class="stat-value">{{ audiences.length }}</p>
+        <p class="stat-label">Programmées</p>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon dossiers">
+        <i class="fas fa-folder-open"></i>
+      </div>
+      <div class="stat-content">
+        <h3>Dossiers Juridiques</h3>
+        <p class="stat-value">0</p>
+        <p class="stat-label">En cours</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Contenu principal -->
+  <div class="content-grid">
+    <!-- Avocats -->
+    <div class="content-card">
+      <div class="card-header">
+        <h2>
+          <i class="fas fa-user-tie"></i>
+          Avocats
+        </h2>
+        <button class="btn btn-primary" routerLink="/admin/juridique/avocats">
+          <i class="fas fa-eye"></i>
+          Voir tous
+        </button>
+      </div>
+      <div class="card-body">
+        <div class="loading-spinner" *ngIf="isLoading">
+          <i class="fas fa-spinner fa-spin"></i>
+          <p>Chargement des avocats...</p>
+        </div>
+        
+        <div class="items-list" *ngIf="!isLoading">
+          <div class="item-card" *ngFor="let avocat of avocats.slice(0, 3)">
+            <div class="item-avatar">
+              <span class="avatar-text">{{ getAvocatInitials(avocat) }}</span>
+            </div>
+            <div class="item-info">
+              <h4>{{ avocat.prenom }} {{ avocat.nom }}</h4>
+              <p>{{ avocat.email }}</p>
+              <span class="item-status active">Actif</span>
+            </div>
+          </div>
+          
+          <div class="no-items" *ngIf="avocats.length === 0">
+            <i class="fas fa-user-tie"></i>
+            <p>Aucun avocat trouvé</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Huissiers -->
+    <div class="content-card">
+      <div class="card-header">
+        <h2>
+          <i class="fas fa-balance-scale"></i>
+          Huissiers
+        </h2>
+        <button class="btn btn-primary" routerLink="/admin/juridique/huissiers">
+          <i class="fas fa-eye"></i>
+          Voir tous
+        </button>
+      </div>
+      <div class="card-body">
+        <div class="loading-spinner" *ngIf="isLoading">
+          <i class="fas fa-spinner fa-spin"></i>
+          <p>Chargement des huissiers...</p>
+        </div>
+        
+        <div class="items-list" *ngIf="!isLoading">
+          <div class="item-card" *ngFor="let huissier of huissiers.slice(0, 3)">
+            <div class="item-avatar">
+              <span class="avatar-text">{{ getHuissierInitials(huissier) }}</span>
+            </div>
+            <div class="item-info">
+              <h4>{{ huissier.prenom }} {{ huissier.nom }}</h4>
+              <p>{{ huissier.email }}</p>
+              <span class="item-status active">Actif</span>
+            </div>
+          </div>
+          
+          <div class="no-items" *ngIf="huissiers.length === 0">
+            <i class="fas fa-balance-scale"></i>
+            <p>Aucun huissier trouvé</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Audiences -->
+    <div class="content-card">
+      <div class="card-header">
+        <h2>
+          <i class="fas fa-gavel"></i>
+          Audiences Récentes
+        </h2>
+        <button class="btn btn-primary" routerLink="/admin/juridique/audiences">
+          <i class="fas fa-eye"></i>
+          Voir toutes
+        </button>
+      </div>
+      <div class="card-body">
+        <div class="items-list">
+          <div class="item-card" *ngFor="let audience of audiences.slice(0, 3)">
+            <div class="item-avatar">
+              <i class="fas fa-gavel"></i>
+            </div>
+            <div class="item-info">
+              <h4>{{ audience.type }}</h4>
+              <p>{{ audience.date | date:'dd/MM/yyyy' }}</p>
+              <span class="item-status" [class]="audience.statut.toLowerCase().replace(' ', '-')">
+                {{ audience.statut }}
+              </span>
+            </div>
+          </div>
+          
+          <div class="no-items" *ngIf="audiences.length === 0">
+            <i class="fas fa-gavel"></i>
+            <p>Aucune audience programmée</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

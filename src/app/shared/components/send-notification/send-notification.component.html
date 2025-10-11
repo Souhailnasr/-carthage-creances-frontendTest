@@ -1,0 +1,136 @@
+<div class="send-notification-container">
+  <!-- Header -->
+  <div class="header">
+    <h2>
+      <i class="fas fa-paper-plane"></i>
+      Envoyer une Notification
+    </h2>
+    <p>Envoyez une notification à un utilisateur du système</p>
+  </div>
+
+  <!-- Permission Check -->
+  <div class="permission-check" *ngIf="!canSendNotifications">
+    <div class="alert alert-warning">
+      <i class="fas fa-exclamation-triangle"></i>
+      <p>{{ permissionMessage }}</p>
+    </div>
+  </div>
+
+  <!-- Form -->
+  <div class="form-container" *ngIf="canSendNotifications">
+    <form (ngSubmit)="onSubmit()" #form="ngForm">
+      <div class="form-grid">
+        <!-- Destinataire -->
+        <div class="form-group">
+          <label for="targetUserId">Destinataire *</label>
+          <select 
+            id="targetUserId" 
+            [(ngModel)]="notificationForm.targetUserId" 
+            name="targetUserId"
+            class="form-control"
+            required>
+            <option value="">Sélectionner un utilisateur</option>
+            <option *ngFor="let user of availableUsers" [value]="user.id">
+              {{ getUserDisplayName(user) }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Type de notification -->
+        <div class="form-group">
+          <label for="type">Type de notification *</label>
+          <select 
+            id="type" 
+            [(ngModel)]="notificationForm.type" 
+            name="type"
+            class="form-control"
+            required>
+            <option value="">Sélectionner un type</option>
+            <option *ngFor="let type of availableTypes" [value]="type">
+              <i [class]="getTypeIcon(type)"></i>
+              {{ getTypeDisplayName(type) }}
+            </option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Titre -->
+      <div class="form-group">
+        <label for="titre">Titre *</label>
+        <input 
+          type="text" 
+          id="titre" 
+          [(ngModel)]="notificationForm.titre" 
+          name="titre"
+          class="form-control"
+          placeholder="Titre de la notification"
+          required>
+      </div>
+
+      <!-- Message -->
+      <div class="form-group">
+        <label for="message">Message *</label>
+        <textarea 
+          id="message" 
+          [(ngModel)]="notificationForm.message" 
+          name="message"
+          class="form-control"
+          rows="4"
+          placeholder="Contenu de la notification"
+          required></textarea>
+      </div>
+
+      <!-- Lien d'action (optionnel) -->
+      <div class="form-group">
+        <label for="lienAction">Lien d'action (optionnel)</label>
+        <input 
+          type="text" 
+          id="lienAction" 
+          [(ngModel)]="notificationForm.lienAction" 
+          name="lienAction"
+          class="form-control"
+          placeholder="/dossier/123 ou /admin/utilisateurs">
+        <small class="form-help">Lien vers une page spécifique de l'application</small>
+      </div>
+
+      <!-- Actions -->
+      <div class="form-actions">
+        <button 
+          type="button" 
+          class="btn btn-secondary" 
+          (click)="resetForm()"
+          [disabled]="isLoading">
+          <i class="fas fa-undo"></i>
+          Réinitialiser
+        </button>
+        <button 
+          type="submit" 
+          class="btn btn-primary" 
+          [disabled]="!isFormValid() || isLoading">
+          <i class="fas fa-paper-plane" *ngIf="!isLoading"></i>
+          <i class="fas fa-spinner fa-spin" *ngIf="isLoading"></i>
+          {{ isLoading ? 'Envoi...' : 'Envoyer' }}
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Help Section -->
+  <div class="help-section" *ngIf="canSendNotifications">
+    <h3>
+      <i class="fas fa-info-circle"></i>
+      Types de notifications disponibles
+    </h3>
+    <div class="types-grid">
+      <div class="type-item" *ngFor="let type of availableTypes">
+        <div class="type-icon" [style.background-color]="getTypeColor(type)">
+          <i [class]="getTypeIcon(type)"></i>
+        </div>
+        <div class="type-info">
+          <h4>{{ getTypeDisplayName(type) }}</h4>
+          <p>{{ getTypeDescription(type) }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
