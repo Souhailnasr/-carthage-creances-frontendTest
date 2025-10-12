@@ -7,12 +7,11 @@ import { RoleService } from '../../../core/services/role.service';
 import { User, Role, Dossier, StatutDossier, Urgence } from '../../models';
 import { Subject, takeUntil } from 'rxjs';
 import { NotificationComponent } from '../notification/notification.component';
-import { ApiDiagnosticComponent } from '../api-diagnostic/api-diagnostic.component';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, NotificationComponent, ApiDiagnosticComponent],
+  imports: [CommonModule, RouterModule, FormsModule, NotificationComponent],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss']
 })

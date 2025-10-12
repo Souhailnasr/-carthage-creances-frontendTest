@@ -2,11 +2,81 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, BehaviorSubject, throwError, interval } from 'rxjs';
 import { tap, catchError, map, switchMap } from 'rxjs/operators';
-import { Notification, NotificationRequest, NotificationStats, NotificationFilter, TypeNotification, StatutNotification, TypeEntite } from '../../shared/models/notification.model';
 import { AuthService } from './auth.service';
 
-// Export pour compatibilité
-export { Notification, NotificationRequest, NotificationStats, NotificationFilter, TypeNotification, StatutNotification, TypeEntite };
+// Types pour les notifications
+export interface NotificationRequest {
+  destinataireId: number;
+  type: TypeNotification;
+  titre: string;
+  message: string;
+  lienAction?: string;
+  entiteId?: number;
+  typeEntite?: TypeEntite;
+}
+
+export interface NotificationStats {
+  total: number;
+  nonLues: number;
+  lues: number;
+  parType: { [key in TypeNotification]: number };
+}
+
+export interface NotificationFilter {
+  type?: TypeNotification;
+  statut?: StatutNotification;
+  dateDebut?: Date;
+  dateFin?: Date;
+  destinataireId?: number;
+  page?: number;
+  size?: number;
+}
+
+export enum TypeNotification {
+  DOSSIER_CREE = 'DOSSIER_CREE',
+  DOSSIER_VALIDE = 'DOSSIER_VALIDE',
+  DOSSIER_REJETE = 'DOSSIER_REJETE',
+  DOSSIER_EN_ATTENTE = 'DOSSIER_EN_ATTENTE',
+  ENQUETE_CREE = 'ENQUETE_CREE',
+  ENQUETE_VALIDE = 'ENQUETE_VALIDE',
+  ENQUETE_REJETE = 'ENQUETE_REJETE',
+  ENQUETE_EN_ATTENTE = 'ENQUETE_EN_ATTENTE',
+  TACHE_URGENTE = 'TACHE_URGENTE',
+  RAPPEL = 'RAPPEL',
+  INFO = 'INFO'
+}
+
+export enum StatutNotification {
+  NON_LUE = 'NON_LUE',
+  LUE = 'LUE'
+}
+
+export enum TypeEntite {
+  DOSSIER = 'DOSSIER',
+  ENQUETE = 'ENQUETE',
+  TACHE = 'TACHE',
+  UTILISATEUR = 'UTILISATEUR'
+}
+
+export interface Notification {
+  id: number;
+  destinataireId: number;
+  expediteurId?: number;
+  type: TypeNotification;
+  titre: string;
+  message: string;
+  statut: StatutNotification;
+  dateCreation: string;
+  dateLecture?: string;
+  lienAction?: string;
+  entiteId?: number;
+  typeEntite?: TypeEntite;
+  utilisateur?: {
+    id: number;
+    nom: string;
+    prenom: string;
+  };
+}
 
 @Injectable({
   providedIn: 'root'
@@ -52,87 +122,71 @@ export class NotificationService {
 
     return this.http.post<Notification>(`${this.baseUrl}/notifications`, notification, { headers })
       .pipe(
-        tap(newNotification => {
-          console.log('✅ Notification créée:', newNotification);
-          this.refreshNotifications();
+        tap(() => {
+          // Rafraîchir les notifications après création
+          const currentUser = this.authService.getCurrentUser();
+          if (currentUser) {
+            this.getNotificationsByUser(Number(currentUser.id)).subscribe();
+          }
         }),
         catchError(this.handleError)
       );
   }
 
   /**
-   * Récupérer toutes les notifications
-   */
-  getAllNotifications(): Observable<Notification[]> {
-    return this.http.get<Notification[]>(`${this.baseUrl}/notifications`)
-      .pipe(
-        tap(notifications => {
-          this.notificationsSubject.next(notifications);
-        }),
-        catchError(this.handleError)
-      );
-  }
-
-  /**
-   * Récupérer les notifications par utilisateur
+   * Obtenir les notifications d'un utilisateur
    */
   getNotificationsByUser(userId: number): Observable<Notification[]> {
     return this.http.get<Notification[]>(`${this.baseUrl}/notifications/user/${userId}`)
       .pipe(
         tap(notifications => {
           this.notificationsSubject.next(notifications);
-          this.updateUnreadCount(notifications);
+          const unreadCount = notifications.filter(n => n.statut === StatutNotification.NON_LUE).length;
+          this.unreadCountSubject.next(unreadCount);
         }),
         catchError(this.handleError)
       );
   }
 
   /**
-   * Récupérer les notifications non lues par utilisateur
+   * Obtenir les notifications avec filtres
    */
-  getNotificationsNonLuesByUser(userId: number): Observable<Notification[]> {
-    return this.http.get<Notification[]>(`${this.baseUrl}/notifications/user/${userId}/non-lues`)
+  getNotificationsWithFilter(filter: NotificationFilter): Observable<{ content: Notification[], totalElements: number }> {
+    const params = new URLSearchParams();
+    
+    if (filter.type) params.append('type', filter.type);
+    if (filter.statut) params.append('statut', filter.statut);
+    if (filter.dateDebut) params.append('dateDebut', filter.dateDebut.toISOString());
+    if (filter.dateFin) params.append('dateFin', filter.dateFin.toISOString());
+    if (filter.destinataireId) params.append('destinataireId', filter.destinataireId.toString());
+    if (filter.page !== undefined) params.append('page', filter.page.toString());
+    if (filter.size !== undefined) params.append('size', filter.size.toString());
+
+    return this.http.get<{ content: Notification[], totalElements: number }>(`${this.baseUrl}/notifications?${params}`)
       .pipe(
-        tap(notifications => {
-          this.unreadCountSubject.next(notifications.length);
-        }),
         catchError(this.handleError)
       );
-  }
-
-  /**
-   * Récupérer les notifications par type et utilisateur
-   */
-  getNotificationsByType(userId: number, type: TypeNotification): Observable<Notification[]> {
-    return this.http.get<Notification[]>(`${this.baseUrl}/notifications/user/${userId}/type/${type}`)
-      .pipe(catchError(this.handleError));
-  }
-
-  /**
-   * Récupérer les notifications récentes
-   */
-  getNotificationsRecent(userId: number, dateDebut: string): Observable<Notification[]> {
-    return this.http.get<Notification[]>(`${this.baseUrl}/notifications/user/${userId}/recentes?dateDebut=${dateDebut}`)
-      .pipe(catchError(this.handleError));
-  }
-
-  /**
-   * Récupérer les notifications par entité
-   */
-  getNotificationsByEntite(entiteId: number, entiteType: TypeEntite): Observable<Notification[]> {
-    return this.http.get<Notification[]>(`${this.baseUrl}/notifications/entite/${entiteId}/type/${entiteType}`)
-      .pipe(catchError(this.handleError));
   }
 
   /**
    * Marquer une notification comme lue
    */
-  marquerLue(notificationId: number): Observable<Notification> {
-    return this.http.post<Notification>(`${this.baseUrl}/notifications/${notificationId}/marquer-lue`, {})
+  marquerLue(notificationId: number): Observable<void> {
+    return this.http.put<void>(`${this.baseUrl}/notifications/${notificationId}/marquer-lue`, {})
       .pipe(
-        tap(updatedNotification => {
-          console.log('✅ Notification marquée comme lue:', updatedNotification);
-          this.refreshNotifications();
+        tap(() => {
+          // Mettre à jour l'état local
+          const notifications = this.notificationsSubject.value;
+          const updatedNotifications = notifications.map(n => 
+            n.id === notificationId 
+              ? { ...n, statut: StatutNotification.LUE, dateLecture: new Date().toISOString() }
+              : n
+          );
+          this.notificationsSubject.next(updatedNotifications);
+          
+          // Mettre à jour le compteur
+          const unreadCount = updatedNotifications.filter(n => n.statut === StatutNotification.NON_LUE).length;
+          this.unreadCountSubject.next(unreadCount);
         }),
         catchError(this.handleError)
       );
@@ -141,12 +195,22 @@ export class NotificationService {
   /**
    * Marquer une notification comme non lue
    */
-  marquerNonLue(notificationId: number): Observable<Notification> {
-    return this.http.post<Notification>(`${this.baseUrl}/notifications/${notificationId}/marquer-non-lue`, {})
+  marquerNonLue(notificationId: number): Observable<void> {
+    return this.http.put<void>(`${this.baseUrl}/notifications/${notificationId}/marquer-non-lue`, {})
       .pipe(
-        tap(updatedNotification => {
-          console.log('✅ Notification marquée comme non lue:', updatedNotification);
-          this.refreshNotifications();
+        tap(() => {
+          // Mettre à jour l'état local
+          const notifications = this.notificationsSubject.value;
+          const updatedNotifications = notifications.map(n => 
+            n.id === notificationId 
+              ? { ...n, statut: StatutNotification.NON_LUE, dateLecture: undefined }
+              : n
+          );
+          this.notificationsSubject.next(updatedNotifications);
+          
+          // Mettre à jour le compteur
+          const unreadCount = updatedNotifications.filter(n => n.statut === StatutNotification.NON_LUE).length;
+          this.unreadCountSubject.next(unreadCount);
         }),
         catchError(this.handleError)
       );
@@ -155,12 +219,19 @@ export class NotificationService {
   /**
    * Marquer toutes les notifications comme lues
    */
-  marquerToutesLues(userId: number): Observable<number> {
-    return this.http.post<number>(`${this.baseUrl}/notifications/user/${userId}/marquer-toutes-lues`, {})
+  marquerToutesLues(userId: number): Observable<void> {
+    return this.http.put<void>(`${this.baseUrl}/notifications/user/${userId}/marquer-toutes-lues`, {})
       .pipe(
-        tap(count => {
-          console.log(`✅ ${count} notifications marquées comme lues`);
-          this.refreshNotifications();
+        tap(() => {
+          // Mettre à jour l'état local
+          const notifications = this.notificationsSubject.value;
+          const updatedNotifications = notifications.map(n => ({
+            ...n,
+            statut: StatutNotification.LUE,
+            dateLecture: new Date().toISOString()
+          }));
+          this.notificationsSubject.next(updatedNotifications);
+          this.unreadCountSubject.next(0);
         }),
         catchError(this.handleError)
       );
@@ -173,8 +244,14 @@ export class NotificationService {
     return this.http.delete<void>(`${this.baseUrl}/notifications/${notificationId}`)
       .pipe(
         tap(() => {
-          console.log('✅ Notification supprimée:', notificationId);
-          this.refreshNotifications();
+          // Mettre à jour l'état local
+          const notifications = this.notificationsSubject.value;
+          const updatedNotifications = notifications.filter(n => n.id !== notificationId);
+          this.notificationsSubject.next(updatedNotifications);
+          
+          // Mettre à jour le compteur
+          const unreadCount = updatedNotifications.filter(n => n.statut === StatutNotification.NON_LUE).length;
+          this.unreadCountSubject.next(unreadCount);
         }),
         catchError(this.handleError)
       );
@@ -184,27 +261,17 @@ export class NotificationService {
    * Obtenir les statistiques des notifications
    */
   getNotificationStats(userId: number): Observable<NotificationStats> {
-    return this.http.get<number>(`${this.baseUrl}/notifications/statistiques/user/${userId}`)
+    return this.http.get<NotificationStats>(`${this.baseUrl}/notifications/user/${userId}/stats`)
       .pipe(
-        switchMap(total => 
-          this.http.get<number>(`${this.baseUrl}/notifications/statistiques/non-lues/user/${userId}`)
-            .pipe(
-              map(nonLues => ({
-                total,
-                nonLues,
-                parType: {} as { [key in TypeNotification]: number }
-              }))
-            )
-        ),
         catchError(this.handleError)
       );
   }
 
   /**
-   * Compter les notifications non lues
+   * Obtenir le nombre de notifications non lues
    */
-  countNotificationsNonLues(userId: number): Observable<number> {
-    return this.http.get<number>(`${this.baseUrl}/notifications/statistiques/non-lues/user/${userId}`)
+  getUnreadCount(userId: number): Observable<number> {
+    return this.http.get<number>(`${this.baseUrl}/notifications/user/${userId}/unread-count`)
       .pipe(
         tap(count => this.unreadCountSubject.next(count)),
         catchError(this.handleError)
@@ -212,144 +279,24 @@ export class NotificationService {
   }
 
   /**
-   * Envoyer une notification à un utilisateur
+   * Gestion des erreurs
    */
-  envoyerNotification(userId: number, titre: string, message: string, type: TypeNotification, entiteId?: number, entiteType?: TypeEntite, lienAction?: string): Observable<Notification> {
-    const notificationRequest: NotificationRequest = {
-      utilisateur: { id: userId },
-      type,
-      titre,
-      message,
-      entiteId,
-      entiteType,
-      lienAction
-    };
+  private handleError = (error: any): Observable<never> => {
+    console.error('Erreur dans NotificationService:', error);
+    return throwError(() => error);
+  };
 
-    return this.createNotification(notificationRequest);
+  /**
+   * Obtenir les notifications actuelles
+   */
+  getCurrentNotifications(): Notification[] {
+    return this.notificationsSubject.value;
   }
 
   /**
-   * Envoyer une notification de validation de dossier
+   * Obtenir le compteur actuel de notifications non lues
    */
-  envoyerNotificationValidation(userId: number, numeroDossier: string, statut: string, commentaire?: string): Observable<Notification> {
-    const titre = `Dossier ${numeroDossier} ${statut}`;
-    const message = `Votre dossier ${numeroDossier} a été ${statut.toLowerCase()}${commentaire ? `. Commentaire: ${commentaire}` : ''}`;
-    const type = statut.toUpperCase() === 'VALIDÉ' ? TypeNotification.DOSSIER_VALIDE : TypeNotification.DOSSIER_REJETE;
-
-    return this.envoyerNotification(userId, titre, message, type, undefined, TypeEntite.DOSSIER);
-  }
-
-  /**
-   * Ajouter une notification (méthode de compatibilité)
-   */
-  addNotification(notification: NotificationRequest): Observable<Notification> {
-    return this.createNotification(notification);
-  }
-
-  /**
-   * Rafraîchir les notifications
-   */
-  private refreshNotifications(): void {
-    const currentUser = this.authService.getCurrentUser();
-    if (currentUser) {
-      this.getNotificationsByUser(Number(currentUser.id)).subscribe();
-    }
-  }
-
-  /**
-   * Mettre à jour le compteur de notifications non lues
-   */
-  private updateUnreadCount(notifications: Notification[]): void {
-    const unreadCount = notifications.filter(n => n.statut === StatutNotification.NON_LUE).length;
-    this.unreadCountSubject.next(unreadCount);
-  }
-
-  /**
-   * Obtenir le nom d'affichage du type de notification
-   */
-  getTypeDisplayName(type: TypeNotification): string {
-    const typeNames: { [key in TypeNotification]: string } = {
-      [TypeNotification.DOSSIER_CREE]: 'Dossier créé',
-      [TypeNotification.DOSSIER_VALIDE]: 'Dossier validé',
-      [TypeNotification.DOSSIER_REJETE]: 'Dossier rejeté',
-      [TypeNotification.DOSSIER_EN_ATTENTE]: 'Dossier en attente',
-      [TypeNotification.ENQUETE_CREE]: 'Enquête créée',
-      [TypeNotification.ENQUETE_VALIDE]: 'Enquête validée',
-      [TypeNotification.ENQUETE_REJETE]: 'Enquête rejetée',
-      [TypeNotification.ENQUETE_EN_ATTENTE]: 'Enquête en attente',
-      [TypeNotification.TACHE_URGENTE]: 'Tâche urgente',
-      [TypeNotification.RAPPEL]: 'Rappel',
-      [TypeNotification.INFO]: 'Information'
-    };
-    return typeNames[type] || type;
-  }
-
-  /**
-   * Obtenir l'icône du type de notification
-   */
-  getTypeIcon(type: TypeNotification): string {
-    const typeIcons: { [key in TypeNotification]: string } = {
-      [TypeNotification.DOSSIER_CREE]: 'fas fa-file-plus',
-      [TypeNotification.DOSSIER_VALIDE]: 'fas fa-check-circle',
-      [TypeNotification.DOSSIER_REJETE]: 'fas fa-times-circle',
-      [TypeNotification.DOSSIER_EN_ATTENTE]: 'fas fa-clock',
-      [TypeNotification.ENQUETE_CREE]: 'fas fa-search-plus',
-      [TypeNotification.ENQUETE_VALIDE]: 'fas fa-check-circle',
-      [TypeNotification.ENQUETE_REJETE]: 'fas fa-times-circle',
-      [TypeNotification.ENQUETE_EN_ATTENTE]: 'fas fa-clock',
-      [TypeNotification.TACHE_URGENTE]: 'fas fa-exclamation-triangle',
-      [TypeNotification.RAPPEL]: 'fas fa-bell',
-      [TypeNotification.INFO]: 'fas fa-info-circle'
-    };
-    return typeIcons[type] || 'fas fa-bell';
-  }
-
-  /**
-   * Obtenir la couleur du type de notification
-   */
-  getTypeColor(type: TypeNotification): string {
-    const typeColors: { [key in TypeNotification]: string } = {
-      [TypeNotification.DOSSIER_CREE]: '#3b82f6',
-      [TypeNotification.DOSSIER_VALIDE]: '#10b981',
-      [TypeNotification.DOSSIER_REJETE]: '#ef4444',
-      [TypeNotification.DOSSIER_EN_ATTENTE]: '#f59e0b',
-      [TypeNotification.ENQUETE_CREE]: '#3b82f6',
-      [TypeNotification.ENQUETE_VALIDE]: '#10b981',
-      [TypeNotification.ENQUETE_REJETE]: '#ef4444',
-      [TypeNotification.ENQUETE_EN_ATTENTE]: '#f59e0b',
-      [TypeNotification.TACHE_URGENTE]: '#ef4444',
-      [TypeNotification.RAPPEL]: '#8b5cf6',
-      [TypeNotification.INFO]: '#6b7280'
-    };
-    return typeColors[type] || '#6b7280';
-  }
-
-  /**
-   * Gérer les erreurs HTTP
-   */
-  private handleError(error: any): Observable<never> {
-    console.error('❌ Erreur dans NotificationService:', error);
-    console.error('❌ Status:', error.status);
-    console.error('❌ StatusText:', error.statusText);
-    console.error('❌ URL:', error.url);
-    console.error('❌ Error body:', error.error);
-    
-    let errorMessage = 'Une erreur est survenue';
-    
-    if (error.error instanceof ErrorEvent) {
-      errorMessage = `Erreur réseau: ${error.error.message}`;
-    } else {
-      if (error.status === 0) {
-        errorMessage = 'Impossible de se connecter au serveur. Vérifiez que le backend est démarré.';
-      } else if (error.status === 404) {
-        errorMessage = 'Endpoint non trouvé. Vérifiez l\'URL du backend.';
-      } else if (error.status === 500) {
-        errorMessage = 'Erreur serveur interne.';
-      } else {
-        errorMessage = `Erreur ${error.status}: ${error.error?.message || error.statusText}`;
-      }
-    }
-    
-    return throwError(() => new Error(errorMessage));
+  getCurrentUnreadCount(): number {
+    return this.unreadCountSubject.value;
   }
 }

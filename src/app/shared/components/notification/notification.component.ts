@@ -48,131 +48,177 @@ export class NotificationComponent implements OnInit, OnDestroy {
         this.notifications = notifications;
         this.notificationsNonLues = notifications.filter(n => n.statut === StatutNotification.NON_LUE);
         this.countNonLues = this.notificationsNonLues.length;
-      },
-      error => {
-        // En cas d'erreur, utiliser des données mockées
-        this.loadMockNotifications();
       }
     );
   }
 
-  private loadMockNotifications(): void {
+  startPolling(): void {
+    // Polling toutes les 30 secondes pour les nouvelles notifications
+    this.subscription.add(
+      interval(30000).subscribe(() => {
+        this.loadNotifications();
+      })
+    );
+  }
+
+  loadMockNotifications(): void {
     // Données mockées pour les tests
     this.notifications = [
       {
         id: 1,
-        utilisateur: { id: 1, nom: 'Test', prenom: 'User', email: 'test@test.com' },
+        destinataireId: 1,
         type: TypeNotification.DOSSIER_CREE,
         titre: 'Nouveau dossier créé',
         message: 'Un nouveau dossier a été créé et nécessite votre attention.',
         statut: StatutNotification.NON_LUE,
-        dateCreation: new Date(Date.now() - 1000 * 60 * 30).toISOString() // Il y a 30 minutes
+        dateCreation: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
+        lienAction: '/dossiers/123'
       },
       {
         id: 2,
-        utilisateur: { id: 1, nom: 'Test', prenom: 'User', email: 'test@test.com' },
+        destinataireId: 1,
         type: TypeNotification.TACHE_URGENTE,
-        titre: 'Tâche urgente assignée',
-        message: 'Une tâche urgente vous a été assignée par votre chef.',
+        titre: 'Tâche urgente',
+        message: 'Une tâche urgente vous a été assignée.',
         statut: StatutNotification.NON_LUE,
-        dateCreation: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString() // Il y a 2 heures
+        dateCreation: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
+        lienAction: '/taches/456'
       },
       {
         id: 3,
-        utilisateur: { id: 1, nom: 'Test', prenom: 'User', email: 'test@test.com' },
+        destinataireId: 1,
         type: TypeNotification.RAPPEL,
-        titre: 'Rappel de réunion',
-        message: 'N\'oubliez pas la réunion d\'équipe prévue à 14h00.',
+        titre: 'Rappel',
+        message: 'N\'oubliez pas de traiter le dossier en attente.',
         statut: StatutNotification.LUE,
-        dateCreation: new Date(Date.now() - 1000 * 60 * 60 * 4).toISOString() // Il y a 4 heures
+        dateCreation: new Date(Date.now() - 1000 * 60 * 60 * 4).toISOString(),
+        dateLecture: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString()
       }
     ];
+
     this.notificationsNonLues = this.notifications.filter(n => n.statut === StatutNotification.NON_LUE);
     this.countNonLues = this.notificationsNonLues.length;
-  }
-
-  startPolling(): void {
-    this.subscription = interval(30000).subscribe(() => {
-      this.loadNotifications();
-    });
   }
 
   toggleDropdown(): void {
     this.showDropdown = !this.showDropdown;
   }
 
-  marquerLue(notification: Notification): void {
-    if (notification.id) {
+  markAsRead(notification: Notification): void {
+    if (notification.statut === StatutNotification.NON_LUE) {
       this.notificationService.marquerLue(notification.id).subscribe(
         () => {
           notification.statut = StatutNotification.LUE;
           notification.dateLecture = new Date().toISOString();
-          this.countNonLues--;
+          this.updateNotificationsList();
         }
       );
     }
   }
 
-  marquerToutesLues(): void {
-    const mockUserId = 1;
-    this.notificationService.marquerToutesLues(mockUserId).subscribe(
+  markAllAsRead(): void {
+    const unreadNotifications = this.notifications.filter(n => n.statut === StatutNotification.NON_LUE);
+    unreadNotifications.forEach(notification => {
+      this.notificationService.marquerLue(notification.id).subscribe(
+        () => {
+          notification.statut = StatutNotification.LUE;
+          notification.dateLecture = new Date().toISOString();
+        }
+      );
+    });
+    this.updateNotificationsList();
+  }
+
+  deleteNotification(notification: Notification): void {
+    this.notificationService.deleteNotification(notification.id).subscribe(
       () => {
-        this.notifications.forEach(n => {
-          n.statut = StatutNotification.LUE;
-          n.dateLecture = new Date().toISOString();
-        });
-        this.countNonLues = 0;
+        this.notifications = this.notifications.filter(n => n.id !== notification.id);
+        this.updateNotificationsList();
       }
     );
   }
 
-  getNotificationIcon(type: string): string {
-    switch (type) {
-      case 'DOSSIER_CREE': return 'fas fa-file-alt';
-      case 'DOSSIER_VALIDE': return 'fas fa-check-circle';
-      case 'DOSSIER_REJETE': return 'fas fa-times-circle';
-      case 'ENQUETE_CREE': return 'fas fa-search';
-      case 'ENQUETE_VALIDE': return 'fas fa-check-circle';
-      case 'TACHE_URGENTE': return 'fas fa-exclamation-triangle';
-      case 'RAPPEL': return 'fas fa-bell';
-      default: return 'fas fa-info-circle';
-    }
+  private updateNotificationsList(): void {
+    this.notificationsNonLues = this.notifications.filter(n => n.statut === StatutNotification.NON_LUE);
+    this.countNonLues = this.notificationsNonLues.length;
   }
 
-  getNotificationClass(type: string): string {
-    switch (type) {
-      case 'DOSSIER_VALIDE': return 'notification-success';
-      case 'DOSSIER_REJETE': return 'notification-error';
-      case 'TACHE_URGENTE': return 'notification-warning';
-      default: return 'notification-info';
-    }
+  getNotificationIcon(type: TypeNotification): string {
+    const icons: { [key in TypeNotification]: string } = {
+      [TypeNotification.DOSSIER_CREE]: 'fas fa-file-plus',
+      [TypeNotification.DOSSIER_VALIDE]: 'fas fa-check-circle',
+      [TypeNotification.DOSSIER_REJETE]: 'fas fa-times-circle',
+      [TypeNotification.DOSSIER_EN_ATTENTE]: 'fas fa-clock',
+      [TypeNotification.ENQUETE_CREE]: 'fas fa-search-plus',
+      [TypeNotification.ENQUETE_VALIDE]: 'fas fa-check-circle',
+      [TypeNotification.ENQUETE_REJETE]: 'fas fa-times-circle',
+      [TypeNotification.ENQUETE_EN_ATTENTE]: 'fas fa-clock',
+      [TypeNotification.TACHE_URGENTE]: 'fas fa-exclamation-triangle',
+      [TypeNotification.RAPPEL]: 'fas fa-bell',
+      [TypeNotification.INFO]: 'fas fa-info-circle'
+    };
+    return icons[type] || 'fas fa-bell';
+  }
+
+  getNotificationClass(type: TypeNotification): string {
+    const classes: { [key in TypeNotification]: string } = {
+      [TypeNotification.DOSSIER_CREE]: 'notification-info',
+      [TypeNotification.DOSSIER_VALIDE]: 'notification-success',
+      [TypeNotification.DOSSIER_REJETE]: 'notification-danger',
+      [TypeNotification.DOSSIER_EN_ATTENTE]: 'notification-warning',
+      [TypeNotification.ENQUETE_CREE]: 'notification-info',
+      [TypeNotification.ENQUETE_VALIDE]: 'notification-success',
+      [TypeNotification.ENQUETE_REJETE]: 'notification-danger',
+      [TypeNotification.ENQUETE_EN_ATTENTE]: 'notification-warning',
+      [TypeNotification.TACHE_URGENTE]: 'notification-danger',
+      [TypeNotification.RAPPEL]: 'notification-warning',
+      [TypeNotification.INFO]: 'notification-info'
+    };
+    return classes[type] || 'notification-info';
+  }
+
+  formatDate(dateString: string): string {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMinutes = Math.round(diffMs / (1000 * 60));
+    const diffHours = Math.round(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffMinutes < 1) return "à l'instant";
+    if (diffMinutes < 60) return `il y a ${diffMinutes} minutes`;
+    if (diffHours < 24) return `il y a ${diffHours} heures`;
+    if (diffDays < 30) return `il y a ${diffDays} jours`;
+    return date.toLocaleDateString('fr-FR');
   }
 
   createNotification(): void {
     if (this.newNotification.titre && this.newNotification.message) {
-      const notification: Notification = {
-        id: Date.now(),
-        utilisateur: { id: 1, nom: 'Test', prenom: 'User', email: 'test@test.com' },
-        type: this.newNotification.type || TypeNotification.RAPPEL,
+      const notificationRequest = {
+        destinataireId: 1, // Mock destinataire
+        type: this.newNotification.type as TypeNotification,
         titre: this.newNotification.titre,
         message: this.newNotification.message,
-        statut: StatutNotification.NON_LUE,
-        dateCreation: new Date().toISOString()
+        lienAction: this.newNotification.lienAction
       };
 
-      this.notifications.unshift(notification);
-      this.countNonLues++;
-      this.showCreateNotification = false;
-      this.resetNewNotification();
+      this.notificationService.createNotification(notificationRequest).subscribe(
+        () => {
+          this.showCreateNotification = false;
+          this.newNotification = {
+            titre: '',
+            message: '',
+            type: TypeNotification.RAPPEL,
+            statut: StatutNotification.NON_LUE
+          };
+          this.loadNotifications();
+        }
+      );
     }
   }
 
-  cancelCreateNotification(): void {
+  closeCreateNotification(): void {
     this.showCreateNotification = false;
-    this.resetNewNotification();
-  }
-
-  private resetNewNotification(): void {
     this.newNotification = {
       titre: '',
       message: '',

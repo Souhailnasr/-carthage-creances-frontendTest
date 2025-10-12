@@ -1,0 +1,256 @@
+<div class="notifications-container">
+  <div class="header">
+    <h1>Notifications</h1>
+    <p>Gérez vos notifications et restez informé des activités du département</p>
+    <button class="btn-primary" (click)="toggleAddForm()">
+      <i class="fas fa-plus"></i> Créer une Notification
+    </button>
+  </div>
+
+  <!-- Formulaire de création -->
+  <div class="add-form" *ngIf="showAddForm">
+    <div class="form-header">
+      <h3>Nouvelle Notification</h3>
+      <button class="btn-close" (click)="toggleAddForm()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    
+    <form [formGroup]="notificationForm" (ngSubmit)="onSubmit()">
+      <div class="form-group">
+        <label for="titre">Titre *</label>
+        <input 
+          type="text" 
+          id="titre"
+          formControlName="titre"
+          class="form-control"
+          [class.error]="notificationForm.get('titre')?.invalid && notificationForm.get('titre')?.touched"
+          placeholder="Titre de la notification">
+        <div class="error-message" *ngIf="getFieldError('titre')">
+          {{ getFieldError('titre') }}
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label for="message">Message *</label>
+        <textarea 
+          id="message"
+          formControlName="message"
+          class="form-control"
+          [class.error]="notificationForm.get('message')?.invalid && notificationForm.get('message')?.touched"
+          placeholder="Contenu de la notification"
+          rows="4"></textarea>
+        <div class="error-message" *ngIf="getFieldError('message')">
+          {{ getFieldError('message') }}
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label for="type">Type *</label>
+        <select 
+          id="type"
+          formControlName="type"
+          class="form-control">
+          <option value="INFO">Information</option>
+          <option value="WARNING">Avertissement</option>
+          <option value="SUCCESS">Succès</option>
+          <option value="ERROR">Erreur</option>
+        </select>
+      </div>
+      
+      <div class="form-actions">
+        <button type="button" class="btn-secondary" (click)="toggleAddForm()">
+          Annuler
+        </button>
+        <button 
+          type="submit" 
+          class="btn-primary"
+          [disabled]="notificationForm.invalid || isSubmitting">
+          <i class="fas fa-save" *ngIf="!isSubmitting"></i>
+          <i class="fas fa-spinner fa-spin" *ngIf="isSubmitting"></i>
+          {{ isSubmitting ? 'Création...' : 'Créer la Notification' }}
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Statistiques -->
+  <div class="stats-section">
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon">
+          <i class="fas fa-bell"></i>
+        </div>
+        <div class="stat-content">
+          <h4>{{ notifications.length }}</h4>
+          <p>Total Notifications</p>
+        </div>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-icon">
+          <i class="fas fa-envelope-open"></i>
+        </div>
+        <div class="stat-content">
+          <h4>{{ getNotificationsNonLues() }}</h4>
+          <p>Non Lues</p>
+        </div>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-icon">
+          <i class="fas fa-info-circle"></i>
+        </div>
+        <div class="stat-content">
+          <h4>{{ getNotificationsParType('INFO') }}</h4>
+          <p>Informations</p>
+        </div>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-icon">
+          <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <div class="stat-content">
+          <h4>{{ getNotificationsParType('WARNING') }}</h4>
+          <p>Avertissements</p>
+        </div>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-icon">
+          <i class="fas fa-check-circle"></i>
+        </div>
+        <div class="stat-content">
+          <h4>{{ getNotificationsParType('SUCCESS') }}</h4>
+          <p>Succès</p>
+        </div>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-icon">
+          <i class="fas fa-times-circle"></i>
+        </div>
+        <div class="stat-content">
+          <h4>{{ getNotificationsParType('ERROR') }}</h4>
+          <p>Erreurs</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filtres et actions -->
+  <div class="filters-section">
+    <div class="filters-header">
+      <h2>Filtres</h2>
+      <div class="actions">
+        <button class="btn-secondary" (click)="marquerToutesCommeLues()" *ngIf="getNotificationsNonLues() > 0">
+          <i class="fas fa-check-double"></i> Marquer toutes comme lues
+        </button>
+      </div>
+    </div>
+    
+    <div class="filters">
+      <div class="filter-group">
+        <label for="statusFilter">Statut :</label>
+        <select id="statusFilter" [(ngModel)]="selectedFilter" (change)="onFilterChange()" class="form-control">
+          <option value="all">Toutes</option>
+          <option value="unread">Non lues</option>
+          <option value="read">Lues</option>
+        </select>
+      </div>
+      
+      <div class="filter-group">
+        <label for="typeFilter">Type :</label>
+        <select id="typeFilter" [(ngModel)]="selectedType" (change)="onTypeChange()" class="form-control">
+          <option value="all">Tous les types</option>
+          <option value="INFO">Information</option>
+          <option value="WARNING">Avertissement</option>
+          <option value="SUCCESS">Succès</option>
+          <option value="ERROR">Erreur</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Liste des notifications -->
+  <div class="notifications-section">
+    <div class="notifications-header">
+      <h3>Notifications ({{ filteredNotifications.length }})</h3>
+    </div>
+    
+    <div class="notifications-list" *ngIf="filteredNotifications.length > 0; else noNotifications">
+      <div 
+        class="notification-card" 
+        *ngFor="let notification of filteredNotifications"
+        [class.unread]="!notification.lu">
+        
+        <div class="notification-icon" [ngClass]="getTypeClass(notification.type)">
+          <i class="fas" [ngClass]="getTypeIcon(notification.type)"></i>
+        </div>
+        
+        <div class="notification-content">
+          <div class="notification-header">
+            <h4>{{ notification.titre }}</h4>
+            <div class="notification-meta">
+              <span class="notification-time">{{ notification.getRelativeTime() }}</span>
+              <span class="notification-type" [ngClass]="getTypeClass(notification.type)">
+                {{ notification.type }}
+              </span>
+            </div>
+          </div>
+          
+          <p class="notification-message">{{ notification.message }}</p>
+          
+          <div class="notification-details" *ngIf="notification.dossierId || notification.actionId">
+            <div class="detail-item" *ngIf="notification.dossierId">
+              <i class="fas fa-folder"></i>
+              <span>Dossier: {{ notification.dossierId }}</span>
+            </div>
+            <div class="detail-item" *ngIf="notification.actionId">
+              <i class="fas fa-tasks"></i>
+              <span>Action: {{ notification.actionId }}</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="notification-actions">
+          <button 
+            class="btn-icon" 
+            *ngIf="!notification.lu"
+            (click)="marquerCommeLu(notification)"
+            title="Marquer comme lu">
+            <i class="fas fa-eye"></i>
+          </button>
+          <button 
+            class="btn-icon btn-danger" 
+            (click)="supprimerNotification(notification)"
+            title="Supprimer">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <ng-template #noNotifications>
+      <div class="no-notifications">
+        <div class="no-notifications-icon">
+          <i class="fas fa-bell-slash"></i>
+        </div>
+        <h3>Aucune notification trouvée</h3>
+        <p *ngIf="selectedFilter === 'all' && selectedType === 'all'">
+          Vous n'avez aucune notification pour le moment.
+        </p>
+        <p *ngIf="selectedFilter !== 'all' || selectedType !== 'all'">
+          Aucune notification ne correspond aux filtres sélectionnés.
+        </p>
+        <button 
+          class="btn-primary" 
+          *ngIf="selectedFilter !== 'all' || selectedType !== 'all'"
+          (click)="selectedFilter = 'all'; selectedType = 'all'; onFilterChange()">
+          <i class="fas fa-refresh"></i> Réinitialiser les filtres
+        </button>
+      </div>
+    </ng-template>
+  </div>
+</div>

@@ -1,214 +1,145 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { Subject, takeUntil } from 'rxjs';
-import { NotificationService } from '../../../core/services/notification.service';
-import { NotificationPermissionsService } from '../../../core/services/notification-permissions.service';
-import { AuthService } from '../../../core/services/auth.service';
-import { ToastService } from '../../../core/services/toast.service';
-import { UtilisateurService } from '../../../core/services/utilisateur.service';
-import { NotificationRequest, TypeNotification } from '../../models/notification.model';
-import { User, Role } from '../../models';
+import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { RouterModule } from '@angular/router';
+import { NotificationService, TypeNotification, NotificationRequest } from '../../../core/services/notification.service';
+import { UtilisateurService, Utilisateur } from '../../../core/services/utilisateur.service';
 
 @Component({
   selector: 'app-send-notification',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterModule],
   templateUrl: './send-notification.component.html',
   styleUrls: ['./send-notification.component.scss']
 })
-export class SendNotificationComponent implements OnInit, OnDestroy {
-  notificationForm = {
-    targetUserId: null as number | null,
-    type: '' as TypeNotification | '',
-    titre: '',
-    message: '',
-    lienAction: ''
-  };
-
-  availableUsers: User[] = [];
-  availableTypes: TypeNotification[] = [];
+export class SendNotificationComponent implements OnInit {
+  notificationForm: FormGroup;
+  users: Utilisateur[] = [];
   isLoading: boolean = false;
-  canSendNotifications: boolean = false;
-  permissionMessage: string = '';
+  isSubmitting: boolean = false;
+  showSuccess: boolean = false;
 
-  private destroy$ = new Subject<void>();
+  typeOptions = [
+    { value: TypeNotification.DOSSIER_CREE, label: 'Dossier créé' },
+    { value: TypeNotification.DOSSIER_VALIDE, label: 'Dossier validé' },
+    { value: TypeNotification.DOSSIER_REJETE, label: 'Dossier rejeté' },
+    { value: TypeNotification.DOSSIER_EN_ATTENTE, label: 'Dossier en attente' },
+    { value: TypeNotification.ENQUETE_CREE, label: 'Enquête créée' },
+    { value: TypeNotification.ENQUETE_VALIDE, label: 'Enquête validée' },
+    { value: TypeNotification.ENQUETE_REJETE, label: 'Enquête rejetée' },
+    { value: TypeNotification.ENQUETE_EN_ATTENTE, label: 'Enquête en attente' },
+    { value: TypeNotification.TACHE_URGENTE, label: 'Tâche urgente' },
+    { value: TypeNotification.RAPPEL, label: 'Rappel' },
+    { value: TypeNotification.INFO, label: 'Information' }
+  ];
 
   constructor(
+    private fb: FormBuilder,
     private notificationService: NotificationService,
-    private notificationPermissions: NotificationPermissionsService,
-    private authService: AuthService,
-    private toastService: ToastService,
     private utilisateurService: UtilisateurService
-  ) {}
+  ) {
+    this.notificationForm = this.fb.group({
+      destinataireId: ['', [Validators.required]],
+      type: [TypeNotification.INFO, [Validators.required]],
+      titre: ['', [Validators.required, Validators.minLength(3)]],
+      message: ['', [Validators.required, Validators.minLength(10)]],
+      lienAction: ['']
+    });
+  }
 
   ngOnInit(): void {
-    this.checkPermissions();
-    this.loadAvailableTypes();
-    this.loadAvailableUsers();
+    this.loadUsers();
   }
 
-  ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
-  }
-
-  private checkPermissions(): void {
-    const currentUser = this.authService.getCurrentUser();
-    this.canSendNotifications = this.notificationPermissions.canSendNotifications(currentUser);
-    this.permissionMessage = this.notificationPermissions.getPermissionDeniedMessage();
-  }
-
-  private loadAvailableTypes(): void {
-    const currentUser = this.authService.getCurrentUser();
-    if (currentUser) {
-      this.availableTypes = this.notificationPermissions.getAllowedNotificationTypes(currentUser.role);
-    }
-  }
-
-  private loadAvailableUsers(): void {
-    this.utilisateurService.getAllUsers()
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (users: any[]) => {
-          const currentUser = this.authService.getCurrentUser();
-          if (currentUser) {
-            // Filtrer les utilisateurs selon les permissions
-            this.availableUsers = users.filter((user: any) => 
-              user.id !== currentUser.id && 
-              this.notificationPermissions.canSendNotificationTo(currentUser, user.id)
-            );
-          }
-        },
-        error: (error: any) => {
-          console.error('Erreur lors du chargement des utilisateurs:', error);
-          this.toastService.error('Erreur lors du chargement des utilisateurs');
-        }
-      });
-  }
-
-  onSubmit(): void {
-    if (!this.isFormValid()) {
-      this.toastService.error('Veuillez remplir tous les champs obligatoires');
-      return;
-    }
-
-    if (!this.notificationForm.targetUserId) {
-      this.toastService.error('Veuillez sélectionner un destinataire');
-      return;
-    }
-
-    if (!this.notificationForm.type) {
-      this.toastService.error('Veuillez sélectionner un type de notification');
-      return;
-    }
-
-    const currentUser = this.authService.getCurrentUser();
-    if (!currentUser) {
-      this.toastService.error('Utilisateur non connecté');
-      return;
-    }
-
-    if (!this.notificationPermissions.canSendNotificationTo(currentUser, this.notificationForm.targetUserId)) {
-      this.toastService.error('Vous n\'avez pas la permission d\'envoyer une notification à cet utilisateur');
-      return;
-    }
-
-    if (!this.notificationPermissions.canSendNotificationType(currentUser, this.notificationForm.type)) {
-      this.toastService.error('Vous n\'avez pas la permission d\'envoyer ce type de notification');
-      return;
-    }
-
+  loadUsers(): void {
     this.isLoading = true;
-
-    const notificationRequest: NotificationRequest = {
-      utilisateur: { id: this.notificationForm.targetUserId },
-      type: this.notificationForm.type,
-      titre: this.notificationForm.titre,
-      message: this.notificationForm.message,
-      lienAction: this.notificationForm.lienAction || undefined
-    };
-
-    this.notificationService.createNotification(notificationRequest)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (notification) => {
-          this.toastService.success('Notification envoyée avec succès');
-          this.resetForm();
-          this.isLoading = false;
-        },
-        error: (error) => {
-          console.error('Erreur lors de l\'envoi de la notification:', error);
-          this.toastService.error('Erreur lors de l\'envoi de la notification');
-          this.isLoading = false;
-        }
-      });
-  }
-
-  isFormValid(): boolean {
-    return !!(
-      this.notificationForm.targetUserId &&
-      this.notificationForm.type &&
-      this.notificationForm.titre.trim() &&
-      this.notificationForm.message.trim()
+    this.utilisateurService.getAllUtilisateurs().subscribe(
+      users => {
+        this.users = users;
+        this.isLoading = false;
+      },
+      error => {
+        console.error('Erreur lors du chargement des utilisateurs', error);
+        this.isLoading = false;
+      }
     );
   }
 
-  resetForm(): void {
-    this.notificationForm = {
-      targetUserId: null,
-      type: '',
-      titre: '',
-      message: '',
-      lienAction: ''
-    };
+  onSubmit(): void {
+    if (this.notificationForm.valid && !this.isSubmitting) {
+      this.isSubmitting = true;
+      
+      const notificationRequest: NotificationRequest = {
+        destinataireId: this.notificationForm.value.destinataireId,
+        type: this.notificationForm.value.type,
+        titre: this.notificationForm.value.titre,
+        message: this.notificationForm.value.message,
+        lienAction: this.notificationForm.value.lienAction || undefined
+      };
+
+      this.notificationService.createNotification(notificationRequest).subscribe(
+        () => {
+          this.showSuccess = true;
+          this.notificationForm.reset();
+          this.notificationForm.patchValue({
+            type: TypeNotification.INFO
+          });
+          this.isSubmitting = false;
+          
+          // Masquer le message de succès après 3 secondes
+          setTimeout(() => {
+            this.showSuccess = false;
+          }, 3000);
+        },
+        error => {
+          console.error('Erreur lors de l\'envoi de la notification', error);
+          this.isSubmitting = false;
+          alert('Erreur lors de l\'envoi de la notification');
+        }
+      );
+    } else {
+      this.markFormGroupTouched();
+    }
   }
 
-  getTypeDisplayName(type: TypeNotification): string {
-    return this.notificationService.getTypeDisplayName(type);
+  private markFormGroupTouched(): void {
+    Object.keys(this.notificationForm.controls).forEach(key => {
+      const control = this.notificationForm.get(key);
+      control?.markAsTouched();
+    });
+  }
+
+  getFieldError(fieldName: string): string {
+    const control = this.notificationForm.get(fieldName);
+    if (control?.errors && control.touched) {
+      if (control.errors['required']) {
+        return `${fieldName} est requis`;
+      }
+      if (control.errors['minlength']) {
+        return `${fieldName} doit contenir au moins ${control.errors['minlength'].requiredLength} caractères`;
+      }
+    }
+    return '';
+  }
+
+  getUserDisplayName(user: Utilisateur): string {
+    return `${user.prenom} ${user.nom} (${user.email})`;
   }
 
   getTypeIcon(type: TypeNotification): string {
-    return this.notificationService.getTypeIcon(type);
-  }
-
-  getTypeColor(type: TypeNotification): string {
-    return this.notificationService.getTypeColor(type);
-  }
-
-  getUserDisplayName(user: User): string {
-    return `${user.prenom} ${user.nom} (${this.getRoleDisplayName(user.role)})`;
-  }
-
-  getTypeDescription(type: TypeNotification): string {
-    const descriptions: { [key in TypeNotification]: string } = {
-      [TypeNotification.DOSSIER_CREE]: 'Notification lors de la création d\'un nouveau dossier',
-      [TypeNotification.DOSSIER_VALIDE]: 'Notification de validation d\'un dossier',
-      [TypeNotification.DOSSIER_REJETE]: 'Notification de rejet d\'un dossier',
-      [TypeNotification.DOSSIER_EN_ATTENTE]: 'Notification de dossier en attente de traitement',
-      [TypeNotification.ENQUETE_CREE]: 'Notification lors de la création d\'une nouvelle enquête',
-      [TypeNotification.ENQUETE_VALIDE]: 'Notification de validation d\'une enquête',
-      [TypeNotification.ENQUETE_REJETE]: 'Notification de rejet d\'une enquête',
-      [TypeNotification.ENQUETE_EN_ATTENTE]: 'Notification d\'enquête en attente de traitement',
-      [TypeNotification.TACHE_URGENTE]: 'Notification pour une tâche urgente',
-      [TypeNotification.RAPPEL]: 'Notification de rappel',
-      [TypeNotification.INFO]: 'Notification d\'information générale'
+    const icons: { [key in TypeNotification]: string } = {
+      [TypeNotification.DOSSIER_CREE]: 'fas fa-file-plus',
+      [TypeNotification.DOSSIER_VALIDE]: 'fas fa-check-circle',
+      [TypeNotification.DOSSIER_REJETE]: 'fas fa-times-circle',
+      [TypeNotification.DOSSIER_EN_ATTENTE]: 'fas fa-clock',
+      [TypeNotification.ENQUETE_CREE]: 'fas fa-search-plus',
+      [TypeNotification.ENQUETE_VALIDE]: 'fas fa-check-circle',
+      [TypeNotification.ENQUETE_REJETE]: 'fas fa-times-circle',
+      [TypeNotification.ENQUETE_EN_ATTENTE]: 'fas fa-clock',
+      [TypeNotification.TACHE_URGENTE]: 'fas fa-exclamation-triangle',
+      [TypeNotification.RAPPEL]: 'fas fa-bell',
+      [TypeNotification.INFO]: 'fas fa-info-circle'
     };
-    return descriptions[type] || 'Description non disponible';
-  }
-
-  private getRoleDisplayName(role: Role): string {
-    const roleNames: { [key in Role]: string } = {
-      [Role.SUPER_ADMIN]: 'Super Admin',
-      [Role.CHEF_DEPARTEMENT_DOSSIER]: 'Chef Département Dossier',
-      [Role.AGENT_DOSSIER]: 'Agent Dossier',
-      [Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE]: 'Chef Département Recouvrement Juridique',
-      [Role.AGENT_RECOUVREMENT_JURIDIQUE]: 'Agent Recouvrement Juridique',
-      [Role.CHEF_DEPARTEMENT_FINANCE]: 'Chef Département Finance',
-      [Role.AGENT_FINANCE]: 'Agent Finance',
-      [Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE]: 'Chef Département Recouvrement Amiable',
-      [Role.AGENT_RECOUVREMENT_AMIABLE]: 'Agent Recouvrement Amiable',
-    };
-    return roleNames[role] || role;
+    return icons[type] || 'fas fa-bell';
   }
 }

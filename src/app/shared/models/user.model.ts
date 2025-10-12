@@ -7,6 +7,7 @@ export class User {
   email: string = '';
   role: Role = Role.AGENT_DOSSIER;
   actif: boolean = true;
+  motDePasse?: string = '';
 
   constructor(data?: Partial<User>) {
     Object.assign(this, data);

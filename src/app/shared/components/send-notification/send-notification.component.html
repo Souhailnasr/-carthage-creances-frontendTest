@@ -1,39 +1,37 @@
 <div class="send-notification-container">
-  <!-- Header -->
   <div class="header">
-    <h2>
-      <i class="fas fa-paper-plane"></i>
-      Envoyer une Notification
-    </h2>
-    <p>Envoyez une notification à un utilisateur du système</p>
+    <h1>Envoyer une Notification</h1>
+    <a routerLink="/notifications" class="btn btn-secondary">
+      <i class="fas fa-arrow-left"></i>
+      Retour aux notifications
+    </a>
   </div>
 
-  <!-- Permission Check -->
-  <div class="permission-check" *ngIf="!canSendNotifications">
-    <div class="alert alert-warning">
-      <i class="fas fa-exclamation-triangle"></i>
-      <p>{{ permissionMessage }}</p>
-    </div>
+  <!-- Message de succès -->
+  <div class="success-message" *ngIf="showSuccess">
+    <i class="fas fa-check-circle"></i>
+    <span>Notification envoyée avec succès !</span>
   </div>
 
-  <!-- Form -->
-  <div class="form-container" *ngIf="canSendNotifications">
-    <form (ngSubmit)="onSubmit()" #form="ngForm">
+  <!-- Formulaire -->
+  <div class="form-container">
+    <form [formGroup]="notificationForm" (ngSubmit)="onSubmit()">
       <div class="form-grid">
         <!-- Destinataire -->
         <div class="form-group">
-          <label for="targetUserId">Destinataire *</label>
+          <label for="destinataireId">Destinataire *</label>
           <select 
-            id="targetUserId" 
-            [(ngModel)]="notificationForm.targetUserId" 
-            name="targetUserId"
-            class="form-control"
-            required>
+            id="destinataireId" 
+            formControlName="destinataireId"
+            [class.is-invalid]="notificationForm.get('destinataireId')?.invalid && notificationForm.get('destinataireId')?.touched">
             <option value="">Sélectionner un utilisateur</option>
-            <option *ngFor="let user of availableUsers" [value]="user.id">
+            <option *ngFor="let user of users" [value]="user.id">
               {{ getUserDisplayName(user) }}
             </option>
           </select>
+          <div class="invalid-feedback" *ngIf="getFieldError('destinataireId')">
+            {{ getFieldError('destinataireId') }}
+          </div>
         </div>
 
         <!-- Type de notification -->
@@ -41,95 +39,83 @@
           <label for="type">Type de notification *</label>
           <select 
             id="type" 
-            [(ngModel)]="notificationForm.type" 
-            name="type"
-            class="form-control"
-            required>
-            <option value="">Sélectionner un type</option>
-            <option *ngFor="let type of availableTypes" [value]="type">
-              <i [class]="getTypeIcon(type)"></i>
-              {{ getTypeDisplayName(type) }}
+            formControlName="type"
+            [class.is-invalid]="notificationForm.get('type')?.invalid && notificationForm.get('type')?.touched">
+            <option *ngFor="let option of typeOptions" [value]="option.value">
+              {{ option.label }}
             </option>
           </select>
+          <div class="invalid-feedback" *ngIf="getFieldError('type')">
+            {{ getFieldError('type') }}
+          </div>
         </div>
-      </div>
 
-      <!-- Titre -->
-      <div class="form-group">
-        <label for="titre">Titre *</label>
-        <input 
-          type="text" 
-          id="titre" 
-          [(ngModel)]="notificationForm.titre" 
-          name="titre"
-          class="form-control"
-          placeholder="Titre de la notification"
-          required>
-      </div>
+        <!-- Titre -->
+        <div class="form-group full-width">
+          <label for="titre">Titre *</label>
+          <input 
+            type="text" 
+            id="titre" 
+            formControlName="titre"
+            placeholder="Entrez le titre de la notification"
+            [class.is-invalid]="notificationForm.get('titre')?.invalid && notificationForm.get('titre')?.touched">
+          <div class="invalid-feedback" *ngIf="getFieldError('titre')">
+            {{ getFieldError('titre') }}
+          </div>
+        </div>
 
-      <!-- Message -->
-      <div class="form-group">
-        <label for="message">Message *</label>
-        <textarea 
-          id="message" 
-          [(ngModel)]="notificationForm.message" 
-          name="message"
-          class="form-control"
-          rows="4"
-          placeholder="Contenu de la notification"
-          required></textarea>
-      </div>
+        <!-- Message -->
+        <div class="form-group full-width">
+          <label for="message">Message *</label>
+          <textarea 
+            id="message" 
+            formControlName="message"
+            rows="5"
+            placeholder="Entrez le message de la notification"
+            [class.is-invalid]="notificationForm.get('message')?.invalid && notificationForm.get('message')?.touched"></textarea>
+          <div class="invalid-feedback" *ngIf="getFieldError('message')">
+            {{ getFieldError('message') }}
+          </div>
+        </div>
 
-      <!-- Lien d'action (optionnel) -->
-      <div class="form-group">
-        <label for="lienAction">Lien d'action (optionnel)</label>
-        <input 
-          type="text" 
-          id="lienAction" 
-          [(ngModel)]="notificationForm.lienAction" 
-          name="lienAction"
-          class="form-control"
-          placeholder="/dossier/123 ou /admin/utilisateurs">
-        <small class="form-help">Lien vers une page spécifique de l'application</small>
+        <!-- Lien d'action (optionnel) -->
+        <div class="form-group full-width">
+          <label for="lienAction">Lien d'action (optionnel)</label>
+          <input 
+            type="url" 
+            id="lienAction" 
+            formControlName="lienAction"
+            placeholder="https://exemple.com/action">
+          <small class="form-text">URL vers laquelle rediriger l'utilisateur lors du clic sur la notification</small>
+        </div>
       </div>
 
       <!-- Actions -->
       <div class="form-actions">
-        <button 
-          type="button" 
-          class="btn btn-secondary" 
-          (click)="resetForm()"
-          [disabled]="isLoading">
+        <button type="button" class="btn btn-secondary" (click)="notificationForm.reset()">
           <i class="fas fa-undo"></i>
           Réinitialiser
         </button>
-        <button 
-          type="submit" 
-          class="btn btn-primary" 
-          [disabled]="!isFormValid() || isLoading">
-          <i class="fas fa-paper-plane" *ngIf="!isLoading"></i>
-          <i class="fas fa-spinner fa-spin" *ngIf="isLoading"></i>
-          {{ isLoading ? 'Envoi...' : 'Envoyer' }}
+        <button type="submit" class="btn btn-primary" [disabled]="notificationForm.invalid || isSubmitting">
+          <i class="fas fa-paper-plane" *ngIf="!isSubmitting"></i>
+          <i class="fas fa-spinner fa-spin" *ngIf="isSubmitting"></i>
+          {{ isSubmitting ? 'Envoi en cours...' : 'Envoyer la notification' }}
         </button>
       </div>
     </form>
   </div>
 
-  <!-- Help Section -->
-  <div class="help-section" *ngIf="canSendNotifications">
-    <h3>
-      <i class="fas fa-info-circle"></i>
-      Types de notifications disponibles
-    </h3>
-    <div class="types-grid">
-      <div class="type-item" *ngFor="let type of availableTypes">
-        <div class="type-icon" [style.background-color]="getTypeColor(type)">
-          <i [class]="getTypeIcon(type)"></i>
-        </div>
-        <div class="type-info">
-          <h4>{{ getTypeDisplayName(type) }}</h4>
-          <p>{{ getTypeDescription(type) }}</p>
-        </div>
+  <!-- Aperçu -->
+  <div class="preview-section" *ngIf="notificationForm.get('titre')?.value && notificationForm.get('message')?.value">
+    <h3>Aperçu de la notification</h3>
+    <div class="notification-preview">
+      <div class="preview-icon" [ngClass]="'notification-' + notificationForm.get('type')?.value">
+        <i [class]="getTypeIcon(notificationForm.get('type')?.value)"></i>
+      </div>
+      <div class="preview-content">
+        <h4>{{ notificationForm.get('titre')?.value }}</h4>
+        <p>{{ notificationForm.get('message')?.value }}</p>
+        <span class="preview-type">{{ notificationForm.get('type')?.value }}</span>
       </div>
     </div>
   </div>

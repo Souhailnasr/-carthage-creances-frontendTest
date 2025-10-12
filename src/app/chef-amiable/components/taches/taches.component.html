@@ -1,0 +1,257 @@
+<div class="taches-container">
+  <div class="header">
+    <h1>Gestion des Tâches</h1>
+    <p>Créez et gérez les tâches pour vos agents de recouvrement amiable</p>
+  </div>
+
+  <!-- Actions -->
+  <div class="actions-section">
+    <div class="actions-header">
+      <h2>Tâches</h2>
+      <button class="btn-primary" (click)="toggleAddForm()">
+        <i class="fas fa-plus"></i> Créer une Tâche
+      </button>
+    </div>
+
+    <!-- Formulaire de création -->
+    <div class="add-form" *ngIf="showAddForm">
+      <div class="form-header">
+        <h3>Nouvelle Tâche</h3>
+        <button class="btn-close" (click)="toggleAddForm()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      
+      <form [formGroup]="tacheForm" (ngSubmit)="onSubmit()">
+        <div class="form-group">
+          <label for="titre">Titre de la tâche *</label>
+          <input 
+            type="text" 
+            id="titre"
+            formControlName="titre"
+            class="form-control"
+            [class.error]="tacheForm.get('titre')?.invalid && tacheForm.get('titre')?.touched"
+            placeholder="Entrez le titre de la tâche">
+          <div class="error-message" *ngIf="getFieldError('titre')">
+            {{ getFieldError('titre') }}
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="description">Description *</label>
+          <textarea 
+            id="description"
+            formControlName="description"
+            class="form-control"
+            [class.error]="tacheForm.get('description')?.invalid && tacheForm.get('description')?.touched"
+            placeholder="Décrivez la tâche en détail"
+            rows="4"></textarea>
+          <div class="error-message" *ngIf="getFieldError('description')">
+            {{ getFieldError('description') }}
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label for="agentId">Agent assigné *</label>
+            <select 
+              id="agentId"
+              formControlName="agentId"
+              class="form-control"
+              [class.error]="tacheForm.get('agentId')?.invalid && tacheForm.get('agentId')?.touched">
+              <option value="">Sélectionnez un agent</option>
+              <option *ngFor="let agent of agents" [value]="agent.id">
+                {{ agent.getFullName() }}
+              </option>
+            </select>
+            <div class="error-message" *ngIf="getFieldError('agentId')">
+              {{ getFieldError('agentId') }}
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label for="priorite">Priorité *</label>
+            <select 
+              id="priorite"
+              formControlName="priorite"
+              class="form-control">
+              <option *ngFor="let priorite of priorites" [value]="priorite.value">
+                {{ priorite.label }}
+              </option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label for="dateEcheance">Date d'échéance *</label>
+            <input 
+              type="date" 
+              id="dateEcheance"
+              formControlName="dateEcheance"
+              class="form-control"
+              [class.error]="tacheForm.get('dateEcheance')?.invalid && tacheForm.get('dateEcheance')?.touched">
+            <div class="error-message" *ngIf="getFieldError('dateEcheance')">
+              {{ getFieldError('dateEcheance') }}
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label for="dossierId">Numéro de dossier (optionnel)</label>
+            <input 
+              type="text" 
+              id="dossierId"
+              formControlName="dossierId"
+              class="form-control"
+              placeholder="Ex: DOS-2024-001">
+          </div>
+        </div>
+        
+        <div class="form-actions">
+          <button type="button" class="btn-secondary" (click)="toggleAddForm()">
+            Annuler
+          </button>
+          <button 
+            type="submit" 
+            class="btn-primary"
+            [disabled]="tacheForm.invalid || isSubmitting">
+            <i class="fas fa-save" *ngIf="!isSubmitting"></i>
+            <i class="fas fa-spinner fa-spin" *ngIf="isSubmitting"></i>
+            {{ isSubmitting ? 'Création...' : 'Créer la Tâche' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Statistiques rapides -->
+  <div class="stats-section">
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon">
+          <i class="fas fa-tasks"></i>
+        </div>
+        <div class="stat-content">
+          <h4>{{ taches.length }}</h4>
+          <p>Total Tâches</p>
+        </div>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-icon">
+          <i class="fas fa-clock"></i>
+        </div>
+        <div class="stat-content">
+          <h4>{{ getTachesFiltrees('EN_ATTENTE').length }}</h4>
+          <p>En Attente</p>
+        </div>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-icon">
+          <i class="fas fa-play"></i>
+        </div>
+        <div class="stat-content">
+          <h4>{{ getTachesFiltrees('EN_COURS').length }}</h4>
+          <p>En Cours</p>
+        </div>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-icon">
+          <i class="fas fa-check"></i>
+        </div>
+        <div class="stat-content">
+          <h4>{{ getTachesFiltrees('TERMINEE').length }}</h4>
+          <p>Terminées</p>
+        </div>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-icon">
+          <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <div class="stat-content">
+          <h4>{{ getTachesEnRetard().length }}</h4>
+          <p>En Retard</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Liste des tâches -->
+  <div class="taches-section">
+    <div class="taches-header">
+      <h3>Liste des Tâches</h3>
+    </div>
+    
+    <div class="taches-list" *ngIf="taches.length > 0; else noTaches">
+      <div class="tache-card" *ngFor="let tache of taches">
+        <div class="tache-header">
+          <div class="tache-title">
+            <h4>{{ tache.titre }}</h4>
+            <span class="tache-id">#{{ tache.id }}</span>
+          </div>
+          <div class="tache-badges">
+            <span class="statut-badge" [ngClass]="getStatutClass(tache.statut)">
+              {{ getStatutText(tache.statut) }}
+            </span>
+            <span class="priorite-badge" [ngClass]="getPrioriteClass(tache.priorite)">
+              {{ getPrioriteText(tache.priorite) }}
+            </span>
+          </div>
+        </div>
+        
+        <div class="tache-content">
+          <p class="tache-description">{{ tache.description }}</p>
+          
+          <div class="tache-details">
+            <div class="detail-item">
+              <i class="fas fa-user"></i>
+              <span>{{ getAgentName(tache.agentId) }}</span>
+            </div>
+            
+            <div class="detail-item" *ngIf="tache.dossierId">
+              <i class="fas fa-folder"></i>
+              <span>{{ tache.dossierId }}</span>
+            </div>
+            
+            <div class="detail-item">
+              <i class="fas fa-calendar"></i>
+              <span>Créée le {{ tache.getFormattedDateCreation() }}</span>
+            </div>
+            
+            <div class="detail-item" *ngIf="tache.dateEcheance">
+              <i class="fas fa-clock"></i>
+              <span [class.en-retard]="tache.isEnRetard()">
+                Échéance: {{ tache.getFormattedDateEcheance() }}
+              </span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="tache-actions">
+          <button class="btn-icon" title="Modifier">
+            <i class="fas fa-edit"></i>
+          </button>
+          <button class="btn-icon" title="Voir les détails">
+            <i class="fas fa-eye"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <ng-template #noTaches>
+      <div class="no-taches">
+        <div class="no-taches-icon">
+          <i class="fas fa-tasks"></i>
+        </div>
+        <h3>Aucune tâche trouvée</h3>
+        <p>Commencez par créer des tâches pour vos agents.</p>
+        <button class="btn-primary" (click)="toggleAddForm()">
+          <i class="fas fa-plus"></i> Créer la première tâche
+        </button>
+      </div>
+    </ng-template>
+  </div>
+</div>

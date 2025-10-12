@@ -1,0 +1,316 @@
+<div class="gestion-utilisateurs-container">
+  <!-- Formulaire Nouvel Agent -->
+  <div class="form-section" *ngIf="showAddForm">
+    <div class="form-header">
+      <h2>Nouvel Agent Amiable</h2>
+      <button class="btn-close" (click)="toggleAddForm()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    
+    <form [formGroup]="agentForm" (ngSubmit)="onSubmit()">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="nom">Nom *</label>
+          <input 
+            type="text" 
+            id="nom"
+            formControlName="nom"
+            class="form-control"
+            [class.error]="agentForm.get('nom')?.invalid && agentForm.get('nom')?.touched"
+            placeholder="Entrez le nom">
+          <div class="error-message" *ngIf="getFieldError('nom')">
+            {{ getFieldError('nom') }}
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="prenom">Prénom *</label>
+          <input 
+            type="text" 
+            id="prenom"
+            formControlName="prenom"
+            class="form-control"
+            [class.error]="agentForm.get('prenom')?.invalid && agentForm.get('prenom')?.touched"
+            placeholder="Entrez le prénom">
+          <div class="error-message" *ngIf="getFieldError('prenom')">
+            {{ getFieldError('prenom') }}
+          </div>
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label for="email">Email *</label>
+        <input 
+          type="email" 
+          id="email"
+          formControlName="email"
+          class="form-control"
+          [class.error]="agentForm.get('email')?.invalid && agentForm.get('email')?.touched"
+          placeholder="exemple@carthage-creance.tn">
+        <div class="error-message" *ngIf="getFieldError('email')">
+          {{ getFieldError('email') }}
+        </div>
+      </div>
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label for="motDePasse">Mot de passe *</label>
+          <div class="password-input">
+            <input 
+              type="password" 
+              id="motDePasse"
+              formControlName="motDePasse"
+              class="form-control"
+              [class.error]="agentForm.get('motDePasse')?.invalid && agentForm.get('motDePasse')?.touched"
+              placeholder="Saisissez le mot de passe">
+            <i class="fas fa-eye password-toggle"></i>
+          </div>
+          <div class="error-message" *ngIf="getFieldError('motDePasse')">
+            {{ getFieldError('motDePasse') }}
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="confirmerMotDePasse">Confirmer le mot de passe *</label>
+          <div class="password-input">
+            <input 
+              type="password" 
+              id="confirmerMotDePasse"
+              formControlName="confirmerMotDePasse"
+              class="form-control"
+              [class.error]="agentForm.get('confirmerMotDePasse')?.invalid && agentForm.get('confirmerMotDePasse')?.touched"
+              placeholder="Confirmez le mot de passe">
+            <i class="fas fa-eye password-toggle"></i>
+          </div>
+          <div class="error-message" *ngIf="getFieldError('confirmerMotDePasse')">
+            {{ getFieldError('confirmerMotDePasse') }}
+          </div>
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label for="role">Rôle Utilisateur *</label>
+        <select 
+          id="role"
+          class="form-control"
+          disabled>
+          <option value="AGENT_RECOUVREMENT_AMIABLE">Agent Recouvrement Amiable</option>
+        </select>
+        <small class="form-text">Le rôle est automatiquement défini pour les agents amiable</small>
+      </div>
+      
+      <div class="form-actions">
+        <button type="button" class="btn-secondary" (click)="toggleAddForm()">
+          <i class="fas fa-times"></i> Annuler
+        </button>
+        <button 
+          type="submit" 
+          class="btn-primary"
+          [disabled]="agentForm.invalid || isSubmitting">
+          <i class="fas fa-plus" *ngIf="!isSubmitting"></i>
+          <i class="fas fa-spinner fa-spin" *ngIf="isSubmitting"></i>
+          {{ isSubmitting ? 'Création...' : 'Créer l\'Agent' }}
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Séparateur -->
+  <div class="separator" *ngIf="showAddForm"></div>
+
+  <!-- Section Recherche et Filtres -->
+  <div class="search-filters-section">
+    <div class="section-header">
+      <h3>
+        <i class="fas fa-filter"></i>
+        Recherche et Filtres
+      </h3>
+      <button class="btn-clear" (click)="clearAllFilters()">
+        <i class="fas fa-times"></i> Effacer tout
+      </button>
+    </div>
+
+    <!-- Barre de recherche -->
+    <div class="search-bar">
+      <div class="search-type">
+        <label for="searchType">Type de recherche</label>
+        <select 
+          id="searchType"
+          [(ngModel)]="searchType"
+          (change)="onSearchChange()"
+          class="form-control">
+          <option *ngFor="let type of searchTypes" [value]="type.value">
+            {{ type.label }}
+          </option>
+        </select>
+      </div>
+      
+      <div class="search-input">
+        <i class="fas fa-search"></i>
+        <input 
+          type="text"
+          [(ngModel)]="searchTerm"
+          (input)="onSearchChange()"
+          placeholder="Rechercher par nom, email, rôle, département..."
+          class="form-control">
+      </div>
+    </div>
+
+    <!-- Filtres -->
+    <div class="filters-row">
+      <div class="filter-group">
+        <label for="roleFilter">Rôle</label>
+        <select 
+          id="roleFilter"
+          [(ngModel)]="selectedRole"
+          (change)="onFilterChange()"
+          class="form-control">
+          <option *ngFor="let role of roles" [value]="role.value">
+            {{ role.label }}
+          </option>
+        </select>
+      </div>
+      
+      <div class="filter-group">
+        <label for="statusFilter">Activité</label>
+        <select 
+          id="statusFilter"
+          [(ngModel)]="selectedStatus"
+          (change)="onFilterChange()"
+          class="form-control">
+          <option *ngFor="let status of statuses" [value]="status.value">
+            {{ status.label }}
+          </option>
+        </select>
+      </div>
+      
+      <div class="filter-group">
+        <label for="departmentFilter">Département</label>
+        <select 
+          id="departmentFilter"
+          [(ngModel)]="selectedDepartment"
+          (change)="onFilterChange()"
+          class="form-control">
+          <option *ngFor="let dept of departments" [value]="dept.value">
+            {{ dept.label }}
+          </option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section Liste des Agents -->
+  <div class="agents-section">
+    <div class="section-header">
+      <h3>Agents Amiable ({{ filteredAgents.length }})</h3>
+      <button class="btn-primary" (click)="toggleAddForm()" *ngIf="!showAddForm">
+        <i class="fas fa-plus"></i> Ajouter un Agent
+      </button>
+    </div>
+    
+    <!-- Tableau des agents -->
+    <div class="agents-table" *ngIf="filteredAgents.length > 0; else noAgents">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Nom</th>
+            <th>Email</th>
+            <th>Rôle</th>
+            <th>Statut</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let agent of filteredAgents">
+            <td>
+              <div class="user-info">
+                <div class="user-avatar">
+                  <i class="fas fa-user"></i>
+                </div>
+                <span>{{ agent.getFullName() }}</span>
+              </div>
+            </td>
+            <td>{{ agent.email }}</td>
+            <td>
+              <span class="role-badge">
+                <i class="fas fa-briefcase"></i>
+                Agent Recouvrement Amiable
+              </span>
+            </td>
+            <td>
+              <span class="status-badge" [ngClass]="getStatusClass(agent.actif)">
+                <i class="fas fa-circle"></i>
+                {{ getStatusText(agent.actif) }}
+              </span>
+            </td>
+            <td>
+              <div class="action-buttons">
+                <button class="btn-icon" title="Voir les détails">
+                  <i class="fas fa-eye"></i>
+                </button>
+                <button class="btn-icon" title="Modifier">
+                  <i class="fas fa-edit"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    
+    <ng-template #noAgents>
+      <div class="no-agents">
+        <div class="no-agents-icon">
+          <i class="fas fa-users"></i>
+        </div>
+        <h3>Aucun agent trouvé</h3>
+        <p *ngIf="searchTerm || selectedRole !== 'Tous les rôles' || selectedStatus !== 'Tous les statuts'">
+          Aucun agent ne correspond aux critères de recherche.
+        </p>
+        <p *ngIf="!searchTerm && selectedRole === 'Tous les rôles' && selectedStatus === 'Tous les statuts'">
+          Commencez par ajouter des agents au département de recouvrement amiable.
+        </p>
+        <button class="btn-primary" (click)="toggleAddForm()">
+          <i class="fas fa-plus"></i> Ajouter le premier agent
+        </button>
+      </div>
+    </ng-template>
+  </div>
+
+  <!-- Statistiques -->
+  <div class="stats-section">
+    <h3>Statistiques</h3>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon">
+          <i class="fas fa-users"></i>
+        </div>
+        <div class="stat-content">
+          <h4>{{ agents.length }}</h4>
+          <p>Total Agents</p>
+        </div>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-icon">
+          <i class="fas fa-user-check"></i>
+        </div>
+        <div class="stat-content">
+          <h4>{{ getAgentsActifs() }}</h4>
+          <p>Agents Actifs</p>
+        </div>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-icon">
+          <i class="fas fa-user-times"></i>
+        </div>
+        <div class="stat-content">
+          <h4>{{ getAgentsInactifs() }}</h4>
+          <p>Agents Inactifs</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

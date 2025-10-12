@@ -24,12 +24,29 @@ export enum Urgence {
 }
 
 export enum TypeAction {
+  APPEL = 'APPEL',
+  EMAIL = 'EMAIL',
+  VISITE = 'VISITE',
+  LETTRE = 'LETTRE',
+  AUTRE = 'AUTRE',
   APPEL_TELEPHONIQUE = 'APPEL_TELEPHONIQUE',
   COURRIER = 'COURRIER',
-  VISITE = 'VISITE',
   MISE_EN_DEMEURE = 'MISE_EN_DEMEURE',
   ASSIGNATION = 'ASSIGNATION',
   JUGEMENT = 'JUGEMENT',
+}
+
+export enum ReponseDebiteur {
+  POSITIVE = 'POSITIVE',
+  NEGATIVE = 'NEGATIVE',
+  EN_ATTENTE = 'EN_ATTENTE'
+}
+
+export enum StatutTache {
+  EN_ATTENTE = 'EN_ATTENTE',
+  EN_COURS = 'EN_COURS',
+  TERMINEE = 'TERMINEE',
+  ANNULEE = 'ANNULEE'
 }
 
 export enum TribunalType {

@@ -1,0 +1,159 @@
+<div class="profil-container">
+  <div class="header">
+    <h1>Mon Profil</h1>
+    <p class="subtitle">Gérez vos informations personnelles</p>
+  </div>
+
+  <!-- Message de succès -->
+  <div class="success-message" *ngIf="showSuccessMessage">
+    <i class="fas fa-check-circle"></i>
+    <span>Profil mis à jour avec succès !</span>
+  </div>
+
+  <div class="profil-content">
+    <!-- Section Avatar et Informations de base -->
+    <div class="profile-header">
+      <div class="avatar-section">
+        <div class="avatar-large">
+          <span class="initials">{{ getInitials() }}</span>
+        </div>
+        <div class="user-basic-info">
+          <h2>{{ currentUser?.getFullName() }}</h2>
+          <p class="role">{{ getRoleDisplayName() }}</p>
+          <p class="email">{{ currentUser?.email }}</p>
+        </div>
+      </div>
+      
+      <div class="action-buttons">
+        <button 
+          class="btn btn-primary" 
+          (click)="toggleEdit()"
+          [class.btn-secondary]="isEditing">
+          <i class="fas" [class.fa-edit]="!isEditing" [class.fa-times]="isEditing"></i>
+          {{ isEditing ? 'Annuler' : 'Modifier' }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Formulaire de profil -->
+    <div class="profil-form-section">
+      <form [formGroup]="profilForm" (ngSubmit)="onSubmit()">
+        <div class="form-grid">
+          <!-- Informations personnelles -->
+          <div class="form-section">
+            <h3>Informations Personnelles</h3>
+            
+            <div class="form-row">
+              <div class="form-group">
+                <label for="prenom">Prénom *</label>
+                <input 
+                  type="text" 
+                  id="prenom" 
+                  formControlName="prenom"
+                  [readonly]="!isEditing"
+                  [class.is-invalid]="getFieldError('prenom')"
+                  placeholder="Votre prénom">
+                <div class="invalid-feedback" *ngIf="getFieldError('prenom')">
+                  {{ getFieldError('prenom') }}
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="nom">Nom *</label>
+                <input 
+                  type="text" 
+                  id="nom" 
+                  formControlName="nom"
+                  [readonly]="!isEditing"
+                  [class.is-invalid]="getFieldError('nom')"
+                  placeholder="Votre nom">
+                <div class="invalid-feedback" *ngIf="getFieldError('nom')">
+                  {{ getFieldError('nom') }}
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="email">Email *</label>
+              <input 
+                type="email" 
+                id="email" 
+                formControlName="email"
+                [readonly]="!isEditing"
+                [class.is-invalid]="getFieldError('email')"
+                placeholder="votre.email@exemple.com">
+              <div class="invalid-feedback" *ngIf="getFieldError('email')">
+                {{ getFieldError('email') }}
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Informations professionnelles -->
+          <div class="form-section">
+            <h3>Informations Professionnelles</h3>
+            
+            <div class="form-group">
+              <label for="role">Rôle</label>
+              <input 
+                type="text" 
+                id="role" 
+                formControlName="role"
+                readonly
+                class="readonly-field">
+            </div>
+
+
+            <!-- Statistiques du profil -->
+            <div class="profile-stats">
+              <h4>Statistiques</h4>
+              <div class="stats-grid">
+                <div class="stat-item">
+                  <div class="stat-icon">
+                    <i class="fas fa-calendar-alt"></i>
+                  </div>
+                  <div class="stat-content">
+                    <span class="stat-value">{{ getDaysSinceHire() }}</span>
+                    <span class="stat-label">Jours d'ancienneté</span>
+                  </div>
+                </div>
+                
+                <div class="stat-item">
+                  <div class="stat-icon">
+                    <i class="fas fa-tasks"></i>
+                  </div>
+                  <div class="stat-content">
+                    <span class="stat-value">24</span>
+                    <span class="stat-label">Tâches assignées</span>
+                  </div>
+                </div>
+                
+                <div class="stat-item">
+                  <div class="stat-icon">
+                    <i class="fas fa-users"></i>
+                  </div>
+                  <div class="stat-content">
+                    <span class="stat-value">8</span>
+                    <span class="stat-label">Agents gérés</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Actions du formulaire -->
+        <div class="form-actions" *ngIf="isEditing">
+          <button type="button" class="btn btn-secondary" (click)="toggleEdit()">
+            <i class="fas fa-times"></i>
+            Annuler
+          </button>
+          <button type="submit" class="btn btn-primary" [disabled]="profilForm.invalid">
+            <i class="fas fa-save"></i>
+            Sauvegarder
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

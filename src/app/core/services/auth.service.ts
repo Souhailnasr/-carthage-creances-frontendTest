@@ -64,6 +64,14 @@ export class AuthService {
             email: 'mohamed.khelil@carthage-creance.tn',
             role: Role.SUPER_ADMIN,
             actif: true
+          },
+          {
+            id: '5',
+            nom: 'Amiable',
+            prenom: 'Chef',
+            email: 'chef.amiable@carthage-creance.tn',
+            role: Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE,
+            actif: true
           }
         ];
 

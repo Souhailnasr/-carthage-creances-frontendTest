@@ -1,72 +1,39 @@
-export interface Notification {
-  id?: number;
-  utilisateur: {
-    id: number;
-    nom: string;
-    prenom: string;
-    email: string;
-  };
-  type: TypeNotification;
-  titre: string;
-  message: string;
-  statut: StatutNotification;
-  dateCreation: string;
-  dateLecture?: string;
-  entiteId?: number;
-  entiteType?: TypeEntite;
-  lienAction?: string;
-}
+export class ChefAmiableNotification {
+  id: string = '';
+  titre: string = '';
+  message: string = '';
+  dateCreation: Date = new Date();
+  lu: boolean = false;
+  type: 'INFO' | 'WARNING' | 'SUCCESS' | 'ERROR' = 'INFO';
+  userId: string = '';
+  dossierId?: string = '';
+  actionId?: string = '';
 
-export interface NotificationRequest {
-  utilisateur: {
-    id: number;
-  };
-  type: TypeNotification;
-  titre: string;
-  message: string;
-  entiteId?: number;
-  entiteType?: TypeEntite;
-  lienAction?: string;
-}
+  constructor(data?: Partial<ChefAmiableNotification>) {
+    Object.assign(this, data);
+  }
 
-export enum TypeNotification {
-  DOSSIER_CREE = 'DOSSIER_CREE',
-  DOSSIER_VALIDE = 'DOSSIER_VALIDE',
-  DOSSIER_REJETE = 'DOSSIER_REJETE',
-  DOSSIER_EN_ATTENTE = 'DOSSIER_EN_ATTENTE',
-  ENQUETE_CREE = 'ENQUETE_CREE',
-  ENQUETE_VALIDE = 'ENQUETE_VALIDE',
-  ENQUETE_REJETE = 'ENQUETE_REJETE',
-  ENQUETE_EN_ATTENTE = 'ENQUETE_EN_ATTENTE',
-  TACHE_URGENTE = 'TACHE_URGENTE',
-  RAPPEL = 'RAPPEL',
-  INFO = 'INFO'
-}
+  getFormattedDate(): string {
+    return new Intl.DateTimeFormat('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(new Date(this.dateCreation));
+  }
 
-export enum StatutNotification {
-  NON_LUE = 'NON_LUE',
-  LUE = 'LUE'
-}
+  getRelativeTime(): string {
+    const now = new Date();
+    const diff = now.getTime() - new Date(this.dateCreation).getTime();
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
 
-export enum TypeEntite {
-  DOSSIER = 'DOSSIER',
-  ENQUETE = 'ENQUETE',
-  TACHE_URGENTE = 'TACHE_URGENTE',
-  ACTION = 'ACTION',
-  AUDIENCE = 'AUDIENCE',
-  UTILISATEUR = 'UTILISATEUR'
-}
-
-export interface NotificationStats {
-  total: number;
-  nonLues: number;
-  parType: { [key in TypeNotification]: number };
-}
-
-export interface NotificationFilter {
-  statut?: StatutNotification;
-  type?: TypeNotification;
-  dateDebut?: string;
-  dateFin?: string;
-  entiteType?: TypeEntite;
+    if (minutes < 1) return 'À l\'instant';
+    if (minutes < 60) return `Il y a ${minutes} min`;
+    if (hours < 24) return `Il y a ${hours}h`;
+    if (days < 7) return `Il y a ${days} jour${days > 1 ? 's' : ''}`;
+    return this.getFormattedDate();
+  }
 }

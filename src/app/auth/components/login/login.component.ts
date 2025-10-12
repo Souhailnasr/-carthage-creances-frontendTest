@@ -112,6 +112,14 @@ export class LoginComponent implements OnInit, OnDestroy {
     this.onSubmit();
   }
 
+  loginAsChefAmiable(): void {
+    this.loginForm.patchValue({
+      email: 'chef.amiable@carthage-creance.tn',
+      password: 'password123'
+    });
+    this.onSubmit();
+  }
+
   togglePasswordVisibility(): void {
     this.showPassword = !this.showPassword;
     const passwordInput = document.getElementById('password') as HTMLInputElement;
@@ -128,6 +136,8 @@ export class LoginComponent implements OnInit, OnDestroy {
         return '/juridique/dashboard';
       case 'CHEF_DEPARTEMENT_DOSSIER':
         return '/dossier/dashboard';
+      case 'CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE':
+        return '/chef-amiable/dashboard';
       case 'AGENT_RECOUVREMENT_JURIDIQUE':
         return '/juridique/dashboard';
       default:

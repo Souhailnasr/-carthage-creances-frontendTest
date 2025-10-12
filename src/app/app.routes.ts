@@ -17,6 +17,11 @@ export const routes: Routes = [
     canActivate: [AuthGuard]
   },
   {
+    path: 'admin',
+    loadChildren: () => import('./admin/admin.module').then(m => m.AdminModule),
+    canActivate: [AuthGuard]
+  },
+  {
     path: 'dossier',
     loadChildren: () => import('./dossier/dossier.module').then(m => m.DossierModule),
     canActivate: [AuthGuard]
@@ -29,6 +34,11 @@ export const routes: Routes = [
   {
     path: 'amiable',
     loadChildren: () => import('./amiable/amiable.module').then(m => m.AmiableModule),
+    canActivate: [AuthGuard]
+  },
+  {
+    path: 'chef-amiable',
+    loadChildren: () => import('./chef-amiable/chef-amiable.module').then(m => m.ChefAmiableModule),
     canActivate: [AuthGuard]
   },
   {
@@ -57,6 +67,21 @@ export const routes: Routes = [
     canActivate: [AuthGuard]
   },
   {
+    path: 'profil',
+    loadComponent: () => import('./shared/components/profil/profil.component').then(m => m.ProfilComponent),
+    canActivate: [AuthGuard]
+  },
+  {
+    path: 'notifications',
+    loadComponent: () => import('./shared/components/notifications-page/notifications-page.component').then(m => m.NotificationsPageComponent),
+    canActivate: [AuthGuard]
+  },
+  {
+    path: 'send-notification',
+    loadComponent: () => import('./shared/components/send-notification/send-notification.component').then(m => m.SendNotificationComponent),
+    canActivate: [AuthGuard]
+  },
+  {
     path: 'chef/dashboard',
     loadComponent: () => import('./chef/components/chef-dashboard/chef-dashboard.component').then(m => m.ChefDashboardComponent),
     canActivate: [AuthGuard]
@@ -79,16 +104,6 @@ export const routes: Routes = [
   {
     path: 'debiteurs',
     loadComponent: () => import('./debiteur/debiteur-gestion/debiteur-gestion.component').then(m => m.DebiteurGestionComponent),
-    canActivate: [AuthGuard]
-  },
-  {
-    path: 'notifications',
-    loadComponent: () => import('./shared/components/notifications-page/notifications-page.component').then(m => m.NotificationsPageComponent),
-    canActivate: [AuthGuard]
-  },
-  {
-    path: 'send-notification',
-    loadComponent: () => import('./shared/components/send-notification/send-notification.component').then(m => m.SendNotificationComponent),
     canActivate: [AuthGuard]
   },
   {

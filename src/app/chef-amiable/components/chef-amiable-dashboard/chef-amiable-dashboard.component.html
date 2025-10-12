@@ -1,0 +1,161 @@
+<div class="dashboard-container">
+  <!-- Header avec notifications -->
+  <div class="dashboard-header">
+    <div class="header-content">
+      <h1>Tableau de Bord - Chef Recouvrement Amiable</h1>
+      <div class="notifications-header">
+        <button class="notification-btn" [routerLink]="['/chef-amiable/notifications']">
+          <i class="fas fa-bell"></i>
+          <span class="notification-badge" *ngIf="notificationsNonLues > 0">{{ notificationsNonLues }}</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Statistiques principales -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon">
+        <i class="fas fa-folder-open"></i>
+      </div>
+      <div class="stat-content">
+        <h3>{{ statistiques.totalDossiers }}</h3>
+        <p>Total Dossiers</p>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon">
+        <i class="fas fa-clock"></i>
+      </div>
+      <div class="stat-content">
+        <h3>{{ statistiques.dossiersEnCours }}</h3>
+        <p>En Cours</p>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon">
+        <i class="fas fa-check-circle"></i>
+      </div>
+      <div class="stat-content">
+        <h3>{{ statistiques.dossiersClotures }}</h3>
+        <p>Clôturés</p>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon">
+        <i class="fas fa-percentage"></i>
+      </div>
+      <div class="stat-content">
+        <h3>{{ statistiques.tauxReussite | number:'1.1-1' }}%</h3>
+        <p>Taux de Réussite</p>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon">
+        <i class="fas fa-money-bill-wave"></i>
+      </div>
+      <div class="stat-content">
+        <h3>{{ statistiques.getFormattedMontantRecupere() }}</h3>
+        <p>Montant Récupéré</p>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon">
+        <i class="fas fa-chart-line"></i>
+      </div>
+      <div class="stat-content">
+        <h3>{{ statistiques.getFormattedMontantEnCours() }}</h3>
+        <p>En Cours</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Graphiques et performances -->
+  <div class="charts-section">
+    <div class="chart-container">
+      <h2>Performances des Agents</h2>
+      <div class="performance-list">
+        <div class="performance-item" *ngFor="let perf of performances">
+          <div class="agent-info">
+            <h4>{{ perf.nomAgent }}</h4>
+            <p>{{ perf.dossiersAssignes }} dossiers assignés</p>
+          </div>
+          <div class="performance-stats">
+            <div class="stat">
+              <span class="label">Taux de réussite:</span>
+              <span class="value">{{ perf.tauxReussite | number:'1.1-1' }}%</span>
+            </div>
+            <div class="stat">
+              <span class="label">Montant récupéré:</span>
+              <span class="value">{{ perf.getFormattedMontantRecupere() }}</span>
+            </div>
+            <div class="stat">
+              <span class="label">Actions effectuées:</span>
+              <span class="value">{{ perf.actionsEffectuees }}</span>
+            </div>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" [style.width.%]="perf.tauxReussite"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="chart-container">
+      <h2>Actions Effectuées</h2>
+      <div class="actions-summary">
+        <div class="action-stat">
+          <h3>{{ statistiques.actionsEffectuees }}</h3>
+          <p>Total Actions</p>
+        </div>
+        <div class="action-stat">
+          <h3>{{ statistiques.actionsReussies }}</h3>
+          <p>Actions Réussies</p>
+        </div>
+        <div class="action-stat">
+          <h3>{{ getTauxReussiteActions() | number:'1.1-1' }}%</h3>
+          <p>Taux de Réussite</p>
+        </div>
+        <div class="action-stat">
+          <h3>{{ statistiques.getFormattedCoutTotal() }}</h3>
+          <p>Coût Total</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notifications récentes -->
+  <div class="recent-notifications">
+    <h2>Notifications Récentes</h2>
+    <div class="notifications-list">
+      <div class="notification-item" 
+           *ngFor="let notification of notifications.slice(0, 5)"
+           [class.unread]="!notification.lu"
+           (click)="marquerCommeLu(notification)">
+        <div class="notification-icon" [ngClass]="'type-' + notification.type">
+          <i class="fas" [ngClass]="{
+            'fa-info-circle': notification.type === 'INFO',
+            'fa-exclamation-triangle': notification.type === 'WARNING',
+            'fa-check-circle': notification.type === 'SUCCESS',
+            'fa-times-circle': notification.type === 'ERROR'
+          }"></i>
+        </div>
+        <div class="notification-content">
+          <h4>{{ notification.titre }}</h4>
+          <p>{{ notification.message }}</p>
+          <span class="notification-time">{{ notification.getRelativeTime() }}</span>
+        </div>
+      </div>
+    </div>
+    <div class="view-all">
+      <button class="btn-secondary" [routerLink]="['/chef-amiable/notifications']">
+        Voir toutes les notifications
+      </button>
+    </div>
+  </div>
+</div>

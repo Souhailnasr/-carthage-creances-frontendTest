@@ -1,204 +1,128 @@
-<div class="notifications-page">
-  <!-- Header -->
-  <div class="page-header">
-    <h1>
-      <i class="fas fa-bell"></i>
-      Notifications
-    </h1>
-    <p>Gérez toutes vos notifications et restez informé des dernières activités</p>
-  </div>
-
-  <!-- Statistics Cards -->
-  <div class="stats-grid">
-    <div class="stat-card">
-      <div class="stat-icon total">
-        <i class="fas fa-bell"></i>
-      </div>
-      <div class="stat-content">
-        <h3>Total</h3>
-        <p class="stat-value">{{ totalNotifications }}</p>
-        <p class="stat-label">Notifications</p>
-      </div>
-    </div>
-
-    <div class="stat-card">
-      <div class="stat-icon unread">
-        <i class="fas fa-exclamation-circle"></i>
-      </div>
-      <div class="stat-content">
-        <h3>Non lues</h3>
-        <p class="stat-value">{{ unreadCount }}</p>
-        <p class="stat-label">À lire</p>
-      </div>
-    </div>
-
-    <div class="stat-card">
-      <div class="stat-icon read">
-        <i class="fas fa-check-circle"></i>
-      </div>
-      <div class="stat-content">
-        <h3>Lues</h3>
-        <p class="stat-value">{{ totalNotifications - unreadCount }}</p>
-        <p class="stat-label">Consultées</p>
-      </div>
-    </div>
-  </div>
-
-  <!-- Actions Bar -->
-  <div class="actions-bar">
-    <div class="actions-left">
-      <button class="btn btn-success" (click)="markAllAsRead()" [disabled]="unreadCount === 0">
+<div class="notifications-container">
+  <div class="header">
+    <h1>Mes Notifications</h1>
+    <div class="header-actions">
+      <button class="btn btn-primary" (click)="markAllAsRead()" [disabled]="getUnreadCount() === 0">
         <i class="fas fa-check-double"></i>
         Marquer tout comme lu
       </button>
-    </div>
-    <div class="actions-right">
-      <button class="btn btn-outline-primary" (click)="loadNotifications()" [disabled]="isLoading">
-        <i class="fas fa-sync-alt" [class.fa-spin]="isLoading"></i>
-        Actualiser
-      </button>
+      <a routerLink="/send-notification" class="btn btn-secondary">
+        <i class="fas fa-paper-plane"></i>
+        Envoyer une notification
+      </a>
     </div>
   </div>
 
-  <!-- Filters -->
+  <!-- Filtres -->
   <div class="filters-section">
-    <div class="filters-header">
-      <h3>
-        <i class="fas fa-filter"></i>
-        Filtres
-      </h3>
-      <button class="clear-filters-btn" (click)="clearFilters()" *ngIf="getActiveFiltersCount() > 0">
-        <i class="fas fa-times"></i>
-        Effacer ({{ getActiveFiltersCount() }})
-      </button>
+    <div class="filter-group">
+      <label for="statusFilter">Statut :</label>
+      <select id="statusFilter" [(ngModel)]="selectedFilter" (change)="onFilterChange()">
+        <option value="all">Toutes</option>
+        <option value="unread">Non lues</option>
+        <option value="read">Lues</option>
+      </select>
     </div>
+    
+    <div class="filter-group">
+      <label for="typeFilter">Type :</label>
+      <select id="typeFilter" [(ngModel)]="selectedType" (change)="onTypeChange()">
+        <option *ngFor="let option of getTypeOptions()" [value]="option.value">
+          {{ option.label }}
+        </option>
+      </select>
+    </div>
+  </div>
 
-    <div class="filters-grid">
-      <div class="filter-group">
-        <label for="searchTerm">Rechercher</label>
-        <div class="search-input-wrapper">
-          <i class="fas fa-search"></i>
-          <input 
-            type="text" 
-            id="searchTerm" 
-            [(ngModel)]="searchTerm" 
-            (ngModelChange)="onSearchChange()"
-            placeholder="Rechercher dans les notifications..."
-            class="form-control">
-        </div>
+  <!-- Statistiques -->
+  <div class="stats-section">
+    <div class="stat-card">
+      <div class="stat-icon">
+        <i class="fas fa-bell"></i>
       </div>
-
-      <div class="filter-group">
-        <label for="selectedType">Type</label>
-        <select 
-          id="selectedType" 
-          [(ngModel)]="selectedType" 
-          (ngModelChange)="onTypeFilterChange()"
-          class="form-control">
-          <option value="">Tous les types</option>
-          <option *ngFor="let type of notificationTypes" [value]="type">
-            {{ getTypeDisplayName(type) }}
-          </option>
-        </select>
+      <div class="stat-content">
+        <h3>{{ notifications.length }}</h3>
+        <p>Total</p>
       </div>
-
-      <div class="filter-group">
-        <label for="selectedStatus">Statut</label>
-        <select 
-          id="selectedStatus" 
-          [(ngModel)]="selectedStatus" 
-          (ngModelChange)="onStatusFilterChange()"
-          class="form-control">
-          <option value="">Tous les statuts</option>
-          <option value="NON_LUE">Non lues</option>
-          <option value="LUE">Lues</option>
-        </select>
+    </div>
+    
+    <div class="stat-card unread">
+      <div class="stat-icon">
+        <i class="fas fa-exclamation-circle"></i>
+      </div>
+      <div class="stat-content">
+        <h3>{{ getUnreadCount() }}</h3>
+        <p>Non lues</p>
+      </div>
+    </div>
+    
+    <div class="stat-card read">
+      <div class="stat-icon">
+        <i class="fas fa-check-circle"></i>
+      </div>
+      <div class="stat-content">
+        <h3>{{ notifications.length - getUnreadCount() }}</h3>
+        <p>Lues</p>
       </div>
     </div>
   </div>
 
-  <!-- Notifications List -->
-  <div class="notifications-container">
-    <!-- Loading State -->
-    <div class="loading-state" *ngIf="isLoading">
-      <i class="fas fa-spinner fa-spin"></i>
-      <p>Chargement des notifications...</p>
-    </div>
-
-    <!-- Notifications List -->
-    <div class="notifications-list" *ngIf="!isLoading">
-      <div class="notification-item" 
-           *ngFor="let notification of filteredNotifications" 
-           [class.unread]="notification.statut === 'NON_LUE'">
-        
-        <div class="notification-icon" [style.background-color]="getTypeColor(notification.type)">
-          <i [class]="getTypeIcon(notification.type)"></i>
+  <!-- Liste des notifications -->
+  <div class="notifications-list" *ngIf="!isLoading; else loadingTemplate">
+    <div class="notification-item" 
+         *ngFor="let notification of filteredNotifications" 
+         [class.unread]="notification.statut === 'NON_LUE'"
+         [class.read]="notification.statut === 'LUE'">
+      
+      <div class="notification-icon" [ngClass]="getNotificationClass(notification.type)">
+        <i [class]="getNotificationIcon(notification.type)"></i>
+      </div>
+      
+      <div class="notification-content">
+        <div class="notification-header">
+          <h3>{{ notification.titre }}</h3>
+          <span class="notification-time">{{ formatDate(notification.dateCreation) }}</span>
         </div>
         
-        <div class="notification-content">
-          <div class="notification-header">
-            <h4 class="notification-title">{{ notification.titre }}</h4>
-            <div class="notification-meta">
-              <span class="notification-type">{{ getTypeDisplayName(notification.type) }}</span>
-              <span class="notification-time">{{ getRelativeTime(notification.dateCreation) }}</span>
-            </div>
-          </div>
-          
-          <p class="notification-message">{{ notification.message }}</p>
-          
-          <div class="notification-details">
-            <span class="notification-date">{{ formatDate(notification.dateCreation) }}</span>
-            <span class="notification-status" [class.unread]="notification.statut === 'NON_LUE'">
-              {{ notification.statut === 'NON_LUE' ? 'Non lue' : 'Lue' }}
-            </span>
-            <span class="notification-user" *ngIf="notification.utilisateur">
-              {{ notification.utilisateur.prenom }} {{ notification.utilisateur.nom }}
-            </span>
-          </div>
-        </div>
+        <p class="notification-message">{{ notification.message }}</p>
         
-        <div class="notification-actions">
-          <button 
-            class="action-btn" 
-            [class.mark-read]="notification.statut === 'NON_LUE'"
-            [class.mark-unread]="notification.statut === 'LUE'"
-            (click)="notification.statut === 'NON_LUE' ? markAsRead(notification) : markAsUnread(notification)"
-            [title]="notification.statut === 'NON_LUE' ? 'Marquer comme lu' : 'Marquer comme non lu'">
-            <i class="fas" [class.fa-check]="notification.statut === 'NON_LUE'" [class.fa-undo]="notification.statut === 'LUE'"></i>
-          </button>
-          
-          <button 
-            class="action-btn delete-btn" 
-            (click)="deleteNotification(notification)"
-            title="Supprimer">
-            <i class="fas fa-trash"></i>
-          </button>
-          
-          <button 
-            class="action-btn link-btn" 
-            *ngIf="notification.lienAction" 
-            [routerLink]="notification.lienAction"
-            title="Ouvrir le lien">
-            <i class="fas fa-external-link-alt"></i>
-          </button>
+        <div class="notification-meta">
+          <span class="notification-type">{{ notification.type }}</span>
+          <span class="notification-status" 
+                [class.status-unread]="notification.statut === 'NON_LUE'"
+                [class.status-read]="notification.statut === 'LUE'">
+            {{ notification.statut === 'NON_LUE' ? 'Non lue' : 'Lue' }}
+          </span>
         </div>
       </div>
-
-      <!-- Empty State -->
-      <div class="empty-state" *ngIf="filteredNotifications.length === 0 && !isLoading">
-        <i class="fas fa-bell-slash"></i>
-        <h3>Aucune notification trouvée</h3>
-        <p *ngIf="getActiveFiltersCount() > 0">
-          Aucune notification ne correspond à vos critères de recherche.
-        </p>
-        <p *ngIf="getActiveFiltersCount() === 0">
-          Vous n'avez pas encore de notifications.
-        </p>
-        <button class="btn btn-primary" (click)="clearFilters()" *ngIf="getActiveFiltersCount() > 0">
-          <i class="fas fa-times"></i>
-          Effacer les filtres
+      
+      <div class="notification-actions">
+        <button class="btn-action" 
+                *ngIf="notification.statut === 'NON_LUE'"
+                (click)="markAsRead(notification)"
+                title="Marquer comme lu">
+          <i class="fas fa-check"></i>
+        </button>
+        
+        <button class="btn-action delete" 
+                (click)="deleteNotification(notification)"
+                title="Supprimer">
+          <i class="fas fa-trash"></i>
         </button>
       </div>
     </div>
+    
+    <div class="no-notifications" *ngIf="filteredNotifications.length === 0">
+      <i class="fas fa-bell-slash"></i>
+      <h3>Aucune notification trouvée</h3>
+      <p>Aucune notification ne correspond à vos critères de filtrage.</p>
+    </div>
   </div>
+
+  <ng-template #loadingTemplate>
+    <div class="loading-container">
+      <div class="spinner"></div>
+      <p>Chargement des notifications...</p>
+    </div>
+  </ng-template>
 </div>

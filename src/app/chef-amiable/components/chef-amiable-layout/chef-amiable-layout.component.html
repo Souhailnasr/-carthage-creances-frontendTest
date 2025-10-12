@@ -1,0 +1,105 @@
+<div class="layout-container">
+  <!-- Sidebar -->
+  <div class="sidebar" [class.collapsed]="!sidebarOpen">
+    <div class="sidebar-header">
+      <div class="logo" *ngIf="sidebarOpen">
+        <i class="fas fa-handshake"></i>
+        <span>Chef Amiable</span>
+      </div>
+      <button class="sidebar-toggle" (click)="toggleSidebar()">
+        <i class="fas" [class.fa-bars]="!sidebarOpen" [class.fa-times]="sidebarOpen"></i>
+      </button>
+    </div>
+
+    <!-- User Profile Section -->
+    <div class="user-profile-section" *ngIf="currentUser">
+      <div class="user-avatar">
+        <span class="initials">{{ getInitials() }}</span>
+      </div>
+      <div class="user-info" *ngIf="sidebarOpen">
+        <h3>{{ currentUser.getFullName() }}</h3>
+        <p>{{ getRoleDisplayName() }}</p>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <ul class="nav-list">
+        <li class="nav-item">
+          <a routerLink="/chef-amiable/dashboard"
+             class="nav-link"
+             [class.active]="isActiveRoute('dashboard')">
+            <i class="fas fa-tachometer-alt"></i>
+            <span *ngIf="sidebarOpen">Tableau de Bord</span>
+          </a>
+        </li>
+
+        <li class="nav-item">
+          <a routerLink="/chef-amiable/gestion-actions"
+             class="nav-link"
+             [class.active]="isActiveRoute('gestion-actions')">
+            <i class="fas fa-tasks"></i>
+            <span *ngIf="sidebarOpen">Gestion des Actions</span>
+          </a>
+        </li>
+
+        <li class="nav-item">
+          <a routerLink="/chef-amiable/gestion-utilisateurs"
+             class="nav-link"
+             [class.active]="isActiveRoute('gestion-utilisateurs')">
+            <i class="fas fa-users"></i>
+            <span *ngIf="sidebarOpen">Gestion Utilisateurs</span>
+          </a>
+        </li>
+
+        <li class="nav-item">
+          <a routerLink="/chef-amiable/taches"
+             class="nav-link"
+             [class.active]="isActiveRoute('taches')">
+            <i class="fas fa-clipboard-list"></i>
+            <span *ngIf="sidebarOpen">Tâches</span>
+          </a>
+        </li>
+
+        <li class="nav-item">
+          <a routerLink="/chef-amiable/notifications"
+             class="nav-link"
+             [class.active]="isActiveRoute('notifications')">
+            <i class="fas fa-bell"></i>
+            <span *ngIf="sidebarOpen">Notifications</span>
+          </a>
+        </li>
+
+        <li class="nav-item">
+          <a routerLink="/chef-amiable/profil"
+             class="nav-link"
+             [class.active]="isActiveRoute('profil')">
+            <i class="fas fa-user-circle"></i>
+            <span *ngIf="sidebarOpen">Mon Profil</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
+
+
+    <div class="sidebar-footer">
+      <button class="logout-btn" (click)="logout()" [title]="sidebarOpen ? 'Déconnexion' : ''">
+        <i class="fas fa-sign-out-alt"></i>
+        <span *ngIf="sidebarOpen">Déconnexion</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main-content" [class.sidebar-collapsed]="!sidebarOpen">
+    <!-- Header avec notifications -->
+    <div class="content-header">
+      <div class="header-actions">
+        <app-notification></app-notification>
+      </div>
+    </div>
+
+    <div class="content-wrapper">
+      <router-outlet></router-outlet>
+    </div>
+  </div>
+</div>

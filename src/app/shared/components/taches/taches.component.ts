@@ -137,13 +137,13 @@ export class TachesComponent implements OnInit, OnDestroy {
 
   private createNotificationForAgent(agent: any, tache: TacheUrgente): void {
     const notification = {
-      utilisateur: { id: agent.id },
+      destinataireId: agent.id,
       type: TypeNotification.TACHE_URGENTE,
       titre: 'Nouvelle tâche assignée',
       message: `Une nouvelle tâche "${tache.titre}" vous a été assignée par ${this.currentUser.getFullName()}`
     };
 
-    this.notificationService.addNotification(notification);
+    this.notificationService.createNotification(notification).subscribe();
   }
 
   cancelCreateTache(): void {

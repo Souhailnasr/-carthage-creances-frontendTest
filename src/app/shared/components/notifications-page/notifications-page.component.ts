@@ -2,10 +2,8 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
-import { Subject, takeUntil } from 'rxjs';
-import { NotificationService } from '../../../core/services/notification.service';
-import { AuthService } from '../../../core/services/auth.service';
-import { Notification, TypeNotification, StatutNotification, NotificationFilter } from '../../models/notification.model';
+import { NotificationService, Notification, TypeNotification, StatutNotification } from '../../../core/services/notification.service';
+import { interval, Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-notifications-page',
@@ -17,238 +15,171 @@ import { Notification, TypeNotification, StatutNotification, NotificationFilter 
 export class NotificationsPageComponent implements OnInit, OnDestroy {
   notifications: Notification[] = [];
   filteredNotifications: Notification[] = [];
+  selectedFilter: 'all' | 'unread' | 'read' = 'all';
+  selectedType: 'all' | TypeNotification = 'all';
   isLoading: boolean = false;
-  hasMore: boolean = true;
-  currentPage: number = 0;
-  pageSize: number = 20;
-
-  // Filtres
-  filter: NotificationFilter = {};
-  searchTerm: string = '';
-  selectedType: TypeNotification | '' = '';
-  selectedStatus: StatutNotification | '' = '';
-
-  // Statistiques
-  totalNotifications: number = 0;
-  unreadCount: number = 0;
-
-  // Types et statuts pour les filtres
-  notificationTypes = Object.values(TypeNotification);
-  notificationStatuses = Object.values(StatutNotification);
-
-  private destroy$ = new Subject<void>();
+  private subscription: Subscription = new Subscription();
 
   constructor(
-    private notificationService: NotificationService,
-    private authService: AuthService
+    private notificationService: NotificationService
   ) {}
 
   ngOnInit(): void {
     this.loadNotifications();
-    this.loadStats();
+    this.startPolling();
   }
 
   ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
+    this.subscription.unsubscribe();
   }
 
   loadNotifications(): void {
-    const currentUser = this.authService.getCurrentUser();
-    if (currentUser) {
-      this.isLoading = true;
-      this.notificationService.getNotificationsByUser(Number(currentUser.id))
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: (notifications) => {
-            this.notifications = notifications;
-            this.applyFilters();
-            this.isLoading = false;
-          },
-          error: (error) => {
-            console.error('Erreur lors du chargement des notifications:', error);
-            this.isLoading = false;
-          }
-        });
-    }
+    this.isLoading = true;
+    // Mock user ID pour les tests
+    const mockUserId = 1;
+    this.notificationService.getNotificationsByUser(mockUserId).subscribe(
+      notifications => {
+        this.notifications = notifications;
+        this.applyFilters();
+        this.isLoading = false;
+      },
+      error => {
+        console.error('Erreur lors du chargement des notifications', error);
+        this.isLoading = false;
+      }
+    );
   }
 
-  loadStats(): void {
-    const currentUser = this.authService.getCurrentUser();
-    if (currentUser) {
-      this.notificationService.getNotificationStats(Number(currentUser.id))
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: (stats) => {
-            this.totalNotifications = stats.total;
-            this.unreadCount = stats.nonLues;
-          },
-          error: (error) => {
-            console.error('Erreur lors du chargement des statistiques:', error);
-          }
-        });
-    }
+  startPolling(): void {
+    // Polling toutes les 30 secondes pour les nouvelles notifications
+    this.subscription.add(
+      interval(30000).subscribe(() => {
+        this.loadNotifications();
+      })
+    );
   }
 
   applyFilters(): void {
-    let filtered = [...this.notifications];
+    this.filteredNotifications = this.notifications.filter(notification => {
+      const matchesStatus = this.selectedFilter === 'all' ||
+        (this.selectedFilter === 'unread' && notification.statut === StatutNotification.NON_LUE) ||
+        (this.selectedFilter === 'read' && notification.statut === StatutNotification.LUE);
 
-    // Filtre par terme de recherche
-    if (this.searchTerm) {
-      const term = this.searchTerm.toLowerCase();
-      filtered = filtered.filter(notification =>
-        notification.titre.toLowerCase().includes(term) ||
-        notification.message.toLowerCase().includes(term)
-      );
-    }
+      const matchesType = this.selectedType === 'all' || notification.type === this.selectedType;
 
-    // Filtre par type
-    if (this.selectedType) {
-      filtered = filtered.filter(notification => notification.type === this.selectedType);
-    }
-
-    // Filtre par statut
-    if (this.selectedStatus) {
-      filtered = filtered.filter(notification => notification.statut === this.selectedStatus);
-    }
-
-    this.filteredNotifications = filtered;
+      return matchesStatus && matchesType;
+    });
   }
 
-  onSearchChange(): void {
+  onFilterChange(): void {
     this.applyFilters();
   }
 
-  onTypeFilterChange(): void {
-    this.applyFilters();
-  }
-
-  onStatusFilterChange(): void {
-    this.applyFilters();
-  }
-
-  clearFilters(): void {
-    this.searchTerm = '';
-    this.selectedType = '';
-    this.selectedStatus = '';
+  onTypeChange(): void {
     this.applyFilters();
   }
 
   markAsRead(notification: Notification): void {
-    if (notification.statut === StatutNotification.NON_LUE && notification.id) {
-      this.notificationService.marquerLue(notification.id)
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: () => {
-            notification.statut = StatutNotification.LUE;
-            notification.dateLecture = new Date().toISOString();
-            this.loadStats();
-          },
-          error: (error) => {
-            console.error('Erreur lors du marquage de la notification:', error);
-          }
-        });
-    }
-  }
-
-  markAsUnread(notification: Notification): void {
-    if (notification.statut === StatutNotification.LUE && notification.id) {
-      this.notificationService.marquerNonLue(notification.id)
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: () => {
-            notification.statut = StatutNotification.NON_LUE;
-            notification.dateLecture = undefined;
-            this.loadStats();
-          },
-          error: (error) => {
-            console.error('Erreur lors du marquage de la notification:', error);
-          }
-        });
+    if (notification.statut === StatutNotification.NON_LUE) {
+      this.notificationService.marquerLue(notification.id).subscribe(
+        () => {
+          notification.statut = StatutNotification.LUE;
+          notification.dateLecture = new Date().toISOString();
+          this.applyFilters();
+        }
+      );
     }
   }
 
   markAllAsRead(): void {
-    const currentUser = this.authService.getCurrentUser();
-    if (currentUser) {
-      this.notificationService.marquerToutesLues(Number(currentUser.id))
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: (count) => {
-            console.log(`${count} notifications marquées comme lues`);
-            this.loadNotifications();
-            this.loadStats();
-          },
-          error: (error) => {
-            console.error('Erreur lors du marquage de toutes les notifications:', error);
-          }
-        });
-    }
+    const unreadNotifications = this.notifications.filter(n => n.statut === StatutNotification.NON_LUE);
+    unreadNotifications.forEach(notification => {
+      this.notificationService.marquerLue(notification.id).subscribe(
+        () => {
+          notification.statut = StatutNotification.LUE;
+          notification.dateLecture = new Date().toISOString();
+        }
+      );
+    });
+    this.applyFilters();
   }
 
   deleteNotification(notification: Notification): void {
-    if (notification.id && confirm('Êtes-vous sûr de vouloir supprimer cette notification ?')) {
-      this.notificationService.deleteNotification(notification.id)
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: () => {
-            this.notifications = this.notifications.filter(n => n.id !== notification.id);
-            this.applyFilters();
-            this.loadStats();
-          },
-          error: (error) => {
-            console.error('Erreur lors de la suppression de la notification:', error);
-          }
-        });
-    }
+    this.notificationService.deleteNotification(notification.id).subscribe(
+      () => {
+        this.notifications = this.notifications.filter(n => n.id !== notification.id);
+        this.applyFilters();
+      }
+    );
   }
 
-  getTypeIcon(type: TypeNotification): string {
-    return this.notificationService.getTypeIcon(type);
+  getNotificationIcon(type: TypeNotification): string {
+    const icons: { [key in TypeNotification]: string } = {
+      [TypeNotification.DOSSIER_CREE]: 'fas fa-file-plus',
+      [TypeNotification.DOSSIER_VALIDE]: 'fas fa-check-circle',
+      [TypeNotification.DOSSIER_REJETE]: 'fas fa-times-circle',
+      [TypeNotification.DOSSIER_EN_ATTENTE]: 'fas fa-clock',
+      [TypeNotification.ENQUETE_CREE]: 'fas fa-search-plus',
+      [TypeNotification.ENQUETE_VALIDE]: 'fas fa-check-circle',
+      [TypeNotification.ENQUETE_REJETE]: 'fas fa-times-circle',
+      [TypeNotification.ENQUETE_EN_ATTENTE]: 'fas fa-clock',
+      [TypeNotification.TACHE_URGENTE]: 'fas fa-exclamation-triangle',
+      [TypeNotification.RAPPEL]: 'fas fa-bell',
+      [TypeNotification.INFO]: 'fas fa-info-circle'
+    };
+    return icons[type] || 'fas fa-bell';
   }
 
-  getTypeColor(type: TypeNotification): string {
-    return this.notificationService.getTypeColor(type);
-  }
-
-  getTypeDisplayName(type: TypeNotification): string {
-    return this.notificationService.getTypeDisplayName(type);
+  getNotificationClass(type: TypeNotification): string {
+    const classes: { [key in TypeNotification]: string } = {
+      [TypeNotification.DOSSIER_CREE]: 'notification-info',
+      [TypeNotification.DOSSIER_VALIDE]: 'notification-success',
+      [TypeNotification.DOSSIER_REJETE]: 'notification-danger',
+      [TypeNotification.DOSSIER_EN_ATTENTE]: 'notification-warning',
+      [TypeNotification.ENQUETE_CREE]: 'notification-info',
+      [TypeNotification.ENQUETE_VALIDE]: 'notification-success',
+      [TypeNotification.ENQUETE_REJETE]: 'notification-danger',
+      [TypeNotification.ENQUETE_EN_ATTENTE]: 'notification-warning',
+      [TypeNotification.TACHE_URGENTE]: 'notification-danger',
+      [TypeNotification.RAPPEL]: 'notification-warning',
+      [TypeNotification.INFO]: 'notification-info'
+    };
+    return classes[type] || 'notification-info';
   }
 
   formatDate(dateString: string): string {
     const date = new Date(dateString);
-    return date.toLocaleDateString('fr-FR', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  }
-
-  getRelativeTime(dateString: string): string {
-    const date = new Date(dateString);
     const now = new Date();
-    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+    const diffMs = now.getTime() - date.getTime();
+    const diffMinutes = Math.round(diffMs / (1000 * 60));
+    const diffHours = Math.round(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
 
-    if (diffInMinutes < 1) {
-      return 'À l\'instant';
-    } else if (diffInMinutes < 60) {
-      return `Il y a ${diffInMinutes} min`;
-    } else if (diffInMinutes < 1440) {
-      const hours = Math.floor(diffInMinutes / 60);
-      return `Il y a ${hours}h`;
-    } else {
-      const days = Math.floor(diffInMinutes / 1440);
-      return `Il y a ${days} jour${days > 1 ? 's' : ''}`;
-    }
+    if (diffMinutes < 1) return "à l'instant";
+    if (diffMinutes < 60) return `il y a ${diffMinutes} minutes`;
+    if (diffHours < 24) return `il y a ${diffHours} heures`;
+    if (diffDays < 30) return `il y a ${diffDays} jours`;
+    return date.toLocaleDateString('fr-FR');
   }
 
-  getActiveFiltersCount(): number {
-    let count = 0;
-    if (this.searchTerm) count++;
-    if (this.selectedType) count++;
-    if (this.selectedStatus) count++;
-    return count;
+  getUnreadCount(): number {
+    return this.notifications.filter(n => n.statut === StatutNotification.NON_LUE).length;
+  }
+
+  getTypeOptions(): Array<{value: string, label: string}> {
+    return [
+      { value: 'all', label: 'Tous les types' },
+      { value: TypeNotification.DOSSIER_CREE, label: 'Dossier créé' },
+      { value: TypeNotification.DOSSIER_VALIDE, label: 'Dossier validé' },
+      { value: TypeNotification.DOSSIER_REJETE, label: 'Dossier rejeté' },
+      { value: TypeNotification.DOSSIER_EN_ATTENTE, label: 'Dossier en attente' },
+      { value: TypeNotification.ENQUETE_CREE, label: 'Enquête créée' },
+      { value: TypeNotification.ENQUETE_VALIDE, label: 'Enquête validée' },
+      { value: TypeNotification.ENQUETE_REJETE, label: 'Enquête rejetée' },
+      { value: TypeNotification.ENQUETE_EN_ATTENTE, label: 'Enquête en attente' },
+      { value: TypeNotification.TACHE_URGENTE, label: 'Tâche urgente' },
+      { value: TypeNotification.RAPPEL, label: 'Rappel' },
+      { value: TypeNotification.INFO, label: 'Information' }
+    ];
   }
 }

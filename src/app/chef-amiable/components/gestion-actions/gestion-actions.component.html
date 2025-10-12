@@ -1,0 +1,147 @@
+<div class="gestion-actions-container">
+  <div class="header">
+    <h1>Gestion des Actions - Recouvrement Amiable</h1>
+    <p>Gérez les dossiers et actions du département de recouvrement amiable</p>
+  </div>
+
+  <!-- Zone de recherche et affectation -->
+  <div class="search-section">
+    <div class="search-form">
+      <div class="form-group">
+        <label for="numeroDossier">Numéro du dossier :</label>
+        <input 
+          type="text" 
+          id="numeroDossier"
+          [(ngModel)]="numeroDossierRecherche" 
+          placeholder="Entrez le numéro du dossier"
+          class="form-control">
+      </div>
+      <div class="form-actions">
+        <button class="btn-primary" (click)="rechercherDossier()">
+          <i class="fas fa-search"></i> Rechercher
+        </button>
+        <button class="btn-secondary" (click)="showAffectationForm = !showAffectationForm">
+          <i class="fas fa-cog"></i> Actions sur dossier
+        </button>
+      </div>
+    </div>
+
+    <!-- Formulaire d'affectation/clôture -->
+    <div class="affectation-form" *ngIf="showAffectationForm">
+      <h3>Actions sur le dossier</h3>
+      <div class="form-group">
+        <label for="dossierAction">Numéro du dossier :</label>
+        <input 
+          type="text" 
+          id="dossierAction"
+          [(ngModel)]="numeroDossierRecherche" 
+          placeholder="Entrez le numéro du dossier"
+          class="form-control">
+      </div>
+      <div class="action-buttons">
+        <button class="btn-warning" (click)="affecterAuJuridique()">
+          <i class="fas fa-gavel"></i> Affecter au Juridique
+        </button>
+        <button class="btn-danger" (click)="cloturerDossier()">
+          <i class="fas fa-lock"></i> Clôturer le Dossier
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Liste des dossiers -->
+  <div class="dossiers-section">
+    <h2>Dossiers avec Actions</h2>
+    <div class="dossiers-grid">
+      <div 
+        class="dossier-card" 
+        *ngFor="let dossier of dossiers"
+        [class.selected]="dossierSelectionne?.numeroDossier === dossier.numeroDossier"
+        (click)="selectionnerDossier(dossier)">
+        <div class="dossier-header">
+          <h3>{{ dossier.numeroDossier }}</h3>
+          <span class="actions-count">{{ dossier.actions.length }} action(s)</span>
+        </div>
+        <div class="dossier-info">
+          <p><strong>Créancier:</strong> {{ dossier.nomCreancier }}</p>
+          <p><strong>Débiteur:</strong> {{ dossier.nomDebiteur }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Détails du dossier sélectionné -->
+  <div class="dossier-details" *ngIf="dossierSelectionne">
+    <div class="details-header">
+      <h2>Détails du dossier : {{ dossierSelectionne.numeroDossier }}</h2>
+      <div class="dossier-summary">
+        <p><strong>Créancier:</strong> {{ dossierSelectionne.nomCreancier }}</p>
+        <p><strong>Débiteur:</strong> {{ dossierSelectionne.nomDebiteur }}</p>
+      </div>
+    </div>
+
+    <!-- Tableau des actions -->
+    <div class="actions-table-container">
+      <h3>Actions Effectuées</h3>
+      <div class="table-responsive">
+        <table class="actions-table">
+          <thead>
+            <tr>
+              <th>Type d'Action</th>
+              <th>Date d'Action</th>
+              <th>Réponse Débiteur</th>
+              <th>Nb Occurrences</th>
+              <th>Coût Unitaire</th>
+              <th>Coût Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let action of dossierSelectionne.actions">
+              <td>
+                <span class="action-type">{{ getTypeActionLabel(action.type) }}</span>
+              </td>
+              <td>{{ getFormattedDate(action.dateAction) }}</td>
+              <td>
+                <span class="reponse-badge" [ngClass]="getReponseClass(action.reponseDebiteur)">
+                  {{ getReponseDebiteurLabel(action.reponseDebiteur) }}
+                </span>
+              </td>
+              <td>{{ action.nbOccurrences }}</td>
+              <td>{{ getFormattedCost(action.coutUnitaire) }}</td>
+              <td>{{ getFormattedCost(action.nbOccurrences * action.coutUnitaire) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Statistiques du dossier -->
+    <div class="dossier-stats">
+      <h3>Statistiques du Dossier</h3>
+      <div class="stats-grid">
+        <div class="stat-item">
+          <span class="stat-label">Total Actions:</span>
+          <span class="stat-value">{{ dossierSelectionne.actions.length }}</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Coût Total:</span>
+          <span class="stat-value">
+            {{ getFormattedCost(getTotalCost()) }}
+          </span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Réponses Positives:</span>
+          <span class="stat-value">
+            {{ getPositiveResponses() }}
+          </span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Réponses Négatives:</span>
+          <span class="stat-value">
+            {{ getNegativeResponses() }}
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

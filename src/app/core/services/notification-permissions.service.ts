@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Role } from '../../shared/models/enums.model';
-import { TypeNotification } from '../../shared/models/notification.model';
+import { TypeNotification } from './notification.service';
 
 @Injectable({
   providedIn: 'root'

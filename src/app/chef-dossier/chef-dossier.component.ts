@@ -55,13 +55,8 @@ export class ChefDossierComponent implements OnInit {
   }
 
   loadNotifications(): void {
-    if (this.currentUser) {
-      this.notificationService.getNotificationsByUser(this.currentUser.id).subscribe(
-        notifications => {
-          this.notifications = notifications.slice(0, 5); // Afficher les 5 plus récentes
-        }
-      );
-    }
+    // Mock notifications pour le moment
+    this.notifications = [];
   }
 
   getRoleDisplayName(role: string): string {
