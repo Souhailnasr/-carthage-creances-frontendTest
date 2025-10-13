@@ -1,6 +1,6 @@
 <div class="layout-container">
-  <!-- Sidebar -->
-  <div class="sidebar" [class.collapsed]="!sidebarOpen">
+  <!-- Sidebar (disabled to use global sidebar) -->
+  <div class="sidebar" *ngIf="false" [class.collapsed]="!sidebarOpen">
     <div class="sidebar-header">
       <div class="logo" *ngIf="sidebarOpen">
         <i class="fas fa-balance-scale"></i>
@@ -17,7 +17,7 @@
         <span class="initials">{{ getInitials() }}</span>
       </div>
       <div class="user-info" *ngIf="sidebarOpen">
-        <h3>{{ currentUser.getFullName() }}</h3>
+        <h3>{{ currentUser?.getFullName() }}</h3>
         <p>{{ getRoleDisplayName() }}</p>
       </div>
     </div>
