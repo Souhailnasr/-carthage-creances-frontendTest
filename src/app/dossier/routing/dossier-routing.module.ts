@@ -14,6 +14,12 @@ import { Role } from '../../shared/models';
 
 const routes: Routes = [
   {
+    path: 'dashboard',
+    loadComponent: () => import('../../chef-dossier/chef-dossier.component').then(m => m.ChefDossierComponent),
+    canActivate: [AuthGuard],
+    data: { allowedRoles: [Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER, Role.SUPER_ADMIN] }
+  },
+  {
     path: 'parties-prenantes',
     component: PartiePrenanteListComponent,
     canActivate: [AuthGuard],
@@ -72,7 +78,13 @@ const routes: Routes = [
     component: UserProfileComponent,
     canActivate: [AuthGuard]
   },
-  { path: '', redirectTo: 'parties-prenantes', pathMatch: 'full' }
+  {
+    path: 'taches',
+    loadComponent: () => import('../components/taches-dossier/taches-dossier.component').then(m => m.TachesDossierComponent),
+    canActivate: [AuthGuard],
+    data: { allowedRoles: [Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER, Role.SUPER_ADMIN] }
+  },
+  { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
 ];
 
 @NgModule({

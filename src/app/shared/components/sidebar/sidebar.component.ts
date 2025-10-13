@@ -36,12 +36,19 @@ export class SidebarComponent implements OnInit, OnDestroy {
       route: '/admin/dashboard',
       roles: [Role.SUPER_ADMIN]
     },
+    // Chef Dossier dashboard
+    {
+      label: 'Tableau de bord',
+      icon: 'fas fa-tachometer-alt',
+      route: '/dossier/dashboard',
+      roles: [Role.CHEF_DEPARTEMENT_DOSSIER]
+    },
     // Other roles use the generic dashboard
     {
       label: 'Tableau de bord',
       icon: 'fas fa-tachometer-alt',
       route: '/dashboard',
-      roles: [Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER, Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE, Role.AGENT_RECOUVREMENT_JURIDIQUE, Role.CHEF_DEPARTEMENT_FINANCE, Role.AGENT_FINANCE]
+      roles: [Role.AGENT_DOSSIER, Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE, Role.AGENT_RECOUVREMENT_JURIDIQUE, Role.CHEF_DEPARTEMENT_FINANCE, Role.AGENT_FINANCE]
     },
     {
       label: 'Créanciers',
@@ -82,8 +89,14 @@ export class SidebarComponent implements OnInit, OnDestroy {
     {
       label: 'Tâches',
       icon: 'fas fa-tasks',
-      route: '/chef-dossier/taches',
-      roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_DOSSIER]
+      route: '/admin/taches',
+      roles: [Role.SUPER_ADMIN]
+    },
+    {
+      label: 'Tâches',
+      icon: 'fas fa-tasks',
+      route: '/dossier/taches',
+      roles: [Role.CHEF_DEPARTEMENT_DOSSIER]
     },
     {
       label: 'Gestion Juridique',

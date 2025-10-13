@@ -109,6 +109,29 @@
           <span>Tâches</span>
         </a>
       </li>
+
+      <!-- Notifications (avec sous-menu) -->
+      <li class="nav-item" [class.active]="isActiveRoute('/juridique/notifications') || isActiveRoute('/juridique/send-notification')">
+        <a class="nav-link" (click)="toggleSubmenu('notifications')">
+          <i class="fas fa-bell"></i>
+          <span>Notifications</span>
+          <i class="fas expand-icon" [ngClass]="expandedMenus['notifications'] ? 'fa-chevron-down' : 'fa-chevron-right'"></i>
+        </a>
+        <ul class="nav-sublist" [class.expanded]="expandedMenus['notifications']">
+          <li class="nav-subitem">
+            <a class="nav-sublink" routerLink="/juridique/notifications" routerLinkActive="active">
+              <i class="fas fa-bell"></i>
+              <span>Mes Notifications</span>
+            </a>
+          </li>
+          <li class="nav-subitem">
+            <a class="nav-sublink" routerLink="/juridique/send-notification" routerLinkActive="active">
+              <i class="fas fa-paper-plane"></i>
+              <span>Envoyer Notification</span>
+            </a>
+          </li>
+        </ul>
+      </li>
     </ul>
   </nav>
 

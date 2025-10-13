@@ -3,6 +3,8 @@ import { JuridiqueLayoutComponent } from './components/juridique-layout/juridiqu
 import { JuridiqueDashboardComponent } from './components/juridique-dashboard/juridique-dashboard.component';
 import { JuridiqueUserManagementComponent } from './components/juridique-user-management/juridique-user-management.component';
 import { JuridiqueProfileComponent } from './components/juridique-profile/juridique-profile.component';
+import { NotificationsPageComponent } from '../shared/components/notifications-page/notifications-page.component';
+import { SendNotificationComponent } from '../shared/components/send-notification/send-notification.component';
 import { AvocatFormComponent } from './components/avocat-form/avocat-form.component';
 import { AvocatListComponent } from './components/avocat-list/avocat-list.component';
 import { AvocatDetailsComponent } from './components/avocat-details/avocat-details.component';
@@ -11,7 +13,7 @@ import { HuissierListComponent } from './components/huissier-list/huissier-list.
 import { HuissierDetailsComponent } from './components/huissier-details/huissier-details.component';
 import { AffectationDossiersComponent } from './components/affectation-dossiers/affectation-dossiers.component';
 import { GestionAudiencesComponent } from './components/gestion-audiences/gestion-audiences.component';
-import { TachesComponent } from '../shared/components/taches/taches.component';
+import { TachesComponent } from '../chef-amiable/components/taches/taches.component';
 
 export const juridiqueRoutes: Routes = [
   {
@@ -74,6 +76,14 @@ export const juridiqueRoutes: Routes = [
       {
         path: 'taches',
         component: TachesComponent
+      },
+      {
+        path: 'notifications',
+        component: NotificationsPageComponent
+      },
+      {
+        path: 'send-notification',
+        component: SendNotificationComponent
       },
       {
         path: 'profile',

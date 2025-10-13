@@ -224,4 +224,12 @@ export class TachesComponent implements OnInit, OnDestroy {
     const diffTime = echeance.getTime() - today.getTime();
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   }
+
+  getTachesFiltrees(statut: string): TacheUrgente[] {
+    return this.taches.filter(tache => tache.statut === statut);
+  }
+
+  getTachesEnRetard(): TacheUrgente[] {
+    return this.taches.filter(tache => this.isEnRetard(tache));
+  }
 }

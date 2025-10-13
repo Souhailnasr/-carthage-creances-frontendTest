@@ -1,6 +1,6 @@
 .layout-container {
   display: flex;
-  height: 100vh;
+  min-height: 100vh;
   background-color: #f8f9fa;
 }
 
@@ -213,6 +213,7 @@
     flex: 1;
     overflow-y: auto;
     background-color: #f8f9fa;
+    padding: 1.5rem;
   }
 }
 

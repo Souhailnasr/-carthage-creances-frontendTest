@@ -1,11 +1,14 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
 import { ChefAmiableService } from '../../services/chef-amiable.service';
 import { Tache, User, StatutTache } from '../../../shared/models';
 
 @Component({
   selector: 'app-taches',
+  standalone: true,
+  imports: [CommonModule, FormsModule, ReactiveFormsModule],
   templateUrl: './taches.component.html',
   styleUrls: ['./taches.component.scss']
 })
@@ -33,7 +36,8 @@ export class TachesComponent implements OnInit {
 
   constructor(
     private chefAmiableService: ChefAmiableService,
-    private fb: FormBuilder
+    private fb: FormBuilder,
+    private router: Router
   ) {
     this.tacheForm = this.fb.group({
       titre: ['', [Validators.required, Validators.minLength(3)]],
@@ -175,5 +179,10 @@ export class TachesComponent implements OnInit {
 
   getTachesEnRetard(): Tache[] {
     return this.taches.filter(t => t.isEnRetard());
+  }
+
+  // Méthode pour détecter si on est dans le contexte Chef Juridique
+  isJuridiqueContext(): boolean {
+    return this.router.url.includes('/juridique/');
   }
 }

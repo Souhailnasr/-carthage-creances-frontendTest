@@ -93,7 +93,12 @@ export const routes: Routes = [
   },
   {
     path: 'chef-dossier/taches',
-    loadComponent: () => import('./chef-dossier/components/taches/taches.component').then(m => m.TachesComponent),
+    loadComponent: () => import('./chef-amiable/components/taches/taches.component').then(m => m.TachesComponent),
+    canActivate: [AuthGuard]
+  },
+  {
+    path: 'admin/taches',
+    loadComponent: () => import('./chef-amiable/components/taches/taches.component').then(m => m.TachesComponent),
     canActivate: [AuthGuard]
   },
   {

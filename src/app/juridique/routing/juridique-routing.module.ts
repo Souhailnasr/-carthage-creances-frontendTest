@@ -46,7 +46,7 @@ const routes: Routes = [
   },
   {
     path: 'taches',
-    loadComponent: () => import('../shared/components/taches/taches.component').then(m => m.TachesComponent),
+    loadComponent: () => import('../../chef-amiable/components/taches/taches.component').then(m => m.TachesComponent),
     canActivate: [AuthGuard],
     data: { allowedRoles: [Role.CHEF_JURIDIQUE, Role.SUPER_ADMIN] }
   }

@@ -15,7 +15,8 @@ export class JuridiqueSidebarComponent implements OnInit {
   isCollapsed = false;
   expandedMenus: { [key: string]: boolean } = {
     avocat: false,
-    huissier: false
+    huissier: false,
+    notifications: true
   };
 
   constructor(

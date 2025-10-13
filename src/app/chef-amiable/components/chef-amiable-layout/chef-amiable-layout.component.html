@@ -60,13 +60,26 @@
           </a>
         </li>
 
-        <li class="nav-item">
-          <a routerLink="/chef-amiable/notifications"
-             class="nav-link"
-             [class.active]="isActiveRoute('notifications')">
+        <li class="nav-item" [class.active]="isActiveRoute('/chef-amiable/notifications') || isActiveRoute('/chef-amiable/send-notification')">
+          <a class="nav-link" (click)="toggleSubmenu('notifications')">
             <i class="fas fa-bell"></i>
             <span *ngIf="sidebarOpen">Notifications</span>
+            <i class="fas expand-icon" *ngIf="sidebarOpen" [ngClass]="expandedMenus['notifications'] ? 'fa-chevron-down' : 'fa-chevron-right'"></i>
           </a>
+          <ul class="nav-sublist" *ngIf="sidebarOpen" [class.expanded]="expandedMenus['notifications']">
+            <li class="nav-subitem">
+              <a class="nav-sublink" routerLink="/chef-amiable/notifications" routerLinkActive="active">
+                <i class="fas fa-bell"></i>
+                <span>Mes Notifications</span>
+              </a>
+            </li>
+            <li class="nav-subitem">
+              <a class="nav-sublink" routerLink="/chef-amiable/send-notification" routerLinkActive="active">
+                <i class="fas fa-paper-plane"></i>
+                <span>Envoyer Notification</span>
+              </a>
+            </li>
+          </ul>
         </li>
 
         <li class="nav-item">

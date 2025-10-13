@@ -73,13 +73,13 @@ export class RoleRedirectComponent implements OnInit {
       case 'CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE':
         return '/juridique/dashboard';
       case 'CHEF_DEPARTEMENT_DOSSIER':
-        return '/dashboard';
+        return '/dossier/dashboard';
       case 'AGENT_RECOUVREMENT_AMIABLE':
         return '/amiable/dashboard';
       case 'AGENT_RECOUVREMENT_JURIDIQUE':
         return '/juridique/dashboard';
       case 'AGENT_DOSSIER':
-        return '/dashboard';
+        return '/dossier/dashboard';
       default:
         return '/dashboard';
     }

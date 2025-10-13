@@ -15,6 +15,7 @@ import { NotificationComponent } from '../../../shared/components/notification/n
 export class ChefAmiableLayoutComponent implements OnInit {
   currentUser: User | null = null;
   sidebarOpen: boolean = true;
+  expandedMenus: { [key: string]: boolean } = { notifications: true };
 
   constructor(
     private authService: AuthService,
@@ -65,5 +66,9 @@ export class ChefAmiableLayoutComponent implements OnInit {
     };
 
     return roleNames[this.currentUser.role] || this.currentUser.role;
+  }
+
+  toggleSubmenu(menuName: string): void {
+    this.expandedMenus[menuName] = !this.expandedMenus[menuName];
   }
 }

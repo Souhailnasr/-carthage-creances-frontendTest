@@ -8,6 +8,9 @@ import { GestionUtilisateursComponent } from './components/gestion-utilisateurs/
 import { TachesComponent } from './components/taches/taches.component';
 import { NotificationsComponent } from './components/notifications/notifications.component';
 import { ProfilChefAmiableComponent } from './components/profil-chef-amiable/profil-chef-amiable.component';
+import { SendNotificationComponent } from './components/send-notification/send-notification.component';
+// import { NotificationsPageComponent } from '../../shared/components/notifications-page/notifications-page.component';
+// import { SendNotificationComponent } from '../../shared/components/send-notification/send-notification.component';
 
 const routes: Routes = [
   {
@@ -38,6 +41,10 @@ const routes: Routes = [
       {
         path: 'notifications',
         component: NotificationsComponent
+      },
+      {
+        path: 'send-notification',
+        component: SendNotificationComponent
       },
       {
         path: 'profil',

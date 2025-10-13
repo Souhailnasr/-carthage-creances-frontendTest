@@ -1,6 +1,6 @@
 .layout-container {
   display: flex;
-  height: 100vh;
+  min-height: 100vh;
   background-color: #f8f9fa;
 }
 
@@ -119,6 +119,7 @@
           text-decoration: none;
           transition: all 0.3s ease;
           border-left: 3px solid transparent;
+          cursor: pointer;
 
           &:hover {
             background: rgba(255, 255, 255, 0.1);
@@ -139,8 +140,57 @@
             text-align: center;
           }
 
+          .expand-icon {
+            margin-left: auto;
+            font-size: 0.8rem;
+            transition: transform 0.3s ease;
+          }
+
           span {
             font-size: 0.95rem;
+          }
+        }
+
+        .nav-sublist {
+          list-style: none;
+          margin: 0;
+          padding: 0;
+          max-height: 0;
+          overflow: hidden;
+          transition: max-height 0.3s ease;
+
+          &.expanded {
+            max-height: 200px;
+          }
+
+          .nav-subitem {
+            .nav-sublink {
+              display: flex;
+              align-items: center;
+              gap: 1rem;
+              padding: 0.75rem 1.5rem 0.75rem 3rem;
+              color: rgba(255, 255, 255, 0.7);
+              text-decoration: none;
+              transition: all 0.3s ease;
+              font-size: 0.9rem;
+
+              &:hover {
+                background: rgba(255, 255, 255, 0.1);
+                color: white;
+              }
+
+              &.active {
+                background: rgba(255, 255, 255, 0.15);
+                color: white;
+                font-weight: 600;
+              }
+
+              i {
+                font-size: 0.9rem;
+                width: 16px;
+                text-align: center;
+              }
+            }
           }
         }
       }
@@ -214,6 +264,7 @@
     flex: 1;
     overflow-y: auto;
     background-color: #f8f9fa;
+    padding: 1.5rem;
   }
 }
 

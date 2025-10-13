@@ -10,7 +10,7 @@ import { ChefAmiableRoutingModule } from './chef-amiable-routing.module';
 import { ChefAmiableDashboardComponent } from './components/chef-amiable-dashboard/chef-amiable-dashboard.component';
 import { GestionActionsComponent } from './components/gestion-actions/gestion-actions.component';
 import { GestionUtilisateursComponent } from './components/gestion-utilisateurs/gestion-utilisateurs.component';
-import { TachesComponent } from './components/taches/taches.component';
+// import { TachesComponent } from './components/taches/taches.component'; // Standalone component
 import { NotificationsComponent } from './components/notifications/notifications.component';
 
 @NgModule({
@@ -19,7 +19,7 @@ import { NotificationsComponent } from './components/notifications/notifications
             ChefAmiableDashboardComponent,
     GestionActionsComponent,
     GestionUtilisateursComponent,
-    TachesComponent,
+    // TachesComponent, // Standalone component
     NotificationsComponent
   ],
           imports: [

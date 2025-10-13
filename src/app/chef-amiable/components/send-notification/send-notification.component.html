@@ -1,0 +1,82 @@
+<div class="send-notification-container">
+  <div class="header">
+    <h1>Envoyer une Notification</h1>
+    <p>Créez et envoyez des notifications à vos équipes</p>
+  </div>
+
+  <div class="form-container">
+    <form [formGroup]="notificationForm" (ngSubmit)="onSubmit()">
+      <div class="form-group">
+        <label for="titre">Titre de la notification *</label>
+        <input 
+          type="text" 
+          id="titre"
+          formControlName="titre"
+          class="form-control"
+          [class.error]="notificationForm.get('titre')?.invalid && notificationForm.get('titre')?.touched"
+          placeholder="Entrez le titre de la notification">
+        <div class="error-message" *ngIf="getFieldError('titre')">
+          {{ getFieldError('titre') }}
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label for="message">Message *</label>
+        <textarea 
+          id="message"
+          formControlName="message"
+          class="form-control"
+          [class.error]="notificationForm.get('message')?.invalid && notificationForm.get('message')?.touched"
+          placeholder="Décrivez le message de la notification"
+          rows="5"></textarea>
+        <div class="error-message" *ngIf="getFieldError('message')">
+          {{ getFieldError('message') }}
+        </div>
+      </div>
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label for="type">Type de notification *</label>
+          <select 
+            id="type"
+            formControlName="type"
+            class="form-control">
+            <option value="INFO">Information</option>
+            <option value="WARNING">Avertissement</option>
+            <option value="SUCCESS">Succès</option>
+            <option value="ERROR">Erreur</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label for="destinataires">Destinataires *</label>
+          <select 
+            id="destinataires"
+            formControlName="destinataires"
+            class="form-control">
+            <option value="">Sélectionnez les destinataires</option>
+            <option value="all">Tous les agents</option>
+            <option value="agents_dossier">Agents Dossier</option>
+            <option value="agents_juridique">Agents Juridique</option>
+            <option value="agents_finance">Agents Finance</option>
+            <option value="chefs">Chefs de Département</option>
+          </select>
+          <div class="error-message" *ngIf="getFieldError('destinataires')">
+            {{ getFieldError('destinataires') }}
+          </div>
+        </div>
+      </div>
+      
+      <div class="form-actions">
+        <button 
+          type="submit" 
+          class="btn-primary"
+          [disabled]="notificationForm.invalid || isSubmitting">
+          <i class="fas fa-paper-plane" *ngIf="!isSubmitting"></i>
+          <i class="fas fa-spinner fa-spin" *ngIf="isSubmitting"></i>
+          {{ isSubmitting ? 'Envoi en cours...' : 'Envoyer la Notification' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

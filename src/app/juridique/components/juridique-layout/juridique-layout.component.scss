@@ -1,13 +1,15 @@
 .juridique-layout {
   display: flex;
   min-height: 100vh;
-  background-color: #f4f7f6;
+  background-color: #f8f9fa;
 
   .main-content {
     flex: 1;
     margin-left: 280px;
     transition: margin-left 0.3s ease;
     min-height: 100vh;
+    padding: 1.5rem;
+    background-color: #f8f9fa;
 
     // When sidebar is collapsed
     .juridique-sidebar.collapsed + & {
