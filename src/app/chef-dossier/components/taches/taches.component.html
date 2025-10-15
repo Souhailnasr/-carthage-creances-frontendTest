@@ -2,6 +2,9 @@
   <div class="header">
     <h1>Gestion des Tâches</h1>
     <p>Créez et gérez les tâches pour vos agents de recouvrement amiable</p>
+    <div class="header-actions">
+      <app-notification></app-notification>
+    </div>
   </div>
 
   <!-- Actions -->
@@ -173,6 +176,30 @@
         <div class="stat-content">
           <h4>{{ getTachesEnRetard().length }}</h4>
           <p>En Retard</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Performance des Agents -->
+  <div class="performance-section">
+    <div class="section-header">
+      <h3>Performance des Agents</h3>
+    </div>
+    <div class="performance-grid">
+      <div class="perf-card" *ngFor="let a of agentPerformance">
+        <div class="perf-header">
+          <div class="agent-initials">{{ a.prenom.charAt(0) }}{{ a.nom.charAt(0) }}</div>
+          <div class="agent-info">
+            <h4>{{ a.prenom }} {{ a.nom }}</h4>
+            <span class="badge" [ngClass]="getPerformanceClass(a.performance)">{{ a.performance | uppercase }}</span>
+          </div>
+        </div>
+        <div class="perf-metrics">
+          <div><span class="metric">{{ a.dossiersTraites }}</span><span class="label">Traités</span></div>
+          <div><span class="metric">{{ a.dossiersClotures }}</span><span class="label">Clôturés</span></div>
+          <div><span class="metric">{{ a.tauxReussite | number:'1.0-1' }}%</span><span class="label">Taux</span></div>
+          <div><span class="metric">{{ a.montantRecupere | number }}</span><span class="label">Recouvré</span></div>
         </div>
       </div>
     </div>

@@ -48,3 +48,4 @@ export class SendNotificationComponent {
     return null;
   }
 }
+

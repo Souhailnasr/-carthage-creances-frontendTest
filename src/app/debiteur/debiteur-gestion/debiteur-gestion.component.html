@@ -17,6 +17,23 @@
         <h3>{{ isEditMode ? 'Modifier le Débiteur' : 'Nouveau Débiteur' }}</h3>
       </div>
 
+      <!-- Sélecteur de type de débiteur -->
+      <div class="form-group">
+        <label for="typeDebiteur">Type de Débiteur *</label>
+        <select 
+          id="typeDebiteur" 
+          formControlName="typeDebiteur"
+          class="form-control"
+          [class.is-invalid]="typeDebiteurControl?.invalid && typeDebiteurControl?.touched">
+          <option *ngFor="let type of debiteurTypes" [value]="type.value">
+            {{ type.label }}
+          </option>
+        </select>
+        <div class="invalid-feedback" *ngIf="typeDebiteurControl?.invalid && typeDebiteurControl?.touched">
+          <div *ngIf="typeDebiteurControl?.errors?.['required']">Le type de débiteur est requis</div>
+        </div>
+      </div>
+
       <div class="form-row">
         <div class="form-group">
           <label for="codeCreance">Code Créance</label>
@@ -31,21 +48,21 @@
 
       <div class="form-row">
         <div class="form-group">
-          <label for="nom">Nom *</label>
+          <label for="nom">{{ isPersonneMorale() ? 'Nom de l\'entreprise *' : 'Nom *' }}</label>
           <input 
             type="text" 
             id="nom" 
             formControlName="nom"
             class="form-control"
             [class.is-invalid]="nomControl?.invalid && nomControl?.touched"
-            placeholder="Nom du débiteur">
+            [placeholder]="isPersonneMorale() ? 'Nom de l\'entreprise' : 'Nom du débiteur'">
           <div class="invalid-feedback" *ngIf="nomControl?.invalid && nomControl?.touched">
-            <div *ngIf="nomControl?.errors?.['required']">Le nom est requis</div>
-            <div *ngIf="nomControl?.errors?.['minlength']">Le nom doit contenir au moins 2 caractères</div>
+            <div *ngIf="nomControl?.errors?.['required']">{{ isPersonneMorale() ? 'Le nom de l\'entreprise est requis' : 'Le nom est requis' }}</div>
+            <div *ngIf="nomControl?.errors?.['minlength']">{{ isPersonneMorale() ? 'Le nom de l\'entreprise doit contenir au moins 2 caractères' : 'Le nom doit contenir au moins 2 caractères' }}</div>
           </div>
         </div>
 
-        <div class="form-group">
+        <div class="form-group" *ngIf="isPersonnePhysique()">
           <label for="prenom">Prénom *</label>
           <input 
             type="text" 
@@ -189,7 +206,10 @@
     <div class="debiteurs-grid" *ngIf="filteredDebiteurs.length > 0; else noDebiteurs">
       <div class="debiteur-card" *ngFor="let debiteur of filteredDebiteurs">
         <div class="card-header">
-          <h4>{{ debiteur.prenom }} {{ debiteur.nom }}</h4>
+          <h4>{{ debiteur.prenom ? debiteur.prenom + ' ' + debiteur.nom : debiteur.nom }}</h4>
+          <span class="type-badge" [ngClass]="debiteur.typeDebiteur === 'PERSONNE_MORALE' ? 'type-morale' : 'type-physique'">
+            {{ debiteur.typeDebiteur === 'PERSONNE_MORALE' ? 'Personne Morale' : 'Personne Physique' }}
+          </span>
           <div class="card-actions">
             <button class="btn btn-sm btn-outline-primary" (click)="editDebiteur(debiteur)">
               <i class="fas fa-edit"></i>

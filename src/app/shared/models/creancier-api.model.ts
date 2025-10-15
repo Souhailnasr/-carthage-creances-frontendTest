@@ -1,10 +1,11 @@
 // Interfaces pour les APIs de créanciers
 export interface CreancierApi {
   id: number;
+  typeCreancier?: 'PERSONNE_PHYSIQUE' | 'PERSONNE_MORALE';
   codeCreancier?: string;
   codeCreance?: string;
   nom: string;
-  prenom: string;
+  prenom?: string;
   email: string;
   telephone: string;
   adresse: string;
@@ -15,10 +16,11 @@ export interface CreancierApi {
 }
 
 export interface CreancierRequest {
+  typeCreancier?: 'PERSONNE_PHYSIQUE' | 'PERSONNE_MORALE';
   codeCreancier?: string;
   codeCreance?: string;
   nom: string;
-  prenom: string;
+  prenom?: string;
   email: string;
   telephone: string;
   adresse: string;

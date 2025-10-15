@@ -48,11 +48,7 @@
     }
   }
 
-  .chef-actions {
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-  }
+  .chef-actions { display: none; }
 }
 
 .statistiques-section {
@@ -123,7 +119,9 @@
   }
 }
 
-.actions-section {
+/* Section actions supprimée et remplacée par performance */
+
+.performance-agents-section {
   margin-bottom: 30px;
 
   h2 {
@@ -134,12 +132,22 @@
     display: flex;
     align-items: center;
     gap: 10px;
-
-    i {
-      font-size: 1.3rem;
-    }
   }
 }
+
+.performance-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(240px,1fr)); gap:20px; }
+.perf-card { background: rgba(255,255,255,0.95); padding:16px; border-radius:12px; box-shadow:0 4px 15px rgba(0,0,0,0.1); }
+.perf-header { display:flex; align-items:center; gap:12px; }
+.agent-initials { width:40px; height:40px; border-radius:50%; background:#eef2ff; color:#4f46e5; display:flex; align-items:center; justify-content:center; font-weight:700; }
+.agent-info h4 { margin:0; font-size:1rem; color:#333; }
+.badge { font-size:0.7rem; padding:2px 8px; border-radius:999px; color:#fff; }
+.perf-excellent { background:#10b981; }
+.perf-bon { background:#3b82f6; }
+.perf-moyen { background:#f59e0b; }
+.perf-faible { background:#ef4444; }
+.perf-metrics { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:10px; }
+.metric { display:block; font-weight:700; }
+.label { display:block; font-size:0.75rem; color:#6b7280; }
 
 .actions-grid {
   display: grid;

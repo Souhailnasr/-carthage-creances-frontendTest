@@ -6,14 +6,7 @@
       <p>Bienvenue, {{ currentUser?.prenom }} {{ currentUser?.nom }}</p>
       <span class="role-badge">{{ getRoleDisplayName(currentUser?.role) }}</span>
     </div>
-    <div class="chef-actions">
-      <button class="btn btn-primary">
-        <i class="fas fa-plus"></i> Nouveau Dossier
-      </button>
-      <button class="btn btn-success">
-        <i class="fas fa-users"></i> Gérer Agents
-      </button>
-    </div>
+    <!-- Suppression des boutons pour épurer le header -->
   </div>
 
   <!-- Statistiques -->
@@ -82,36 +75,24 @@
     </div>
   </div>
 
-  <!-- Actions Rapides -->
-  <div class="actions-section">
-    <h2><i class="fas fa-bolt"></i> Actions Rapides</h2>
-    <div class="actions-grid">
-      <div class="action-card">
-        <i class="fas fa-clipboard-check"></i>
-        <h3>Valider Dossiers</h3>
-        <p>Examiner et valider les dossiers en attente</p>
-        <button class="btn btn-primary">Accéder</button>
-      </div>
-      
-      <div class="action-card">
-        <i class="fas fa-search"></i>
-        <h3>Valider Enquêtes</h3>
-        <p>Examiner et valider les enquêtes soumises</p>
-        <button class="btn btn-primary">Accéder</button>
-      </div>
-      
-      <div class="action-card">
-        <i class="fas fa-users-cog"></i>
-        <h3>Gérer Agents</h3>
-        <p>Assigner des tâches et superviser les agents</p>
-        <button class="btn btn-primary">Accéder</button>
-      </div>
-      
-      <div class="action-card">
-        <i class="fas fa-chart-line"></i>
-        <h3>Rapports</h3>
-        <p>Générer des rapports de performance</p>
-        <button class="btn btn-primary">Accéder</button>
+  <!-- Performance des Agents (remplace les Actions Rapides) -->
+  <div class="performance-agents-section">
+    <h2><i class="fas fa-user-chart"></i> Performance des Agents</h2>
+    <div class="performance-grid">
+      <div class="perf-card" *ngFor="let a of agentPerformance">
+        <div class="perf-header">
+          <div class="agent-initials">{{ a.prenom.charAt(0) }}{{ a.nom.charAt(0) }}</div>
+          <div class="agent-info">
+            <h4>{{ a.prenom }} {{ a.nom }}</h4>
+            <span class="badge" [ngClass]="getPerformanceClass(a.performance)">{{ a.performance | uppercase }}</span>
+          </div>
+        </div>
+        <div class="perf-metrics">
+          <div><span class="metric">{{ a.dossiersTraites }}</span><span class="label">Traités</span></div>
+          <div><span class="metric">{{ a.dossiersClotures }}</span><span class="label">Clôturés</span></div>
+          <div><span class="metric">{{ a.tauxReussite | number:'1.0-1' }}%</span><span class="label">Taux</span></div>
+          <div><span class="metric">{{ a.montantRecupere | number }}</span><span class="label">Recouvré</span></div>
+        </div>
       </div>
     </div>
   </div>

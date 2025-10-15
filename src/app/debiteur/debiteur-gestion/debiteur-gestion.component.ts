@@ -24,6 +24,12 @@ export class DebiteurGestionComponent implements OnInit {
   searchTerm = '';
   currentUser: any;
   showForm = false; // Nouvelle variable pour contrôler l'affichage du formulaire
+  
+  // Types de débiteur
+  debiteurTypes = [
+    { value: 'PERSONNE_PHYSIQUE', label: 'Personne Physique' },
+    { value: 'PERSONNE_MORALE', label: 'Personne Morale' }
+  ];
 
   constructor(
     private debiteurApiService: DebiteurApiService,
@@ -38,6 +44,11 @@ export class DebiteurGestionComponent implements OnInit {
   ngOnInit(): void {
     this.loadCurrentUser();
     this.authenticateAndLoadDebiteurs();
+    
+    // Écouter les changements de type de débiteur
+    this.debiteurForm.get('typeDebiteur')?.valueChanges.subscribe(type => {
+      this.onTypeChange(type);
+    });
   }
 
   authenticateAndLoadDebiteurs(): void {
@@ -64,6 +75,7 @@ export class DebiteurGestionComponent implements OnInit {
 
   initializeForm(): FormGroup {
     return this.fb.group({
+      typeDebiteur: ['PERSONNE_PHYSIQUE', [Validators.required]],
       codeCreance: [''],
       nom: ['', [Validators.required, Validators.minLength(2)]],
       prenom: ['', [Validators.required, Validators.minLength(2)]],
@@ -115,6 +127,7 @@ export class DebiteurGestionComponent implements OnInit {
 
   createDebiteur(debiteurData: any): void {
     const debiteurRequest: DebiteurRequest = {
+      typeDebiteur: debiteurData.typeDebiteur,
       codeCreance: debiteurData.codeCreance,
       nom: debiteurData.nom,
       prenom: debiteurData.prenom,
@@ -145,6 +158,7 @@ export class DebiteurGestionComponent implements OnInit {
 
   updateDebiteur(id: number, debiteurData: any): void {
     const debiteurRequest: DebiteurRequest = {
+      typeDebiteur: debiteurData.typeDebiteur,
       codeCreance: debiteurData.codeCreance,
       nom: debiteurData.nom,
       prenom: debiteurData.prenom,
@@ -203,6 +217,7 @@ export class DebiteurGestionComponent implements OnInit {
     this.isEditMode = true;
     this.editingDebiteurId = debiteur.id;
     this.debiteurForm.patchValue({
+      typeDebiteur: debiteur.typeDebiteur || 'PERSONNE_PHYSIQUE',
       codeCreance: debiteur.codeCreance,
       nom: debiteur.nom,
       prenom: debiteur.prenom,
@@ -248,7 +263,7 @@ export class DebiteurGestionComponent implements OnInit {
           // Fallback avec recherche locale
           this.filteredDebiteurs = this.debiteurs.filter(debiteur =>
             debiteur.nom.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-            debiteur.prenom.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
+            (debiteur.prenom && debiteur.prenom.toLowerCase().includes(this.searchTerm.toLowerCase())) ||
             debiteur.email.toLowerCase().includes(this.searchTerm.toLowerCase())
           );
         }
@@ -270,7 +285,31 @@ export class DebiteurGestionComponent implements OnInit {
     });
   }
 
+  onTypeChange(type: string): void {
+    const prenomControl = this.debiteurForm.get('prenom');
+    
+    if (type === 'PERSONNE_MORALE') {
+      // Pour personne morale, supprimer la validation du prénom et vider le champ
+      prenomControl?.clearValidators();
+      prenomControl?.setValue('');
+    } else {
+      // Pour personne physique, remettre la validation du prénom
+      prenomControl?.setValidators([Validators.required, Validators.minLength(2)]);
+    }
+    
+    prenomControl?.updateValueAndValidity();
+  }
+
+  isPersonnePhysique(): boolean {
+    return this.debiteurForm.get('typeDebiteur')?.value === 'PERSONNE_PHYSIQUE';
+  }
+
+  isPersonneMorale(): boolean {
+    return this.debiteurForm.get('typeDebiteur')?.value === 'PERSONNE_MORALE';
+  }
+
   // Getters pour les contrôles du formulaire
+  get typeDebiteurControl() { return this.debiteurForm.get('typeDebiteur'); }
   get nomControl() { return this.debiteurForm.get('nom'); }
   get prenomControl() { return this.debiteurForm.get('prenom'); }
   get emailControl() { return this.debiteurForm.get('email'); }

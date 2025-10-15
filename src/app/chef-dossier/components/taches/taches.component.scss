@@ -5,6 +5,9 @@
 
   .header {
     margin-bottom: 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     
     h1 {
       color: #2c3e50;
@@ -17,6 +20,11 @@
       color: #6c757d;
       margin: 0;
       font-size: 1.1rem;
+    }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
     }
   }
 
@@ -203,6 +211,60 @@
           }
         }
       }
+    }
+  }
+
+  .performance-section {
+    margin-bottom: 2rem;
+    .section-header {
+      margin-bottom: 1rem;
+      h3 {
+        color: #2c3e50;
+        margin: 0;
+        font-size: 1.5rem;
+        font-weight: 600;
+      }
+    }
+    .performance-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1rem;
+    }
+    .perf-card {
+      background: white;
+      border-radius: 12px;
+      padding: 1rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+    .perf-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      .agent-initials {
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        background: #eef2ff;
+        color: #4f46e5;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+      }
+      .agent-info h4 { margin: 0; font-size: 1rem; }
+      .badge { font-size: 0.7rem; padding: 2px 8px; border-radius: 999px; color: #fff; }
+      .perf-excellent { background: #10b981; }
+      .perf-bon { background: #3b82f6; }
+      .perf-moyen { background: #f59e0b; }
+      .perf-faible { background: #ef4444; }
+    }
+    .perf-metrics {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-top: 12px;
+      .metric { display: block; font-weight: 700; }
+      .label { display: block; font-size: 0.75rem; color: #6b7280; }
     }
   }
 

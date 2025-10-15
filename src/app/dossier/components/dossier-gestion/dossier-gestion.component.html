@@ -36,13 +36,37 @@
         </div>
 
         <div class="form-group">
-          <label for="nomCreancier">Nom du Créancier</label>
-          <input type="text" id="nomCreancier" formControlName="nomCreancier" class="form-control" placeholder="Entrez le nom du créancier">
+          <label for="typeCreancier">Type de Créancier</label>
+          <select id="typeCreancier" formControlName="typeCreancier" class="form-control">
+            <option *ngFor="let type of personTypes" [value]="type.value">{{ type.label }}</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="nomCreancier">{{ getCreancierNomLabel() }}</label>
+          <input type="text" id="nomCreancier" formControlName="nomCreancier" class="form-control" [placeholder]="getCreancierNomPlaceholder()">
+        </div>
+
+        <div class="form-group" *ngIf="!isCreancierPersonneMorale()">
+          <label for="prenomCreancier">Prénom du Créancier</label>
+          <input type="text" id="prenomCreancier" formControlName="prenomCreancier" class="form-control" placeholder="Entrez le prénom du créancier">
         </div>
         
         <div class="form-group">
-          <label for="nomDebiteur">Nom du Débiteur</label>
-          <input type="text" id="nomDebiteur" formControlName="nomDebiteur" class="form-control" placeholder="Entrez le nom du débiteur">
+          <label for="typeDebiteur">Type de Débiteur</label>
+          <select id="typeDebiteur" formControlName="typeDebiteur" class="form-control">
+            <option *ngFor="let type of personTypes" [value]="type.value">{{ type.label }}</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="nomDebiteur">{{ getDebiteurNomLabel() }}</label>
+          <input type="text" id="nomDebiteur" formControlName="nomDebiteur" class="form-control" [placeholder]="getDebiteurNomPlaceholder()">
+        </div>
+
+        <div class="form-group" *ngIf="!isDebiteurPersonneMorale()">
+          <label for="prenomDebiteur">Prénom du Débiteur</label>
+          <input type="text" id="prenomDebiteur" formControlName="prenomDebiteur" class="form-control" placeholder="Entrez le prénom du débiteur">
         </div>
 
         <div class="form-group full-width">

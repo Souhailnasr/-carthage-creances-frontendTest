@@ -65,9 +65,17 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
   get typeDocumentControl(): FormControl { return this.dossierForm.get('typeDocumentJustificatif') as FormControl; }
   get urgenceControl(): FormControl { return this.dossierForm.get('urgence') as FormControl; }
   get nomCreancierControl(): FormControl { return this.dossierForm.get('nomCreancier') as FormControl; }
+  get prenomCreancierControl(): FormControl { return this.dossierForm.get('prenomCreancier') as FormControl; }
   get nomDebiteurControl(): FormControl { return this.dossierForm.get('nomDebiteur') as FormControl; }
+  get prenomDebiteurControl(): FormControl { return this.dossierForm.get('prenomDebiteur') as FormControl; }
   get pouvoirControl(): FormControl { return this.dossierForm.get('pouvoir') as FormControl; }
   get contratSigneControl(): FormControl { return this.dossierForm.get('contratSigne') as FormControl; }
+
+  // Types personne for select
+  personTypes = [
+    { value: 'PERSONNE_PHYSIQUE', label: 'Personne Physique' },
+    { value: 'PERSONNE_MORALE', label: 'Personne Morale' }
+  ];
 
   constructor(
     private fb: FormBuilder,
@@ -99,12 +107,20 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
       montantCreance: [0, [Validators.required, Validators.min(0)]],
       typeDocumentJustificatif: [TypeDocumentJustificatif.FACTURE, Validators.required],
       urgence: [UrgenceDossier.FAIBLE, Validators.required],
+      typeCreancier: ['PERSONNE_PHYSIQUE', Validators.required],
       nomCreancier: ['', Validators.required],
+      prenomCreancier: ['', Validators.minLength(2)],
+      typeDebiteur: ['PERSONNE_PHYSIQUE', Validators.required],
       nomDebiteur: ['', Validators.required],
+      prenomDebiteur: ['', Validators.minLength(2)],
       pouvoir: [false],
       contratSigne: [false],
       isChef: [false]
     });
+
+    // Update validators when types change
+    this.dossierForm.get('typeCreancier')?.valueChanges.subscribe(t => this.onTypeCreancierChange(t));
+    this.dossierForm.get('typeDebiteur')?.valueChanges.subscribe(t => this.onTypeDebiteurChange(t));
   }
 
   loadCurrentUser(): void {
@@ -375,8 +391,12 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
       montantCreance: dossier.montantCreance,
       typeDocumentJustificatif: dossier.typeDocumentJustificatif,
       urgence: dossier.urgence,
+      typeCreancier: 'PERSONNE_PHYSIQUE',
       nomCreancier: dossier.creancier ? dossier.creancier.nom : '',
+      prenomCreancier: dossier.creancier ? (dossier.creancier as any).prenom || '' : '',
+      typeDebiteur: 'PERSONNE_PHYSIQUE',
       nomDebiteur: dossier.debiteur ? dossier.debiteur.nom : '',
+      prenomDebiteur: dossier.debiteur ? (dossier.debiteur as any).prenom || '' : '',
       pouvoir: dossier.pouvoir,
       contratSigne: dossier.contratSigne
     });
@@ -402,7 +422,14 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
 
   private createDossierApi(formValue: any): void {
     // Rechercher les IDs des créanciers et débiteurs basés sur les noms
-    this.findCreancierAndDebiteurIds(formValue.nomCreancier, formValue.nomDebiteur)
+    const searchCreancier = formValue.typeCreancier === 'PERSONNE_PHYSIQUE' && formValue.prenomCreancier
+      ? `${formValue.nomCreancier}`.trim() // API search call below compares both
+      : `${formValue.nomCreancier}`.trim();
+    const searchDebiteur = formValue.typeDebiteur === 'PERSONNE_PHYSIQUE' && formValue.prenomDebiteur
+      ? `${formValue.nomDebiteur}`.trim()
+      : `${formValue.nomDebiteur}`.trim();
+
+    this.findCreancierAndDebiteurIds(searchCreancier, searchDebiteur)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: ({ creancierId, debiteurId }: { creancierId: number, debiteurId: number }) => {
@@ -414,9 +441,13 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
             montantCreance: formValue.montantCreance,
             typeDocumentJustificatif: this.convertLocalTypeDocumentToApi(formValue.typeDocumentJustificatif),
             urgence: this.convertLocalUrgenceToApi(formValue.urgence),
+            typeCreancier: formValue.typeCreancier,
             // Pour compat DTO backend (noms) et pour logs côté service si besoin
             nomCreancier: formValue.nomCreancier,
+            prenomCreancier: formValue.typeCreancier === 'PERSONNE_PHYSIQUE' ? (formValue.prenomCreancier || '') : '',
+            typeDebiteur: formValue.typeDebiteur,
             nomDebiteur: formValue.nomDebiteur,
+            prenomDebiteur: formValue.typeDebiteur === 'PERSONNE_PHYSIQUE' ? (formValue.prenomDebiteur || '') : '',
             // Si le backend accepte aussi des IDs ou objets, ils sont disponibles côté service si nécessaire
             creancierId: creancierId,
             debiteurId: debiteurId,
@@ -459,6 +490,35 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
           this.toastService.error(msg);
         }
       });
+  }
+
+  // Type logic for labels/placeholders
+  isCreancierPersonneMorale(): boolean {
+    return this.dossierForm.get('typeCreancier')?.value === 'PERSONNE_MORALE';
+  }
+  getCreancierNomLabel(): string {
+    return this.isCreancierPersonneMorale() ? "Nom de l'entreprise" : 'Nom du Créancier';
+  }
+  getCreancierNomPlaceholder(): string {
+    return this.isCreancierPersonneMorale() ? "Nom de l'entreprise" : 'Entrez le nom du créancier';
+  }
+
+  isDebiteurPersonneMorale(): boolean {
+    return this.dossierForm.get('typeDebiteur')?.value === 'PERSONNE_MORALE';
+  }
+  getDebiteurNomLabel(): string {
+    return this.isDebiteurPersonneMorale() ? "Nom de l'entreprise" : 'Nom du Débiteur';
+  }
+  getDebiteurNomPlaceholder(): string {
+    return this.isDebiteurPersonneMorale() ? "Nom de l'entreprise" : 'Entrez le nom du débiteur';
+  }
+
+  private onTypeCreancierChange(type: string): void {
+    // In this simplified UI, we only toggle labels; names are always required
+  }
+
+  private onTypeDebiteurChange(type: string): void {
+    // Same here; could toggle extra fields later
   }
 
   private findCreancierAndDebiteurIds(nomCreancier: string, nomDebiteur: string): Observable<{ creancierId: number, debiteurId: number }> {

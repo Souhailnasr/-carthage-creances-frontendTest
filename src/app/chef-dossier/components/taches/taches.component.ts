@@ -6,11 +6,12 @@ import { AuthService } from '../../../core/services/auth.service';
 import { TacheUrgenteService, TacheUrgente } from '../../../core/services/tache-urgente.service';
 import { NotificationService, TypeNotification } from '../../../core/services/notification.service';
 import { interval, Subscription } from 'rxjs';
+import { NotificationComponent } from '../../../shared/components/notification/notification.component';
 
 @Component({
   selector: 'app-taches',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, NotificationComponent],
   templateUrl: './taches.component.html',
   styleUrls: ['./taches.component.scss']
 })
@@ -33,6 +34,19 @@ export class TachesComponent implements OnInit, OnDestroy {
   };
   private subscription: Subscription = new Subscription();
 
+  // Performance par agent (KPIs)
+  agentPerformance: Array<{
+    id: number;
+    nom: string;
+    prenom: string;
+    role: string;
+    dossiersTraites: number;
+    dossiersClotures: number;
+    tauxReussite: number;
+    montantRecupere: number;
+    performance: 'excellent' | 'bon' | 'moyen' | 'faible';
+  }> = [];
+
   constructor(
     private tacheUrgenteService: TacheUrgenteService,
     private authService: AuthService,
@@ -44,10 +58,41 @@ export class TachesComponent implements OnInit, OnDestroy {
     this.loadTaches();
     this.loadAvailableAgents();
     this.startPolling();
+    this.loadAgentPerformance();
   }
 
   ngOnDestroy(): void {
     this.subscription.unsubscribe();
+  }
+
+  loadAgentPerformance(): void {
+    const allAgentPerformance: Array<{
+      id: number;
+      nom: string;
+      prenom: string;
+      role: string;
+      dossiersTraites: number;
+      dossiersClotures: number;
+      tauxReussite: number;
+      montantRecupere: number;
+      performance: 'excellent' | 'bon' | 'moyen' | 'faible';
+    }> = [
+      { id: 1, nom: 'Ben Salah', prenom: 'Leila', role: 'Agent de Dossier', dossiersTraites: 35, dossiersClotures: 22, tauxReussite: 62.9, montantRecupere: 82000, performance: 'excellent' },
+      { id: 2, nom: 'Mansouri', prenom: 'Omar', role: 'Agent de Dossier', dossiersTraites: 28, dossiersClotures: 17, tauxReussite: 60.7, montantRecupere: 61000, performance: 'bon' },
+      { id: 3, nom: 'Hammami', prenom: 'Sonia', role: 'Agent de Dossier', dossiersTraites: 22, dossiersClotures: 12, tauxReussite: 54.5, montantRecupere: 38000, performance: 'moyen' },
+      { id: 4, nom: 'Ben Ammar', prenom: 'Ali', role: 'Agent de Dossier', dossiersTraites: 18, dossiersClotures: 8, tauxReussite: 44.4, montantRecupere: 25000, performance: 'faible' }
+    ];
+    this.agentPerformance = allAgentPerformance;
+  }
+
+  getPerformanceClass(perf: 'excellent' | 'bon' | 'moyen' | 'faible'): string {
+    switch (perf) {
+      case 'excellent': return 'perf-excellent';
+      case 'bon': return 'perf-bon';
+      case 'moyen': return 'perf-moyen';
+      case 'faible': return 'perf-faible';
+      default: return '';
+    }
   }
 
   loadTaches(): void {

@@ -19,6 +19,17 @@ export class ChefDossierComponent implements OnInit {
   statistiques: any = {};
   tachesUrgentes: any[] = [];
   notifications: any[] = [];
+  agentPerformance: Array<{
+    id: number;
+    nom: string;
+    prenom: string;
+    role: string;
+    dossiersTraites: number;
+    dossiersClotures: number;
+    tauxReussite: number;
+    montantRecupere: number;
+    performance: 'excellent' | 'bon' | 'moyen' | 'faible';
+  }> = [];
 
   constructor(
     private authService: AuthService,
@@ -31,6 +42,7 @@ export class ChefDossierComponent implements OnInit {
     this.loadStatistiques();
     this.loadTachesUrgentes();
     this.loadNotifications();
+    this.loadAgentPerformance();
   }
 
   loadStatistiques(): void {
@@ -44,6 +56,25 @@ export class ChefDossierComponent implements OnInit {
       tachesUrgentes: 12,
       notificationsNonLues: 5
     };
+  }
+
+  loadAgentPerformance(): void {
+    this.agentPerformance = [
+      { id: 1, nom: 'Ben Salah', prenom: 'Leila', role: 'Agent de Dossier', dossiersTraites: 35, dossiersClotures: 22, tauxReussite: 62.9, montantRecupere: 82000, performance: 'excellent' },
+      { id: 2, nom: 'Mansouri', prenom: 'Omar', role: 'Agent de Dossier', dossiersTraites: 28, dossiersClotures: 17, tauxReussite: 60.7, montantRecupere: 61000, performance: 'bon' },
+      { id: 3, nom: 'Hammami', prenom: 'Sonia', role: 'Agent de Dossier', dossiersTraites: 22, dossiersClotures: 12, tauxReussite: 54.5, montantRecupere: 38000, performance: 'moyen' },
+      { id: 4, nom: 'Ben Ammar', prenom: 'Ali', role: 'Agent de Dossier', dossiersTraites: 18, dossiersClotures: 8, tauxReussite: 44.4, montantRecupere: 25000, performance: 'faible' }
+    ];
+  }
+
+  getPerformanceClass(perf: 'excellent' | 'bon' | 'moyen' | 'faible'): string {
+    switch (perf) {
+      case 'excellent': return 'perf-excellent';
+      case 'bon': return 'perf-bon';
+      case 'moyen': return 'perf-moyen';
+      case 'faible': return 'perf-faible';
+      default: return '';
+    }
   }
 
   loadTachesUrgentes(): void {

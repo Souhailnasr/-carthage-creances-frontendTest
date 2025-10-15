@@ -17,6 +17,23 @@
         <h3>{{ isEditMode ? 'Modifier le Créancier' : 'Nouveau Créancier' }}</h3>
       </div>
 
+      <!-- Sélecteur de type de créancier -->
+      <div class="form-group">
+        <label for="typeCreancier">Type de Créancier *</label>
+        <select 
+          id="typeCreancier" 
+          formControlName="typeCreancier"
+          class="form-control"
+          [class.is-invalid]="typeCreancierControl?.invalid && typeCreancierControl?.touched">
+          <option *ngFor="let type of creancierTypes" [value]="type.value">
+            {{ type.label }}
+          </option>
+        </select>
+        <div class="invalid-feedback" *ngIf="typeCreancierControl?.invalid && typeCreancierControl?.touched">
+          <div *ngIf="typeCreancierControl?.errors?.['required']">Le type de créancier est requis</div>
+        </div>
+      </div>
+
       <div class="form-row">
         <div class="form-group">
           <label for="codeCreancier">Code Créancier *</label>
@@ -51,21 +68,21 @@
 
       <div class="form-row">
         <div class="form-group">
-          <label for="nom">Nom *</label>
+          <label for="nom">{{ isPersonneMorale() ? 'Nom de l\'entreprise *' : 'Nom *' }}</label>
           <input 
             type="text" 
             id="nom" 
             formControlName="nom"
             class="form-control"
             [class.is-invalid]="nomControl?.invalid && nomControl?.touched"
-            placeholder="Nom du créancier">
+            [placeholder]="isPersonneMorale() ? 'Nom de l\'entreprise' : 'Nom du créancier'">
           <div class="invalid-feedback" *ngIf="nomControl?.invalid && nomControl?.touched">
-            <div *ngIf="nomControl?.errors?.['required']">Le nom est requis</div>
-            <div *ngIf="nomControl?.errors?.['minlength']">Le nom doit contenir au moins 2 caractères</div>
+            <div *ngIf="nomControl?.errors?.['required']">{{ isPersonneMorale() ? 'Le nom de l\'entreprise est requis' : 'Le nom est requis' }}</div>
+            <div *ngIf="nomControl?.errors?.['minlength']">{{ isPersonneMorale() ? 'Le nom de l\'entreprise doit contenir au moins 2 caractères' : 'Le nom doit contenir au moins 2 caractères' }}</div>
           </div>
         </div>
 
-        <div class="form-group">
+        <div class="form-group" *ngIf="isPersonnePhysique()">
           <label for="prenom">Prénom *</label>
           <input 
             type="text" 
@@ -197,7 +214,10 @@
     <div class="creanciers-grid" *ngIf="filteredCreanciers.length > 0; else noCreanciers">
       <div class="creancier-card" *ngFor="let creancier of filteredCreanciers">
         <div class="card-header">
-          <h4>{{ creancier.prenom }} {{ creancier.nom }}</h4>
+          <h4>{{ creancier.prenom ? creancier.prenom + ' ' + creancier.nom : creancier.nom }}</h4>
+          <span class="type-badge" [ngClass]="creancier.typeCreancier === 'PERSONNE_MORALE' ? 'type-morale' : 'type-physique'">
+            {{ creancier.typeCreancier === 'PERSONNE_MORALE' ? 'Personne Morale' : 'Personne Physique' }}
+          </span>
           <div class="card-actions">
             <button class="btn btn-sm btn-outline-primary" (click)="editCreancier(creancier)">
               <i class="fas fa-edit"></i>

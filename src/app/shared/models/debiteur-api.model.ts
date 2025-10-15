@@ -1,9 +1,10 @@
 // Interfaces pour les APIs de débiteurs
 export interface DebiteurApi {
   id: number;
+  typeDebiteur?: 'PERSONNE_PHYSIQUE' | 'PERSONNE_MORALE';
   codeCreance?: string;
   nom: string;
-  prenom: string;
+  prenom?: string;
   email: string;
   telephone: string;
   fax?: string;
@@ -15,9 +16,10 @@ export interface DebiteurApi {
 }
 
 export interface DebiteurRequest {
+  typeDebiteur?: 'PERSONNE_PHYSIQUE' | 'PERSONNE_MORALE';
   codeCreance?: string;
   nom: string;
-  prenom: string;
+  prenom?: string;
   email: string;
   telephone: string;
   fax?: string;

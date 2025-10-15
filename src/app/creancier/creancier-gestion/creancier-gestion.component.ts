@@ -24,6 +24,12 @@ export class CreancierGestionComponent implements OnInit {
   searchTerm = '';
   currentUser: any;
   showForm = false; // Nouvelle variable pour contrôler l'affichage du formulaire
+  
+  // Types de créancier
+  creancierTypes = [
+    { value: 'PERSONNE_PHYSIQUE', label: 'Personne Physique' },
+    { value: 'PERSONNE_MORALE', label: 'Personne Morale' }
+  ];
 
   constructor(
     private creancierApiService: CreancierApiService,
@@ -38,6 +44,11 @@ export class CreancierGestionComponent implements OnInit {
   ngOnInit(): void {
     this.loadCurrentUser();
     this.authenticateAndLoadCreanciers();
+    
+    // Écouter les changements de type de créancier
+    this.creancierForm.get('typeCreancier')?.valueChanges.subscribe(type => {
+      this.onTypeChange(type);
+    });
   }
 
   authenticateAndLoadCreanciers(): void {
@@ -64,6 +75,7 @@ export class CreancierGestionComponent implements OnInit {
 
   initializeForm(): FormGroup {
     return this.fb.group({
+      typeCreancier: ['PERSONNE_PHYSIQUE', [Validators.required]],
       codeCreancier: ['', [Validators.required, Validators.minLength(2)]],
       codeCreance: ['', [Validators.required, Validators.minLength(2)]],
       nom: ['', [Validators.required, Validators.minLength(2)]],
@@ -115,6 +127,7 @@ export class CreancierGestionComponent implements OnInit {
 
   createCreancier(creancierData: any): void {
     const creancierRequest: CreancierRequest = {
+      typeCreancier: creancierData.typeCreancier,
       codeCreancier: creancierData.codeCreancier,
       codeCreance: creancierData.codeCreance,
       nom: creancierData.nom,
@@ -145,6 +158,7 @@ export class CreancierGestionComponent implements OnInit {
 
   updateCreancier(id: number, creancierData: any): void {
     const creancierRequest: CreancierRequest = {
+      typeCreancier: creancierData.typeCreancier,
       codeCreancier: creancierData.codeCreancier,
       codeCreance: creancierData.codeCreance,
       nom: creancierData.nom,
@@ -202,6 +216,7 @@ export class CreancierGestionComponent implements OnInit {
     this.isEditMode = true;
     this.editingCreancierId = creancier.id;
     this.creancierForm.patchValue({
+      typeCreancier: creancier.typeCreancier || 'PERSONNE_PHYSIQUE',
       codeCreancier: creancier.codeCreancier,
       codeCreance: creancier.codeCreance,
       nom: creancier.nom,
@@ -246,7 +261,7 @@ export class CreancierGestionComponent implements OnInit {
           // Fallback avec recherche locale
           this.filteredCreanciers = this.creanciers.filter(creancier =>
             creancier.nom.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-            creancier.prenom.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
+            (creancier.prenom && creancier.prenom.toLowerCase().includes(this.searchTerm.toLowerCase())) ||
             creancier.email.toLowerCase().includes(this.searchTerm.toLowerCase())
           );
         }
@@ -268,7 +283,31 @@ export class CreancierGestionComponent implements OnInit {
     });
   }
 
+  onTypeChange(type: string): void {
+    const prenomControl = this.creancierForm.get('prenom');
+    
+    if (type === 'PERSONNE_MORALE') {
+      // Pour personne morale, supprimer la validation du prénom et vider le champ
+      prenomControl?.clearValidators();
+      prenomControl?.setValue('');
+    } else {
+      // Pour personne physique, remettre la validation du prénom
+      prenomControl?.setValidators([Validators.required, Validators.minLength(2)]);
+    }
+    
+    prenomControl?.updateValueAndValidity();
+  }
+
+  isPersonnePhysique(): boolean {
+    return this.creancierForm.get('typeCreancier')?.value === 'PERSONNE_PHYSIQUE';
+  }
+
+  isPersonneMorale(): boolean {
+    return this.creancierForm.get('typeCreancier')?.value === 'PERSONNE_MORALE';
+  }
+
   // Getters pour les contrôles du formulaire
+  get typeCreancierControl() { return this.creancierForm.get('typeCreancier'); }
   get codeCreancierControl() { return this.creancierForm.get('codeCreancier'); }
   get codeCreanceControl() { return this.creancierForm.get('codeCreance'); }
   get nomControl() { return this.creancierForm.get('nom'); }
