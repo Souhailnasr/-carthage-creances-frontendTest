@@ -206,15 +206,16 @@ export class ChefAmiableService {
     };
 
     return this.utilisateurService.createUtilisateur(agentRequest).pipe(
-      map((nouvelUtilisateur) => {
-        // Convertir l'utilisateur créé en User pour le module chef-amiable
+      map((response) => {
+        // L'AuthenticationResponse ne contient que le token, on doit recharger les données utilisateur
+        // Pour l'instant, on retourne un User basé sur les données de la requête
         const user = new User({
-          id: nouvelUtilisateur.id?.toString() || '',
-          nom: nouvelUtilisateur.nom,
-          prenom: nouvelUtilisateur.prenom,
-          email: nouvelUtilisateur.email,
+          id: Date.now().toString(), // ID temporaire
+          nom: agent.nom || '',
+          prenom: agent.prenom || '',
+          email: agent.email || '',
           role: Role.AGENT_RECOUVREMENT_AMIABLE,
-          actif: nouvelUtilisateur.actif
+          actif: true
         });
         return user;
       })

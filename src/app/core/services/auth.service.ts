@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, BehaviorSubject } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { User } from '../../shared/models/user.model';
@@ -15,6 +15,10 @@ export interface LoginResponse {
   user: User;
   expiresIn: number;
 }
+
+const httpOptions = {
+  headers: new HttpHeaders({ 'Content-Type': 'application/json' })
+};
 
 @Injectable({
   providedIn: 'root'
@@ -93,6 +97,17 @@ export class AuthService {
         }
       }, 500);
     });
+  }
+
+  authenticate(email: string, password: string): Observable<any> {
+    return this.http.post(
+      `http://localhost:8089/carthage-creance/auth/authenticate`,
+      {
+        email,
+        password,
+      },
+      httpOptions
+    );
   }
 
   register(userData: any): Observable<User> {

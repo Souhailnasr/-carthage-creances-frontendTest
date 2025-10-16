@@ -10,7 +10,7 @@
     </div>
 
     <!-- Formulaire de connexion -->
-    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
+    <form class="login-form" [formGroup]="loginForm">
       <div class="form-group">
         <label for="email">Email</label>
         <input
@@ -48,8 +48,15 @@
         </div>
       </div>
 
+      <!-- Message d'erreur -->
+      <div class="alert alert-danger" *ngIf="invalidLogin && error">
+        <i class="fas fa-exclamation-triangle"></i>
+        {{ error }}
+      </div>
+
       <button
-        type="submit"
+        (click)="checkLogin()"
+        type="button"
         class="btn btn-primary btn-login"
         [disabled]="loading || loginForm.invalid">
         <i class="fas fa-spinner fa-spin" *ngIf="loading"></i>

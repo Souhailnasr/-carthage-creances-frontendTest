@@ -10,7 +10,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
 import { Subject, takeUntil, debounceTime, distinctUntilChanged } from 'rxjs';
 
-import { UtilisateurService, UtilisateurRequest } from '../../../core/services/utilisateur.service';
+import { UtilisateurService, UtilisateurRequest, AuthenticationResponse } from '../../../core/services/utilisateur.service';
 
 @Component({
   selector: 'app-utilisateur-create',
@@ -149,9 +149,21 @@ export class UtilisateurCreateComponent implements OnInit, OnDestroy {
       this.utilisateurService.createUtilisateur(utilisateurRequest)
         .pipe(takeUntil(this.destroy$))
         .subscribe({
-          next: (utilisateur) => {
+          next: (response) => {
             this.isLoading = false;
-            this.dialogRef.close(utilisateur);
+            if (response.errors && response.errors.length > 0) {
+              // Afficher les erreurs de validation du backend
+              this.snackBar.open('Erreurs de validation: ' + response.errors.join(', '), 'Fermer', {
+                duration: 5000,
+                panelClass: ['error-snackbar']
+              });
+            } else {
+              this.snackBar.open('Utilisateur créé avec succès', 'Fermer', {
+                duration: 3000,
+                panelClass: ['success-snackbar']
+              });
+              this.dialogRef.close(response);
+            }
           },
           error: (error) => {
             this.isLoading = false;

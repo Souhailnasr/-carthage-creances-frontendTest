@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { AuthService } from '../../../core/services/auth.service';
@@ -6,6 +6,9 @@ import { Router } from '@angular/router';
 import { ToastService } from '../../../core/services/toast.service';
 import { Subject, takeUntil } from 'rxjs';
 import { Role } from '../../../shared/models';
+import { jwtDecode } from 'jwt-decode';
+import { TokenStorageService } from '../../../core/services/token-storage.service';
+
 
 @Component({
   selector: 'app-login',
@@ -15,6 +18,33 @@ import { Role } from '../../../shared/models';
   styleUrls: ['./login.component.scss']
 })
 export class LoginComponent implements OnInit, OnDestroy {
+
+  user: any = {};
+  email: string = '';
+  password: string = '';
+  isSent : boolean = false;
+  authority:string='';
+  sub:string | null = null;
+  token: string = '';
+  private role: string[] = [];
+  @Input() error: string | null = null;
+  form: any = {
+    email: null,
+    password: null
+  };
+  isLoggedIn = false;
+  isLoginFailed = false;
+  errorMessage = '';
+
+  invalidLogin = false
+  getDecodedAccessToken(token: string): any {
+    try {
+      return jwtDecode(token);
+    } catch(Error) {
+      return null;
+    }
+  }
+
   loginForm!: FormGroup;
   loading: boolean = false;
   returnUrl: string = '/dashboard';
@@ -25,7 +55,8 @@ export class LoginComponent implements OnInit, OnDestroy {
     private fb: FormBuilder,
     private authService: AuthService,
     private toastService: ToastService,
-    private router: Router
+    private router: Router,
+    private tokenStorage: TokenStorageService
   ) { }
 
   ngOnInit(): void {
@@ -40,11 +71,117 @@ export class LoginComponent implements OnInit, OnDestroy {
       const redirectUrl = currentUser ? this.getRedirectUrlByRole(currentUser.role) : this.returnUrl;
       this.router.navigate([redirectUrl]);
     }
+
+    if (this.tokenStorage.getToken()) {
+      this.isLoggedIn = true;
+      const token = sessionStorage.getItem('auth-user');
+      if (token) {
+        this.token = token;
+        const tokenInfo = this.getDecodedAccessToken(this.token);
+        if (tokenInfo && tokenInfo.roles && tokenInfo.roles.length > 0) {
+          this.role[0] = tokenInfo.role[0];
+        }
+      }
+    }
   }
 
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  checkLogin() {
+    // Récupérer les valeurs du formulaire
+    this.email = this.loginForm.get('email')?.value || '';
+    this.password = this.loginForm.get('password')?.value || '';
+
+    if (!this.email || !this.password) {
+      this.toastService.error('Veuillez saisir votre email et mot de passe.');
+      return;
+    }
+
+    this.loading = true;
+    this.invalidLogin = false;
+
+    this.authService.authenticate(this.email, this.password).subscribe({
+      next: (data) => {
+        this.loading = false;
+        this.tokenStorage.saveToken(data.accessToken);
+        this.tokenStorage.saveUser(data);
+        
+        // Récupérer le token pour décoder les informations
+        const token = sessionStorage.getItem('auth-user');
+        if (token) {
+          this.token = token;
+          const tokenInfo = this.getDecodedAccessToken(this.token);
+          console.log('Token:', this.token);
+          console.log('Token Info:', tokenInfo);
+          console.log('Roles:', tokenInfo.role.length);
+          
+          if (tokenInfo && tokenInfo.role && tokenInfo.role.length > 0) {
+            this.isLoggedIn = true;
+            this.invalidLogin = false;
+            
+            // Redirection selon le rôle
+            const role = tokenInfo.role[0].authority;
+            this.redirectByRole(role);
+          } else {
+            this.toastService.error('Erreur lors de la récupération des informations utilisateur.');
+            this.invalidLogin = true;
+          }
+        } else {
+          this.toastService.error('Erreur lors de la sauvegarde du token.');
+          this.invalidLogin = true;
+        }
+      },
+      error: (error) => {
+        this.loading = false;
+        this.invalidLogin = true;
+        this.error = error.message || 'Erreur de connexion';
+        this.toastService.error('Email ou mot de passe incorrect.');
+        console.error('Login error:', error);
+      }
+    });
+  }
+
+  private redirectByRole(role: string): void {
+    console.log('🔍 Rôle reçu pour redirection:', role);
+    
+    switch (role) {
+      case 'RoleUtilisateur_SUPER_ADMIN':
+        this.router.navigate(['/admin/dashboard']);
+        this.toastService.success('Connexion réussie - Super Admin');
+        break;
+      case 'RoleUtilisateur_CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE':
+        this.router.navigate(['/juridique/dashboard']);
+        this.toastService.success('Connexion réussie - Chef Département Juridique');
+        break;
+      case 'RoleUtilisateur_CHEF_DEPARTEMENT_DOSSIER':
+        this.router.navigate(['/dossier/dashboard']);
+        this.toastService.success('Connexion réussie - Chef Département Dossier');
+        break;
+      case 'RoleUtilisateur_CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE':
+        this.router.navigate(['/chef-amiable/dashboard']);
+        this.toastService.success('Connexion réussie - Chef Département Amiable');
+        break;
+      case 'RoleUtilisateur_AGENT_DOSSIER':
+        this.router.navigate(['/dossier/dashboard']);
+        this.toastService.success('Connexion réussie - Agent Dossier');
+        break;
+      case 'RoleUtilisateur_AGENT_RECOUVREMENT_JURIDIQUE':
+        this.router.navigate(['/juridique/dashboard']);
+        this.toastService.success('Connexion réussie - Agent Juridique');
+        break;
+      case 'RoleUtilisateur_AGENT_RECOUVREMENT_AMIABLE':
+        this.router.navigate(['/chef-amiable/dashboard']);
+        this.toastService.success('Connexion réussie - Agent Amiable');
+        break;
+      default:
+        console.warn('⚠️ Rôle non reconnu:', role);
+        this.router.navigate(['/dashboard']);
+        this.toastService.success('Connexion réussie');
+        break;
+    }
   }
 
   get f() { return this.loginForm.controls; }
@@ -131,15 +268,26 @@ export class LoginComponent implements OnInit, OnDestroy {
   private getRedirectUrlByRole(role: string): string {
     switch (role) {
       case 'SUPER_ADMIN':
+      case 'RoleUtilisateur_SUPER_ADMIN':
         return '/admin/dashboard';
       case 'CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE':
+      case 'RoleUtilisateur_CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE':
         return '/juridique/dashboard';
       case 'CHEF_DEPARTEMENT_DOSSIER':
+      case 'RoleUtilisateur_CHEF_DEPARTEMENT_DOSSIER':
         return '/dossier/dashboard';
       case 'CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE':
+      case 'RoleUtilisateur_CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE':
         return '/chef-amiable/dashboard';
       case 'AGENT_RECOUVREMENT_JURIDIQUE':
+      case 'RoleUtilisateur_AGENT_RECOUVREMENT_JURIDIQUE':
         return '/juridique/dashboard';
+      case 'AGENT_DOSSIER':
+      case 'RoleUtilisateur_AGENT_DOSSIER':
+        return '/dossier/dashboard';
+      case 'AGENT_RECOUVREMENT_AMIABLE':
+      case 'RoleUtilisateur_AGENT_RECOUVREMENT_AMIABLE':
+        return '/chef-amiable/dashboard';
       default:
         return '/dashboard';
     }

@@ -34,6 +34,11 @@ export interface UtilisateurRequest {
   motDePasse?: string;
 }
 
+export interface AuthenticationResponse {
+  token: string;
+  errors?: string[];
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -76,8 +81,9 @@ export class UtilisateurService {
 
   /**
    * Créer un nouvel utilisateur via l'API backend
+   * Retourne maintenant AuthenticationResponse avec token JWT
    */
-  createUtilisateur(utilisateur: UtilisateurRequest): Observable<Utilisateur> {
+  createUtilisateur(utilisateur: UtilisateurRequest): Observable<AuthenticationResponse> {
     const headers = new HttpHeaders({
       'Content-Type': 'application/json',
       'Accept': 'application/json'
@@ -89,22 +95,25 @@ export class UtilisateurService {
       payload.roleUtilisateur = payload.role;
       delete payload.role;
     }
+    
+    // Le mot de passe sera crypté côté backend, on l'envoie tel quel
     if (!payload.motDePasse) {
-      payload.motDePasse = 'password123';
+      payload.motDePasse = 'password123'; // Mot de passe par défaut
     }
 
     console.log('🔵 UtilisateurService.createUtilisateur appelé');
-    console.log('🔵 URL:', `${this.baseUrl}/users`); // ✅ CORRIGÉ
+    console.log('🔵 URL:', `${this.baseUrl}/users`);
     console.log('🔵 Données envoyées:', payload);
     console.log('🔵 Headers:', headers);
 
-    return this.http.post<Utilisateur>(`${this.baseUrl}/users`, payload, { headers })
+    return this.http.post<AuthenticationResponse>(`${this.baseUrl}/users`, payload, { headers })
       .pipe(
-        tap(newUtilisateur => {
-          console.log('✅ Utilisateur créé avec succès:', newUtilisateur);
-          // Mettre à jour la liste locale après création
-          const currentUtilisateurs = this.utilisateursSubject.value;
-          this.utilisateursSubject.next([...currentUtilisateurs, newUtilisateur]);
+        tap(response => {
+          console.log('✅ Utilisateur créé avec succès, token reçu:', response.token);
+          console.log('✅ Erreurs éventuelles:', response.errors);
+          
+          // Recharger la liste des utilisateurs après création
+          this.getAllUtilisateurs().subscribe();
         }),
         catchError(this.handleError)
       );

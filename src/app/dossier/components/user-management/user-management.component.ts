@@ -6,7 +6,7 @@ import { Subject, takeUntil } from 'rxjs';
 import { User, Role } from '../../../shared/models';
 import { FormInputComponent } from '../../../shared/components/form-input/form-input.component';
 import { ToastService } from '../../../core/services/toast.service';
-import { UtilisateurService, Utilisateur, UtilisateurRequest } from '../../../core/services/utilisateur.service';
+import { UtilisateurService, Utilisateur, UtilisateurRequest, AuthenticationResponse } from '../../../core/services/utilisateur.service';
 import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
@@ -264,10 +264,15 @@ export class UserManagementComponent implements OnInit, OnDestroy {
       this.utilisateurService.createUtilisateur(utilisateurRequest)
         .pipe(takeUntil(this.destroy$))
         .subscribe({
-          next: () => {
-            this.toastService.success('Utilisateur créé avec succès.');
-            this.cancelForm();
-            this.loadUsers(); // Recharger la liste
+          next: (response) => {
+            if (response.errors && response.errors.length > 0) {
+              // Afficher les erreurs de validation du backend
+              this.toastService.error('Erreurs de validation: ' + response.errors.join(', '));
+            } else {
+              this.toastService.success('Utilisateur créé avec succès.');
+              this.cancelForm();
+              this.loadUsers(); // Recharger la liste
+            }
           },
           error: (error) => {
             console.error('❌ Erreur lors de la création:', error);
