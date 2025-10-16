@@ -57,12 +57,12 @@ export class JuridiqueDashboardComponent implements OnInit, OnDestroy {
     this.dossierService.loadAll()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (dossiers) => {
-          this.totalDossiers = dossiers.filter(dossier => 
+        next: (dossiers: any[]) => {
+          this.totalDossiers = dossiers.filter((dossier: any) => 
             dossier.dossierStatus === 'ENCOURSDETRAITEMENT'
           ).length;
         },
-        error: (error) => {
+        error: (error: any) => {
           console.error('❌ Erreur lors du chargement des dossiers:', error);
         }
       });

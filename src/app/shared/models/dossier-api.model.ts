@@ -137,9 +137,7 @@ export enum Urgence {
 
 export enum DossierStatus {
   ENCOURSDETRAITEMENT = 'ENCOURSDETRAITEMENT',
-  CLOTURE = 'CLOTURE',
-  SUSPENDU = 'SUSPENDU',
-  ANNULE = 'ANNULE'
+  CLOTURE = 'CLOTURE'
 }
 
 export enum TypeDocumentJustificatif {

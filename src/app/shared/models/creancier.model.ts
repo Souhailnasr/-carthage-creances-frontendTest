@@ -11,6 +11,7 @@ export class Creancier {
   fax: string = '';
   email: string = '';
   agentCreateur: string = '';
+  type?: string;
 
   constructor(data?: Partial<Creancier>) {
     Object.assign(this, data);

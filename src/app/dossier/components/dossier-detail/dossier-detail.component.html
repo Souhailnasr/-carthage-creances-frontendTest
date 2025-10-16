@@ -43,9 +43,15 @@
           <span>{{ dossier.getFormattedDate() }}</span>
         </div>
         <div class="info-item">
-          <label>Statut</label>
+          <label>Statut Fonctionnel</label>
           <span class="status-badge" [ngClass]="getStatutClass(dossier.statut)">
             {{ getStatutLabel(dossier.statut) }}
+          </span>
+        </div>
+        <div class="info-item">
+          <label>Dossier Status</label>
+          <span class="status-badge" [ngClass]="getDossierStatusClass(dossier.dossierStatus)">
+            {{ getDossierStatusLabel(dossier.dossierStatus) }}
           </span>
         </div>
         <div class="info-item">
@@ -69,6 +75,12 @@
           <div class="party-item">
             <label>Code Créance</label>
             <span>{{ dossier.creancier.codeCreance }}</span>
+          </div>
+          <div class="party-item">
+            <label>Type</label>
+            <span class="type-badge" [ngClass]="getTypeClass(dossier.typeCreancier)">
+              {{ getTypeLabel(dossier.typeCreancier) }}
+            </span>
           </div>
           <div class="party-item">
             <label>Nom</label>
@@ -95,6 +107,12 @@
           <div class="party-item">
             <label>Code Créance</label>
             <span>{{ dossier.debiteur.codeCreance }}</span>
+          </div>
+          <div class="party-item">
+            <label>Type</label>
+            <span class="type-badge" [ngClass]="getTypeClass(dossier.typeDebiteur)">
+              {{ getTypeLabel(dossier.typeDebiteur) }}
+            </span>
           </div>
           <div class="party-item">
             <label>Nom</label>

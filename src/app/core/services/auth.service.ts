@@ -159,7 +159,9 @@ export class AuthService {
     const userStr = localStorage.getItem('currentUser');
     if (userStr) {
       const user = JSON.parse(userStr);
-      this.currentUserSubject.next(user);
+      // Recréer une instance de User pour récupérer les méthodes (ex: getFullName)
+      const hydratedUser = new User({ ...user });
+      this.currentUserSubject.next(hydratedUser);
     }
   }
 

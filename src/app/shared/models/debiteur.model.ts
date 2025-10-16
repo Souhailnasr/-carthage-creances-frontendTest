@@ -10,6 +10,7 @@ export class Debiteur {
   fax: string = '';
   email: string = '';
   agentCreateur: string = '';
+  type?: string;
 
   constructor(data?: Partial<Debiteur>) {
     Object.assign(this, data);

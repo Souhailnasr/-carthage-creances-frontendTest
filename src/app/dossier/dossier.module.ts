@@ -12,6 +12,9 @@ import { UserManagementComponent } from './components/user-management/user-manag
 import { UserProfileComponent } from '../shared/components/user-profile/user-profile.component';
 import { ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { FormInputComponent } from '../shared/components/form-input/form-input.component';
+import { DossierFormComponent } from './components/dossier-form/dossier-form.component';
+import { DossierListComponent } from './components/dossier-list/dossier-list.component';
+import { DossierDemoComponent } from './components/dossier-demo/dossier-demo.component';
 
 @NgModule({
   declarations: [], // Standalone components don't need to be declared here
@@ -29,7 +32,10 @@ import { FormInputComponent } from '../shared/components/form-input/form-input.c
     EnquetePhaseComponent,
     EnqueteDetailComponent,
     UserManagementComponent,
-    UserProfileComponent
+    UserProfileComponent,
+    DossierFormComponent,
+    DossierListComponent,
+    DossierDemoComponent
   ]
 })
 export class DossierModule { }

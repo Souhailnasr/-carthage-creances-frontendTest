@@ -3,7 +3,8 @@ import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormControl } from '@angular/forms';
 import { Subject, takeUntil } from 'rxjs';
-import { Dossier, StatutDossier, UrgenceDossier, TypeDocumentJustificatif, Creancier, Debiteur } from '../../../shared/models';
+import { Dossier, UrgenceDossier, TypeDocumentJustificatif, Creancier, Debiteur } from '../../../shared/models';
+import { ValidationStatut } from '../../../shared/models/enums.model';
 import { ToastService } from '../../../core/services/toast.service';
 
 @Component({
@@ -135,7 +136,7 @@ export class EnqueteDetailComponent implements OnInit, OnDestroy {
         numeroDossier: 'DOS-2024-001',
         montantCreance: 15000,
         dateCreation: new Date('2024-01-15'),
-        statut: StatutDossier.ENQUETE,
+        statut: ValidationStatut.EN_COURS,
         urgence: UrgenceDossier.MOYENNE,
         agentResponsable: 'John Doe',
         agentCreateur: 'John Doe',

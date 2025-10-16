@@ -2,10 +2,11 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
-import { Dossier, StatutDossier, UrgenceDossier, TypeDocumentJustificatif, Creancier, Debiteur } from '../../../shared/models';
+import { Dossier, UrgenceDossier, TypeDocumentJustificatif, Creancier, Debiteur } from '../../../shared/models';
+import { ValidationStatut } from '../../../shared/models/enums.model';
 import { Role } from '../../../shared/models/enums.model';
 import { ToastService } from '../../../core/services/toast.service';
-import { DossierService } from '../../../core/services/dossier.service';
+import { DossierApiService } from '../../../core/services/dossier-api.service';
 import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
@@ -23,7 +24,7 @@ export class DossierDetailComponent implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     private router: Router,
     private toastService: ToastService,
-    private dossierService: DossierService,
+    private dossierApiService: DossierApiService,
     private authService: AuthService
   ) { }
 
@@ -44,141 +45,113 @@ export class DossierDetailComponent implements OnInit, OnDestroy {
   }
 
   loadDossier(id: string): void {
-    // Simulation de données - dans une vraie app, ceci viendrait d'une API
-    const mockDossiers: Dossier[] = [
-      new Dossier({
-        id: '1',
-        titre: 'Dossier Client ABC',
-        description: 'Recouvrement facture impayée pour services de télécommunications',
-        numeroDossier: 'DOS-2024-001',
-        montantCreance: 15000,
-        dateCreation: new Date('2024-01-15'),
-        statut: StatutDossier.EN_COURS,
-        urgence: UrgenceDossier.MOYENNE,
-        agentResponsable: 'John Doe',
-        agentCreateur: 'John Doe',
-        typeDocumentJustificatif: TypeDocumentJustificatif.FACTURE,
-        pouvoir: true,
-        contratSigne: true,
-        valide: false,
-        dateValidation: undefined,
-        creancier: new Creancier({
-          id: 1,
-          codeCreancier: 'CRE001',
-          codeCreance: 'CREA001',
-          nom: 'Entreprise Tunisie Telecom',
-          prenom: '',
-          adresse: 'Avenue Habib Bourguiba',
-          ville: 'Tunis',
-          codePostal: '1000',
-          telephone: '71234567',
-          fax: '71234568',
-          email: 'contact@tunisietelecom.tn'
-        }),
-        debiteur: new Debiteur({
-          id: 1,
-          codeCreance: 'CREA001',
-          nom: 'Ben Ammar',
-          prenom: 'Ali',
-          adresse: '123 Rue de la Paix',
-          ville: 'Sfax',
-          codePostal: '3000',
-          telephone: '98111222',
-          fax: '98111223',
-          email: 'ali.benammar@email.com'
-        })
-      }),
-      new Dossier({
-        id: '2',
-        titre: 'Dossier Client XYZ',
-        description: 'Recouvrement contrat non honoré pour services bancaires',
-        numeroDossier: 'DOS-2024-002',
-        montantCreance: 25000,
-        dateCreation: new Date('2024-01-20'),
-        statut: StatutDossier.EN_COURS,
-        urgence: UrgenceDossier.TRES_URGENT,
-        agentResponsable: 'Jane Smith',
-        agentCreateur: 'Jane Smith',
-        typeDocumentJustificatif: TypeDocumentJustificatif.CONTRAT,
-        pouvoir: false,
-        contratSigne: true,
-        valide: false,
-        dateValidation: undefined,
-        creancier: new Creancier({
-          id: 2,
-          codeCreancier: 'CRE002',
-          codeCreance: 'CREA002',
-          nom: 'Banque de Tunisie',
-          prenom: '',
-          adresse: 'Rue de la République',
-          ville: 'Tunis',
-          codePostal: '1001',
-          telephone: '71234568',
-          fax: '71234569',
-          email: 'contact@btd.com.tn'
-        }),
-        debiteur: new Debiteur({
-          id: 2,
-          codeCreance: 'CREA002',
-          nom: 'Trabelsi',
-          prenom: 'Fatma',
-          adresse: '456 Avenue de l\'Indépendance',
-          ville: 'Sousse',
-          codePostal: '4000',
-          telephone: '22333444',
-          fax: '22333445',
-          email: 'fatma.trabelsi@email.com'
-        })
-      }),
-      new Dossier({
-        id: '3',
-        titre: 'Dossier Client DEF',
-        description: 'Recouvrement facture impayée pour services d\'électricité',
-        numeroDossier: 'DOS-2024-003',
-        montantCreance: 18000,
-        dateCreation: new Date('2024-01-22'),
-        statut: StatutDossier.ENQUETE,
-        urgence: UrgenceDossier.FAIBLE,
-        agentResponsable: 'Mike Johnson',
-        agentCreateur: 'Mike Johnson',
-        typeDocumentJustificatif: TypeDocumentJustificatif.FACTURE,
-        pouvoir: true,
-        contratSigne: false,
-        valide: true,
-        dateValidation: new Date('2024-01-23'),
-        creancier: new Creancier({
-          id: 3,
-          codeCreancier: 'CRE003',
-          codeCreance: 'CREA003',
-          nom: 'STEG',
-          prenom: '',
-          adresse: 'Rue de la République',
-          ville: 'Tunis',
-          codePostal: '1000',
-          telephone: '71234569',
-          fax: '71234570',
-          email: 'contact@steg.com.tn'
-        }),
-        debiteur: new Debiteur({
-          id: 3,
-          codeCreance: 'CREA003',
-          nom: 'Hammami',
-          prenom: 'Sonia',
-          adresse: '789 Rue de la Liberté',
-          ville: 'Monastir',
-          codePostal: '5000',
-          telephone: '33444555',
-          fax: '33444556',
-          email: 'sonia.hammami@email.com'
-        })
-      })
-    ];
-
-    this.dossier = mockDossiers.find(d => d.id === id) || null;
-    
-    if (!this.dossier) {
-      this.toastService.error('Dossier non trouvé.');
+    const dossierId = parseInt(id, 10);
+    if (Number.isNaN(dossierId)) {
+      this.toastService.error('Identifiant de dossier invalide.');
       this.router.navigate(['/dossier/gestion']);
+      return;
+    }
+
+    this.dossierApiService.getDossierById(dossierId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (api) => {
+          // Créer les objets créancier et débiteur avec les données disponibles
+          const creancier = new Creancier({
+            id: (api as any).creancier?.id || 0,
+            nom: (api as any).creancier?.nom || '',
+            prenom: (api as any).creancier?.prenom || '',
+            type: (api as any).creancier?.type || 'PERSONNE_PHYSIQUE',
+            codeCreancier: (api as any).creancier?.codeCreancier || '',
+            codeCreance: (api as any).creancier?.codeCreance || '',
+            adresse: (api as any).creancier?.adresse || '',
+            ville: (api as any).creancier?.ville || '',
+            codePostal: (api as any).creancier?.codePostal || '',
+            telephone: (api as any).creancier?.telephone || '',
+            fax: (api as any).creancier?.fax || '',
+            email: (api as any).creancier?.email || ''
+          });
+
+          const debiteur = new Debiteur({
+            id: (api as any).debiteur?.id || 0,
+            nom: (api as any).debiteur?.nom || '',
+            prenom: (api as any).debiteur?.prenom || '',
+            type: (api as any).debiteur?.type || 'PERSONNE_PHYSIQUE',
+            codeCreance: (api as any).debiteur?.codeCreance || '',
+            adresse: (api as any).debiteur?.adresse || '',
+            ville: (api as any).debiteur?.ville || '',
+            codePostal: (api as any).debiteur?.codePostal || '',
+            telephone: (api as any).debiteur?.telephone || '',
+            fax: (api as any).debiteur?.fax || '',
+            email: (api as any).debiteur?.email || ''
+          });
+
+          // Mapper le modèle API vers le modèle local utilisé par l'UI
+          const mapped = new Dossier({
+            id: String(api.id),
+            titre: api.titre || '',
+            description: api.description || '',
+            numeroDossier: api.numeroDossier || '',
+            montantCreance: (api.montantCreance as any) ?? 0,
+            dateCreation: api.dateCreation ? new Date(api.dateCreation as any) : new Date(),
+            statut: this.convertBackendStatutToLocal((api as any).statut),
+            dossierStatus: api.dossierStatus as any,
+            urgence: this.convertApiUrgenceToLocal(api.urgence as any),
+            agentResponsable: api.agentResponsable ? `${(api.agentResponsable as any).prenom} ${(api.agentResponsable as any).nom}` : '',
+            agentCreateur: api.agentCreateur ? `${(api.agentCreateur as any).prenom} ${(api.agentCreateur as any).nom}` : '',
+            typeDocumentJustificatif: this.convertApiTypeDocumentToLocal(api.typeDocumentJustificatif as any),
+            pouvoir: !!(api as any).pouvoir,
+            contratSigne: !!(api as any).contratSigne,
+            valide: (api as any).valide,
+            dateValidation: (api as any).dateValidation ? new Date((api as any).dateValidation) : undefined,
+            creancier: creancier,
+            debiteur: debiteur,
+            // Ajouter les types pour l'affichage
+            typeCreancier: (api as any).creancier?.type || 'PERSONNE_PHYSIQUE',
+            typeDebiteur: (api as any).debiteur?.type || 'PERSONNE_PHYSIQUE'
+          });
+
+          this.dossier = mapped;
+        },
+        error: () => {
+          this.toastService.error('Dossier non trouvé.');
+          this.router.navigate(['/dossier/gestion']);
+        }
+      });
+  }
+
+  private convertBackendStatutToLocal(statut: any): ValidationStatut {
+    switch (statut) {
+      case 'EN_ATTENTE_VALIDATION': return ValidationStatut.EN_ATTENTE_VALIDATION;
+      case 'VALIDE': return ValidationStatut.VALIDE;
+      case 'REJETE': return ValidationStatut.REJETE;
+      case 'EN_COURS': return ValidationStatut.EN_COURS;
+      case 'CLOTURE': return ValidationStatut.CLOTURE;
+      default: return ValidationStatut.EN_COURS;
+    }
+  }
+
+  private convertApiUrgenceToLocal(apiUrgence: any): UrgenceDossier {
+    switch (apiUrgence) {
+      case 'TRES_URGENT':
+        return UrgenceDossier.TRES_URGENT;
+      case 'MOYENNE':
+        return UrgenceDossier.MOYENNE;
+      case 'FAIBLE':
+        return UrgenceDossier.FAIBLE;
+      default:
+        return UrgenceDossier.FAIBLE;
+    }
+  }
+
+  private convertApiTypeDocumentToLocal(apiType: any): TypeDocumentJustificatif {
+    switch (apiType) {
+      case 'FACTURE':
+        return TypeDocumentJustificatif.FACTURE;
+      case 'CONTRAT':
+        return TypeDocumentJustificatif.CONTRAT;
+      default:
+        return TypeDocumentJustificatif.FACTURE;
     }
   }
 
@@ -208,30 +181,70 @@ export class DossierDetailComponent implements OnInit, OnDestroy {
     }
   }
 
-  getStatutClass(statut: StatutDossier): string {
+  getStatutClass(statut: ValidationStatut): string {
     switch (statut) {
-      case StatutDossier.EN_COURS:
+      case ValidationStatut.EN_ATTENTE_VALIDATION:
+        return 'statut-en-attente';
+      case ValidationStatut.VALIDE:
+        return 'statut-valide';
+      case ValidationStatut.REJETE:
+        return 'statut-rejete';
+      case ValidationStatut.EN_COURS:
         return 'statut-en-cours';
-      case StatutDossier.ENQUETE:
-        return 'statut-enquete';
-      case StatutDossier.CLOTURE:
+      case ValidationStatut.CLOTURE:
         return 'statut-cloture';
       default:
         return '';
     }
   }
 
-  getStatutLabel(statut: StatutDossier): string {
+  getStatutLabel(statut: ValidationStatut): string {
     switch (statut) {
-      case StatutDossier.EN_COURS:
-        return 'En Cours';
-      case StatutDossier.ENQUETE:
-        return 'En Enquête';
-      case StatutDossier.CLOTURE:
+      case ValidationStatut.EN_ATTENTE_VALIDATION:
+        return 'En attente de validation';
+      case ValidationStatut.VALIDE:
+        return 'Validé';
+      case ValidationStatut.REJETE:
+        return 'Rejeté';
+      case ValidationStatut.EN_COURS:
+        return 'En cours';
+      case ValidationStatut.CLOTURE:
         return 'Clôturé';
       default:
         return statut;
     }
+  }
+
+  getTypeClass(type: string | undefined): string {
+    switch (type) {
+      case 'PERSONNE_PHYSIQUE':
+        return 'type-physique';
+      case 'PERSONNE_MORALE':
+        return 'type-morale';
+      default:
+        return 'type-default';
+    }
+  }
+
+  getTypeLabel(type: string | undefined): string {
+    switch (type) {
+      case 'PERSONNE_PHYSIQUE':
+        return 'Physique';
+      case 'PERSONNE_MORALE':
+        return 'Morale';
+      default:
+        return type || 'Physique';
+    }
+  }
+
+  getDossierStatusClass(status?: 'ENCOURSDETRAITEMENT' | 'CLOTURE'): string {
+    if (status === 'CLOTURE') return 'statut-cloture';
+    return 'statut-en-cours';
+  }
+
+  getDossierStatusLabel(status?: 'ENCOURSDETRAITEMENT' | 'CLOTURE'): string {
+    if (status === 'CLOTURE') return 'Clôturé';
+    return 'En cours de traitement';
   }
 
   goBack(): void {
@@ -258,7 +271,7 @@ export class DossierDetailComponent implements OnInit, OnDestroy {
   onUploadContrat(event: any): void {
     const file: File | undefined = event?.target?.files?.[0];
     if (!file || !this.dossier) return;
-    this.dossierService.uploadPdf(parseInt(this.dossier.id), 'contratSigne', file)
+    this.dossierApiService.uploadPdf(parseInt(this.dossier.id), 'contratSigne', file)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => this.toastService.success('Contrat signé téléversé.'),
@@ -269,7 +282,7 @@ export class DossierDetailComponent implements OnInit, OnDestroy {
   onUploadPouvoir(event: any): void {
     const file: File | undefined = event?.target?.files?.[0];
     if (!file || !this.dossier) return;
-    this.dossierService.uploadPdf(parseInt(this.dossier.id), 'pouvoir', file)
+    this.dossierApiService.uploadPdf(parseInt(this.dossier.id), 'pouvoir', file)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => this.toastService.success('Pouvoir téléversé.'),
@@ -279,7 +292,7 @@ export class DossierDetailComponent implements OnInit, OnDestroy {
 
   deleteContrat(): void {
     if (!this.dossier) return;
-    this.dossierService.deletePdf(parseInt(this.dossier.id), 'contratSigne')
+    this.dossierApiService.deletePdf(parseInt(this.dossier.id), 'contratSigne')
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => this.toastService.success('Contrat supprimé.'),
@@ -289,7 +302,7 @@ export class DossierDetailComponent implements OnInit, OnDestroy {
 
   deletePouvoir(): void {
     if (!this.dossier) return;
-    this.dossierService.deletePdf(parseInt(this.dossier.id), 'pouvoir')
+    this.dossierApiService.deletePdf(parseInt(this.dossier.id), 'pouvoir')
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => this.toastService.success('Pouvoir supprimé.'),

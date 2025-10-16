@@ -88,7 +88,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   loadStatistics(): void {
     this.dossierService.refreshStats()
       .pipe(takeUntil(this.destroy$))
-      .subscribe(s => {
+      .subscribe((s: DossierStats) => {
         this.stats = s;
       });
   }

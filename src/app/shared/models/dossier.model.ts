@@ -1,4 +1,4 @@
-import { StatutDossier, Urgence } from './enums.model';
+import { StatutDossier, ValidationStatut, Urgence } from './enums.model';
 import { Creancier } from './creancier.model';
 import { Debiteur } from './debiteur.model';
 
@@ -36,7 +36,9 @@ export class Dossier {
   montantCreance: number = 0;
   dateCreation: Date = new Date();
   dateCloture?: Date;
-  statut: StatutDossier = StatutDossier.EN_COURS;
+  // Deux statuts: dossierStatus (technique) + statut (fonctionnel)
+  statut: ValidationStatut = ValidationStatut.EN_COURS;
+  dossierStatus?: 'ENCOURSDETRAITEMENT' | 'CLOTURE';
   urgence: UrgenceDossier = UrgenceDossier.FAIBLE;
   creancier: Creancier = new Creancier();
   debiteur: Debiteur = new Debiteur();
@@ -51,6 +53,10 @@ export class Dossier {
   agentCreateur: string = '';
   valide: boolean = false;
   dateValidation?: Date;
+
+  // Types de créancier et débiteur
+  typeCreancier?: string;
+  typeDebiteur?: string;
 
   constructor(data?: Partial<Dossier>) {
     Object.assign(this, data);

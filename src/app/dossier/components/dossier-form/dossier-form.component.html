@@ -1,0 +1,188 @@
+<div class="dossier-form-container">
+  <h2>Créer un Nouveau Dossier</h2>
+  
+  <form (ngSubmit)="createDossier()" #dossierForm="ngForm">
+    <!-- Informations générales -->
+    <div class="form-section">
+      <h3>Informations Générales</h3>
+      <div class="form-group">
+        <label for="titre">Titre du Dossier</label>
+        <input type="text" id="titre" name="titre" [(ngModel)]="dossierData.titre" class="form-control">
+      </div>
+      
+      <div class="form-group">
+        <label for="description">Description</label>
+        <textarea id="description" name="description" [(ngModel)]="dossierData.description" class="form-control" rows="3"></textarea>
+      </div>
+      
+      <div class="form-group">
+        <label for="numeroDossier">Numéro de Dossier</label>
+        <input type="text" id="numeroDossier" name="numeroDossier" [(ngModel)]="dossierData.numeroDossier" class="form-control">
+      </div>
+      
+      <div class="form-group">
+        <label for="montantCreance">Montant de la Créance</label>
+        <input type="number" id="montantCreance" name="montantCreance" [(ngModel)]="dossierData.montantCreance" class="form-control">
+      </div>
+      
+      <div class="form-group">
+        <label for="typeDocumentJustificatif">Type de Document</label>
+        <select id="typeDocumentJustificatif" name="typeDocumentJustificatif" [(ngModel)]="dossierData.typeDocumentJustificatif" class="form-control">
+          <option value="FACTURE">Facture</option>
+          <option value="CONTRAT">Contrat</option>
+          <option value="BON_COMMANDE">Bon de Commande</option>
+          <option value="AUTRE">Autre</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label for="urgence">Urgence</label>
+        <select id="urgence" name="urgence" [(ngModel)]="dossierData.urgence" class="form-control">
+          <option value="FAIBLE">Faible</option>
+          <option value="MOYENNE">Moyenne</option>
+          <option value="ELEVEE">Élevée</option>
+          <option value="CRITIQUE">Critique</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Informations Créancier -->
+    <div class="form-section">
+      <h3>Informations Créancier</h3>
+      <div class="form-group">
+        <label for="typeCreancier">Type de Créancier</label>
+        <select id="typeCreancier" name="typeCreancier" [(ngModel)]="dossierData.typeCreancier" class="form-control">
+          <option value="PERSONNE_PHYSIQUE">Personne Physique</option>
+          <option value="PERSONNE_MORALE">Personne Morale</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label for="nomCreancier">Nom</label>
+        <input type="text" id="nomCreancier" name="nomCreancier" [(ngModel)]="dossierData.nomCreancier" class="form-control">
+      </div>
+      
+      <div class="form-group" *ngIf="dossierData.typeCreancier === 'PERSONNE_PHYSIQUE'">
+        <label for="prenomCreancier">Prénom</label>
+        <input type="text" id="prenomCreancier" name="prenomCreancier" [(ngModel)]="dossierData.prenomCreancier" class="form-control">
+      </div>
+      
+      <div class="form-group">
+        <label for="emailCreancier">Email</label>
+        <input type="email" id="emailCreancier" name="emailCreancier" [(ngModel)]="dossierData.emailCreancier" class="form-control">
+      </div>
+      
+      <div class="form-group">
+        <label for="telCreancier">Téléphone</label>
+        <input type="tel" id="telCreancier" name="telCreancier" [(ngModel)]="dossierData.telCreancier" class="form-control">
+      </div>
+      
+      <div class="form-group">
+        <label for="adresseCreancier">Adresse</label>
+        <textarea id="adresseCreancier" name="adresseCreancier" [(ngModel)]="dossierData.adresseCreancier" class="form-control" rows="2"></textarea>
+      </div>
+    </div>
+
+    <!-- Informations Débiteur -->
+    <div class="form-section">
+      <h3>Informations Débiteur</h3>
+      <div class="form-group">
+        <label for="typeDebiteur">Type de Débiteur</label>
+        <select id="typeDebiteur" name="typeDebiteur" [(ngModel)]="dossierData.typeDebiteur" class="form-control">
+          <option value="PERSONNE_PHYSIQUE">Personne Physique</option>
+          <option value="PERSONNE_MORALE">Personne Morale</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label for="nomDebiteur">Nom</label>
+        <input type="text" id="nomDebiteur" name="nomDebiteur" [(ngModel)]="dossierData.nomDebiteur" class="form-control">
+      </div>
+      
+      <div class="form-group" *ngIf="dossierData.typeDebiteur === 'PERSONNE_PHYSIQUE'">
+        <label for="prenomDebiteur">Prénom</label>
+        <input type="text" id="prenomDebiteur" name="prenomDebiteur" [(ngModel)]="dossierData.prenomDebiteur" class="form-control">
+      </div>
+      
+      <div class="form-group">
+        <label for="emailDebiteur">Email</label>
+        <input type="email" id="emailDebiteur" name="emailDebiteur" [(ngModel)]="dossierData.emailDebiteur" class="form-control">
+      </div>
+      
+      <div class="form-group">
+        <label for="telDebiteur">Téléphone</label>
+        <input type="tel" id="telDebiteur" name="telDebiteur" [(ngModel)]="dossierData.telDebiteur" class="form-control">
+      </div>
+      
+      <div class="form-group">
+        <label for="adresseDebiteur">Adresse</label>
+        <textarea id="adresseDebiteur" name="adresseDebiteur" [(ngModel)]="dossierData.adresseDebiteur" class="form-control" rows="2"></textarea>
+      </div>
+    </div>
+
+    <!-- Options -->
+    <div class="form-section">
+      <h3>Options</h3>
+      <div class="form-group">
+        <label class="checkbox-label">
+          <input type="checkbox" name="pouvoir" [(ngModel)]="dossierData.pouvoir">
+          Pouvoir
+        </label>
+      </div>
+      
+      <div class="form-group">
+        <label class="checkbox-label">
+          <input type="checkbox" name="contratSigne" [(ngModel)]="dossierData.contratSigne">
+          Contrat Signé
+        </label>
+      </div>
+      
+      <div class="form-group">
+        <label class="checkbox-label">
+          <input type="checkbox" name="isChef" [(ngModel)]="dossierData.isChef">
+          Chef
+        </label>
+      </div>
+    </div>
+
+    <!-- Fichiers -->
+    <div class="form-section">
+      <h3>Fichiers (Optionnel)</h3>
+      <div class="form-group">
+        <label for="contratFile">Fichier Contrat</label>
+        <input type="file" id="contratFile" name="contratFile" (change)="onContratFileSelected($event)" class="form-control" accept=".pdf,.doc,.docx">
+      </div>
+      
+      <div class="form-group">
+        <label for="pouvoirFile">Fichier Pouvoir</label>
+        <input type="file" id="pouvoirFile" name="pouvoirFile" (change)="onPouvoirFileSelected($event)" class="form-control" accept=".pdf,.doc,.docx">
+      </div>
+    </div>
+
+    <!-- Boutons d'action -->
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary" [disabled]="isLoading">
+        <span *ngIf="isLoading">Création en cours...</span>
+        <span *ngIf="!isLoading">Créer le Dossier</span>
+      </button>
+      
+      <button type="button" class="btn btn-secondary" (click)="resetForm()" [disabled]="isLoading">
+        Réinitialiser
+      </button>
+    </div>
+  </form>
+
+  <!-- Affichage des résultats -->
+  <div class="result-section" *ngIf="result || error">
+    <div class="success-message" *ngIf="result">
+      <h4>✅ Dossier créé avec succès !</h4>
+      <pre>{{ result | json }}</pre>
+    </div>
+    
+    <div class="error-message" *ngIf="error">
+      <h4>❌ Erreur</h4>
+      <p>{{ error }}</p>
+    </div>
+  </div>
+</div>
+

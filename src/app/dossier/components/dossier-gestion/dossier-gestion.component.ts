@@ -3,7 +3,8 @@ import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormControl, FormsModule } from '@angular/forms';
 import { Subject, takeUntil, Observable } from 'rxjs';
-import { Dossier, TypeDocumentJustificatif, UrgenceDossier, StatutDossier } from '../../../shared/models';
+import { Dossier, TypeDocumentJustificatif, UrgenceDossier, Creancier, Debiteur, User } from '../../../shared/models';
+import { ValidationStatut } from '../../../shared/models/enums.model';
 import { FormInputComponent } from '../../../shared/components/form-input/form-input.component';
 import { ToastService } from '../../../core/services/toast.service';
 import { AuthService } from '../../../core/services/auth.service';
@@ -11,6 +12,7 @@ import { AgentDossierService } from '../../../core/services/agent-dossier.servic
 import { ChefDossierService } from '../../../core/services/chef-dossier.service';
 import { CreancierApiService } from '../../../core/services/creancier-api.service';
 import { DebiteurApiService } from '../../../core/services/debiteur-api.service';
+import { DossierApiService } from '../../../core/services/dossier-api.service';
 import { DossierApi, DossierRequest, Urgence, DossierStatus, TypeDocumentJustificatif as ApiTypeDocument, CreancierApi, DebiteurApi } from '../../../shared/models/dossier-api.model';
 import { Role } from '../../../shared/models/enums.model';
 
@@ -30,12 +32,18 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
   dossierForm!: FormGroup;
   isEditMode: boolean = false;
   editingDossier: Dossier | null = null;
-  currentUser: any = null;
+  currentUser: User | null = null;
   private destroy$ = new Subject<void>();
 
   // Fichiers sélectionnés
   selectedContratFile?: File;
   selectedPouvoirFile?: File;
+
+  // Suggestions pour autocomplétion
+  creancierSuggestions: any[] = [];
+  debiteurSuggestions: any[] = [];
+  showCreancierSuggestions = false;
+  showDebiteurSuggestions = false;
 
   // Filtres avancés (UI)
   filters: any = {
@@ -85,6 +93,7 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
     private chefDossierService: ChefDossierService,
     private creancierApiService: CreancierApiService,
     private debiteurApiService: DebiteurApiService,
+    private dossierApiService: DossierApiService,
     private router: Router
   ) { }
 
@@ -115,12 +124,16 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
       prenomDebiteur: ['', Validators.minLength(2)],
       pouvoir: [false],
       contratSigne: [false],
-      isChef: [false]
+      isChef: [false],
+      agentCreateurId: [null] // Nouveau champ pour l'ID de l'agent créateur
     });
 
     // Update validators when types change
     this.dossierForm.get('typeCreancier')?.valueChanges.subscribe(t => this.onTypeCreancierChange(t));
     this.dossierForm.get('typeDebiteur')?.valueChanges.subscribe(t => this.onTypeDebiteurChange(t));
+    
+    // Logique pour agentCreateurId basée sur isChef
+    this.dossierForm.get('isChef')?.valueChanges.subscribe(isChef => this.onIsChefChange(isChef));
   }
 
   loadCurrentUser(): void {
@@ -129,6 +142,7 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
 
   loadDossiers(): void {
     this.currentUser = this.authService.getCurrentUser();
+    console.log('🔄 Chargement des dossiers pour l\'utilisateur:', this.currentUser?.role);
     
     if (this.currentUser?.role === Role.AGENT_DOSSIER) {
       // Pour les agents : charger leurs dossiers créés
@@ -136,27 +150,29 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: (dossiersApi: DossierApi[]) => {
+            console.log('📋 Dossiers chargés pour l\'agent:', dossiersApi.length);
             this.dossiers = this.convertApiDossiersToLocal(dossiersApi);
             this.filterDossiers();
           },
           error: (error) => {
-            console.error('Erreur lors du chargement des dossiers:', error);
+            console.error('❌ Erreur lors du chargement des dossiers:', error);
             this.toastService.showError('Erreur lors du chargement des dossiers');
             // Fallback avec données mock
             this.loadMockDossiers();
           }
         });
     } else if (this.currentUser?.role === Role.CHEF_DEPARTEMENT_DOSSIER) {
-      // Pour les chefs : charger les dossiers en attente de validation
-      this.chefDossierService.loadDossiersEnAttente()
+      // Pour les chefs : charger TOUS les dossiers (pas seulement ceux en attente)
+      this.dossierApiService.getAllDossiers()
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: (dossiersApi: DossierApi[]) => {
+            console.log('📋 Tous les dossiers chargés pour le chef:', dossiersApi.length);
             this.dossiers = this.convertApiDossiersToLocal(dossiersApi);
             this.filterDossiers();
           },
           error: (error) => {
-            console.error('Erreur lors du chargement des dossiers:', error);
+            console.error('❌ Erreur lors du chargement des dossiers:', error);
             this.toastService.showError('Erreur lors du chargement des dossiers');
             // Fallback avec données mock
             this.loadMockDossiers();
@@ -164,6 +180,7 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
         });
     } else {
       // Fallback pour les autres rôles
+      console.log('⚠️ Rôle non reconnu, utilisation des données mock');
       this.loadMockDossiers();
     }
   }
@@ -178,7 +195,7 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
         numeroDossier: 'DOS-2024-001',
         montantCreance: 15000,
         dateCreation: new Date('2024-01-15'),
-        statut: StatutDossier.EN_COURS,
+        statut: ValidationStatut.EN_COURS,
         urgence: UrgenceDossier.MOYENNE,
         agentResponsable: 'John Doe',
         agentCreateur: 'John Doe',
@@ -195,7 +212,7 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
         numeroDossier: 'DOS-2024-002',
         montantCreance: 25000,
         dateCreation: new Date('2024-01-20'),
-        statut: StatutDossier.EN_COURS,
+        statut: ValidationStatut.EN_COURS,
         urgence: UrgenceDossier.TRES_URGENT,
         agentResponsable: 'Jane Smith',
         agentCreateur: 'Jane Smith',
@@ -213,7 +230,7 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
     if (this.currentUser?.role === 'AGENT_DOSSIER') {
       // Pour les agents, ne montrer que les dossiers qui leur sont assignés
       this.filteredDossiers = this.dossiers.filter(dossier => 
-        dossier.agentResponsable === this.currentUser.getFullName()
+        dossier.agentResponsable === this.currentUser?.getFullName()
       );
     } else {
       // Pour les chefs, montrer tous les dossiers
@@ -226,38 +243,71 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
    * Convertit les dossiers API vers le format local
    */
   private convertApiDossiersToLocal(dossiersApi: DossierApi[]): Dossier[] {
-    return dossiersApi.map(dossierApi => new Dossier({
-      id: dossierApi.id.toString(),
-      titre: dossierApi.titre,
-      description: dossierApi.description,
-      numeroDossier: dossierApi.numeroDossier,
-      montantCreance: dossierApi.montantCreance,
-      dateCreation: new Date(dossierApi.dateCreation),
-      dateCloture: dossierApi.dateCloture ? new Date(dossierApi.dateCloture) : undefined,
-      statut: this.convertApiStatusToLocal(dossierApi.dossierStatus),
-      urgence: this.convertApiUrgenceToLocal(dossierApi.urgence),
-      agentResponsable: dossierApi.agentResponsable ? `${dossierApi.agentResponsable.prenom} ${dossierApi.agentResponsable.nom}` : '',
-      agentCreateur: dossierApi.agentCreateur ? `${dossierApi.agentCreateur.prenom} ${dossierApi.agentCreateur.nom}` : '',
-      typeDocumentJustificatif: this.convertApiTypeDocumentToLocal(dossierApi.typeDocumentJustificatif),
-      pouvoir: !!dossierApi.pouvoir,
-      contratSigne: !!dossierApi.contratSigne,
-      valide: dossierApi.valide,
-      dateValidation: dossierApi.dateValidation ? new Date(dossierApi.dateValidation) : undefined
-    }));
+    return dossiersApi.map(dossierApi => {
+      // Créer les objets créancier et débiteur avec les données disponibles
+      const creancier = new Creancier({
+        id: (dossierApi.creancier as any)?.id || 0,
+        nom: (dossierApi.creancier as any)?.nom || '',
+        prenom: (dossierApi.creancier as any)?.prenom || '',
+        type: (dossierApi.creancier as any)?.type || 'PERSONNE_PHYSIQUE',
+        codeCreancier: (dossierApi.creancier as any)?.codeCreancier || '',
+        codeCreance: (dossierApi.creancier as any)?.codeCreance || '',
+        adresse: (dossierApi.creancier as any)?.adresse || '',
+        ville: (dossierApi.creancier as any)?.ville || '',
+        codePostal: (dossierApi.creancier as any)?.codePostal || '',
+        telephone: (dossierApi.creancier as any)?.telephone || '',
+        fax: (dossierApi.creancier as any)?.fax || '',
+        email: (dossierApi.creancier as any)?.email || ''
+      });
+
+      const debiteur = new Debiteur({
+        id: (dossierApi.debiteur as any)?.id || 0,
+        nom: (dossierApi.debiteur as any)?.nom || '',
+        prenom: (dossierApi.debiteur as any)?.prenom || '',
+        type: (dossierApi.debiteur as any)?.type || 'PERSONNE_PHYSIQUE',
+        codeCreance: (dossierApi.debiteur as any)?.codeCreance || '',
+        adresse: (dossierApi.debiteur as any)?.adresse || '',
+        ville: (dossierApi.debiteur as any)?.ville || '',
+        codePostal: (dossierApi.debiteur as any)?.codePostal || '',
+        telephone: (dossierApi.debiteur as any)?.telephone || '',
+        fax: (dossierApi.debiteur as any)?.fax || '',
+        email: (dossierApi.debiteur as any)?.email || ''
+      });
+
+      return new Dossier({
+        id: dossierApi.id.toString(),
+        titre: dossierApi.titre,
+        description: dossierApi.description,
+        numeroDossier: dossierApi.numeroDossier,
+        montantCreance: dossierApi.montantCreance,
+        dateCreation: new Date(dossierApi.dateCreation),
+        dateCloture: dossierApi.dateCloture ? new Date(dossierApi.dateCloture) : undefined,
+        statut: this.convertBackendStatutToLocal((dossierApi as any).statut),
+        urgence: this.convertApiUrgenceToLocal(dossierApi.urgence),
+        agentResponsable: dossierApi.agentResponsable ? `${dossierApi.agentResponsable.prenom} ${dossierApi.agentResponsable.nom}` : '',
+        agentCreateur: dossierApi.agentCreateur ? `${dossierApi.agentCreateur.prenom} ${dossierApi.agentCreateur.nom}` : '',
+        typeDocumentJustificatif: this.convertApiTypeDocumentToLocal(dossierApi.typeDocumentJustificatif),
+        pouvoir: !!dossierApi.pouvoir,
+        contratSigne: !!dossierApi.contratSigne,
+        valide: dossierApi.valide,
+        dateValidation: dossierApi.dateValidation ? new Date(dossierApi.dateValidation) : undefined,
+        creancier: creancier,
+        debiteur: debiteur,
+        // Ajouter les types pour l'affichage
+        typeCreancier: (dossierApi.creancier as any)?.type || 'PERSONNE_PHYSIQUE',
+        typeDebiteur: (dossierApi.debiteur as any)?.type || 'PERSONNE_PHYSIQUE'
+      });
+    });
   }
 
-  private convertApiStatusToLocal(apiStatus: DossierStatus): StatutDossier {
-    switch (apiStatus) {
-      case DossierStatus.ENCOURSDETRAITEMENT:
-        return StatutDossier.EN_COURS;
-      case DossierStatus.CLOTURE:
-        return StatutDossier.CLOTURE;
-      case DossierStatus.SUSPENDU:
-        return StatutDossier.EN_COURS; // Fallback
-      case DossierStatus.ANNULE:
-        return StatutDossier.EN_COURS; // Fallback
-      default:
-        return StatutDossier.EN_COURS;
+  private convertBackendStatutToLocal(statut: any): ValidationStatut {
+    switch (statut) {
+      case 'EN_ATTENTE_VALIDATION': return ValidationStatut.EN_ATTENTE_VALIDATION;
+      case 'VALIDE': return ValidationStatut.VALIDE;
+      case 'REJETE': return ValidationStatut.REJETE;
+      case 'EN_COURS': return ValidationStatut.EN_COURS;
+      case 'CLOTURE': return ValidationStatut.CLOTURE;
+      default: return ValidationStatut.EN_COURS;
     }
   }
 
@@ -294,7 +344,7 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
       this.filterDossiers();
     } else {
       const baseDossiers = this.currentUser?.role === 'AGENT_DOSSIER' 
-        ? this.dossiers.filter(dossier => dossier.agentResponsable === this.currentUser.getFullName())
+        ? this.dossiers.filter(dossier => dossier.agentResponsable === this.currentUser?.getFullName())
         : this.dossiers;
         
       this.filteredDossiers = baseDossiers.filter(dossier =>
@@ -309,7 +359,7 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
 
   applyAdvancedFilters(): void {
     const baseDossiers = this.currentUser?.role === 'AGENT_DOSSIER' 
-      ? this.dossiers.filter(dossier => dossier.agentResponsable === this.currentUser.getFullName())
+      ? this.dossiers.filter(dossier => dossier.agentResponsable === this.currentUser?.getFullName())
       : this.dossiers;
 
     this.filteredDossiers = baseDossiers.filter(dossier => {
@@ -338,6 +388,8 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
   }
 
   applySortingAndPaging(): void {
+    console.log('🔄 applySortingAndPaging - filteredDossiers:', this.filteredDossiers.length);
+    
     const sorted = [...this.filteredDossiers].sort((a, b) => {
       const dir = this.sortDir === 'asc' ? 1 : -1;
       if (this.sortKey === 'dateCreation') {
@@ -357,6 +409,9 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
     const start = this.pageIndex * this.pageSize;
     const end = start + this.pageSize;
     this.pagedDossiers = sorted.slice(start, end);
+    
+    console.log('📄 Pagination - totalPages:', this.totalPages, 'pageIndex:', this.pageIndex, 'pagedDossiers:', this.pagedDossiers.length);
+    console.log('📄 pagedDossiers:', this.pagedDossiers);
   }
 
   nextPage(): void {
@@ -433,6 +488,10 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: ({ creancierId, debiteurId }: { creancierId: number, debiteurId: number }) => {
+          const current = this.authService.getCurrentUser();
+          // Sans auth, on laisse la case isChef décider; sinon on autorise aussi par rôle
+          const isChef: boolean = !!formValue.isChef || !!(current && (current.role === Role.CHEF_DEPARTEMENT_DOSSIER || current.role === Role.SUPER_ADMIN));
+          
           // Adapter au contrat backend: creancier/debiteur en objets avec id uniquement
           const dossierRequest: any = {
             titre: formValue.titre,
@@ -441,6 +500,7 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
             montantCreance: formValue.montantCreance,
             typeDocumentJustificatif: this.convertLocalTypeDocumentToApi(formValue.typeDocumentJustificatif),
             urgence: this.convertLocalUrgenceToApi(formValue.urgence),
+            dossierStatus: 'ENCOURSDETRAITEMENT', // Statut par défaut pour un nouveau dossier (même pour les chefs)
             typeCreancier: formValue.typeCreancier,
             // Pour compat DTO backend (noms) et pour logs côté service si besoin
             nomCreancier: formValue.nomCreancier,
@@ -452,12 +512,13 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
             creancierId: creancierId,
             debiteurId: debiteurId,
             contratSigne: formValue.contratSigne ? 'uploaded' : undefined,
-            pouvoir: formValue.pouvoir ? 'uploaded' : undefined
+            pouvoir: formValue.pouvoir ? 'uploaded' : undefined,
+            // Utiliser la valeur du formulaire agentCreateurId (définie automatiquement par onIsChefChange)
+            agentCreateurId: formValue.agentCreateurId
           };
-
-          const current = this.authService.getCurrentUser();
-          // Sans auth, on laisse la case isChef décider; sinon on autorise aussi par rôle
-          const isChef: boolean = !!formValue.isChef || !!(current && (current.role === Role.CHEF_DEPARTEMENT_DOSSIER || current.role === Role.SUPER_ADMIN));
+          
+          // Log pour déboguer
+          console.log('🔍 Données envoyées au backend:', JSON.stringify(dossierRequest, null, 2));
 
           const hasFiles = !!this.selectedContratFile || !!this.selectedPouvoirFile;
           const create$ = hasFiles
@@ -473,12 +534,23 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
             .pipe(takeUntil(this.destroy$))
             .subscribe({
               next: (nouveauDossier) => {
+                console.log('✅ Dossier créé avec succès:', nouveauDossier);
                 this.toastService.success('Dossier créé avec succès.');
                 this.cancelForm();
-                this.loadDossiers(); // Recharger les dossiers
+                // Recharger les dossiers avec un délai pour s'assurer que la DB est à jour
+                setTimeout(() => {
+                  this.loadDossiers();
+                }, 500);
               },
               error: (error) => {
-                console.error('Erreur lors de la création du dossier:', error);
+                console.error('❌ Erreur lors de la création du dossier:', error);
+                console.error('❌ Détails de l\'erreur:', JSON.stringify(error, null, 2));
+                
+                // Essayer de recharger quand même au cas où le dossier aurait été créé
+                setTimeout(() => {
+                  this.loadDossiers();
+                }, 1000);
+                
                 const msg = typeof error === 'string' ? error : 'Erreur lors de la création du dossier.';
                 this.toastService.error(msg);
               }
@@ -518,7 +590,144 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
   }
 
   private onTypeDebiteurChange(type: string): void {
-    // Same here; could toggle extra fields later
+    const prenomControl = this.dossierForm.get('prenomDebiteur');
+    if (type === 'PERSONNE_PHYSIQUE') {
+      prenomControl?.setValidators([Validators.required, Validators.minLength(2)]);
+    } else {
+      prenomControl?.clearValidators();
+    }
+    prenomControl?.updateValueAndValidity();
+  }
+
+  private onIsChefChange(isChef: boolean): void {
+    const agentCreateurIdControl = this.dossierForm.get('agentCreateurId');
+    if (isChef) {
+      // Quand la case est cochée, définir agentCreateurId à 11
+      agentCreateurIdControl?.setValue(11);
+      console.log('✅ Case "Créer en tant que Chef" cochée - agentCreateurId défini à 11');
+    } else {
+      // Quand la case est décochée, réinitialiser agentCreateurId à null
+      agentCreateurIdControl?.setValue(null);
+      console.log('❌ Case "Créer en tant que Chef" décochée - agentCreateurId réinitialisé à null');
+    }
+  }
+
+  // Méthodes pour l'autocomplétion des créanciers
+  onCreancierInput(event: any): void {
+    const value = event.target.value;
+    if (value && value.length >= 2) {
+      this.searchCreanciers(value);
+    } else {
+      this.creancierSuggestions = [];
+      this.showCreancierSuggestions = false;
+    }
+  }
+
+  searchCreanciers(term: string): void {
+    this.creancierApiService.searchCreancierByName(term)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (creanciers) => {
+          this.creancierSuggestions = creanciers.slice(0, 5); // Limiter à 5 suggestions
+          this.showCreancierSuggestions = this.creancierSuggestions.length > 0;
+        },
+        error: (error) => {
+          console.error('Erreur lors de la recherche de créanciers:', error);
+          this.creancierSuggestions = [];
+          this.showCreancierSuggestions = false;
+        }
+      });
+  }
+
+  selectCreancier(creancier: any): void {
+    console.log('🎯 Sélection du créancier:', creancier);
+    
+    const nomControl = this.dossierForm.get('nomCreancier');
+    const prenomControl = this.dossierForm.get('prenomCreancier');
+    const typeControl = this.dossierForm.get('typeCreancier');
+    
+    if (nomControl && prenomControl && typeControl) {
+      // Utiliser typeCreancier ou type selon ce qui est disponible
+      const typeValue = creancier.typeCreancier || creancier.type || 'PERSONNE_PHYSIQUE';
+      
+      nomControl.setValue(creancier.nom);
+      prenomControl.setValue(creancier.prenom || '');
+      typeControl.setValue(typeValue);
+      
+      console.log('✅ Champs remplis:', {
+        nom: creancier.nom,
+        prenom: creancier.prenom || '',
+        type: typeValue
+      });
+    } else {
+      console.error('❌ Contrôles de formulaire non trouvés');
+    }
+    
+    this.creancierSuggestions = [];
+    this.showCreancierSuggestions = false;
+  }
+
+  // Méthodes pour l'autocomplétion des débiteurs
+  onDebiteurInput(event: any): void {
+    const value = event.target.value;
+    if (value && value.length >= 2) {
+      this.searchDebiteurs(value);
+    } else {
+      this.debiteurSuggestions = [];
+      this.showDebiteurSuggestions = false;
+    }
+  }
+
+  searchDebiteurs(term: string): void {
+    this.debiteurApiService.searchDebiteurByName(term)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (debiteurs) => {
+          this.debiteurSuggestions = debiteurs.slice(0, 5); // Limiter à 5 suggestions
+          this.showDebiteurSuggestions = this.debiteurSuggestions.length > 0;
+        },
+        error: (error) => {
+          console.error('Erreur lors de la recherche de débiteurs:', error);
+          this.debiteurSuggestions = [];
+          this.showDebiteurSuggestions = false;
+        }
+      });
+  }
+
+  selectDebiteur(debiteur: any): void {
+    console.log('🎯 Sélection du débiteur:', debiteur);
+    
+    const nomControl = this.dossierForm.get('nomDebiteur');
+    const prenomControl = this.dossierForm.get('prenomDebiteur');
+    const typeControl = this.dossierForm.get('typeDebiteur');
+    
+    if (nomControl && prenomControl && typeControl) {
+      // Utiliser typeDebiteur ou type selon ce qui est disponible
+      const typeValue = debiteur.typeDebiteur || debiteur.type || 'PERSONNE_PHYSIQUE';
+      
+      nomControl.setValue(debiteur.nom);
+      prenomControl.setValue(debiteur.prenom || '');
+      typeControl.setValue(typeValue);
+      
+      console.log('✅ Champs remplis:', {
+        nom: debiteur.nom,
+        prenom: debiteur.prenom || '',
+        type: typeValue
+      });
+    } else {
+      console.error('❌ Contrôles de formulaire non trouvés');
+    }
+    
+    this.debiteurSuggestions = [];
+    this.showDebiteurSuggestions = false;
+  }
+
+  // Masquer les suggestions quand on clique ailleurs
+  hideSuggestions(): void {
+    setTimeout(() => {
+      this.showCreancierSuggestions = false;
+      this.showDebiteurSuggestions = false;
+    }, 200);
   }
 
   private findCreancierAndDebiteurIds(nomCreancier: string, nomDebiteur: string): Observable<{ creancierId: number, debiteurId: number }> {
@@ -668,13 +877,35 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
     }
   }
 
+  getTypeClass(type: string | undefined): string {
+    switch (type) {
+      case 'PERSONNE_PHYSIQUE':
+        return 'type-physique';
+      case 'PERSONNE_MORALE':
+        return 'type-morale';
+      default:
+        return 'type-default';
+    }
+  }
+
+  getTypeLabel(type: string | undefined): string {
+    switch (type) {
+      case 'PERSONNE_PHYSIQUE':
+        return 'Physique';
+      case 'PERSONNE_MORALE':
+        return 'Morale';
+      default:
+        return type || 'Physique';
+    }
+  }
+
   // Méthodes pour la validation des dossiers
   canValidateDossier(dossier: Dossier): boolean {
     // Seul le Chef de Dossier peut valider les dossiers créés par des agents
-    return this.currentUser && 
+    return !!(this.currentUser && 
            this.currentUser.role === Role.CHEF_DEPARTEMENT_DOSSIER && 
            !dossier.valide && 
-           dossier.agentCreateur !== this.currentUser.getFullName();
+           dossier.agentCreateur !== this.currentUser.getFullName());
   }
 
   validateDossier(dossier: Dossier): void {
@@ -683,8 +914,8 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
       if (index !== -1) {
         this.dossiers[index].valide = true;
         this.dossiers[index].dateValidation = new Date();
-        this.dossiers[index].statut = StatutDossier.ENQUETE;
-        this.dossiers[index].agentResponsable = this.currentUser.getFullName();
+        this.dossiers[index].statut = ValidationStatut.VALIDE;
+        this.dossiers[index].agentResponsable = this.currentUser?.getFullName() || '';
         
         this.filteredDossiers = [...this.dossiers];
         this.toastService.success('Dossier validé avec succès. Il a été envoyé en phase d\'enquête.');

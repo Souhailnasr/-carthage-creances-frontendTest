@@ -10,17 +10,28 @@ export enum Role {
   AGENT_FINANCE = 'AGENT_FINANCE',
 }
 
+// Aligner avec le backend: Statut
 export enum StatutDossier {
+  EN_ATTENTE_VALIDATION = 'EN_ATTENTE_VALIDATION',
+  VALIDE = 'VALIDE',
+  REJETE = 'REJETE',
   EN_COURS = 'EN_COURS',
-  ENQUETE = 'ENQUETE',
   CLOTURE = 'CLOTURE',
-  ARCHIVE = 'ARCHIVE',
 }
 
 export enum Urgence {
   FAIBLE = 'FAIBLE',
   MOYENNE = 'MOYENNE',
   ELEVE = 'ELEVE',
+}
+
+// Statut fonctionnel (validation/avancement) aligné sur le backend 'Statut'
+export enum ValidationStatut {
+  EN_ATTENTE_VALIDATION = 'EN_ATTENTE_VALIDATION',
+  VALIDE = 'VALIDE',
+  REJETE = 'REJETE',
+  EN_COURS = 'EN_COURS',
+  CLOTURE = 'CLOTURE',
 }
 
 export enum TypeAction {

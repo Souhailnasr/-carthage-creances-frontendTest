@@ -88,7 +88,8 @@ export class AgentDossierService {
       ? isChefOverride
       : !!(currentUser && (currentUser.role === Role.CHEF_DEPARTEMENT_DOSSIER || currentUser.role === Role.SUPER_ADMIN));
 
-    return this.dossierApiService.create(dossierRequest, isChef).pipe(
+    // Utiliser une création robuste avec fallback si la route /create échoue
+    return this.dossierApiService.createWithFallback(dossierRequest, isChef).pipe(
       tap(nouveauDossier => {
         // Ajouter à la liste locale
         const dossiers = this.mesDossiersSubject.value;
@@ -180,7 +181,7 @@ export class AgentDossierService {
           this.statistiquesPersonnellesSubject.next({
             dossiersCrees: dossiersCrees,
             dossiersAssignes: dossiersAssignes,
-            dossiersEnCours: this.mesDossiersSubject.value.filter(d => d.dossierStatus === 'ENCOURSDETRAITEMENT').length,
+            dossiersEnCours: this.mesDossiersSubject.value.filter(d => d.dossierStatus === 'ENCOURSDETRAITEMENT').length, // Fixed enum value
             dossiersValides: this.mesDossiersSubject.value.filter(d => d.valide).length
           });
         });

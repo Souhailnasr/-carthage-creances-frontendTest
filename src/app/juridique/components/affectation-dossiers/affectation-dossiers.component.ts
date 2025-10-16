@@ -61,15 +61,15 @@ export class AffectationDossiersComponent implements OnInit, OnDestroy {
     this.dossierService.loadAll()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (dossiers) => {
+        next: (dossiers: any[]) => {
           // Filter dossiers assigned to juridical recovery
-          this.dossiers = dossiers.filter(dossier => 
+          this.dossiers = dossiers.filter((dossier: any) => 
             dossier.dossierStatus === 'ENCOURSDETRAITEMENT'
           );
           this.filteredDossiers = [...this.dossiers];
           this.isLoading = false;
         },
-        error: (error) => {
+        error: (error: any) => {
           console.error('❌ Erreur lors du chargement des dossiers:', error);
           this.toastService.error('Erreur lors du chargement des dossiers');
           this.isLoading = false;

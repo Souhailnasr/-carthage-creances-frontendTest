@@ -25,6 +25,7 @@ export class CreancierApiService {
   createCreancier(creancier: CreancierRequest): Observable<CreancierApi> {
     // Nettoyer et formater les données pour le backend
     const creancierData = {
+      type: creancier.typeCreancier || '',
       codeCreancier: creancier.codeCreancier || '',
       codeCreance: creancier.codeCreance || '',
       nom: creancier.nom,
@@ -84,6 +85,7 @@ export class CreancierApiService {
               if (item.id && item.nom) {
                 const creancier: CreancierApi = {
                   id: item.id,
+                  typeCreancier: item.type || item.typeCreancier || undefined,
                   codeCreancier: item.codeCreancier || item.code_creancier || '',
                   codeCreance: item.codeCreance || item.code_creance || '',
                   nom: item.nom || '',
@@ -101,6 +103,7 @@ export class CreancierApiService {
               else if (item.creancier && item.creancier.id) {
                 const creancier: CreancierApi = {
                   id: item.creancier.id,
+                  typeCreancier: item.creancier.type || item.creancier.typeCreancier || undefined,
                   codeCreancier: item.creancier.codeCreancier || item.creancier.code_creancier || '',
                   codeCreance: item.creancier.codeCreance || item.creancier.code_creance || '',
                   nom: item.creancier.nom || '',

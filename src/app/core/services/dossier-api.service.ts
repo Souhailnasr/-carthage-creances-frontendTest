@@ -56,6 +56,50 @@ export class DossierApiService {
   }
 
   /**
+   * Création robuste: si /create renvoie un 500 (ex: Duplicate entry sur numeroDossier),
+   * on régénère un numeroDossier unique et on retente sur la même route /create.
+   */
+  createWithFallback(dossier: DossierRequest, isChef: boolean): Observable<DossierApi> {
+    return new Observable<DossierApi>(observer => {
+      const tryCreate = (payload: DossierRequest, attempt: number = 1) => {
+        console.log(`🔄 Tentative ${attempt} de création avec numeroDossier: ${payload.numeroDossier}`);
+        
+        this.http.post<DossierApi>(`${this.apiUrl}/create`, payload, { params: { isChef: String(isChef) } })
+          .subscribe({
+            next: d => { 
+              console.log(`✅ Dossier créé avec succès avec numeroDossier: ${payload.numeroDossier}`);
+              observer.next(d); 
+              observer.complete(); 
+            },
+            error: err => {
+              console.log(`❌ Erreur tentative ${attempt}:`, err);
+              
+              const msg: string = (err?.error?.error || err?.error?.message || err?.message || '').toString();
+              console.log(`📝 Message d'erreur: ${msg}`);
+              
+              // Détection plus robuste des erreurs de duplicate entry
+              const isDuplicate = msg.includes('Duplicate entry') || 
+                                 msg.includes('duplicate') || 
+                                 msg.includes('UK511v1d6q4d0pvftyg9hc3qyfw') ||
+                                 msg.includes('numero_dossier');
+              
+              if (err.status === 500 && isDuplicate && attempt < 3) {
+                const uniqueNumero = `${payload.numeroDossier}-${Date.now().toString().slice(-6)}-${attempt}`;
+                console.log(`🔄 Duplicate entry détecté, retry avec nouveau numeroDossier: ${uniqueNumero}`);
+                const secondPayload: DossierRequest = { ...payload, numeroDossier: uniqueNumero } as DossierRequest;
+                tryCreate(secondPayload, attempt + 1);
+              } else {
+                console.error(`❌ Échec définitif après ${attempt} tentatives:`, err);
+                observer.error(err);
+              }
+            }
+          });
+      };
+      tryCreate(dossier);
+    });
+  }
+
+  /**
    * Crée un nouveau dossier avec fichiers
    */
   createDossierWithFiles(

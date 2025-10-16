@@ -73,12 +73,12 @@ export class GestionAudiencesComponent implements OnInit, OnDestroy {
     this.dossierService.loadAll()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (dossiers) => {
+        next: (dossiers: any[]) => {
           this.dossiers = dossiers;
           this.filteredDossiers = [...dossiers];
           this.isLoading = false;
         },
-        error: (error) => {
+        error: (error: any) => {
           console.error('❌ Erreur lors du chargement des dossiers:', error);
           this.toastService.error('Erreur lors du chargement des dossiers');
           this.isLoading = false;

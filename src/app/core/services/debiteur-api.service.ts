@@ -29,6 +29,7 @@ export class DebiteurApiService {
     
     // Nettoyer et formater les données pour le backend
     const debiteurData = {
+      type: debiteur.typeDebiteur || '',
       codeCreance: debiteur.codeCreance || '',
       nom: debiteur.nom,
       prenom: debiteur.prenom,
@@ -90,6 +91,7 @@ export class DebiteurApiService {
               if (item.id && item.nom) {
                 const debiteur: DebiteurApi = {
                   id: item.id,
+                  typeDebiteur: item.type || item.typeDebiteur || undefined,
                   codeCreance: item.codeCreance || item.code_creance || '',
                   nom: item.nom || '',
                   prenom: item.prenom || '',
@@ -107,6 +109,7 @@ export class DebiteurApiService {
               else if (item.debiteur && item.debiteur.id) {
                 const debiteur: DebiteurApi = {
                   id: item.debiteur.id,
+                  typeDebiteur: item.debiteur.type || item.debiteur.typeDebiteur || undefined,
                   codeCreance: item.debiteur.codeCreance || item.debiteur.code_creance || '',
                   nom: item.debiteur.nom || '',
                   prenom: item.debiteur.prenom || '',

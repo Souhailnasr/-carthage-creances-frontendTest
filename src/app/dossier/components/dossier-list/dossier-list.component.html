@@ -1,0 +1,209 @@
+<div class="dossier-list-container">
+  <div class="header-section">
+    <h2>Gestion des Dossiers</h2>
+    
+    <!-- Barre de recherche -->
+    <div class="search-section">
+      <div class="search-input-group">
+        <input 
+          type="text" 
+          [(ngModel)]="searchTerm" 
+          (keyup.enter)="searchDossiers()"
+          placeholder="Rechercher un dossier..."
+          class="search-input">
+        <button (click)="searchDossiers()" class="btn btn-primary" [disabled]="isLoading">
+          <i class="fas fa-search"></i> Rechercher
+        </button>
+        <button (click)="clearSearch()" class="btn btn-secondary" *ngIf="searchTerm">
+          <i class="fas fa-times"></i> Effacer
+        </button>
+      </div>
+    </div>
+
+    <!-- Bouton de rafraîchissement -->
+    <div class="actions-section">
+      <button (click)="loadDossiers()" class="btn btn-success" [disabled]="isLoading">
+        <i class="fas fa-sync-alt"></i> Actualiser
+      </button>
+    </div>
+  </div>
+
+  <!-- Message d'erreur -->
+  <div class="error-message" *ngIf="error">
+    <i class="fas fa-exclamation-triangle"></i>
+    {{ error }}
+  </div>
+
+  <!-- Indicateur de chargement -->
+  <div class="loading-indicator" *ngIf="isLoading">
+    <i class="fas fa-spinner fa-spin"></i>
+    Chargement en cours...
+  </div>
+
+  <!-- Liste des dossiers -->
+  <div class="dossiers-grid" *ngIf="!isLoading && filteredDossiers.length > 0">
+    <div class="dossier-card" *ngFor="let dossier of filteredDossiers">
+      <div class="dossier-header">
+        <h3>{{ dossier.titre || 'Sans titre' }}</h3>
+        <span class="dossier-number">#{{ dossier.numeroDossier || dossier.id }}</span>
+      </div>
+      
+      <div class="dossier-content">
+        <div class="dossier-info">
+          <p class="description">{{ dossier.description || 'Aucune description' }}</p>
+          
+          <div class="dossier-details">
+            <div class="detail-item">
+              <strong>Montant:</strong> {{ dossier.montantCreance | number:'1.2-2' }} TND
+            </div>
+            <div class="detail-item">
+              <strong>Urgence:</strong> 
+              <span class="badge" [ngClass]="getUrgenceClass(dossier.urgence)">
+                {{ getUrgenceLabel(dossier.urgence) }}
+              </span>
+            </div>
+            <div class="detail-item">
+              <strong>Type Document:</strong> {{ dossier.typeDocumentJustificatif }}
+            </div>
+          </div>
+
+          <div class="dossier-parties">
+            <div class="party-info">
+              <strong>Créancier:</strong> 
+              {{ dossier.nomCreancier }}
+              <span *ngIf="dossier.prenomCreancier"> {{ dossier.prenomCreancier }}</span>
+            </div>
+            <div class="party-info">
+              <strong>Débiteur:</strong> 
+              {{ dossier.nomDebiteur }}
+              <span *ngIf="dossier.prenomDebiteur"> {{ dossier.prenomDebiteur }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dossier-actions">
+        <button (click)="viewDossier(dossier)" class="btn btn-info btn-sm">
+          <i class="fas fa-eye"></i> Voir
+        </button>
+        <button (click)="editDossier(dossier)" class="btn btn-warning btn-sm">
+          <i class="fas fa-edit"></i> Modifier
+        </button>
+        <button (click)="deleteDossier(dossier)" class="btn btn-danger btn-sm">
+          <i class="fas fa-trash"></i> Supprimer
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Message si aucun dossier -->
+  <div class="no-dossiers" *ngIf="!isLoading && filteredDossiers.length === 0">
+    <i class="fas fa-folder-open"></i>
+    <h3>Aucun dossier trouvé</h3>
+    <p *ngIf="searchTerm">Aucun dossier ne correspond à votre recherche "{{ searchTerm }}"</p>
+    <p *ngIf="!searchTerm">Aucun dossier n'a été créé pour le moment</p>
+  </div>
+
+  <!-- Modal de détail/édition -->
+  <div class="modal-overlay" *ngIf="selectedDossier" (click)="cancelEdit()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>{{ isEditing ? 'Modifier le Dossier' : 'Détails du Dossier' }}</h3>
+        <button (click)="cancelEdit()" class="close-btn">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Mode visualisation -->
+        <div *ngIf="!isEditing">
+          <div class="detail-section">
+            <h4>Informations Générales</h4>
+            <div class="detail-grid">
+              <div class="detail-item">
+                <strong>Titre:</strong> {{ selectedDossier.titre }}
+              </div>
+              <div class="detail-item">
+                <strong>Description:</strong> {{ selectedDossier.description }}
+              </div>
+              <div class="detail-item">
+                <strong>Numéro:</strong> {{ selectedDossier.numeroDossier }}
+              </div>
+              <div class="detail-item">
+                <strong>Montant:</strong> {{ selectedDossier.montantCreance | number:'1.2-2' }} TND
+              </div>
+              <div class="detail-item">
+                <strong>Urgence:</strong> 
+                <span class="badge" [ngClass]="getUrgenceClass(selectedDossier.urgence)">
+                  {{ getUrgenceLabel(selectedDossier.urgence) }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div class="detail-section">
+            <h4>Parties</h4>
+            <div class="parties-grid">
+              <div class="party-card">
+                <h5>Créancier</h5>
+                <p><strong>Type:</strong> {{ selectedDossier.typeCreancier }}</p>
+                <p><strong>Nom:</strong> {{ selectedDossier.nomCreancier }}</p>
+                <p *ngIf="selectedDossier.prenomCreancier"><strong>Prénom:</strong> {{ selectedDossier.prenomCreancier }}</p>
+                <p><strong>Email:</strong> {{ selectedDossier.emailCreancier }}</p>
+                <p><strong>Téléphone:</strong> {{ selectedDossier.telCreancier }}</p>
+              </div>
+              <div class="party-card">
+                <h5>Débiteur</h5>
+                <p><strong>Type:</strong> {{ selectedDossier.typeDebiteur }}</p>
+                <p><strong>Nom:</strong> {{ selectedDossier.nomDebiteur }}</p>
+                <p *ngIf="selectedDossier.prenomDebiteur"><strong>Prénom:</strong> {{ selectedDossier.prenomDebiteur }}</p>
+                <p><strong>Email:</strong> {{ selectedDossier.emailDebiteur }}</p>
+                <p><strong>Téléphone:</strong> {{ selectedDossier.telDebiteur }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mode édition -->
+        <div *ngIf="isEditing">
+          <form (ngSubmit)="updateDossier()">
+            <div class="form-group">
+              <label for="editTitre">Titre</label>
+              <input type="text" id="editTitre" [(ngModel)]="editData.titre" name="titre" class="form-control">
+            </div>
+            
+            <div class="form-group">
+              <label for="editDescription">Description</label>
+              <textarea id="editDescription" [(ngModel)]="editData.description" name="description" class="form-control" rows="3"></textarea>
+            </div>
+            
+            <div class="form-group">
+              <label for="editMontant">Montant</label>
+              <input type="number" id="editMontant" [(ngModel)]="editData.montantCreance" name="montantCreance" class="form-control">
+            </div>
+            
+            <div class="form-group">
+              <label for="editUrgence">Urgence</label>
+              <select id="editUrgence" [(ngModel)]="editData.urgence" name="urgence" class="form-control">
+                <option value="FAIBLE">Faible</option>
+                <option value="MOYENNE">Moyenne</option>
+                <option value="ELEVEE">Élevée</option>
+                <option value="CRITIQUE">Critique</option>
+              </select>
+            </div>
+
+            <div class="modal-actions">
+              <button type="submit" class="btn btn-primary" [disabled]="isLoading">
+                <i class="fas fa-save"></i> Sauvegarder
+              </button>
+              <button type="button" (click)="cancelEdit()" class="btn btn-secondary">
+                <i class="fas fa-times"></i> Annuler
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+

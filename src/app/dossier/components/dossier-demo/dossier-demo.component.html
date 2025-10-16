@@ -1,0 +1,85 @@
+<div class="dossier-demo-container">
+  <div class="demo-header">
+    <h1>Démonstration du Service DossierService</h1>
+    <p>Ce composant démontre l'utilisation du DossierService avec toutes ses fonctionnalités</p>
+  </div>
+
+  <div class="demo-tabs">
+    <button 
+      class="tab-button" 
+      [class.active]="activeTab === 'form'"
+      (click)="switchTab('form')">
+      <i class="fas fa-plus"></i> Créer un Dossier
+    </button>
+    <button 
+      class="tab-button" 
+      [class.active]="activeTab === 'list'"
+      (click)="switchTab('list')">
+      <i class="fas fa-list"></i> Gérer les Dossiers
+    </button>
+  </div>
+
+  <div class="demo-content">
+    <div class="tab-content" *ngIf="activeTab === 'form'">
+      <div class="demo-description">
+        <h3>Formulaire de Création de Dossier</h3>
+        <p>Ce formulaire utilise les méthodes createDossier() et createDossierWithFiles() du DossierService.</p>
+        <ul>
+          <li><strong>createDossier()</strong> : Envoie les données en JSON vers POST /api/dossiers/create</li>
+          <li><strong>createDossierWithFiles()</strong> : Envoie les données en multipart/form-data avec fichiers</li>
+          <li>Gestion automatique des erreurs avec affichage dans la console</li>
+          <li>État de chargement pendant les requêtes</li>
+        </ul>
+      </div>
+      <app-dossier-form></app-dossier-form>
+    </div>
+
+    <div class="tab-content" *ngIf="activeTab === 'list'">
+      <div class="demo-description">
+        <h3>Gestion des Dossiers</h3>
+        <p>Cette interface utilise toutes les méthodes de lecture et modification du DossierService.</p>
+        <ul>
+          <li><strong>getAllDossiers()</strong> : Récupère tous les dossiers via GET /api/dossiers</li>
+          <li><strong>searchDossiers()</strong> : Recherche via GET /api/dossiers/search?term=</li>
+          <li><strong>updateDossier()</strong> : Modification via PUT /api/dossiers/{{ '{' }}id{{ '}' }}</li>
+          <li><strong>deleteDossier()</strong> : Suppression via DELETE /api/dossiers/{{ '{' }}id{{ '}' }}</li>
+          <li><strong>assignAgent/Avocat/Huissier()</strong> : Assignation via PUT /api/dossiers/{{ '{' }}id{{ '}' }}/assign/</li>
+        </ul>
+      </div>
+      <app-dossier-list></app-dossier-list>
+    </div>
+  </div>
+
+  <div class="demo-info">
+    <h3>Informations Techniques</h3>
+    <div class="info-grid">
+      <div class="info-card">
+        <h4>URL de Base</h4>
+        <code>http://localhost:8089/carthage-creance/api/dossiers</code>
+      </div>
+      <div class="info-card">
+        <h4>Méthodes Disponibles</h4>
+        <ul>
+          <li>createDossier()</li>
+          <li>createDossierWithFiles()</li>
+          <li>getAllDossiers()</li>
+          <li>getDossierById()</li>
+          <li>searchDossiers()</li>
+          <li>updateDossier()</li>
+          <li>deleteDossier()</li>
+          <li>assignAgent()</li>
+          <li>assignAvocat()</li>
+          <li>assignHuissier()</li>
+        </ul>
+      </div>
+      <div class="info-card">
+        <h4>Gestion d'Erreurs</h4>
+        <p>Toutes les méthodes interceptent les erreurs HTTP et les affichent dans la console avec des messages détaillés.</p>
+      </div>
+      <div class="info-card">
+        <h4>Observables</h4>
+        <p>Toutes les méthodes retournent des Observable pour une gestion asynchrone optimale.</p>
+      </div>
+    </div>
+  </div>
+</div>

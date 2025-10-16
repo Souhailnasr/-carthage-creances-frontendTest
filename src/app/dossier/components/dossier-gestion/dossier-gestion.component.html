@@ -42,9 +42,29 @@
           </select>
         </div>
 
-        <div class="form-group">
+        <div class="form-group autocomplete-container">
           <label for="nomCreancier">{{ getCreancierNomLabel() }}</label>
-          <input type="text" id="nomCreancier" formControlName="nomCreancier" class="form-control" [placeholder]="getCreancierNomPlaceholder()">
+          <input 
+            type="text" 
+            id="nomCreancier" 
+            formControlName="nomCreancier" 
+            class="form-control" 
+            [placeholder]="getCreancierNomPlaceholder()"
+            (input)="onCreancierInput($event)"
+            (blur)="hideSuggestions()"
+            autocomplete="off">
+          
+          <!-- Suggestions pour créancier -->
+          <div class="suggestions-dropdown" *ngIf="showCreancierSuggestions && creancierSuggestions.length > 0">
+            <div 
+              class="suggestion-item" 
+              *ngFor="let creancier of creancierSuggestions" 
+              (click)="selectCreancier(creancier)">
+              <strong>{{ creancier.nom }}</strong>
+              <span *ngIf="creancier.prenom"> {{ creancier.prenom }}</span>
+              <small class="text-muted">({{ creancier.typeCreancier || creancier.type || 'PERSONNE_PHYSIQUE' }})</small>
+            </div>
+          </div>
         </div>
 
         <div class="form-group" *ngIf="!isCreancierPersonneMorale()">
@@ -59,9 +79,29 @@
           </select>
         </div>
 
-        <div class="form-group">
+        <div class="form-group autocomplete-container">
           <label for="nomDebiteur">{{ getDebiteurNomLabel() }}</label>
-          <input type="text" id="nomDebiteur" formControlName="nomDebiteur" class="form-control" [placeholder]="getDebiteurNomPlaceholder()">
+          <input 
+            type="text" 
+            id="nomDebiteur" 
+            formControlName="nomDebiteur" 
+            class="form-control" 
+            [placeholder]="getDebiteurNomPlaceholder()"
+            (input)="onDebiteurInput($event)"
+            (blur)="hideSuggestions()"
+            autocomplete="off">
+          
+          <!-- Suggestions pour débiteur -->
+          <div class="suggestions-dropdown" *ngIf="showDebiteurSuggestions && debiteurSuggestions.length > 0">
+            <div 
+              class="suggestion-item" 
+              *ngFor="let debiteur of debiteurSuggestions" 
+              (click)="selectDebiteur(debiteur)">
+              <strong>{{ debiteur.nom }}</strong>
+              <span *ngIf="debiteur.prenom"> {{ debiteur.prenom }}</span>
+              <small class="text-muted">({{ debiteur.typeDebiteur || debiteur.type || 'PERSONNE_PHYSIQUE' }})</small>
+            </div>
+          </div>
         </div>
 
         <div class="form-group" *ngIf="!isDebiteurPersonneMorale()">
@@ -113,6 +153,9 @@
             Créer en tant que Chef
           </label>
         </div>
+
+        <!-- Champ caché pour agentCreateurId (géré automatiquement par la logique isChef) -->
+        <input type="hidden" formControlName="agentCreateurId">
       </div>
 
       <div class="form-actions">
@@ -202,7 +245,9 @@
           <th>Titre</th>
           <th>Montant</th>
           <th>Créancier</th>
+          <th>Type Créancier</th>
           <th>Débiteur</th>
+          <th>Type Débiteur</th>
           <th>Urgence</th>
           <th>Date Création</th>
           <th>Agent Créateur</th>
@@ -217,7 +262,17 @@
           <td>{{ dossier.titre }}</td>
           <td>{{ dossier.getFormattedAmount() }}</td>
           <td>{{ dossier.creancier.getFullName() }}</td>
+          <td>
+            <span class="type-badge" [ngClass]="getTypeClass(dossier.typeCreancier)">
+              {{ getTypeLabel(dossier.typeCreancier) }}
+            </span>
+          </td>
           <td>{{ dossier.debiteur.getFullName() }}</td>
+          <td>
+            <span class="type-badge" [ngClass]="getTypeClass(dossier.typeDebiteur)">
+              {{ getTypeLabel(dossier.typeDebiteur) }}
+            </span>
+          </td>
           <td>
             <span class="urgence-badge" [ngClass]="getUrgenceClass(dossier.urgence)">
               {{ getUrgenceLabel(dossier.urgence) }}
