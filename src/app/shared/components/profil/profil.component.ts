@@ -42,6 +42,12 @@ export class ProfilComponent implements OnInit {
     return roleNames[this.currentUser?.role || ''] || this.currentUser?.role || '';
   }
 
+  getRoleClass(): string {
+    if (!this.currentUser?.role) return 'user-role';
+    const normalizedRole = this.currentUser.role.toLowerCase().replace(/_/g, '-');
+    return `user-role role-${normalizedRole}`;
+  }
+
   getInitials(): string {
     if (this.currentUser) {
       return `${this.currentUser.prenom.charAt(0)}${this.currentUser.nom.charAt(0)}`.toUpperCase();

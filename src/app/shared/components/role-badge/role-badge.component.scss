@@ -1,0 +1,18 @@
+// Styles spécifiques au composant RoleBadge
+// Les styles principaux sont dans role-badges.scss
+
+.role-badge {
+  // Le composant hérite des styles globaux
+  // Ici on peut ajouter des styles spécifiques si nécessaire
+  
+  &.icon-only {
+    span {
+      display: none;
+    }
+    
+    &::before {
+      content: attr(data-icon);
+      font-size: 1.2rem;
+    }
+  }
+}

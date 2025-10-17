@@ -1,9 +1,10 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { RouterModule, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { DossierService, DossierStats } from '../../../core/services/dossier.service';
 import { RoleService } from '../../../core/services/role.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { User, Role, Dossier, StatutDossier, Urgence } from '../../models';
 import { Subject, takeUntil } from 'rxjs';
 import { NotificationComponent } from '../notification/notification.component';
@@ -67,19 +68,27 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   constructor(
     private dossierService: DossierService,
-    public roleService: RoleService // Public to be accessible in template
+    public roleService: RoleService, // Public to be accessible in template
+    private authService: AuthService,
+    private router: Router
   ) { }
 
   ngOnInit(): void {
-    // Mock user pour les tests - Agent de Dossier
-    this.currentUser = {
-      id: 1,
-      nom: 'Ben Ali',
-      prenom: 'Ahmed',
-      email: 'ahmed.benali@test.com',
-      role: 'AGENT_DOSSIER',
-      getFullName: () => 'Ahmed Ben Ali'
-    } as any;
+    // Récupérer l'utilisateur actuel depuis le service d'authentification
+    this.currentUser = this.authService.getCurrentUser();
+    
+    console.log('🔍 DashboardComponent - Utilisateur actuel:', this.currentUser);
+    console.log('🔍 DashboardComponent - Rôle:', this.currentUser?.role);
+    console.log('🔍 DashboardComponent - Token:', this.authService.getToken());
+    console.log('🔍 DashboardComponent - Authentifié:', this.authService.isAuthenticated());
+    
+    if (!this.currentUser) {
+      console.error('❌ Aucun utilisateur connecté trouvé - redirection vers login');
+      // Rediriger vers login si pas d'utilisateur
+      this.router.navigate(['/login']);
+      return;
+    }
+    
     this.loadStatistics();
     this.loadAgentPerformance();
     this.loadUrgentTasks();
@@ -311,6 +320,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
     };
 
     return roleNames[this.currentUser.role] || this.currentUser.role;
+  }
+
+  getRoleClass(): string {
+    if (!this.currentUser?.role) return 'user-role';
+    const normalizedRole = this.currentUser.role.toLowerCase().replace(/_/g, '-');
+    return `user-role role-${normalizedRole}`;
   }
 
   getUserInitials(): string {

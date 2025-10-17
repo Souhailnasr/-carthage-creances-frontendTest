@@ -535,12 +535,107 @@
               font-size: 0.85rem;
               font-weight: 500;
               text-align: center;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+              box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+              transition: all 0.3s ease;
               display: inline-block;
 
-              &.juridique-role {
-                background-color: #e8f5e8;
-                color: #27ae60;
+              &:hover {
+                transform: translateY(-1px);
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+              }
+
+              // Super Admin
+              &.role-super-admin {
+                background: linear-gradient(135deg, #e74c3c, #c0392b);
+                color: white;
+                border: 2px solid #c0392b;
+              }
+
+              // Chefs de Département - Tous en vert comme demandé
+              &.role-chef-departement-dossier {
+                background: linear-gradient(135deg, #27ae60, #229954) !important;
+                color: white !important;
+                border: 2px solid #229954 !important;
+                font-weight: 700;
+                position: relative;
+                
+                &::before {
+                  content: "👑";
+                  margin-right: 4px;
+                }
+              }
+
+              &.role-chef-departement-recouvement-juridique {
+                background: linear-gradient(135deg, #27ae60, #229954) !important;
+                color: white !important;
+                border: 2px solid #229954 !important;
+                font-weight: 700;
+                position: relative;
+                
+                &::before {
+                  content: "⚖️";
+                  margin-right: 4px;
+                }
+              }
+
+              &.role-chef-departement-finance {
+                background: linear-gradient(135deg, #27ae60, #229954) !important;
+                color: white !important;
+                border: 2px solid #229954 !important;
+                font-weight: 700;
+                position: relative;
+                
+                &::before {
+                  content: "💰";
+                  margin-right: 4px;
+                }
+              }
+
+              &.role-chef-departement-recouvement-amiable {
+                background: linear-gradient(135deg, #27ae60, #229954) !important;
+                color: white !important;
+                border: 2px solid #229954 !important;
+                font-weight: 700;
+                position: relative;
+                
+                &::before {
+                  content: "🤝";
+                  margin-right: 4px;
+                }
+              }
+
+              // Agents - Couleurs plus douces
+              &.role-agent-dossier {
+                background: linear-gradient(135deg, #3498db, #2980b9);
+                color: white;
+                border: 1px solid #2980b9;
+              }
+
+              &.role-agent-recouvement-juridique {
+                background: linear-gradient(135deg, #8e44ad, #7d3c98);
+                color: white;
+                border: 1px solid #7d3c98;
+              }
+
+              &.role-agent-finance {
+                background: linear-gradient(135deg, #2ecc71, #27ae60);
+                color: white;
                 border: 1px solid #27ae60;
+              }
+
+              &.role-agent-recouvement-amiable {
+                background: linear-gradient(135deg, #d35400, #ba4a00);
+                color: white;
+                border: 1px solid #ba4a00;
+              }
+
+              // Style par défaut pour les rôles non définis
+              &:not([class*="role-"]) {
+                background-color: #e9ecef;
+                color: #495057;
+                border: 1px solid #dee2e6;
               }
             }
 

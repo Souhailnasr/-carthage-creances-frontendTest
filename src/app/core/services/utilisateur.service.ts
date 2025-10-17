@@ -91,9 +91,13 @@ export class UtilisateurService {
 
     // Adapter la charge utile au format backend
     const payload: any = { ...utilisateur };
-    if (!payload.roleUtilisateur && payload.role) {
+    
+    // Normaliser le rôle - s'assurer que roleUtilisateur est défini
+    if (payload.role && !payload.roleUtilisateur) {
       payload.roleUtilisateur = payload.role;
-      delete payload.role;
+    }
+    if (payload.roleUtilisateur && !payload.role) {
+      payload.role = payload.roleUtilisateur;
     }
     
     // Le mot de passe sera crypté côté backend, on l'envoie tel quel
@@ -101,16 +105,32 @@ export class UtilisateurService {
       payload.motDePasse = 'password123'; // Mot de passe par défaut
     }
 
+    // Validation des champs requis
+    if (!payload.nom || !payload.prenom || !payload.email || !payload.roleUtilisateur) {
+      console.error('❌ Champs requis manquants:', {
+        nom: payload.nom,
+        prenom: payload.prenom,
+        email: payload.email,
+        roleUtilisateur: payload.roleUtilisateur
+      });
+      return throwError(() => new Error('Champs requis manquants pour la création d\'utilisateur'));
+    }
+
     console.log('🔵 UtilisateurService.createUtilisateur appelé');
     console.log('🔵 URL:', `${this.baseUrl}/users`);
-    console.log('🔵 Données envoyées:', payload);
+    console.log('🔵 Données envoyées:', JSON.stringify(payload, null, 2));
     console.log('🔵 Headers:', headers);
 
     return this.http.post<AuthenticationResponse>(`${this.baseUrl}/users`, payload, { headers })
       .pipe(
         tap(response => {
-          console.log('✅ Utilisateur créé avec succès, token reçu:', response.token);
+          console.log('✅ Utilisateur créé avec succès');
+          console.log('✅ Token reçu:', response.token ? 'OUI' : 'NON');
           console.log('✅ Erreurs éventuelles:', response.errors);
+          
+          if (!response.token) {
+            console.warn('⚠️ Aucun token reçu dans la réponse');
+          }
           
           // Recharger la liste des utilisateurs après création
           this.getAllUtilisateurs().subscribe();
@@ -256,7 +276,24 @@ export class UtilisateurService {
       } else if (error.status === 404) {
         errorMessage = 'Endpoint non trouvé. Vérifiez l\'URL du backend.';
       } else if (error.status === 500) {
-        errorMessage = 'Erreur serveur interne.';
+        // Analyser l'erreur 500 plus en détail
+        if (error.error && error.error.errors && Array.isArray(error.error.errors)) {
+          errorMessage = `Erreur serveur: ${error.error.errors.join(', ')}`;
+        } else if (error.error && error.error.message) {
+          errorMessage = `Erreur serveur: ${error.error.message}`;
+        } else {
+          errorMessage = 'Erreur serveur interne. Vérifiez les logs du backend.';
+        }
+        console.error('❌ Détails de l\'erreur 500:', {
+          message: error.error?.message,
+          errors: error.error?.errors,
+          token: error.error?.token
+        });
+      } else if (error.status === 400) {
+        errorMessage = 'Données invalides. Vérifiez les informations saisies.';
+        if (error.error && error.error.errors) {
+          errorMessage += ` Détails: ${error.error.errors.join(', ')}`;
+        }
       } else {
         errorMessage = `Erreur ${error.status}: ${error.error?.message || error.statusText}`;
       }

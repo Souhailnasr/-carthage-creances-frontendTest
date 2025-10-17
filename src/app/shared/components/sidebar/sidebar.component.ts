@@ -40,15 +40,22 @@ export class SidebarComponent implements OnInit, OnDestroy {
     {
       label: 'Tableau de bord',
       icon: 'fas fa-tachometer-alt',
-      route: '/dossier/dashboard',
+      route: '/dossier/chef-dashboard',
       roles: [Role.CHEF_DEPARTEMENT_DOSSIER]
+    },
+    // Agent Dossier dashboard
+    {
+      label: 'Tableau de bord',
+      icon: 'fas fa-tachometer-alt',
+      route: '/dossier/dashboard',
+      roles: [Role.AGENT_DOSSIER]
     },
     // Other roles use the generic dashboard
     {
       label: 'Tableau de bord',
       icon: 'fas fa-tachometer-alt',
       route: '/dashboard',
-      roles: [Role.AGENT_DOSSIER, Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE, Role.AGENT_RECOUVREMENT_JURIDIQUE, Role.CHEF_DEPARTEMENT_FINANCE, Role.AGENT_FINANCE]
+      roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE, Role.AGENT_RECOUVREMENT_JURIDIQUE, Role.CHEF_DEPARTEMENT_FINANCE, Role.AGENT_FINANCE]
     },
     {
       label: 'Créanciers',
@@ -332,6 +339,12 @@ export class SidebarComponent implements OnInit, OnDestroy {
     };
 
     return roleNames[this.currentUser.role] || this.currentUser.role;
+  }
+
+  getRoleClass(): string {
+    if (!this.currentUser?.role) return 'user-role';
+    const normalizedRole = this.currentUser.role.toLowerCase().replace(/_/g, '-');
+    return `user-role role-${normalizedRole}`;
   }
 
   getUserInitials(): string {

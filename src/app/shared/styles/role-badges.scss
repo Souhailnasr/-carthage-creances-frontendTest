@@ -1,0 +1,195 @@
+// Styles globaux pour les badges de rôles
+// Ce fichier peut être importé dans styles.scss pour une cohérence globale
+
+// Règle de secours pour tous les chefs de département
+.user-role[class*="chef"], 
+.role-badge[class*="chef"] {
+  background: linear-gradient(135deg, #27ae60, #229954) !important;
+  color: white !important;
+  border: 2px solid #229954 !important;
+  font-weight: 700 !important;
+}
+
+.role-badge, .user-role {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  text-align: center;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  }
+
+  // Super Admin - Rouge vif
+  &.role-super-admin {
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    color: white;
+    border: 2px solid #c0392b;
+    font-weight: 600;
+  }
+
+  // Chefs de Département - Tous en vert comme demandé
+  &.role-chef-departement-dossier {
+    background: linear-gradient(135deg, #27ae60, #229954) !important;
+    color: white !important;
+    border: 2px solid #229954 !important;
+    font-weight: 700;
+    position: relative;
+    
+    &::before {
+      content: "👑";
+      margin-right: 4px;
+    }
+  }
+
+  &.role-chef-departement-recouvement-juridique {
+    background: linear-gradient(135deg, #27ae60, #229954) !important;
+    color: white !important;
+    border: 2px solid #229954 !important;
+    font-weight: 700;
+    position: relative;
+    
+    &::before {
+      content: "⚖️";
+      margin-right: 4px;
+    }
+  }
+
+  &.role-chef-departement-finance {
+    background: linear-gradient(135deg, #27ae60, #229954) !important;
+    color: white !important;
+    border: 2px solid #229954 !important;
+    font-weight: 700;
+    position: relative;
+    
+    &::before {
+      content: "💰";
+      margin-right: 4px;
+    }
+  }
+
+  &.role-chef-departement-recouvement-amiable {
+    background: linear-gradient(135deg, #27ae60, #229954) !important;
+    color: white !important;
+    border: 2px solid #229954 !important;
+    font-weight: 700;
+    position: relative;
+    
+    &::before {
+      content: "🤝";
+      margin-right: 4px;
+    }
+  }
+
+  // Agents - Couleurs plus douces
+  &.role-agent-dossier {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    color: white;
+    border: 1px solid #2980b9;
+  }
+
+  &.role-agent-recouvement-juridique {
+    background: linear-gradient(135deg, #8e44ad, #7d3c98);
+    color: white;
+    border: 1px solid #7d3c98;
+  }
+
+  &.role-agent-finance {
+    background: linear-gradient(135deg, #2ecc71, #27ae60);
+    color: white;
+    border: 1px solid #27ae60;
+  }
+
+  &.role-agent-recouvement-amiable {
+    background: linear-gradient(135deg, #d35400, #ba4a00);
+    color: white;
+    border: 1px solid #ba4a00;
+  }
+
+  // Style par défaut pour les rôles non définis
+  &:not([class*="role-"]) {
+    background-color: #e9ecef;
+    color: #495057;
+    border: 1px solid #dee2e6;
+  }
+}
+
+// Variantes pour différents contextes
+.role-badge {
+  // Version compacte pour les tableaux
+  &.compact {
+    padding: 4px 8px;
+    font-size: 0.75rem;
+    border-radius: 15px;
+  }
+
+  // Version large pour les cartes
+  &.large {
+    padding: 8px 16px;
+    font-size: 0.9rem;
+    border-radius: 25px;
+  }
+
+  // Version avec icône seulement
+  &.icon-only {
+    padding: 8px;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    
+    &::before {
+      margin: 0;
+    }
+  }
+}
+
+// Animations spéciales pour les chefs de département
+.role-badge[class*="chef-departement"] {
+  animation: pulse-glow 2s infinite;
+}
+
+@keyframes pulse-glow {
+  0% {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  50% {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2), 0 0 20px rgba(255, 255, 255, 0.1);
+  }
+  100% {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .role-badge, .user-role {
+    font-size: 0.75rem;
+    padding: 4px 8px;
+    
+    &::before {
+      font-size: 0.8rem;
+    }
+  }
+}
+
+// Mode sombre (si implémenté)
+@media (prefers-color-scheme: dark) {
+  .role-badge, .user-role {
+    &:not([class*="role-"]) {
+      background-color: #495057;
+      color: #f8f9fa;
+      border: 1px solid #6c757d;
+    }
+  }
+}

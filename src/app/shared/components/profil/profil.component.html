@@ -7,7 +7,7 @@
       </div>
       <div class="user-info">
         <h1>{{ currentUser?.getFullName() }}</h1>
-        <p class="user-role">{{ getRoleDisplayName() }}</p>
+        <p class="user-role" [class]="getRoleClass()">{{ getRoleDisplayName() }}</p>
       </div>
       <div class="header-actions">
         <button class="btn-modifier" (click)="toggleEdit()">

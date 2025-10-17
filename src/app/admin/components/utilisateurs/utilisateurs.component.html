@@ -228,7 +228,7 @@
         <div class="user-info">
           <h3 class="user-name">{{ utilisateur.prenom }} {{ utilisateur.nom }}</h3>
           <p class="user-email">{{ utilisateur.email }}</p>
-          <span class="user-role" [class]="'role-' + (utilisateur.roleUtilisateur || utilisateur.role || '').toLowerCase().replace('_', '-')">
+          <span class="user-role" [class]="getRoleClass(utilisateur)">
             {{ getRoleDisplayName(utilisateur.roleUtilisateur || utilisateur.role || '') }}
           </span>
           <p class="user-department" *ngIf="utilisateur.departement">

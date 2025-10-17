@@ -135,6 +135,12 @@ export class UserProfileComponent implements OnInit, OnDestroy {
     return roleNames[role] || role;
   }
 
+  getRoleClass(): string {
+    const role = this.currentUser?.role || 'AGENT_DOSSIER';
+    const normalizedRole = role.toLowerCase().replace(/_/g, '-');
+    return `user-role role-${normalizedRole}`;
+  }
+
   getUserInitials(): string {
     if (!this.currentUser) return '';
     return this.currentUser.getFullName().split(' ').map(n => n[0]).join('');

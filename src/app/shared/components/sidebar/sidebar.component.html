@@ -20,7 +20,7 @@
     </div>
     <div class="user-details">
       <div class="user-name">{{ currentUser.prenom }} {{ currentUser.nom }}</div>
-      <div class="user-role">
+      <div class="user-role" [class]="getRoleClass()">
         {{ getRoleDisplayName() }}
       </div>
     </div>

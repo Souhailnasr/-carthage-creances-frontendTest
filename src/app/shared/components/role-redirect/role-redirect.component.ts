@@ -55,32 +55,47 @@ export class RoleRedirectComponent implements OnInit {
   ngOnInit(): void {
     const currentUser = this.authService.getCurrentUser();
     
+    console.log('🔍 RoleRedirectComponent - Utilisateur actuel:', currentUser);
+    console.log('🔍 RoleRedirectComponent - Rôle:', currentUser?.role);
+    
     if (currentUser) {
       const redirectUrl = this.getRedirectUrlByRole(currentUser.role);
+      console.log('🔍 RoleRedirectComponent - URL de redirection:', redirectUrl);
       this.router.navigate([redirectUrl]);
     } else {
       // Si pas d'utilisateur connecté, rediriger vers login
+      console.log('🔍 RoleRedirectComponent - Pas d\'utilisateur, redirection vers login');
       this.router.navigate(['/login']);
     }
   }
 
   private getRedirectUrlByRole(role: string): string {
+    console.log('🔍 getRedirectUrlByRole - Rôle reçu:', role);
+    
     switch (role) {
       case 'SUPER_ADMIN':
+        console.log('🔍 getRedirectUrlByRole - Cas SUPER_ADMIN');
         return '/dashboard';
       case 'CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE':
+        console.log('🔍 getRedirectUrlByRole - Cas CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE');
         return '/chef-amiable/dashboard';
       case 'CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE':
+        console.log('🔍 getRedirectUrlByRole - Cas CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE');
         return '/juridique/dashboard';
       case 'CHEF_DEPARTEMENT_DOSSIER':
-        return '/dossier/dashboard';
+        console.log('🔍 getRedirectUrlByRole - Cas CHEF_DEPARTEMENT_DOSSIER');
+        return '/dossier/chef-dashboard';
       case 'AGENT_RECOUVREMENT_AMIABLE':
+        console.log('🔍 getRedirectUrlByRole - Cas AGENT_RECOUVREMENT_AMIABLE');
         return '/amiable/dashboard';
       case 'AGENT_RECOUVREMENT_JURIDIQUE':
+        console.log('🔍 getRedirectUrlByRole - Cas AGENT_RECOUVREMENT_JURIDIQUE');
         return '/juridique/dashboard';
       case 'AGENT_DOSSIER':
+        console.log('🔍 getRedirectUrlByRole - Cas AGENT_DOSSIER');
         return '/dossier/dashboard';
       default:
+        console.log('🔍 getRedirectUrlByRole - Cas DEFAULT pour rôle:', role);
         return '/dashboard';
     }
   }

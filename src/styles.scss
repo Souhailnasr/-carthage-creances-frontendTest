@@ -2,6 +2,9 @@
 @use '@angular/material' as mat;
 @import '@angular/material/prebuilt-themes/indigo-pink.css';
 
+/* Import global role badge styles */
+@import 'app/shared/styles/role-badges.scss';
+
 /* Global font for Material */
 html, body { height: 100%; }
 body {

@@ -48,8 +48,12 @@
       .user-role {
         margin: 0;
         font-size: 1.1rem;
-        color: #6c757d;
         font-weight: 500;
+        
+        // Styles par défaut seulement si pas de classe de rôle spécifique
+        &:not([class*="role-"]) {
+          color: #6c757d;
+        }
       }
     }
 

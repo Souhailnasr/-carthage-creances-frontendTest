@@ -157,7 +157,7 @@ export class LoginComponent implements OnInit, OnDestroy {
         this.toastService.success('Connexion réussie - Chef Département Juridique');
         break;
       case 'RoleUtilisateur_CHEF_DEPARTEMENT_DOSSIER':
-        this.router.navigate(['/dossier/dashboard']);
+        this.router.navigate(['/dossier/chef-dashboard']);
         this.toastService.success('Connexion réussie - Chef Département Dossier');
         break;
       case 'RoleUtilisateur_CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE':

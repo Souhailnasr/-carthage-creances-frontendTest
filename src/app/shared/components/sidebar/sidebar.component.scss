@@ -113,11 +113,15 @@
 
 .user-role {
   font-size: 12px;
-  color: #bdc3c7;
   margin: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  
+  // Styles par défaut seulement si pas de classe de rôle spécifique
+  &:not([class*="role-"]) {
+    color: #bdc3c7;
+  }
 }
 
 .sidebar-nav {

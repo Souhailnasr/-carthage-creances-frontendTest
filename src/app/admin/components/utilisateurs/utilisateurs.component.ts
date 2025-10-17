@@ -366,7 +366,22 @@ export class UtilisateursComponent implements OnInit, OnDestroy {
           },
           error: (error) => {
             console.error('❌ Erreur lors de la création:', error);
-            this.toastService.error('Erreur lors de la création de l\'utilisateur');
+            
+            // Afficher un message d'erreur plus détaillé
+            let errorMessage = 'Erreur lors de la création de l\'utilisateur';
+            if (error.message) {
+              errorMessage = error.message;
+            }
+            
+            this.toastService.error(errorMessage);
+            
+            // Log supplémentaire pour diagnostic
+            console.error('❌ Détails de l\'erreur:', {
+              message: error.message,
+              status: error.status,
+              url: error.url,
+              userData: utilisateurRequest
+            });
           }
         });
     }
@@ -410,6 +425,23 @@ export class UtilisateursComponent implements OnInit, OnDestroy {
     };
 
     return roleNames[role] || role;
+  }
+
+  getRoleClass(utilisateur: any): string {
+    const role = utilisateur.roleUtilisateur || utilisateur.role || '';
+    if (!role) return 'user-role';
+    const normalizedRole = role.toLowerCase().replace(/_/g, '-');
+    const className = `user-role role-${normalizedRole}`;
+    
+    // Debug pour voir les classes générées
+    console.log('🔍 Role class debug:', {
+      originalRole: role,
+      normalizedRole: normalizedRole,
+      className: className,
+      user: `${utilisateur.prenom} ${utilisateur.nom}`
+    });
+    
+    return className;
   }
 
   getUserInitials(utilisateur: Utilisateur): string {

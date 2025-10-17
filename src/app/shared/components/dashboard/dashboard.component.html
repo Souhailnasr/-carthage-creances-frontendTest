@@ -19,7 +19,7 @@
     </div>
     <div class="user-details">
       <h2>{{ currentUser.getFullName() }}</h2>
-      <p class="user-role">{{ getRoleDisplayName() }}</p>
+      <p class="user-role" [class]="getRoleClass()">{{ getRoleDisplayName() }}</p>
       <p class="user-email">{{ currentUser.email }}</p>
     </div>
   </div>

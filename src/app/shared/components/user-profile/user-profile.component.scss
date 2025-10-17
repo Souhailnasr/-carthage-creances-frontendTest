@@ -58,10 +58,14 @@
         }
 
         .user-role {
-          color: #007bff;
           font-weight: 600;
           font-size: 1.2rem;
           margin: 0 0 5px 0;
+          
+          // Styles par défaut seulement si pas de classe de rôle spécifique
+          &:not([class*="role-"]) {
+            color: #007bff;
+          }
         }
 
         .user-email {

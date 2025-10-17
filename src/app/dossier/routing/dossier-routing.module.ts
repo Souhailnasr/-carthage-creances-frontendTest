@@ -15,9 +15,15 @@ import { Role } from '../../shared/models';
 const routes: Routes = [
   {
     path: 'dashboard',
-    loadComponent: () => import('../../chef-dossier/chef-dossier.component').then(m => m.ChefDossierComponent),
+    loadComponent: () => import('../../shared/components/dashboard/dashboard.component').then(m => m.DashboardComponent),
     canActivate: [AuthGuard],
     data: { allowedRoles: [Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER, Role.SUPER_ADMIN] }
+  },
+  {
+    path: 'chef-dashboard',
+    loadComponent: () => import('../../chef-dossier/chef-dossier.component').then(m => m.ChefDossierComponent),
+    canActivate: [AuthGuard],
+    data: { allowedRoles: [Role.CHEF_DEPARTEMENT_DOSSIER, Role.SUPER_ADMIN] }
   },
   {
     path: 'parties-prenantes',

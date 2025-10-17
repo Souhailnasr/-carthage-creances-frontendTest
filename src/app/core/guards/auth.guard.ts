@@ -28,7 +28,7 @@ function getRedirectUrlByRole(role: string): string {
     case 'CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE':
       return '/juridique/dashboard';
     case 'CHEF_DEPARTEMENT_DOSSIER':
-      return '/dossier/dashboard';
+      return '/dossier/chef-dashboard';
     case 'AGENT_DOSSIER':
       return '/dossier/dashboard';
     case 'AGENT_RECOUVREMENT_JURIDIQUE':
