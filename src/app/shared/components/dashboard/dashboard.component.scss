@@ -1017,6 +1017,85 @@
   }
 }
 
+/* Sections spécifiques selon le rôle */
+.admin-section, .chef-section, .agent-section {
+  margin: 2rem 0;
+  padding: 1.5rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+
+  h3 {
+    color: #2c3e50;
+    margin-bottom: 1.5rem;
+    font-size: 1.4rem;
+    font-weight: 600;
+    border-bottom: 2px solid #3498db;
+    padding-bottom: 0.5rem;
+  }
+}
+
+.admin-cards, .chef-cards, .agent-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.admin-card, .chef-card, .agent-card {
+  background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 1px solid #dee2e6;
+  transition: all 0.3s ease;
+  cursor: pointer;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    border-color: #3498db;
+  }
+}
+
+.admin-icon, .chef-icon, .agent-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+  font-size: 1.5rem;
+  color: white;
+}
+
+.admin-icon {
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+}
+
+.chef-icon {
+  background: linear-gradient(135deg, #27ae60, #229954);
+}
+
+.agent-icon {
+  background: linear-gradient(135deg, #3498db, #2980b9);
+}
+
+.admin-content, .chef-content, .agent-content {
+  h4 {
+    color: #2c3e50;
+    margin-bottom: 0.5rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+  }
+
+  p {
+    color: #6c757d;
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.4;
+  }
+}
+
 // Responsive pour les notifications
 @media (max-width: 768px) {
   .notifications-fixed {
@@ -1035,5 +1114,9 @@
     flex-direction: column;
     gap: 12px;
     align-items: stretch;
+  }
+
+  .admin-cards, .chef-cards, .agent-cards {
+    grid-template-columns: 1fr;
   }
 }

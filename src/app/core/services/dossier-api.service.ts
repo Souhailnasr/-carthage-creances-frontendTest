@@ -11,6 +11,7 @@ import {
   Urgence,
   DossierStatus
 } from '../../shared/models/dossier-api.model';
+import { Page } from '../../shared/models/pagination.model';
 
 @Injectable({
   providedIn: 'root'
@@ -161,21 +162,29 @@ export class DossierApiService {
     return this.http.get<DossierApi>(`${this.apiUrl}/${id}`);
   }
 
+
   /**
-   * Récupère tous les dossiers
+   * Clôture un dossier
    */
-  getAllDossiers(): Observable<DossierApi[]> {
-    return this.http.get<DossierApi[]>(this.apiUrl);
+  cloturerDossier(id: number): Observable<any> {
+    return this.http.put(`${this.apiUrl}/${id}/cloturer`, {});
+  }
+
+  /**
+   * Récupère tous les dossiers avec pagination
+   */
+  getAllDossiers(): Observable<Page<DossierApi>> {
+    return this.http.get<Page<DossierApi>>(this.apiUrl);
   }
 
   /**
    * Liste filtrée: GET /?role=&userId=
    */
-  list(role?: 'CHEF' | 'AGENT', userId?: number): Observable<DossierApi[]> {
+  list(role?: 'CHEF' | 'AGENT', userId?: number): Observable<Page<DossierApi>> {
     const params: any = {};
     if (role) params.role = role;
     if (userId !== undefined) params.userId = String(userId);
-    return this.http.get<DossierApi[]>(this.apiUrl, { params });
+    return this.http.get<Page<DossierApi>>(this.apiUrl, { params });
   }
 
   /**

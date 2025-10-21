@@ -1,0 +1,120 @@
+<div class="validation-dossier-form">
+  <div class="form-header">
+    <h2>Créer une Validation de Dossier</h2>
+    <button class="btn btn-secondary" (click)="onCancel()">
+      <i class="fas fa-times"></i>
+      Annuler
+    </button>
+  </div>
+
+  <form [formGroup]="validationForm" (ngSubmit)="onSubmit()" class="form-content">
+    <!-- Dossier sélection -->
+    <div class="form-group">
+      <label for="dossierId" class="form-label required">
+        <i class="fas fa-folder"></i>
+        Dossier à valider
+      </label>
+      <select 
+        id="dossierId" 
+        formControlName="dossierId" 
+        class="form-control"
+        [class.is-invalid]="isFieldInvalid('dossierId')"
+      >
+        <option value="">Sélectionner un dossier...</option>
+        <option 
+          *ngFor="let dossier of availableDossiers" 
+          [value]="dossier.id"
+        >
+          {{ dossier.titre }} - {{ dossier.numeroDossier }} 
+          ({{ dossier.montantCreance | currency:'TND':'symbol':'1.0-0':'fr' }})
+        </option>
+      </select>
+      <div class="invalid-feedback" *ngIf="getFieldError('dossierId')">
+        {{ getFieldError('dossierId') }}
+      </div>
+    </div>
+
+    <!-- Informations du dossier sélectionné -->
+    <div class="dossier-info" *ngIf="getSelectedDossier()">
+      <h4>Informations du dossier sélectionné</h4>
+      <div class="dossier-details">
+        <div class="detail-item">
+          <span class="label">Titre:</span>
+          <span class="value">{{ getSelectedDossier()?.titre }}</span>
+        </div>
+        <div class="detail-item">
+          <span class="label">Numéro:</span>
+          <span class="value">{{ getSelectedDossier()?.numeroDossier }}</span>
+        </div>
+        <div class="detail-item">
+          <span class="label">Montant:</span>
+          <span class="value">{{ getSelectedDossier()?.montantCreance | currency:'TND':'symbol':'1.0-0':'fr' }}</span>
+        </div>
+        <div class="detail-item">
+          <span class="label">Date création:</span>
+          <span class="value">{{ getSelectedDossier()?.dateCreation | date:'dd/MM/yyyy HH:mm':'fr' }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Commentaires -->
+    <div class="form-group">
+      <label for="commentaires" class="form-label">
+        <i class="fas fa-comment"></i>
+        Commentaires (optionnel)
+      </label>
+      <textarea 
+        id="commentaires" 
+        formControlName="commentaires" 
+        class="form-control"
+        rows="4"
+        placeholder="Ajoutez des commentaires sur cette validation..."
+      ></textarea>
+      <small class="form-text">
+        Les commentaires sont visibles par tous les utilisateurs ayant accès à cette validation.
+      </small>
+    </div>
+
+    <!-- Informations utilisateur -->
+    <div class="user-info">
+      <h4>Informations de validation</h4>
+      <div class="info-item">
+        <span class="label">Agent créateur:</span>
+        <span class="value">{{ getCurrentUserName() }}</span>
+      </div>
+      <div class="info-item">
+        <span class="label">Date de création:</span>
+        <span class="value">{{ getCurrentDate() }}</span>
+      </div>
+    </div>
+
+    <!-- Messages d'erreur -->
+    <div class="error-message" *ngIf="error">
+      <i class="fas fa-exclamation-triangle"></i>
+      <span>{{ error }}</span>
+    </div>
+
+    <!-- Actions -->
+    <div class="form-actions">
+      <button 
+        type="button" 
+        class="btn btn-secondary" 
+        (click)="onCancel()"
+        [disabled]="loading"
+      >
+        <i class="fas fa-times"></i>
+        Annuler
+      </button>
+      
+      <button 
+        type="submit" 
+        class="btn btn-primary" 
+        [disabled]="validationForm.invalid || loading"
+      >
+        <i class="fas fa-spinner fa-spin" *ngIf="loading"></i>
+        <i class="fas fa-check" *ngIf="!loading"></i>
+        {{ loading ? 'Création...' : 'Créer la validation' }}
+      </button>
+    </div>
+  </form>
+</div>

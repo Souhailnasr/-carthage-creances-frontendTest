@@ -106,32 +106,52 @@ export class LoginComponent implements OnInit, OnDestroy {
     this.authService.authenticate(this.email, this.password).subscribe({
       next: (data) => {
         this.loading = false;
-        this.tokenStorage.saveToken(data.accessToken);
-        this.tokenStorage.saveUser(data);
+        console.log('🔍 Réponse d\'authentification complète:', JSON.stringify(data, null, 2));
         
-        // Récupérer le token pour décoder les informations
-        const token = sessionStorage.getItem('auth-user');
-        if (token) {
-          this.token = token;
-          const tokenInfo = this.getDecodedAccessToken(this.token);
-          console.log('Token:', this.token);
-          console.log('Token Info:', tokenInfo);
-          console.log('Roles:', tokenInfo.role.length);
+        // Sauvegarder le token
+        this.tokenStorage.saveToken(data.token);
+        
+        // Si la réponse ne contient que le token, créer un utilisateur basique
+        if (data.token && !data.user && !data.utilisateur && !data.id) {
+          console.log('🔍 Token reçu, création d\'utilisateur basique...');
           
-          if (tokenInfo && tokenInfo.role && tokenInfo.role.length > 0) {
-            this.isLoggedIn = true;
-            this.invalidLogin = false;
-            
-            // Redirection selon le rôle
-            const role = tokenInfo.role[0].authority;
-            this.redirectByRole(role);
-          } else {
-            this.toastService.error('Erreur lors de la récupération des informations utilisateur.');
-            this.invalidLogin = true;
-          }
+          // Créer un utilisateur basique avec l'email
+          const basicUser = {
+            id: null,
+            nom: this.extractNameFromEmail(this.email),
+            prenom: this.extractFirstNameFromEmail(this.email),
+            email: this.email,
+            role: this.determineRoleFromEmail(this.email),
+            actif: true,
+            getFullName: function() {
+              return `${this.prenom} ${this.nom}`;
+            }
+          };
+          
+          console.log('🔍 Utilisateur basique créé:', basicUser);
+          this.handleSuccessfulLogin(basicUser, data.token);
         } else {
-          this.toastService.error('Erreur lors de la sauvegarde du token.');
-          this.invalidLogin = true;
+          // La réponse contient des données utilisateur
+          let userData = null;
+          
+          if (data.user) {
+            userData = data.user;
+          } else if (data.utilisateur) {
+            userData = data.utilisateur;
+          } else if (data.id || data.nom || data.prenom) {
+            userData = data;
+          }
+          
+          console.log('🔍 Données utilisateur extraites:', userData);
+          
+          if (!userData) {
+            console.error('❌ Aucune donnée utilisateur trouvée dans la réponse');
+            this.toastService.error('Erreur lors de la récupération des données utilisateur');
+            this.invalidLogin = true;
+            return;
+          }
+          
+          this.handleSuccessfulLogin(userData, data.token);
         }
       },
       error: (error) => {
@@ -144,40 +164,137 @@ export class LoginComponent implements OnInit, OnDestroy {
     });
   }
 
+  private handleSuccessfulLogin(userData: any, token: string): void {
+    console.log('🔍 Traitement de la connexion réussie');
+    
+    // Créer un objet User compatible avec AuthService
+    const user = {
+      id: userData.id,
+      nom: userData.nom,
+      prenom: userData.prenom,
+      email: userData.email,
+      role: userData.role || userData.roleUtilisateur,
+      actif: userData.actif !== undefined ? userData.actif : true,
+      getFullName: function() {
+        return `${this.prenom} ${this.nom}`;
+      }
+    };
+    
+    console.log('🔍 Utilisateur créé:', user);
+    console.log('🔍 Rôle de l\'utilisateur:', user.role);
+    
+    // Sauvegarder les données utilisateur
+    this.tokenStorage.saveUser(user);
+    
+    // Synchroniser avec AuthService
+    this.authService.saveUserToStorage(user, token);
+    this.authService.setCurrentUser(user);
+    
+    this.isLoggedIn = true;
+    this.invalidLogin = false;
+    
+    // Redirection selon le rôle
+    this.redirectByRole(user.role);
+  }
+
+  private extractNameFromEmail(email: string): string {
+    const emailParts = email.split('@')[0];
+    const nameParts = emailParts.split('.');
+    if (nameParts.length >= 2) {
+      return nameParts[nameParts.length - 1].charAt(0).toUpperCase() + nameParts[nameParts.length - 1].slice(1);
+    }
+    return 'Utilisateur';
+  }
+
+  private extractFirstNameFromEmail(email: string): string {
+    const emailParts = email.split('@')[0];
+    const nameParts = emailParts.split('.');
+    if (nameParts.length >= 2) {
+      return nameParts[0].charAt(0).toUpperCase() + nameParts[0].slice(1);
+    }
+    return 'Connecté';
+  }
+
+  private determineRoleFromEmail(email: string): string {
+    const emailLower = email.toLowerCase();
+    
+    // Déterminer le rôle basé sur les comptes réels de la base de données
+    if (emailLower.includes('ali.mejri')) {
+      return 'SUPER_ADMIN'; // Ali Mejri = Super Admin
+    } else if (emailLower.includes('mohamed.daas')) {
+      return 'CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE'; // Mohamed Daas = Chef Département Recouvrement Amiable
+    } else if (emailLower.includes('ahmed.daas')) {
+      return 'CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE'; // Ahmed Daas = Chef Département Recouvrement Juridique
+    } else if (emailLower.includes('souhailnsrpro98')) {
+      return 'AGENT_DOSSIER'; // Souhail Nasr = Agent Dossier
+    } else if (emailLower.includes('souhailnasr80')) {
+      return 'CHEF_DEPARTEMENT_DOSSIER'; // Souhailou Nasr = Chef Département Dossier
+    } else if (emailLower.includes('admin') || emailLower.includes('super')) {
+      return 'SUPER_ADMIN';
+    } else if (emailLower.includes('chef.dossier') || emailLower.includes('chefdossier')) {
+      return 'CHEF_DEPARTEMENT_DOSSIER';
+    } else if (emailLower.includes('chef.juridique') || emailLower.includes('chefjuridique')) {
+      return 'CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE';
+    } else if (emailLower.includes('chef.amiable') || emailLower.includes('chefamiable')) {
+      return 'CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE';
+    } else if (emailLower.includes('agent.dossier') || emailLower.includes('agentdossier')) {
+      return 'AGENT_DOSSIER';
+    } else if (emailLower.includes('agent.juridique') || emailLower.includes('agentjuridique')) {
+      return 'AGENT_RECOUVREMENT_JURIDIQUE';
+    } else if (emailLower.includes('agent.amiable') || emailLower.includes('agentamiable')) {
+      return 'AGENT_RECOUVREMENT_AMIABLE';
+    }
+    
+    // Rôle par défaut
+    return 'AGENT_DOSSIER';
+  }
+
   private redirectByRole(role: string): void {
     console.log('🔍 Rôle reçu pour redirection:', role);
     
-    switch (role) {
-      case 'RoleUtilisateur_SUPER_ADMIN':
+    // Vérifier si le rôle est défini
+    if (!role || role === 'undefined' || role === 'null') {
+      console.error('❌ Rôle non défini ou invalide:', role);
+      this.toastService.error('Erreur: Rôle utilisateur non trouvé');
+      this.invalidLogin = true;
+      return;
+    }
+    
+    // Normaliser le rôle (enlever les préfixes possibles)
+    const normalizedRole = role.replace(/^RoleUtilisateur_/, '').replace(/^ROLE_/, '');
+    console.log('🔍 Rôle normalisé:', normalizedRole);
+    
+    switch (normalizedRole) {
+      case 'SUPER_ADMIN':
         this.router.navigate(['/admin/dashboard']);
         this.toastService.success('Connexion réussie - Super Admin');
         break;
-      case 'RoleUtilisateur_CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE':
+      case 'CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE':
         this.router.navigate(['/juridique/dashboard']);
         this.toastService.success('Connexion réussie - Chef Département Juridique');
         break;
-      case 'RoleUtilisateur_CHEF_DEPARTEMENT_DOSSIER':
+      case 'CHEF_DEPARTEMENT_DOSSIER':
         this.router.navigate(['/dossier/chef-dashboard']);
         this.toastService.success('Connexion réussie - Chef Département Dossier');
         break;
-      case 'RoleUtilisateur_CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE':
+      case 'CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE':
         this.router.navigate(['/chef-amiable/dashboard']);
         this.toastService.success('Connexion réussie - Chef Département Amiable');
         break;
-      case 'RoleUtilisateur_AGENT_DOSSIER':
+      case 'AGENT_DOSSIER':
         this.router.navigate(['/dossier/dashboard']);
         this.toastService.success('Connexion réussie - Agent Dossier');
         break;
-      case 'RoleUtilisateur_AGENT_RECOUVREMENT_JURIDIQUE':
+      case 'AGENT_RECOUVREMENT_JURIDIQUE':
         this.router.navigate(['/juridique/dashboard']);
         this.toastService.success('Connexion réussie - Agent Juridique');
         break;
-      case 'RoleUtilisateur_AGENT_RECOUVREMENT_AMIABLE':
+      case 'AGENT_RECOUVREMENT_AMIABLE':
         this.router.navigate(['/chef-amiable/dashboard']);
         this.toastService.success('Connexion réussie - Agent Amiable');
         break;
       default:
-        console.warn('⚠️ Rôle non reconnu:', role);
+        console.warn('⚠️ Rôle non reconnu:', role, 'normalisé:', normalizedRole);
         this.router.navigate(['/dashboard']);
         this.toastService.success('Connexion réussie');
         break;

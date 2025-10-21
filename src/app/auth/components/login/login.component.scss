@@ -208,17 +208,75 @@
   padding: 12px 16px;
   font-size: 14px;
   font-weight: 500;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
 }
 
 .btn-demo:hover {
-  background: #667eea;
-  color: white;
-  border-color: #667eea;
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .btn-demo i {
   font-size: 16px;
+  margin-right: 8px;
+}
+
+// Styles spécifiques pour chaque rôle
+.btn-demo:nth-child(1) { // Super Admin
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+  color: white;
+  border-color: #c0392b;
+  
+  &:hover {
+    background: linear-gradient(135deg, #c0392b, #a93226);
+    border-color: #a93226;
+  }
+}
+
+.btn-demo:nth-child(2) { // Chef Dossier
+  background: linear-gradient(135deg, #27ae60, #229954);
+  color: white;
+  border-color: #229954;
+  
+  &:hover {
+    background: linear-gradient(135deg, #229954, #1e8449);
+    border-color: #1e8449;
+  }
+}
+
+.btn-demo:nth-child(3) { // Agent Dossier
+  background: linear-gradient(135deg, #3498db, #2980b9);
+  color: white;
+  border-color: #2980b9;
+  
+  &:hover {
+    background: linear-gradient(135deg, #2980b9, #21618c);
+    border-color: #21618c;
+  }
+}
+
+.btn-demo:nth-child(4) { // Chef Juridique
+  background: linear-gradient(135deg, #27ae60, #229954);
+  color: white;
+  border-color: #229954;
+  
+  &:hover {
+    background: linear-gradient(135deg, #229954, #1e8449);
+    border-color: #1e8449;
+  }
+}
+
+.btn-demo:nth-child(5) { // Chef Amiable
+  background: linear-gradient(135deg, #27ae60, #229954);
+  color: white;
+  border-color: #229954;
+  
+  &:hover {
+    background: linear-gradient(135deg, #229954, #1e8449);
+    border-color: #1e8449;
+  }
 }
 
 // Responsive

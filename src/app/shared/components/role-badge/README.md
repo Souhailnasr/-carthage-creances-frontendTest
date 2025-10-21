@@ -118,3 +118,5 @@ Les couleurs sont définies dans `role-badges.scss` avec des gradients CSS. Modi
 ## Exemple de démonstration
 
 Utilisez le composant `RoleBadgeDemoComponent` pour voir tous les badges en action et tester les différentes variantes.
+
+

@@ -75,3 +75,5 @@ import { RoleBadgeComponent } from './role-badge.component';
 export class RoleBadgeDemoComponent {
   // Composant de démonstration pour tester les badges de rôles
 }
+
+

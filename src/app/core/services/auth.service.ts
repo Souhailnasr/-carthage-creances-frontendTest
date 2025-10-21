@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable, BehaviorSubject } from 'rxjs';
+import { Observable, BehaviorSubject, throwError } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { User } from '../../shared/models/user.model';
 import { Role } from '../../shared/models/enums.model';
@@ -110,6 +110,20 @@ export class AuthService {
     );
   }
 
+  getUserProfile(): Observable<any> {
+    const token = this.getToken();
+    if (!token) {
+      return throwError(() => new Error('Token non trouvé'));
+    }
+
+    const headers = new HttpHeaders({
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    });
+
+    return this.http.get(`${this.apiUrl}/profile`, { headers });
+  }
+
   register(userData: any): Observable<User> {
     return this.http.post<User>(`${this.apiUrl}/register`, userData);
   }
@@ -121,7 +135,23 @@ export class AuthService {
   }
 
   getCurrentUser(): User | null {
-    return this.currentUserSubject.value;
+    const user = this.currentUserSubject.value;
+    if (!user) {
+      // Essayer de charger depuis le localStorage si pas en mémoire
+      this.loadUserFromStorage();
+      return this.currentUserSubject.value;
+    }
+    return user;
+  }
+
+  setCurrentUser(user: User): void {
+    this.currentUserSubject.next(user);
+  }
+
+  saveUserToStorage(user: User, token: string): void {
+    localStorage.setItem('currentUser', JSON.stringify(user));
+    localStorage.setItem('token', token);
+    this.currentUserSubject.next(user);
   }
 
   getRole(): string | null {
@@ -137,6 +167,171 @@ export class AuthService {
 
   getToken(): string | null {
     return localStorage.getItem('token');
+  }
+
+  /**
+   * Extrait l'ID utilisateur du token JWT
+   */
+  getUserIdFromToken(): string | null {
+    const token = this.getToken();
+    if (!token) {
+      console.log('🔍 Aucun token trouvé');
+      return null;
+    }
+
+    try {
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+      const payload = JSON.parse(jsonPayload);
+      
+      console.log('🔍 Payload du token:', payload);
+      
+      // Chercher l'ID dans différentes propriétés possibles
+      const userId = payload.sub || payload.id || payload.userId || payload.user_id || null;
+      console.log('🔍 ID extrait du token:', userId);
+      return userId;
+    } catch (e) {
+      console.error('Erreur lors du décodage du token:', e);
+      return null;
+    }
+  }
+
+  /**
+   * Méthode alternative pour récupérer l'ID utilisateur depuis localStorage
+   */
+  getUserIdFromStorage(): string | null {
+    try {
+      const userData = localStorage.getItem('currentUser');
+      if (userData) {
+        const user = JSON.parse(userData);
+        console.log('🔍 Utilisateur depuis localStorage:', user);
+        return user.id || null;
+      }
+    } catch (e) {
+      console.error('Erreur lors de la lecture du localStorage:', e);
+    }
+    return null;
+  }
+
+  /**
+   * Récupère l'ID utilisateur depuis le backend en utilisant l'email du token
+   */
+  async getUserIdFromBackend(): Promise<string | null> {
+    const email = this.getUserIdFromToken();
+    if (!email) {
+      console.log('🔍 Aucun email trouvé dans le token');
+      return null;
+    }
+
+    try {
+      // Appel au backend pour récupérer l'ID utilisateur par email
+      const response = await fetch(`http://localhost:8089/carthage-creance/api/utilisateurs/by-email/${email}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${this.getToken()}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const userData = await response.json();
+        console.log('✅ ID utilisateur récupéré depuis le backend:', userData.id);
+        return userData.id.toString();
+      } else if (response.status === 404) {
+        console.warn('⚠️ Utilisateur non trouvé avec l\'email:', email);
+        return null;
+      } else if (response.status === 500) {
+        console.error('❌ Erreur serveur 500 - Endpoint /api/utilisateurs/by-email/{email} non implémenté');
+        console.error('🔧 SOLUTION: Créer l\'endpoint GET /api/utilisateurs/by-email/{email} dans le UserController');
+        return null;
+      } else {
+        console.error('❌ Erreur lors de la récupération de l\'ID utilisateur:', response.status);
+        return null;
+      }
+    } catch (error) {
+      console.error('❌ Erreur lors de l\'appel au backend:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Obtient l'ID utilisateur depuis le token ou l'utilisateur actuel
+   */
+  getCurrentUserId(): string | null {
+    const user = this.getCurrentUser();
+    console.log('🔍 getCurrentUserId - user:', user);
+    console.log('🔍 getCurrentUserId - user.id:', user?.id);
+    
+    if (user && user.id && user.id !== 'null' && user.id !== 'undefined' && !isNaN(Number(user.id))) {
+      console.log('✅ ID utilisateur trouvé dans user:', user.id);
+      return user.id;
+    }
+    
+    // Fallback 1: extraire depuis localStorage
+    const storageId = this.getUserIdFromStorage();
+    console.log('🔍 getCurrentUserId - storageId:', storageId);
+    if (storageId && !isNaN(Number(storageId))) {
+      return storageId;
+    }
+    
+    // Fallback 2: essayer de récupérer depuis le backend
+    console.log('⚠️ ID utilisateur non trouvé localement, tentative depuis le backend...');
+    return null; // Retourner null pour forcer l'appel à getUserIdFromBackend()
+  }
+
+  /**
+   * Obtient l'ID numérique de l'utilisateur (pour les APIs qui nécessitent un ID numérique)
+   */
+  getCurrentUserIdNumber(): number | null {
+    const userId = this.getCurrentUserId();
+    if (!userId) {
+      return null;
+    }
+    
+    // Si c'est déjà un nombre, le retourner
+    if (!isNaN(Number(userId))) {
+      return parseInt(userId);
+    }
+    
+    // Si c'est un email, essayer de récupérer l'ID depuis le backend
+    // Pour l'instant, on retourne null pour forcer l'utilisation de getAllDossiers()
+    console.log('⚠️ ID utilisateur est un email, utilisation de getAllDossiers()');
+    return null;
+  }
+
+  /**
+   * Vérifie si l'utilisateur peut valider des dossiers
+   */
+  canValidateDossiers(): boolean {
+    const user = this.getCurrentUser();
+    if (!user) return false;
+    
+    const validationRoles = [
+      Role.SUPER_ADMIN,
+      Role.CHEF_DEPARTEMENT_DOSSIER,
+      Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE,
+      Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE,
+      Role.CHEF_DEPARTEMENT_FINANCE
+    ];
+    
+    return validationRoles.includes(user.role);
+  }
+
+  /**
+   * Vérifie si l'utilisateur peut créer des validations
+   */
+  canCreateValidations(): boolean {
+    return this.canValidateDossiers();
+  }
+
+  /**
+   * Vérifie si l'utilisateur peut voir les statistiques de validation
+   */
+  canViewValidationStats(): boolean {
+    return this.canValidateDossiers();
   }
 
   hasRole(role: string): boolean {
@@ -157,18 +352,11 @@ export class AuthService {
     return this.hasAnyRole(['SUPER_ADMIN', 'CHEF_DEPARTEMENT_DOSSIER']);
   }
 
-  canValidateDossiers(): boolean {
-    return this.hasAnyRole(['SUPER_ADMIN', 'CHEF_DEPARTEMENT_DOSSIER']);
-  }
 
   canCreateDossiers(): boolean {
     return this.hasAnyRole(['SUPER_ADMIN', 'CHEF_DEPARTEMENT_DOSSIER', 'AGENT_DOSSIER']);
   }
 
-  private saveUserToStorage(user: User, token: string): void {
-    localStorage.setItem('currentUser', JSON.stringify(user));
-    localStorage.setItem('token', token);
-  }
 
   private loadUserFromStorage(): void {
     const userStr = localStorage.getItem('currentUser');

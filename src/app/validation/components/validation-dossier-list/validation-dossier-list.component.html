@@ -1,0 +1,207 @@
+<div class="validation-dossier-list">
+  <div class="header">
+    <h1>Validation des Dossiers</h1>
+    <div class="header-actions">
+      <button class="btn btn-primary" (click)="loadValidations()" [disabled]="loading">
+        <i class="fas fa-sync-alt" [class.fa-spin]="loading"></i>
+        Actualiser
+      </button>
+    </div>
+  </div>
+
+  <!-- Statistiques -->
+  <div class="stats-container" *ngIf="stats">
+    <div class="stat-card">
+      <div class="stat-number">{{ stats.total }}</div>
+      <div class="stat-label">Total</div>
+    </div>
+    <div class="stat-card stat-en-attente">
+      <div class="stat-number">{{ stats.enAttente }}</div>
+      <div class="stat-label">En Attente</div>
+    </div>
+    <div class="stat-card stat-valide">
+      <div class="stat-number">{{ stats.valides }}</div>
+      <div class="stat-label">Validés</div>
+    </div>
+    <div class="stat-card stat-rejete">
+      <div class="stat-number">{{ stats.rejetes }}</div>
+      <div class="stat-label">Rejetés</div>
+    </div>
+  </div>
+
+  <!-- Filtres -->
+  <div class="filters-container">
+    <form [formGroup]="filterForm" class="filters-form">
+      <div class="filter-group">
+        <label>Statut</label>
+        <select formControlName="statut">
+          <option value="">Tous</option>
+          <option *ngFor="let statut of statutOptions" [value]="statut">
+            {{ getStatutLabel(statut) }}
+          </option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label>Recherche</label>
+        <input 
+          type="text" 
+          formControlName="searchTerm" 
+          placeholder="Titre, numéro, agent..."
+        />
+      </div>
+
+      <div class="filter-group">
+        <label>Date début</label>
+        <input type="date" formControlName="dateDebut" />
+      </div>
+
+      <div class="filter-group">
+        <label>Date fin</label>
+        <input type="date" formControlName="dateFin" />
+      </div>
+
+      <div class="filter-actions">
+        <button type="button" class="btn btn-secondary" (click)="clearFilters()">
+          Effacer
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Liste des validations -->
+  <div class="validations-container">
+    <div class="loading" *ngIf="loading">
+      <i class="fas fa-spinner fa-spin"></i>
+      <span>Chargement...</span>
+    </div>
+
+    <div class="error" *ngIf="error">
+      <i class="fas fa-exclamation-triangle"></i>
+      <span>{{ error }}</span>
+      <button class="btn btn-primary" (click)="loadValidations()">Réessayer</button>
+    </div>
+
+    <div class="no-data" *ngIf="!loading && !error && filteredValidations.length === 0">
+      <i class="fas fa-folder-open"></i>
+      <span>Aucune validation trouvée</span>
+    </div>
+
+    <div class="validations-table" *ngIf="!loading && !error && filteredValidations.length > 0">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Dossier</th>
+            <th>Agent Créateur</th>
+            <th>Chef Validateur</th>
+            <th>Statut</th>
+            <th>Date Création</th>
+            <th>Date Validation</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let validation of paginatedValidations">
+            <td>{{ validation.id }}</td>
+            <td>
+              <div class="dossier-info">
+                <div class="dossier-titre">{{ validation.dossier.titre }}</div>
+                <div class="dossier-numero">{{ validation.dossier.numeroDossier }}</div>
+                <div class="dossier-montant">{{ validation.dossier.montantCreance | currency:'TND':'symbol':'1.0-0':'fr' }}</div>
+              </div>
+            </td>
+            <td>
+              <div class="user-info">
+                <div class="user-name">{{ validation.agentCreateur.prenom }} {{ validation.agentCreateur.nom }}</div>
+                <div class="user-email">{{ validation.agentCreateur.email }}</div>
+              </div>
+            </td>
+            <td>
+              <div class="user-info" *ngIf="validation.chefValidateur">
+                <div class="user-name">{{ validation.chefValidateur.prenom }} {{ validation.chefValidateur.nom }}</div>
+                <div class="user-email">{{ validation.chefValidateur.email }}</div>
+              </div>
+              <span class="no-validator" *ngIf="!validation.chefValidateur">-</span>
+            </td>
+            <td>
+              <span class="statut-badge" [ngClass]="getStatutClass(validation.statut)">
+                {{ getStatutLabel(validation.statut) }}
+              </span>
+            </td>
+            <td>{{ formatDate(validation.dateCreation) }}</td>
+            <td>
+              <span *ngIf="validation.dateValidation">{{ formatDate(validation.dateValidation) }}</span>
+              <span class="no-date" *ngIf="!validation.dateValidation">-</span>
+            </td>
+            <td class="actions">
+              <!-- Boutons d'action selon le statut -->
+              <button 
+                *ngIf="canValidate() && validation.statut === 'EN_ATTENTE'"
+                class="btn btn-success btn-sm"
+                (click)="validerDossier(validation)"
+                title="Valider le dossier"
+              >
+                <i class="fas fa-check"></i>
+              </button>
+              
+              <button 
+                *ngIf="canValidate() && validation.statut === 'EN_ATTENTE'"
+                class="btn btn-warning btn-sm"
+                (click)="rejeterDossier(validation)"
+                title="Rejeter le dossier"
+              >
+                <i class="fas fa-times"></i>
+              </button>
+              
+              <button 
+                *ngIf="canValidate() && (validation.statut === 'VALIDE' || validation.statut === 'REJETE')"
+                class="btn btn-info btn-sm"
+                (click)="remettreEnAttente(validation)"
+                title="Remettre en attente"
+              >
+                <i class="fas fa-clock"></i>
+              </button>
+
+              <!-- Commentaires -->
+              <button 
+                *ngIf="validation.commentaires"
+                class="btn btn-secondary btn-sm"
+                title="Voir les commentaires"
+                (click)="showCommentaires(validation.commentaires)"
+              >
+                <i class="fas fa-comment"></i>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination" *ngIf="totalPages > 1">
+      <button 
+        class="btn btn-secondary" 
+        (click)="prevPage()" 
+        [disabled]="currentPage === 0"
+      >
+        <i class="fas fa-chevron-left"></i>
+        Précédent
+      </button>
+      
+      <span class="pagination-info">
+        Page {{ currentPage + 1 }} sur {{ totalPages }} 
+        ({{ totalItems }} éléments)
+      </span>
+      
+      <button 
+        class="btn btn-secondary" 
+        (click)="nextPage()" 
+        [disabled]="currentPage >= totalPages - 1"
+      >
+        Suivant
+        <i class="fas fa-chevron-right"></i>
+      </button>
+    </div>
+  </div>
+</div>

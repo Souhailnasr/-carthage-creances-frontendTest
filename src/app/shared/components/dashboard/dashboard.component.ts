@@ -89,9 +89,84 @@ export class DashboardComponent implements OnInit, OnDestroy {
       return;
     }
     
+    // Charger les données selon le rôle
+    this.loadRoleSpecificData();
     this.loadStatistics();
     this.loadAgentPerformance();
     this.loadUrgentTasks();
+  }
+
+  loadRoleSpecificData(): void {
+    console.log('🔍 Chargement des données spécifiques au rôle:', this.currentUser?.role);
+    
+    // Charger des données différentes selon le rôle
+    switch (this.currentUser?.role) {
+      case 'SUPER_ADMIN':
+        this.loadSuperAdminData();
+        break;
+      case 'CHEF_DEPARTEMENT_DOSSIER':
+        this.loadChefDossierData();
+        break;
+      case 'CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE':
+        this.loadChefJuridiqueData();
+        break;
+      case 'CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE':
+        this.loadChefAmiableData();
+        break;
+      case 'AGENT_DOSSIER':
+        this.loadAgentDossierData();
+        break;
+      case 'AGENT_RECOUVREMENT_JURIDIQUE':
+        this.loadAgentJuridiqueData();
+        break;
+      case 'AGENT_RECOUVREMENT_AMIABLE':
+        this.loadAgentAmiableData();
+        break;
+      default:
+        console.warn('⚠️ Rôle non reconnu pour le dashboard:', this.currentUser?.role);
+        this.loadDefaultData();
+        break;
+    }
+  }
+
+  loadSuperAdminData(): void {
+    console.log('🔍 Chargement des données Super Admin');
+    // Données spécifiques au Super Admin
+  }
+
+  loadChefDossierData(): void {
+    console.log('🔍 Chargement des données Chef Dossier');
+    // Données spécifiques au Chef Dossier
+  }
+
+  loadChefJuridiqueData(): void {
+    console.log('🔍 Chargement des données Chef Juridique');
+    // Données spécifiques au Chef Juridique
+  }
+
+  loadChefAmiableData(): void {
+    console.log('🔍 Chargement des données Chef Amiable');
+    // Données spécifiques au Chef Amiable
+  }
+
+  loadAgentDossierData(): void {
+    console.log('🔍 Chargement des données Agent Dossier');
+    // Données spécifiques à l'Agent Dossier
+  }
+
+  loadAgentJuridiqueData(): void {
+    console.log('🔍 Chargement des données Agent Juridique');
+    // Données spécifiques à l'Agent Juridique
+  }
+
+  loadAgentAmiableData(): void {
+    console.log('🔍 Chargement des données Agent Amiable');
+    // Données spécifiques à l'Agent Amiable
+  }
+
+  loadDefaultData(): void {
+    console.log('🔍 Chargement des données par défaut');
+    // Données par défaut
   }
 
   loadStatistics(): void {
@@ -311,15 +386,65 @@ export class DashboardComponent implements OnInit, OnDestroy {
     
     const roleNames: { [key: string]: string } = {
       'SUPER_ADMIN': 'Super Administrateur',
-      'CHEF_DOSSIER': 'Chef de Dossier',
-      'AGENT_DOSSIER': 'Agent de Dossier',
-      'CHEF_JURIDIQUE': 'Chef Juridique',
-      'AGENT_JURIDIQUE': 'Agent Juridique',
-      'CHEF_FINANCE': 'Chef Finance',
+      'CHEF_DEPARTEMENT_DOSSIER': 'Chef Département Dossier',
+      'CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE': 'Chef Département Recouvrement Juridique',
+      'CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE': 'Chef Département Recouvrement Amiable',
+      'CHEF_DEPARTEMENT_FINANCE': 'Chef Département Finance',
+      'AGENT_DOSSIER': 'Agent Dossier',
+      'AGENT_RECOUVREMENT_JURIDIQUE': 'Agent Recouvrement Juridique',
+      'AGENT_RECOUVREMENT_AMIABLE': 'Agent Recouvrement Amiable',
       'AGENT_FINANCE': 'Agent Finance'
     };
 
     return roleNames[this.currentUser.role] || this.currentUser.role;
+  }
+
+  getDashboardTitle(): string {
+    if (!this.currentUser) return 'Tableau de Bord';
+    
+    const titles: { [key: string]: string } = {
+      'SUPER_ADMIN': 'Tableau de Bord - Super Administrateur',
+      'CHEF_DEPARTEMENT_DOSSIER': 'Interface Chef Dossier',
+      'CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE': 'Interface Chef Juridique',
+      'CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE': 'Interface Chef Amiable',
+      'CHEF_DEPARTEMENT_FINANCE': 'Interface Chef Finance',
+      'AGENT_DOSSIER': 'Tableau de Bord Agent Dossier',
+      'AGENT_RECOUVREMENT_JURIDIQUE': 'Tableau de Bord Agent Juridique',
+      'AGENT_RECOUVREMENT_AMIABLE': 'Tableau de Bord Agent Amiable',
+      'AGENT_FINANCE': 'Tableau de Bord Agent Finance'
+    };
+
+    return titles[this.currentUser.role] || 'Tableau de Bord';
+  }
+
+  getWelcomeMessage(): string {
+    if (!this.currentUser) return 'Bienvenue';
+    
+    const messages: { [key: string]: string } = {
+      'SUPER_ADMIN': `Bienvenue, ${this.currentUser.prenom} ${this.currentUser.nom}`,
+      'CHEF_DEPARTEMENT_DOSSIER': `Bienvenue, ${this.currentUser.prenom} ${this.currentUser.nom}`,
+      'CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE': `Bienvenue, ${this.currentUser.prenom} ${this.currentUser.nom}`,
+      'CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE': `Bienvenue, ${this.currentUser.prenom} ${this.currentUser.nom}`,
+      'CHEF_DEPARTEMENT_FINANCE': `Bienvenue, ${this.currentUser.prenom} ${this.currentUser.nom}`,
+      'AGENT_DOSSIER': `Bienvenue, ${this.currentUser.prenom} ${this.currentUser.nom}`,
+      'AGENT_RECOUVREMENT_JURIDIQUE': `Bienvenue, ${this.currentUser.prenom} ${this.currentUser.nom}`,
+      'AGENT_RECOUVREMENT_AMIABLE': `Bienvenue, ${this.currentUser.prenom} ${this.currentUser.nom}`,
+      'AGENT_FINANCE': `Bienvenue, ${this.currentUser.prenom} ${this.currentUser.nom}`
+    };
+
+    return messages[this.currentUser.role] || `Bienvenue, ${this.currentUser.prenom} ${this.currentUser.nom}`;
+  }
+
+  isChefRole(): boolean {
+    return this.currentUser?.role?.includes('CHEF_DEPARTEMENT') || false;
+  }
+
+  isAgentRole(): boolean {
+    return this.currentUser?.role?.includes('AGENT') || false;
+  }
+
+  isSuperAdmin(): boolean {
+    return this.currentUser?.role === 'SUPER_ADMIN';
   }
 
   getRoleClass(): string {

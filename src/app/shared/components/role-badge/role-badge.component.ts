@@ -71,3 +71,5 @@ export class RoleBadgeComponent {
     return roleIcons[this.role] || '👤';
   }
 }
+
+

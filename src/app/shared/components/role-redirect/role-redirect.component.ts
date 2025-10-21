@@ -72,10 +72,14 @@ export class RoleRedirectComponent implements OnInit {
   private getRedirectUrlByRole(role: string): string {
     console.log('🔍 getRedirectUrlByRole - Rôle reçu:', role);
     
-    switch (role) {
+    // Normaliser le rôle (enlever les préfixes possibles)
+    const normalizedRole = role.replace(/^RoleUtilisateur_/, '').replace(/^ROLE_/, '');
+    console.log('🔍 getRedirectUrlByRole - Rôle normalisé:', normalizedRole);
+    
+    switch (normalizedRole) {
       case 'SUPER_ADMIN':
         console.log('🔍 getRedirectUrlByRole - Cas SUPER_ADMIN');
-        return '/dashboard';
+        return '/admin/dashboard';
       case 'CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE':
         console.log('🔍 getRedirectUrlByRole - Cas CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE');
         return '/chef-amiable/dashboard';
@@ -95,7 +99,7 @@ export class RoleRedirectComponent implements OnInit {
         console.log('🔍 getRedirectUrlByRole - Cas AGENT_DOSSIER');
         return '/dossier/dashboard';
       default:
-        console.log('🔍 getRedirectUrlByRole - Cas DEFAULT pour rôle:', role);
+        console.log('🔍 getRedirectUrlByRole - Cas DEFAULT pour rôle:', role, 'normalisé:', normalizedRole);
         return '/dashboard';
     }
   }

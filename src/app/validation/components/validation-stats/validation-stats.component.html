@@ -1,0 +1,159 @@
+<div class="validation-stats">
+  <div class="stats-header">
+    <h1>Statistiques de Validation</h1>
+    <button class="btn btn-primary" (click)="loadStats()" [disabled]="loading">
+      <i class="fas fa-sync-alt" [class.fa-spin]="loading"></i>
+      Actualiser
+    </button>
+  </div>
+
+  <div class="loading" *ngIf="loading">
+    <i class="fas fa-spinner fa-spin"></i>
+    <span>Chargement des statistiques...</span>
+  </div>
+
+  <div class="error" *ngIf="error">
+    <i class="fas fa-exclamation-triangle"></i>
+    <span>{{ error }}</span>
+    <button class="btn btn-primary" (click)="loadStats()">Réessayer</button>
+  </div>
+
+  <div class="stats-content" *ngIf="!loading && !error && stats">
+    <!-- Métriques principales -->
+    <div class="metrics-grid">
+      <div class="metric-card total">
+        <div class="metric-icon">
+          <i class="fas fa-chart-bar"></i>
+        </div>
+        <div class="metric-content">
+          <div class="metric-number">{{ stats.total }}</div>
+          <div class="metric-label">Total Validations</div>
+        </div>
+      </div>
+
+      <div class="metric-card en-attente">
+        <div class="metric-icon">
+          <i class="fas fa-clock"></i>
+        </div>
+        <div class="metric-content">
+          <div class="metric-number">{{ stats.enAttente }}</div>
+          <div class="metric-label">En Attente</div>
+          <div class="metric-percentage">{{ formatPercentage(getStatutPercentage(StatutValidation.EN_ATTENTE)) }}</div>
+        </div>
+      </div>
+
+      <div class="metric-card valides">
+        <div class="metric-icon">
+          <i class="fas fa-check-circle"></i>
+        </div>
+        <div class="metric-content">
+          <div class="metric-number">{{ stats.valides }}</div>
+          <div class="metric-label">Validés</div>
+          <div class="metric-percentage">{{ formatPercentage(getStatutPercentage(StatutValidation.VALIDE)) }}</div>
+        </div>
+      </div>
+
+      <div class="metric-card rejetes">
+        <div class="metric-icon">
+          <i class="fas fa-times-circle"></i>
+        </div>
+        <div class="metric-content">
+          <div class="metric-number">{{ stats.rejetes }}</div>
+          <div class="metric-label">Rejetés</div>
+          <div class="metric-percentage">{{ formatPercentage(getStatutPercentage(StatutValidation.REJETE)) }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Graphique des statuts -->
+    <div class="chart-container">
+      <h3>Répartition par Statut</h3>
+      <div class="chart-wrapper">
+        <canvas #statusChart></canvas>
+      </div>
+    </div>
+
+    <!-- Top Agents -->
+    <div class="top-performers">
+      <div class="performers-section">
+        <h3>Top Agents (Validations créées)</h3>
+        <div class="performers-list">
+          <div class="performer-item" *ngFor="let agent of getTopAgents(); let i = index">
+            <div class="performer-rank">{{ i + 1 }}</div>
+            <div class="performer-info">
+              <div class="performer-name">Agent #{{ agent.id }}</div>
+              <div class="performer-count">{{ agent.count }} validations</div>
+            </div>
+            <div class="performer-bar">
+              <div class="bar-fill" [style.width.%]="getTopAgents().length > 0 ? (agent.count / getTopAgents()[0].count) * 100 : 0"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="performers-section">
+        <h3>Top Chefs (Validations traitées)</h3>
+        <div class="performers-list">
+          <div class="performer-item" *ngFor="let chef of getTopChefs(); let i = index">
+            <div class="performer-rank">{{ i + 1 }}</div>
+            <div class="performer-info">
+              <div class="performer-name">Chef #{{ chef.id }}</div>
+              <div class="performer-count">{{ chef.count }} validations</div>
+            </div>
+            <div class="performer-bar">
+              <div class="bar-fill" [style.width.%]="getTopChefs().length > 0 ? (chef.count / getTopChefs()[0].count) * 100 : 0"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Indicateurs de performance -->
+    <div class="performance-indicators">
+      <div class="indicator-card">
+        <div class="indicator-icon">
+          <i class="fas fa-tachometer-alt"></i>
+        </div>
+        <div class="indicator-content">
+          <div class="indicator-title">Taux de Validation</div>
+          <div class="indicator-value">
+            {{ stats.total > 0 ? formatPercentage((stats.valides / stats.total) * 100) : '0%' }}
+          </div>
+          <div class="indicator-description">
+            {{ stats.valides }} validés sur {{ stats.total }} total
+          </div>
+        </div>
+      </div>
+
+      <div class="indicator-card">
+        <div class="indicator-icon">
+          <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <div class="indicator-content">
+          <div class="indicator-title">Taux de Rejet</div>
+          <div class="indicator-value">
+            {{ stats.total > 0 ? formatPercentage((stats.rejetes / stats.total) * 100) : '0%' }}
+          </div>
+          <div class="indicator-description">
+            {{ stats.rejetes }} rejetés sur {{ stats.total }} total
+          </div>
+        </div>
+      </div>
+
+      <div class="indicator-card">
+        <div class="indicator-icon">
+          <i class="fas fa-hourglass-half"></i>
+        </div>
+        <div class="indicator-content">
+          <div class="indicator-title">En Attente</div>
+          <div class="indicator-value">
+            {{ formatPercentage(getStatutPercentage(StatutValidation.EN_ATTENTE)) }}
+          </div>
+          <div class="indicator-description">
+            {{ stats.enAttente }} dossiers en attente de validation
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

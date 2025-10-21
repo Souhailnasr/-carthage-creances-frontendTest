@@ -1,7 +1,7 @@
 <div class="dashboard-container">
   <div class="header">
     <div class="header-left">
-      <h1>Tableau de Bord</h1>
+      <h1>{{ getDashboardTitle() }}</h1>
       <p class="current-time">{{ getCurrentTime() }}</p>
     </div>
     <div class="header-right">
@@ -18,7 +18,7 @@
       <span class="avatar-text">{{ getUserInitials() }}</span>
     </div>
     <div class="user-details">
-      <h2>{{ currentUser.getFullName() }}</h2>
+      <h2>{{ getWelcomeMessage() }}</h2>
       <p class="user-role" [class]="getRoleClass()">{{ getRoleDisplayName() }}</p>
       <p class="user-email">{{ currentUser.email }}</p>
     </div>
@@ -193,6 +193,140 @@
                 <i class="fas fa-check-circle"></i>
                 <h4>Aucune tâche urgente</h4>
                 <p>Vous n'avez aucune tâche urgente en cours</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section spécifique Super Admin -->
+          <div class="admin-section" *ngIf="isSuperAdmin()">
+            <h3>Interface Super Administrateur</h3>
+            <div class="admin-cards">
+              <div class="admin-card">
+                <div class="admin-icon">
+                  <i class="fas fa-users-cog"></i>
+                </div>
+                <div class="admin-content">
+                  <h4>Gestion des Utilisateurs</h4>
+                  <p>Gérer tous les utilisateurs du système</p>
+                </div>
+              </div>
+              <div class="admin-card">
+                <div class="admin-icon">
+                  <i class="fas fa-cogs"></i>
+                </div>
+                <div class="admin-content">
+                  <h4>Paramètres Système</h4>
+                  <p>Configuration globale de l'application</p>
+                </div>
+              </div>
+              <div class="admin-card">
+                <div class="admin-icon">
+                  <i class="fas fa-chart-bar"></i>
+                </div>
+                <div class="admin-content">
+                  <h4>Rapports Globaux</h4>
+                  <p>Analyses et statistiques complètes</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section spécifique Chef Dossier -->
+          <div class="chef-section" *ngIf="currentUser?.role === 'CHEF_DEPARTEMENT_DOSSIER'">
+            <h3>Interface Chef Dossier</h3>
+            <div class="chef-cards">
+              <div class="chef-card">
+                <div class="chef-icon">
+                  <i class="fas fa-tasks"></i>
+                </div>
+                <div class="chef-content">
+                  <h4>Validation des Dossiers</h4>
+                  <p>Dossiers en attente de validation</p>
+                </div>
+              </div>
+              <div class="chef-card">
+                <div class="chef-icon">
+                  <i class="fas fa-users"></i>
+                </div>
+                <div class="chef-content">
+                  <h4>Gestion de l'Équipe</h4>
+                  <p>Supervision des agents dossier</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section spécifique Chef Juridique -->
+          <div class="chef-section" *ngIf="currentUser?.role === 'CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE'">
+            <h3>Interface Chef Juridique</h3>
+            <div class="chef-cards">
+              <div class="chef-card">
+                <div class="chef-icon">
+                  <i class="fas fa-gavel"></i>
+                </div>
+                <div class="chef-content">
+                  <h4>Actions Juridiques</h4>
+                  <p>Suivi des procédures juridiques</p>
+                </div>
+              </div>
+              <div class="chef-card">
+                <div class="chef-icon">
+                  <i class="fas fa-balance-scale"></i>
+                </div>
+                <div class="chef-content">
+                  <h4>Gestion des Avocats</h4>
+                  <p>Coordination avec les avocats</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section spécifique Chef Amiable -->
+          <div class="chef-section" *ngIf="currentUser?.role === 'CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE'">
+            <h3>Interface Chef Amiable</h3>
+            <div class="chef-cards">
+              <div class="chef-card">
+                <div class="chef-icon">
+                  <i class="fas fa-handshake"></i>
+                </div>
+                <div class="chef-content">
+                  <h4>Négociations</h4>
+                  <p>Suivi des négociations amiables</p>
+                </div>
+              </div>
+              <div class="chef-card">
+                <div class="chef-icon">
+                  <i class="fas fa-phone"></i>
+                </div>
+                <div class="chef-content">
+                  <h4>Relances</h4>
+                  <p>Gestion des relances téléphoniques</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section spécifique Agent Dossier -->
+          <div class="agent-section" *ngIf="currentUser?.role === 'AGENT_DOSSIER'">
+            <h3>Mes Actions</h3>
+            <div class="agent-cards">
+              <div class="agent-card">
+                <div class="agent-icon">
+                  <i class="fas fa-folder-plus"></i>
+                </div>
+                <div class="agent-content">
+                  <h4>Nouveaux Dossiers</h4>
+                  <p>Créer de nouveaux dossiers</p>
+                </div>
+              </div>
+              <div class="agent-card">
+                <div class="agent-icon">
+                  <i class="fas fa-search"></i>
+                </div>
+                <div class="agent-content">
+                  <h4>Recherche</h4>
+                  <p>Rechercher des dossiers</p>
+                </div>
               </div>
             </div>
           </div>

@@ -290,13 +290,30 @@
             <button class="btn btn-sm btn-warning" (click)="showEditDossierForm(dossier)" title="Modifier">
               <i class="fas fa-edit"></i>
             </button>
+            <!-- Boutons de validation pour les chefs -->
             <button 
-              *ngIf="canValidateDossier(dossier)" 
+              *ngIf="authService.canValidateDossiers() && dossier.statut === 'EN_ATTENTE_VALIDATION'" 
               class="btn btn-sm btn-success" 
-              (click)="validateDossier(dossier)" 
+              (click)="validerDossier(dossier)" 
               title="Valider le dossier"
             >
               <i class="fas fa-check"></i>
+            </button>
+            <button 
+              *ngIf="authService.canValidateDossiers() && dossier.statut === 'EN_ATTENTE_VALIDATION'" 
+              class="btn btn-sm btn-warning" 
+              (click)="rejeterDossier(dossier)" 
+              title="Rejeter le dossier"
+            >
+              <i class="fas fa-times"></i>
+            </button>
+            <button 
+              *ngIf="authService.canValidateDossiers() && dossier.statut === 'VALIDE' && dossier.dossierStatus !== 'CLOTURE'" 
+              class="btn btn-sm btn-danger" 
+              (click)="cloturerDossier(dossier)" 
+              title="Clôturer le dossier"
+            >
+              <i class="fas fa-lock"></i>
             </button>
             <button class="btn btn-sm btn-danger" (click)="deleteDossier(dossier)" title="Supprimer">
               <i class="fas fa-trash"></i>

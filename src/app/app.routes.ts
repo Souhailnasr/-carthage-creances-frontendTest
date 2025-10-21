@@ -47,6 +47,11 @@ export const routes: Routes = [
     canActivate: [AuthGuard]
   },
   {
+    path: 'validation',
+    loadChildren: () => import('./validation/validation.module').then(m => m.ValidationModule),
+    canActivate: [AuthGuard]
+  },
+  {
     path: 'admin',
     loadChildren: () => import('./admin/admin.module').then(m => m.AdminModule),
     canActivate: [AuthGuard]

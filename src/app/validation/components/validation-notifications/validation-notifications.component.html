@@ -1,0 +1,178 @@
+<div class="validation-notifications">
+  <div class="notifications-header">
+    <h1>Notifications de Validation</h1>
+    <div class="header-actions">
+      <div class="unread-badge" *ngIf="getUnreadCount() > 0">
+        {{ getUnreadCount() }} non lues
+      </div>
+      <button class="btn btn-primary" (click)="loadNotifications()" [disabled]="loading">
+        <i class="fas fa-sync-alt" [class.fa-spin]="loading"></i>
+        Actualiser
+      </button>
+      <button class="btn btn-secondary" (click)="markAllAsRead()" [disabled]="getUnreadCount() === 0">
+        <i class="fas fa-check-double"></i>
+        Tout marquer comme lu
+      </button>
+    </div>
+  </div>
+
+  <!-- Filtres -->
+  <div class="filters-container">
+    <div class="filters-form">
+      <div class="filter-group">
+        <label>Type de notification</label>
+        <select [(ngModel)]="filterType" (change)="applyFilters()">
+          <option *ngFor="let type of notificationTypes" [value]="type.value">
+            {{ type.label }}
+          </option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label>Statut du dossier</label>
+        <select [(ngModel)]="filterStatut" (change)="applyFilters()">
+          <option *ngFor="let statut of statutOptions" [value]="statut.value">
+            {{ statut.label }}
+          </option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label class="checkbox-label">
+          <input type="checkbox" [(ngModel)]="showUnreadOnly" (change)="applyFilters()">
+          <span class="checkmark"></span>
+          Non lues uniquement
+        </label>
+      </div>
+
+      <div class="filter-actions">
+        <button type="button" class="btn btn-secondary" (click)="clearFilters()">
+          Effacer les filtres
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Liste des notifications -->
+  <div class="notifications-container">
+    <div class="loading" *ngIf="loading">
+      <i class="fas fa-spinner fa-spin"></i>
+      <span>Chargement des notifications...</span>
+    </div>
+
+    <div class="error" *ngIf="error">
+      <i class="fas fa-exclamation-triangle"></i>
+      <span>{{ error }}</span>
+      <button class="btn btn-primary" (click)="loadNotifications()">Réessayer</button>
+    </div>
+
+    <div class="no-data" *ngIf="!loading && !error && filteredNotifications.length === 0">
+      <i class="fas fa-bell-slash"></i>
+      <span>Aucune notification trouvée</span>
+    </div>
+
+    <div class="notifications-list" *ngIf="!loading && !error && filteredNotifications.length > 0">
+      <div 
+        class="notification-item" 
+        *ngFor="let notification of paginatedNotifications"
+        [class.unread]="!notification.lu"
+        [ngClass]="getNotificationClass(notification.type)"
+        (click)="markAsRead(notification)"
+      >
+        <div class="notification-icon">
+          <i [ngClass]="getNotificationIcon(notification.type)"></i>
+        </div>
+        
+        <div class="notification-content">
+          <div class="notification-header">
+            <h4 class="notification-title">{{ notification.titre }}</h4>
+            <div class="notification-meta">
+              <span class="notification-date">{{ formatDate(notification.dateCreation) }}</span>
+              <span class="notification-priorite" [ngClass]="getPrioriteClass(notification.priorite)">
+                {{ notification.priorite }}
+              </span>
+            </div>
+          </div>
+          
+          <p class="notification-message">{{ notification.message }}</p>
+          
+          <div class="notification-details">
+            <div class="detail-item">
+              <span class="label">Dossier:</span>
+              <span class="value">{{ notification.validation.dossier.titre }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="label">Numéro:</span>
+              <span class="value">{{ notification.validation.dossier.numeroDossier }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="label">Agent:</span>
+              <span class="value">{{ notification.validation.agentCreateur.prenom }} {{ notification.validation.agentCreateur.nom }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="label">Statut:</span>
+              <span class="value statut-badge" [ngClass]="'statut-' + notification.validation.statut.toLowerCase()">
+                {{ notification.validation.statut }}
+              </span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="notification-actions">
+          <!-- Actions rapides selon le type -->
+          <button 
+            *ngIf="canValidate() && notification.validation.statut === 'EN_ATTENTE'"
+            class="btn btn-success btn-sm"
+            (click)="validerDossier(notification); $event.stopPropagation()"
+            title="Valider le dossier"
+          >
+            <i class="fas fa-check"></i>
+          </button>
+          
+          <button 
+            *ngIf="canValidate() && notification.validation.statut === 'EN_ATTENTE'"
+            class="btn btn-warning btn-sm"
+            (click)="rejeterDossier(notification); $event.stopPropagation()"
+            title="Rejeter le dossier"
+          >
+            <i class="fas fa-times"></i>
+          </button>
+          
+          <button 
+            class="btn btn-info btn-sm"
+            (click)="markAsRead(notification); $event.stopPropagation()"
+            title="Marquer comme lu"
+            *ngIf="!notification.lu"
+          >
+            <i class="fas fa-eye"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination" *ngIf="totalPages > 1">
+      <button 
+        class="btn btn-secondary" 
+        (click)="prevPage()" 
+        [disabled]="currentPage === 0"
+      >
+        <i class="fas fa-chevron-left"></i>
+        Précédent
+      </button>
+      
+      <span class="pagination-info">
+        Page {{ currentPage + 1 }} sur {{ totalPages }}
+      </span>
+      
+      <button 
+        class="btn btn-secondary" 
+        (click)="nextPage()" 
+        [disabled]="currentPage >= totalPages - 1"
+      >
+        Suivant
+        <i class="fas fa-chevron-right"></i>
+      </button>
+    </div>
+  </div>
+</div>

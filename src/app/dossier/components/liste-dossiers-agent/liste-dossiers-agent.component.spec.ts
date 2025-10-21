@@ -102,7 +102,7 @@ describe('ListeDossiersAgentComponent', () => {
   });
 
   describe('getStatutLabel', () => {
-    it('should return correct label for ENCOURSDETRAITEMENT', () => {
+    it('should return correct label for EN_COURS', () => {
       const result = component.getStatutLabel(DossierStatus.ENCOURSDETRAITEMENT);
       expect(result).toBe('En attente de validation');
     });
@@ -124,7 +124,7 @@ describe('ListeDossiersAgentComponent', () => {
   });
 
   describe('getStatutClass', () => {
-    it('should return correct class for ENCOURSDETRAITEMENT', () => {
+    it('should return correct class for EN_COURS', () => {
       const result = component.getStatutClass(DossierStatus.ENCOURSDETRAITEMENT);
       expect(result).toBe('statut-en-attente');
     });
@@ -155,7 +155,7 @@ describe('ListeDossiersAgentComponent', () => {
   });
 
   describe('getDossiersEnAttente', () => {
-    it('should return dossiers with ENCOURSDETRAITEMENT status', () => {
+    it('should return dossiers with EN_COURS status', () => {
       component.dossiers = mockDossiers;
       const result = component.getDossiersEnAttente();
       expect(result.length).toBe(1);
