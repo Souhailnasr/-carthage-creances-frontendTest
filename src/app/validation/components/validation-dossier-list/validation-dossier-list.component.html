@@ -114,13 +114,13 @@
             <td>
               <div class="user-info">
                 <div class="user-name">{{ validation.agentCreateur.prenom }} {{ validation.agentCreateur.nom }}</div>
-                <div class="user-email">{{ validation.agentCreateur.email }}</div>
+                <div class="user-email">{{ validation.agentCreateur.nom }} {{ validation.agentCreateur.prenom }}</div>
               </div>
             </td>
             <td>
               <div class="user-info" *ngIf="validation.chefValidateur">
                 <div class="user-name">{{ validation.chefValidateur.prenom }} {{ validation.chefValidateur.nom }}</div>
-                <div class="user-email">{{ validation.chefValidateur.email }}</div>
+                <div class="user-email">{{ validation.chefValidateur.nom }} {{ validation.chefValidateur.prenom }}</div>
               </div>
               <span class="no-validator" *ngIf="!validation.chefValidateur">-</span>
             </td>

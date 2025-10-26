@@ -91,3 +91,7 @@ Après le test, vous devriez voir dans la console :
 - `🔍 Valeur du contrôle après setValue: 32`
 
 **Si vous voyez ces logs, l'endpoint fonctionne correctement !** 🎉
+
+
+
+

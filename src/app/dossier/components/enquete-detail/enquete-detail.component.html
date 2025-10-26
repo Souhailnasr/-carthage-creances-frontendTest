@@ -1,4 +1,12 @@
-<div class="enquete-detail-container" *ngIf="dossier">
+<!-- Indicateur de chargement -->
+<div class="loading-container" *ngIf="isLoading">
+  <div class="loading-spinner">
+    <i class="fas fa-spinner fa-spin"></i>
+    <p>Chargement du dossier...</p>
+  </div>
+</div>
+
+<div class="enquete-detail-container" *ngIf="dossier && !isLoading">
   <div class="header">
     <div class="header-left">
       <button class="btn btn-secondary" (click)="goBack()">

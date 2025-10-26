@@ -70,3 +70,7 @@ export interface ValidationFilter {
   dateFin?: Date;
   searchTerm?: string;
 }
+
+
+
+

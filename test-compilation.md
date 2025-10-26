@@ -61,3 +61,7 @@ Assure-toi que cet endpoint est accessible et fonctionne correctement.
 - ✅ **Backend fonctionne** (6 dossiers trouvés)
 - 🚨 **Endpoint `/api/utilisateurs/by-email/{email}` manquant** (à créer)
 - ✅ **Base de données nettoyée** (plus d'erreur enum)
+
+
+
+

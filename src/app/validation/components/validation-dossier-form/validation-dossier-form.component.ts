@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Subject, takeUntil } from 'rxjs';
 import { ValidationDossierRequest } from '../../../shared/models/validation-dossier.model';
-import { ValidationDossierService } from '../../../core/services/validation-dossier.service';
+import { ValidationDossierService, CreateValidationRequest } from '../../../core/services/validation-dossier.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { DossierApiService } from '../../../core/services/dossier-api.service';
@@ -103,7 +103,13 @@ export class ValidationDossierFormComponent implements OnInit, OnDestroy {
     this.loading = true;
     this.error = null;
 
-    this.validationService.createValidationDossier(validationRequest)
+    const createRequest: CreateValidationRequest = {
+      dossier: { id: validationRequest.dossierId },
+      agentCreateur: { id: validationRequest.agentCreateurId },
+      commentaires: validationRequest.commentaires
+    };
+    
+    this.validationService.createValidationDossier(createRequest)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (validation) => {

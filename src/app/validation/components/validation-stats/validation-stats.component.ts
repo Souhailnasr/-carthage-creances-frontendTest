@@ -48,12 +48,12 @@ export class ValidationStatsComponent implements OnInit, OnDestroy {
     this.validationService.getValidationStats()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (stats) => {
+        next: (stats: any) => {
           this.stats = stats;
           this.prepareChartData();
           this.loading = false;
         },
-        error: (error) => {
+        error: (error: any) => {
           console.error('Erreur lors du chargement des statistiques:', error);
           this.error = 'Erreur lors du chargement des statistiques';
           this.loading = false;

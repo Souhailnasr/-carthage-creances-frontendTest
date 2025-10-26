@@ -3,10 +3,11 @@ import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormControl, FormsModule } from '@angular/forms';
 import { Subject, takeUntil } from 'rxjs';
-import { Dossier } from '../../../shared/models';
+import { Dossier, Creancier, Debiteur } from '../../../shared/models';
 import { FormInputComponent } from '../../../shared/components/form-input/form-input.component';
 import { ToastService } from '../../../core/services/toast.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { DossierApiService } from '../../../core/services/dossier-api.service';
 
 @Component({
   selector: 'app-enquete-phase',
@@ -70,7 +71,8 @@ export class EnquetePhaseComponent implements OnInit, OnDestroy {
     private fb: FormBuilder,
     private toastService: ToastService,
     private router: Router,
-    private authService: AuthService
+    private authService: AuthService,
+    private dossierApiService: DossierApiService
   ) { }
 
   ngOnInit(): void {
@@ -133,7 +135,56 @@ export class EnquetePhaseComponent implements OnInit, OnDestroy {
   }
 
   loadDossiers(): void {
-    // Simulation de données - dans une vraie app, ceci viendrait d'une API
+    // Utilisation de l'API réelle pour récupérer les dossiers
+    this.dossierApiService.getAllDossiers()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          // Convertir les données de l'API en objets Dossier
+          this.dossiers = response.content?.map((dossierApi: any) => {
+            return new Dossier({
+              id: dossierApi.id?.toString() || '',
+              titre: dossierApi.titre || '',
+              numeroDossier: dossierApi.numeroDossier || '',
+              montantCreance: dossierApi.montantCreance || 0,
+              dateCreation: dossierApi.dateCreation ? new Date(dossierApi.dateCreation) : new Date(),
+              statut: dossierApi.statut || 'EN_ATTENTE_VALIDATION',
+              urgence: dossierApi.urgence || 'FAIBLE',
+              agentResponsable: dossierApi.agentResponsable || '',
+              valide: dossierApi.valide || false,
+              dateValidation: dossierApi.dateValidation ? new Date(dossierApi.dateValidation) : undefined,
+              creancier: new Creancier({
+                id: dossierApi.creancier?.id || 0,
+                codeCreancier: dossierApi.creancier?.codeCreancier || '',
+                nom: dossierApi.creancier?.nom || dossierApi.nomCreancier || '',
+                prenom: dossierApi.creancier?.prenom || '',
+                type: dossierApi.creancier?.type || 'PARTICULIER',
+                email: dossierApi.creancier?.email || '',
+                telephone: dossierApi.creancier?.telephone || ''
+              }),
+              debiteur: new Debiteur({
+                id: dossierApi.debiteur?.id || 0,
+                nom: dossierApi.debiteur?.nom || dossierApi.nomDebiteur || '',
+                prenom: dossierApi.debiteur?.prenom || '',
+                type: dossierApi.debiteur?.type || 'PARTICULIER',
+                email: dossierApi.debiteur?.email || '',
+                telephone: dossierApi.debiteur?.telephone || ''
+              })
+            });
+          }) || [];
+          this.filterDossiers();
+        },
+        error: (error) => {
+          console.error('Erreur lors du chargement des dossiers:', error);
+          this.toastService.error('Erreur lors du chargement des dossiers');
+          // En cas d'erreur, utiliser des données de fallback
+          this.loadFallbackData();
+        }
+      });
+  }
+
+  private loadFallbackData(): void {
+    // Données de fallback en cas d'erreur API
     this.dossiers = [
       new Dossier({
         id: '1',
@@ -141,11 +192,28 @@ export class EnquetePhaseComponent implements OnInit, OnDestroy {
         numeroDossier: 'DOS-2024-001',
         montantCreance: 15000,
         dateCreation: new Date('2024-01-15'),
-        statut: 'EN_PHASE_ENQUETE' as any,
+        statut: 'VALIDE' as any,
         urgence: 'MOYENNE' as any,
         agentResponsable: 'John Doe',
         valide: true,
-        dateValidation: new Date('2024-01-16')
+        dateValidation: new Date('2024-01-16'),
+        creancier: new Creancier({
+          id: 1,
+          codeCreancier: 'CRE-001',
+          nom: 'BEN ALI',
+          prenom: 'Ahmed',
+          type: 'PARTICULIER',
+          email: 'ahmed.benali@email.com',
+          telephone: '+216 20 123 456'
+        }),
+        debiteur: new Debiteur({
+          id: 1,
+          nom: 'TRAORE',
+          prenom: 'Fatima',
+          type: 'ENTREPRISE',
+          email: 'fatima.traore@company.com',
+          telephone: '+216 20 789 012'
+        })
       }),
       new Dossier({
         id: '2',
@@ -153,23 +221,28 @@ export class EnquetePhaseComponent implements OnInit, OnDestroy {
         numeroDossier: 'DOS-2024-002',
         montantCreance: 25000,
         dateCreation: new Date('2024-01-20'),
-        statut: 'EN_PHASE_ENQUETE' as any,
+        statut: 'VALIDE' as any,
         urgence: 'TRES_URGENT' as any,
         agentResponsable: 'Jane Smith',
         valide: true,
-        dateValidation: new Date('2024-01-21')
-      }),
-      new Dossier({
-        id: '3',
-        titre: 'Dossier Client DEF',
-        numeroDossier: 'DOS-2024-003',
-        montantCreance: 18000,
-        dateCreation: new Date('2024-01-22'),
-        statut: 'EN_PHASE_ENQUETE' as any,
-        urgence: 'FAIBLE' as any,
-        agentResponsable: 'Current User',
-        valide: true,
-        dateValidation: new Date('2024-01-23')
+        dateValidation: new Date('2024-01-21'),
+        creancier: new Creancier({
+          id: 2,
+          codeCreancier: 'CRE-002',
+          nom: 'KASSEM',
+          prenom: 'Mohamed',
+          type: 'ENTREPRISE',
+          email: 'm.kassem@business.tn',
+          telephone: '+216 20 345 678'
+        }),
+        debiteur: new Debiteur({
+          id: 2,
+          nom: 'BOUAZIZI',
+          prenom: 'Karim',
+          type: 'PARTICULIER',
+          email: 'karim.bouazizi@email.com',
+          telephone: '+216 20 456 789'
+        })
       })
     ];
     this.filterDossiers();
@@ -177,13 +250,13 @@ export class EnquetePhaseComponent implements OnInit, OnDestroy {
 
   filterDossiers(): void {
     if (this.currentUser?.role === 'AGENT_DOSSIER') {
-      // Pour les agents, ne montrer que les dossiers validés qui leur sont assignés
+      // Pour les agents, ne montrer que les dossiers avec statut VALIDE qui leur sont assignés
       this.filteredDossiers = this.dossiers.filter(dossier => 
-        dossier.valide && dossier.agentResponsable === this.currentUser.getFullName()
+        dossier.statut === 'VALIDE' && dossier.agentResponsable === this.currentUser.getFullName()
       );
     } else {
-      // Pour les chefs, montrer tous les dossiers validés
-      this.filteredDossiers = this.dossiers.filter(dossier => dossier.valide);
+      // Pour les chefs, montrer tous les dossiers avec statut VALIDE
+      this.filteredDossiers = this.dossiers.filter(dossier => dossier.statut === 'VALIDE');
     }
   }
 
@@ -192,8 +265,8 @@ export class EnquetePhaseComponent implements OnInit, OnDestroy {
       this.filterDossiers();
     } else {
       const baseDossiers = this.currentUser?.role === 'AGENT_DOSSIER' 
-        ? this.dossiers.filter(dossier => dossier.valide && dossier.agentResponsable === this.currentUser.getFullName())
-        : this.dossiers.filter(dossier => dossier.valide);
+        ? this.dossiers.filter(dossier => dossier.statut === 'VALIDE' && dossier.agentResponsable === this.currentUser.getFullName())
+        : this.dossiers.filter(dossier => dossier.statut === 'VALIDE');
         
       this.filteredDossiers = baseDossiers.filter(dossier =>
         dossier.titre.toLowerCase().includes(this.searchTerm.toLowerCase()) ||

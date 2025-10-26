@@ -3,13 +3,8 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Subject, takeUntil, debounceTime, distinctUntilChanged } from 'rxjs';
-import { 
-  ValidationDossier, 
-  ValidationFilter, 
-  StatutValidation,
-  ValidationStats 
-} from '../../../shared/models/validation-dossier.model';
-import { ValidationDossierService } from '../../../core/services/validation-dossier.service';
+import { ValidationDossierService, ValidationDossier } from '../../../core/services/validation-dossier.service';
+import { ValidationFilter, StatutValidation, ValidationStats } from '../../../shared/models/validation-dossier.model';
 import { AuthService } from '../../../core/services/auth.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { Role } from '../../../shared/models/enums.model';
@@ -107,10 +102,10 @@ export class ValidationDossierListComponent implements OnInit, OnDestroy {
     this.validationService.getValidationStats()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (stats) => {
+        next: (stats: any) => {
           this.stats = stats;
         },
-        error: (error) => {
+        error: (error: any) => {
           console.error('Erreur lors du chargement des statistiques:', error);
         }
       });
@@ -259,7 +254,7 @@ export class ValidationDossierListComponent implements OnInit, OnDestroy {
   }
 
   // Utilitaires
-  getStatutLabel(statut: StatutValidation): string {
+  getStatutLabel(statut: string): string {
     switch (statut) {
       case StatutValidation.EN_ATTENTE:
         return 'En Attente';
@@ -272,7 +267,7 @@ export class ValidationDossierListComponent implements OnInit, OnDestroy {
     }
   }
 
-  getStatutClass(statut: StatutValidation): string {
+  getStatutClass(statut: string): string {
     switch (statut) {
       case StatutValidation.EN_ATTENTE:
         return 'statut-en-attente';
@@ -293,7 +288,7 @@ export class ValidationDossierListComponent implements OnInit, OnDestroy {
     alert(commentaires);
   }
 
-  formatDate(date: Date): string {
+  formatDate(date: string | Date): string {
     return new Intl.DateTimeFormat('fr-FR', {
       year: 'numeric',
       month: '2-digit',

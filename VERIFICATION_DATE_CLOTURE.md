@@ -82,3 +82,7 @@ Après correction :
 - ✅ **Création** : `date_cloture = NULL`
 - ✅ **Clôture** : `date_cloture = date actuelle`
 - ✅ **Interface** : Cohérence entre frontend et base de données
+
+
+
+

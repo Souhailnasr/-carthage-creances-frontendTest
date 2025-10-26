@@ -2,8 +2,8 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subject, takeUntil, interval } from 'rxjs';
-import { ValidationDossier, StatutValidation } from '../../../shared/models/validation-dossier.model';
-import { ValidationDossierService } from '../../../core/services/validation-dossier.service';
+import { ValidationDossierService, ValidationDossier } from '../../../core/services/validation-dossier.service';
+import { StatutValidation } from '../../../shared/models/validation-dossier.model';
 import { AuthService } from '../../../core/services/auth.service';
 import { ToastService } from '../../../core/services/toast.service';
 
@@ -121,7 +121,7 @@ export class ValidationNotificationsComponent implements OnInit, OnDestroy {
           titre: 'Nouvelle validation en attente',
           message: `Le dossier "${validation.dossier.titre}" est en attente de validation`,
           validation,
-          dateCreation: validation.dateCreation,
+          dateCreation: new Date(validation.dateCreation),
           lu: false,
           priorite: 'ELEVEE'
         });
@@ -135,7 +135,7 @@ export class ValidationNotificationsComponent implements OnInit, OnDestroy {
           titre: 'Dossier validé',
           message: `Le dossier "${validation.dossier.titre}" a été validé`,
           validation,
-          dateCreation: validation.dateValidation,
+          dateCreation: validation.dateValidation ? new Date(validation.dateValidation) : new Date(),
           lu: false,
           priorite: 'MOYENNE'
         });
@@ -149,7 +149,7 @@ export class ValidationNotificationsComponent implements OnInit, OnDestroy {
           titre: 'Dossier rejeté',
           message: `Le dossier "${validation.dossier.titre}" a été rejeté`,
           validation,
-          dateCreation: validation.dateValidation,
+          dateCreation: validation.dateValidation ? new Date(validation.dateValidation) : new Date(),
           lu: false,
           priorite: 'ELEVEE'
         });

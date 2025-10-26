@@ -111,25 +111,68 @@ export class LoginComponent implements OnInit, OnDestroy {
         // Sauvegarder le token
         this.tokenStorage.saveToken(data.token);
         
-        // Si la réponse ne contient que le token, créer un utilisateur basique
+        // Si la réponse ne contient que le token, essayer de récupérer l'ID utilisateur depuis le backend
         if (data.token && !data.user && !data.utilisateur && !data.id) {
-          console.log('🔍 Token reçu, création d\'utilisateur basique...');
+          console.log('🔍 Token reçu, tentative de récupération de l\'ID utilisateur depuis le backend...');
           
-          // Créer un utilisateur basique avec l'email
-          const basicUser = {
-            id: null,
-            nom: this.extractNameFromEmail(this.email),
-            prenom: this.extractFirstNameFromEmail(this.email),
-            email: this.email,
-            role: this.determineRoleFromEmail(this.email),
-            actif: true,
-            getFullName: function() {
-              return `${this.prenom} ${this.nom}`;
+          // Essayer de récupérer l'ID utilisateur depuis le backend
+          this.authService.getUserIdFromBackend().then(backendUserId => {
+            if (backendUserId && !isNaN(Number(backendUserId))) {
+              console.log('✅ ID utilisateur récupéré depuis le backend:', backendUserId);
+              
+              // Créer un utilisateur avec l'ID récupéré
+              const userWithId = {
+                id: backendUserId,
+                nom: this.extractNameFromEmail(this.email),
+                prenom: this.extractFirstNameFromEmail(this.email),
+                email: this.email,
+                role: this.determineRoleFromEmail(this.email),
+                actif: true,
+                getFullName: function() {
+                  return `${this.prenom} ${this.nom}`;
+                }
+              };
+              
+              console.log('🔍 Utilisateur créé avec ID:', userWithId);
+              this.handleSuccessfulLogin(userWithId, data.token);
+            } else {
+              console.warn('⚠️ Impossible de récupérer l\'ID utilisateur, création d\'utilisateur basique...');
+              
+              // Créer un utilisateur basique avec l'email (fallback)
+              const basicUser = {
+                id: null,
+                nom: this.extractNameFromEmail(this.email),
+                prenom: this.extractFirstNameFromEmail(this.email),
+                email: this.email,
+                role: this.determineRoleFromEmail(this.email),
+                actif: true,
+                getFullName: function() {
+                  return `${this.prenom} ${this.nom}`;
+                }
+              };
+              
+              console.log('🔍 Utilisateur basique créé:', basicUser);
+              this.handleSuccessfulLogin(basicUser, data.token);
             }
-          };
-          
-          console.log('🔍 Utilisateur basique créé:', basicUser);
-          this.handleSuccessfulLogin(basicUser, data.token);
+          }).catch(error => {
+            console.error('❌ Erreur lors de la récupération de l\'ID utilisateur:', error);
+            
+            // Créer un utilisateur basique avec l'email (fallback)
+            const basicUser = {
+              id: null,
+              nom: this.extractNameFromEmail(this.email),
+              prenom: this.extractFirstNameFromEmail(this.email),
+              email: this.email,
+              role: this.determineRoleFromEmail(this.email),
+              actif: true,
+              getFullName: function() {
+                return `${this.prenom} ${this.nom}`;
+              }
+            };
+            
+            console.log('🔍 Utilisateur basique créé (fallback):', basicUser);
+            this.handleSuccessfulLogin(basicUser, data.token);
+          });
         } else {
           // La réponse contient des données utilisateur
           let userData = null;
@@ -317,18 +360,30 @@ export class LoginComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
-          this.loading = false; // Réinitialiser le loading
-          this.toastService.success('Connexion réussie !');
+          this.loading = false;
+          console.log('✅ Connexion réussie, redirection en cours...');
           
-          // Attendre un peu pour que l'authentification soit complètement persistée
-          setTimeout(() => {
-            const redirectUrl = this.getRedirectUrlByRole(response.user.role);
-            this.router.navigate([redirectUrl]);
-          }, 100);
+          // Récupérer l'utilisateur actuel pour la redirection
+          const currentUser = this.authService.getCurrentUser();
+          if (currentUser && currentUser.role) {
+            const redirectUrl = this.getRedirectUrlByRole(currentUser.role);
+            console.log('✅ Redirection vers:', redirectUrl);
+            
+            this.toastService.success(`Connexion réussie - ${this.getRoleDisplayName(currentUser.role)}`);
+            
+            // Redirection immédiate
+            setTimeout(() => {
+              this.router.navigate([redirectUrl]);
+            }, 100);
+          } else {
+            console.error('❌ Utilisateur non trouvé après connexion');
+            this.toastService.error('Erreur: Utilisateur non trouvé');
+          }
         },
         error: (error) => {
-          this.toastService.error('Email ou mot de passe incorrect.');
           this.loading = false;
+          this.toastService.error('Email ou mot de passe incorrect.');
+          console.error('❌ Erreur de connexion:', error);
         }
       });
   }
@@ -382,26 +437,48 @@ export class LoginComponent implements OnInit, OnDestroy {
     }
   }
 
+  private getRoleDisplayName(role: string): string {
+    switch (role) {
+      case 'SUPER_ADMIN':
+      case 'RoleUtilisateur_SUPER_ADMIN':
+        return 'Super Admin';
+      case 'CHEF_DEPARTEMENT_DOSSIER':
+      case 'RoleUtilisateur_CHEF_DEPARTEMENT_DOSSIER':
+        return 'Chef Dossier';
+      case 'AGENT_DOSSIER':
+      case 'RoleUtilisateur_AGENT_DOSSIER':
+        return 'Agent Dossier';
+      case 'CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE':
+      case 'RoleUtilisateur_CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE':
+        return 'Chef Juridique';
+      case 'CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE':
+      case 'RoleUtilisateur_CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE':
+        return 'Chef Recouvrement Amiable';
+      default:
+        return 'Utilisateur';
+    }
+  }
+
   private getRedirectUrlByRole(role: string): string {
     switch (role) {
       case 'SUPER_ADMIN':
       case 'RoleUtilisateur_SUPER_ADMIN':
-        return '/admin/dashboard';
+        return '/dashboard';
       case 'CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE':
       case 'RoleUtilisateur_CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE':
-        return '/juridique/dashboard';
+        return '/juridique';
       case 'CHEF_DEPARTEMENT_DOSSIER':
       case 'RoleUtilisateur_CHEF_DEPARTEMENT_DOSSIER':
-        return '/dossier/dashboard';
+        return '/dossier';
       case 'CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE':
       case 'RoleUtilisateur_CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE':
-        return '/chef-amiable/dashboard';
+        return '/chef-amiable';
       case 'AGENT_RECOUVREMENT_JURIDIQUE':
       case 'RoleUtilisateur_AGENT_RECOUVREMENT_JURIDIQUE':
-        return '/juridique/dashboard';
+        return '/juridique';
       case 'AGENT_DOSSIER':
       case 'RoleUtilisateur_AGENT_DOSSIER':
-        return '/dossier/dashboard';
+        return '/dossier';
       case 'AGENT_RECOUVREMENT_AMIABLE':
       case 'RoleUtilisateur_AGENT_RECOUVREMENT_AMIABLE':
         return '/chef-amiable/dashboard';

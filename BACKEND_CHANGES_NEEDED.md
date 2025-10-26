@@ -216,3 +216,7 @@ public class DossierService {
 - **Headers requis** : `Authorization: Bearer {token}`
 - **Format de réponse** : JSON
 - **Gestion des erreurs** : Codes HTTP standards (200, 400, 401, 403, 404, 500)
+
+
+
+

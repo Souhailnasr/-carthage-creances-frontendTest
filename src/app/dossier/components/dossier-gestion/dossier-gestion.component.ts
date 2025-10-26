@@ -13,6 +13,7 @@ import { ChefDossierService } from '../../../core/services/chef-dossier.service'
 import { CreancierApiService } from '../../../core/services/creancier-api.service';
 import { DebiteurApiService } from '../../../core/services/debiteur-api.service';
 import { DossierApiService } from '../../../core/services/dossier-api.service';
+import { ValidationDossierService, ValidationDossier, CreateValidationRequest } from '../../../core/services/validation-dossier.service';
 import { DossierApi, DossierRequest, Urgence, DossierStatus, TypeDocumentJustificatif as ApiTypeDocument, CreancierApi, DebiteurApi } from '../../../shared/models/dossier-api.model';
 import { Role } from '../../../shared/models/enums.model';
 import { Page } from '../../../shared/models/pagination.model';
@@ -36,9 +37,18 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
   currentUser: User | null = null;
   private destroy$ = new Subject<void>();
 
+  // Propriétés pour la validation
+  validations: ValidationDossier[] = [];
+  showValidationModal: boolean = false;
+  selectedDossierForValidation: Dossier | null = null;
+  validationComment: string = '';
+
   // Fichiers sélectionnés
   selectedContratFile?: File;
   selectedPouvoirFile?: File;
+  
+  // Filtre pour les agents
+  selectedStatus: string = 'all';
 
   // Suggestions pour autocomplétion
   creancierSuggestions: any[] = [];
@@ -95,6 +105,7 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
     private creancierApiService: CreancierApiService,
     private debiteurApiService: DebiteurApiService,
     private dossierApiService: DossierApiService,
+    private validationDossierService: ValidationDossierService,
     private router: Router
   ) { }
 
@@ -107,6 +118,77 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  // Méthodes pour l'interface des agents
+  getDossiersByStatus(status: string): Dossier[] {
+    if (status === 'all') {
+      return this.dossiers;
+    }
+    return this.dossiers.filter(dossier => dossier.statut === status);
+  }
+
+  filterByStatus(status: string): void {
+    this.selectedStatus = status;
+    this.applyAdvancedFilters();
+  }
+
+  getStatutClass(statut: string): string {
+    switch (statut) {
+      case 'EN_ATTENTE_VALIDATION':
+        return 'status-en-attente';
+      case 'VALIDE':
+        return 'status-valide';
+      case 'REJETE':
+        return 'status-rejete';
+      case 'ENCOURSDETRAITEMENT':
+        return 'status-en-cours';
+      default:
+        return 'status-default';
+    }
+  }
+
+  getStatutLabel(statut: string): string {
+    switch (statut) {
+      case 'EN_ATTENTE_VALIDATION':
+        return 'En Attente';
+      case 'VALIDE':
+        return 'Validé';
+      case 'REJETE':
+        return 'Rejeté';
+      case 'ENCOURSDETRAITEMENT':
+        return 'En Cours';
+      default:
+        return statut;
+    }
+  }
+
+  getDossierStatusClass(dossierStatus: string | undefined): string {
+    if (!dossierStatus) return 'status-default';
+    switch (dossierStatus) {
+      case 'ENCOURSDETRAITEMENT':
+        return 'status-encours';
+      case 'ENQUETE':
+        return 'status-enquete';
+      case 'CLOTURE':
+        return 'status-cloture';
+      default:
+        return 'status-default';
+    }
+  }
+
+  getDossierStatusLabel(dossierStatus: string | undefined): string {
+    if (!dossierStatus) return 'Non défini';
+    switch (dossierStatus) {
+      case 'ENCOURSDETRAITEMENT':
+        return 'En Cours';
+      case 'ENQUETE':
+        return 'Enquête';
+      case 'CLOTURE':
+        return 'Clôturé';
+      default:
+        return dossierStatus;
+    }
   }
 
   initializeForm(): void {
@@ -135,6 +217,9 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
     
     // Logique pour agentCreateurId basée sur isChef
     this.dossierForm.get('isChef')?.valueChanges.subscribe(isChef => this.onIsChefChange(isChef));
+    
+    // Initialiser l'agentCreateurId dès la création du formulaire
+    this.initializeAgentCreateurId();
   }
 
   loadCurrentUser(): void {
@@ -148,16 +233,58 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
     console.log('🔍 ID utilisateur:', this.currentUser?.id);
     
     if (this.currentUser?.role === Role.AGENT_DOSSIER) {
-      // Pour les agents : charger leurs dossiers créés
-      this.agentDossierService.loadMesDossiers()
+      // Récupérer l'ID utilisateur de manière fiable
+      const userId = this.authService.getCurrentUserId();
+      console.log('🔍 ID utilisateur récupéré:', userId);
+      
+      if (!userId || isNaN(Number(userId))) {
+        console.warn('⚠️ ID utilisateur non trouvé localement, tentative de récupération depuis le backend...');
+        
+        // Essayer de récupérer l'ID depuis le backend
+        this.authService.getUserIdFromBackend().then(backendUserId => {
+          if (backendUserId && !isNaN(Number(backendUserId))) {
+            console.log('✅ ID utilisateur récupéré depuis le backend:', backendUserId);
+            
+            // Charger les dossiers avec l'ID récupéré
+            this.dossierApiService.getDossiersByAgent(Number(backendUserId))
+              .pipe(takeUntil(this.destroy$))
+              .subscribe({
+                next: (dossiersApi: DossierApi[]) => {
+                  console.log('📋 Dossiers chargés pour l\'agent:', dossiersApi.length);
+                  this.dossiers = this.convertApiDossiersToLocal(dossiersApi);
+                  this.filterDossiers();
+                },
+                error: (error: any) => {
+                  console.error('❌ Erreur lors du chargement des dossiers:', error);
+                  this.toastService.showError('Erreur lors du chargement des dossiers');
+                  this.loadMockDossiers();
+                }
+              });
+          } else {
+            console.error('❌ Impossible de récupérer l\'ID utilisateur depuis le backend');
+            this.toastService.showError('Erreur: Impossible de récupérer l\'ID utilisateur');
+            this.loadMockDossiers();
+          }
+        }).catch(error => {
+          console.error('❌ Erreur lors de la récupération de l\'ID utilisateur:', error);
+          this.toastService.showError('Erreur lors de la récupération de l\'ID utilisateur');
+          this.loadMockDossiers();
+        });
+        
+        return;
+      }
+      
+      // Pour les agents : charger leurs dossiers créés (EN_ATTENTE_VALIDATION et VALIDE)
+      this.dossierApiService.getDossiersByAgent(Number(userId))
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: (dossiersApi: DossierApi[]) => {
             console.log('📋 Dossiers chargés pour l\'agent:', dossiersApi.length);
+            // Afficher tous les dossiers de l'agent (EN_ATTENTE_VALIDATION et VALIDE)
             this.dossiers = this.convertApiDossiersToLocal(dossiersApi);
             this.filterDossiers();
           },
-          error: (error) => {
+          error: (error: any) => {
             console.error('❌ Erreur lors du chargement des dossiers:', error);
             this.toastService.showError('Erreur lors du chargement des dossiers');
             // Fallback avec données mock
@@ -166,53 +293,44 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
         });
     } else if (this.currentUser?.role === Role.CHEF_DEPARTEMENT_DOSSIER) {
       // Pour les chefs : charger TOUS les dossiers
-      console.log('🔄 Chargement de tous les dossiers pour le chef...');
-      
-      // D'abord, essayer de récupérer l'ID utilisateur depuis le backend
-      this.authService.getUserIdFromBackend().then(userId => {
-        if (userId) {
-          console.log('✅ ID utilisateur récupéré:', userId);
-          // Utiliser l'ID pour charger les dossiers
-          this.dossierApiService.list('CHEF', parseInt(userId))
-            .pipe(takeUntil(this.destroy$))
-            .subscribe({
-              next: (dossiersPage: Page<DossierApi>) => {
-                console.log('📋 Dossiers chargés avec userId:', dossiersPage.content.length);
-                this.dossiers = this.convertApiDossiersToLocal(dossiersPage.content);
-                this.filterDossiers();
-              },
-              error: (error) => {
-                console.error('❌ Erreur avec userId, tentative sans filtre:', error);
-                
-                // Gestion spécifique des erreurs
-                if (error.status === 500) {
-                  console.error('🔴 Erreur 500 : Problème avec les données de la base de données');
-                  this.toastService.showError('Erreur serveur : Problème avec les données de la base de données. Contactez l\'administrateur.');
-                } else if (error.status === 404) {
-                  console.error('🔴 Erreur 404 : Endpoint non trouvé');
-                  this.toastService.showError('Endpoint non trouvé. Vérifiez que le backend est démarré.');
-                } else if (error.status === 401) {
-                  console.error('🔴 Erreur 401 : Session expirée');
-                  this.toastService.showError('Session expirée. Veuillez vous reconnecter.');
-                } else {
-                  console.error('🔴 Erreur inconnue:', error.status);
-                  this.toastService.showError(`Erreur lors du chargement des dossiers (${error.status})`);
-                }
-                
-                this.loadAllDossiersFallback();
+      console.log('👑 Chargement de tous les dossiers pour le chef');
+      this.dossierApiService.getAllDossiers()
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (response: any) => {
+            console.log('📋 Tous les dossiers chargés pour le chef:', response.content?.length || 0);
+            this.dossiers = this.convertApiDossiersToLocal(response.content || []);
+            this.filterDossiers();
+          },
+          error: (error: any) => {
+            console.error('❌ Erreur lors du chargement des dossiers:', error);
+            
+            // Analyser le type d'erreur
+            if (error.status === 500) {
+              console.error('🔴 Erreur 500 : Problème avec les données de la base de données');
+              console.error('🔍 Détails de l\'erreur:', error.error);
+              
+              // Vérifier si c'est une erreur Jackson/Hibernate
+              if (error.error && typeof error.error === 'string' && error.error.includes('ByteBuddyInterceptor')) {
+                console.error('🔴 Erreur Jackson/Hibernate détectée');
+                this.toastService.showError('Erreur de sérialisation backend (Jackson/Hibernate). Les données mockées sont affichées temporairement.');
+                this.loadMockDossiers();
+              } else if (error.error && typeof error.error === 'string' && error.error.includes('LocalDateTime')) {
+                console.error('🔴 Erreur Jackson LocalDateTime détectée');
+                this.toastService.showError('Erreur de sérialisation backend (LocalDateTime). Les données mockées sont affichées temporairement.');
+                this.loadMockDossiers();
+              } else {
+                this.toastService.showError('Erreur serveur (500) : Problème avec les données de la base de données. Vérifiez le backend.');
+                this.loadDossiersWithRetry();
               }
-            });
-        } else {
-          console.log('⚠️ ID utilisateur non récupéré, chargement sans filtre');
-          this.loadAllDossiersFallback();
-        }
-      }).catch(error => {
-        console.error('❌ Erreur lors de la récupération de l\'ID utilisateur:', error);
-        console.log('🔄 Tentative de chargement sans filtre utilisateur...');
-        this.loadAllDossiersFallback();
-      });
+            } else {
+              this.toastService.showError('Erreur lors du chargement des dossiers');
+              this.loadMockDossiers();
+            }
+          }
+        });
     } else {
-      // Fallback pour les autres rôles
+      // Rôle non reconnu, utiliser les données mock
       console.log('⚠️ Rôle non reconnu, utilisation des données mock');
       this.loadMockDossiers();
     }
@@ -228,7 +346,7 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
           this.dossiers = this.convertApiDossiersToLocal(dossiersPage.content);
           this.filterDossiers();
         },
-        error: (error) => {
+        error: (error: any) => {
           console.error('❌ Erreur lors du chargement des dossiers (fallback):', error);
           
           // Analyser le type d'erreur
@@ -253,6 +371,53 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
           this.loadMockDossiers();
         }
       });
+  }
+
+  private loadDossiersWithRetry(): void {
+    console.log('🔄 Tentative de chargement avec retry...');
+    
+    // Attendre un peu avant de réessayer
+    setTimeout(() => {
+      if (this.currentUser?.role === Role.CHEF_DEPARTEMENT_DOSSIER) {
+        // Pour les chefs, essayer de charger tous les dossiers
+        this.dossierApiService.getAllDossiers()
+          .pipe(takeUntil(this.destroy$))
+          .subscribe({
+            next: (response: any) => {
+              console.log('✅ Dossiers chargés avec retry:', response.content?.length || 0);
+              this.dossiers = this.convertApiDossiersToLocal(response.content || []);
+              this.filterDossiers();
+            },
+            error: (error: any) => {
+              console.error('❌ Erreur persistante lors du chargement:', error);
+              this.toastService.showError('Impossible de charger les dossiers. Vérifiez le backend.');
+              this.dossiers = []; // Afficher une liste vide au lieu de données mock
+            }
+          });
+      } else if (this.currentUser?.role === Role.AGENT_DOSSIER) {
+        // Pour les agents, essayer de charger leurs dossiers
+        const userId = this.authService.getCurrentUserId();
+        if (userId) {
+          this.dossierApiService.getDossiersByAgent(Number(userId))
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+              next: (dossiers) => {
+                console.log('✅ Dossiers de l\'agent chargés avec retry:', dossiers.length);
+                this.dossiers = this.convertApiDossiersToLocal(dossiers);
+                this.filterDossiers();
+              },
+              error: (error: any) => {
+                console.error('❌ Erreur persistante lors du chargement des dossiers de l\'agent:', error);
+                this.toastService.showError('Impossible de charger les dossiers. Vérifiez le backend.');
+                this.dossiers = []; // Afficher une liste vide au lieu de données mock
+              }
+            });
+        } else {
+          console.error('❌ ID utilisateur non trouvé pour l\'agent');
+          this.dossiers = [];
+        }
+      }
+    }, 1000);
   }
 
   private loadMockDossiers(): void {
@@ -546,6 +711,32 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
   }
 
   private createDossierApi(formValue: any): void {
+    // S'assurer que l'agentCreateurId est disponible avant de continuer
+    if (!formValue.agentCreateurId || formValue.agentCreateurId === null || isNaN(Number(formValue.agentCreateurId))) {
+      console.warn('⚠️ agentCreateurId non disponible, tentative de récupération...');
+      
+      // Essayer de récupérer l'ID utilisateur depuis le backend
+      this.authService.getUserIdFromBackend().then(backendUserId => {
+        if (backendUserId && !isNaN(Number(backendUserId))) {
+          console.log('✅ ID utilisateur récupéré depuis le backend:', backendUserId);
+          formValue.agentCreateurId = parseInt(backendUserId);
+          this.proceedWithDossierCreation(formValue);
+        } else {
+          console.error('❌ Impossible de récupérer l\'ID utilisateur depuis le backend');
+          this.toastService.error('Erreur: Impossible de récupérer l\'ID utilisateur. Contactez l\'administrateur.');
+        }
+      }).catch(error => {
+        console.error('❌ Erreur lors de la récupération de l\'ID utilisateur:', error);
+        this.toastService.error('Erreur lors de la récupération de l\'ID utilisateur. Contactez l\'administrateur.');
+      });
+      
+      return;
+    }
+    
+    this.proceedWithDossierCreation(formValue);
+  }
+
+  private proceedWithDossierCreation(formValue: any): void {
     // Rechercher les IDs des créanciers et débiteurs basés sur les noms
     const searchCreancier = formValue.typeCreancier === 'PERSONNE_PHYSIQUE' && formValue.prenomCreancier
       ? `${formValue.nomCreancier}`.trim() // API search call below compares both
@@ -562,13 +753,12 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
           // Sans auth, on laisse la case isChef décider; sinon on autorise aussi par rôle
           const isChef: boolean = !!formValue.isChef || !!(current && (current.role === Role.CHEF_DEPARTEMENT_DOSSIER || current.role === Role.SUPER_ADMIN));
           
-          // Vérifier si l'ID utilisateur est disponible pour les chefs
-          if (isChef && (!formValue.agentCreateurId || formValue.agentCreateurId === null || isNaN(Number(formValue.agentCreateurId)))) {
-            console.error('❌ ERREUR: agentCreateurId est requis pour les chefs mais n\'est pas disponible ou invalide');
+          // Vérifier si l'ID utilisateur est disponible
+          if (!formValue.agentCreateurId || formValue.agentCreateurId === null || isNaN(Number(formValue.agentCreateurId))) {
+            console.error('❌ ERREUR: agentCreateurId est requis mais n\'est pas disponible ou invalide');
             console.error('🔍 formValue.agentCreateurId:', formValue.agentCreateurId);
             console.error('🔍 isChef:', isChef);
             console.error('🔍 isNaN(Number(formValue.agentCreateurId)):', isNaN(Number(formValue.agentCreateurId)));
-            console.error('🔧 SOLUTION: Vérifier que l\'endpoint GET /api/utilisateurs/by-email/{email} fonctionne');
             this.toastService.error('Erreur: Impossible de récupérer l\'ID utilisateur valide. Contactez l\'administrateur.');
             return;
           }
@@ -586,32 +776,31 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
             typeDocumentJustificatif: this.convertLocalTypeDocumentToApi(formValue.typeDocumentJustificatif),
             urgence: this.convertLocalUrgenceToApi(formValue.urgence),
             dossierStatus: 'ENCOURSDETRAITEMENT', // Statut par défaut pour un nouveau dossier (même pour les chefs)
-            typeCreancier: formValue.typeCreancier,
             // Pour compat DTO backend (noms) et pour logs côté service si besoin
+            typeCreancier: formValue.typeCreancier,
             nomCreancier: formValue.nomCreancier,
             prenomCreancier: formValue.typeCreancier === 'PERSONNE_PHYSIQUE' ? (formValue.prenomCreancier || '') : '',
             typeDebiteur: formValue.typeDebiteur,
             nomDebiteur: formValue.nomDebiteur,
             prenomDebiteur: formValue.typeDebiteur === 'PERSONNE_PHYSIQUE' ? (formValue.prenomDebiteur || '') : '',
-            // Si le backend accepte aussi des IDs ou objets, ils sont disponibles côté service si nécessaire
-            creancierId: creancierId,
-            debiteurId: debiteurId,
+            // Les IDs ne sont pas envoyés au backend, seulement les noms pour la recherche
+            // creancierId et debiteurId sont utilisés en interne pour la validation
             contratSigne: formValue.contratSigne ? 'uploaded' : undefined,
             pouvoir: formValue.pouvoir ? 'uploaded' : undefined,
             // Utiliser la valeur du formulaire agentCreateurId (définie automatiquement par onIsChefChange)
             agentCreateurId: formValue.agentCreateurId,
-            // Logique pour les chefs : dossier validé automatiquement
-            valide: isChef, // Si c'est un chef, le dossier est automatiquement validé
-            dateValidation: isChef ? new Date().toISOString() : undefined, // Date de validation si c'est un chef
+            // SUPPRIMÉ: valide: isChef, // Ce champ n'est pas reconnu par le backend DTO
+            // SUPPRIMÉ: dateValidation: isChef ? new Date().toISOString() : undefined, // Ce champ n'est pas reconnu par le backend DTO
             // Statut (statut fonctionnel) - logique de validation
-            statut: isChef ? 'VALIDE' : 'EN_ATTENTE_VALIDATION', // EN_ATTENTE_VALIDATION pour les agents, VALIDE pour les chefs
-            // S'assurer que le dossier n'est pas fermé automatiquement
-            dateCloture: null // Explicitement NULL pour éviter l'assignation automatique
+            statut: isChef ? 'VALIDE' : 'EN_ATTENTE_VALIDATION' // EN_ATTENTE_VALIDATION pour les agents, VALIDE pour les chefs
+            // SUPPRIMÉ: dateCloture: null // Ce champ n'est pas reconnu par le backend DTO
           };
           
           // Log pour déboguer
           console.log('🔍 Données envoyées au backend:', JSON.stringify(dossierRequest, null, 2));
           console.log('🔍 agentCreateurId dans dossierRequest:', dossierRequest.agentCreateurId);
+          console.log('🔍 formValue.agentCreateurId:', formValue.agentCreateurId);
+          console.log('🔍 Type de agentCreateurId:', typeof dossierRequest.agentCreateurId);
           console.log('🔍 isChef:', isChef);
 
           const hasFiles = !!this.selectedContratFile || !!this.selectedPouvoirFile;
@@ -629,14 +818,20 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
             .subscribe({
               next: (nouveauDossier) => {
                 console.log('✅ Dossier créé avec succès:', nouveauDossier);
-                this.toastService.success('Dossier créé avec succès.');
-                this.cancelForm();
-                // Recharger les dossiers avec un délai pour s'assurer que la DB est à jour
-                setTimeout(() => {
-                  this.loadDossiers();
-                }, 500);
+                
+                // Créer automatiquement une validation pour les agents
+                if (this.currentUser?.role === Role.AGENT_DOSSIER) {
+                  this.createValidationForDossier(nouveauDossier);
+                } else {
+                  this.toastService.success('Dossier créé avec succès.');
+                  this.cancelForm();
+                  // Recharger les dossiers avec un délai pour s'assurer que la DB est à jour
+                  setTimeout(() => {
+                    this.loadDossiers();
+                  }, 500);
+                }
               },
-              error: (error) => {
+              error: (error: any) => {
                 console.error('❌ Erreur lors de la création du dossier:', error);
                 console.error('❌ Détails de l\'erreur:', JSON.stringify(error, null, 2));
                 
@@ -693,189 +888,74 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
     prenomControl?.updateValueAndValidity();
   }
 
+  private initializeAgentCreateurId(): void {
+    const agentCreateurIdControl = this.dossierForm.get('agentCreateurId');
+    console.log('🔄 Initialisation de l\'agentCreateurId');
+    
+    const userId = this.authService.getCurrentUserId();
+    console.log('🔍 ID utilisateur actuel:', userId);
+    
+    if (userId && !isNaN(Number(userId))) {
+      agentCreateurIdControl?.setValue(parseInt(userId));
+      console.log('✅ agentCreateurId initialisé à:', userId);
+    } else {
+      console.warn('⚠️ ID utilisateur non trouvé localement, tentative de récupération depuis le backend...');
+      
+      // Attendre que l'ID soit récupéré avant de continuer
+      this.authService.getUserIdFromBackend().then(backendUserId => {
+        if (backendUserId && !isNaN(Number(backendUserId))) {
+          agentCreateurIdControl?.setValue(parseInt(backendUserId));
+          console.log('✅ ID utilisateur récupéré depuis le backend:', backendUserId);
+        } else {
+          console.error('❌ Impossible de récupérer l\'ID utilisateur depuis le backend');
+          // Utiliser une valeur par défaut pour permettre la création de dossier
+          agentCreateurIdControl?.setValue(1); // ID par défaut pour les tests
+          console.log('🔧 Utilisation d\'un ID par défaut (1) pour permettre la création de dossier');
+        }
+      }).catch(error => {
+        console.error('❌ Erreur lors de la récupération de l\'ID utilisateur:', error);
+        // Utiliser une valeur par défaut pour permettre la création de dossier
+        agentCreateurIdControl?.setValue(1); // ID par défaut pour les tests
+        console.log('🔧 Utilisation d\'un ID par défaut (1) pour permettre la création de dossier');
+      });
+    }
+  }
+
   private onIsChefChange(isChef: boolean): void {
     const agentCreateurIdControl = this.dossierForm.get('agentCreateurId');
     console.log('🔄 onIsChefChange appelé avec isChef:', isChef);
     
-    if (isChef) {
-      // Récupérer l'ID de l'utilisateur connecté via la nouvelle méthode
-      const userId = this.authService.getCurrentUserId();
-      console.log('🔍 ID utilisateur actuel:', userId);
-      
-      if (userId && !isNaN(Number(userId))) {
-        agentCreateurIdControl?.setValue(parseInt(userId));
-        console.log('✅ Case "Créer en tant que Chef" cochée - agentCreateurId défini à:', userId);
-        console.log('🔍 Valeur du contrôle après setValue:', agentCreateurIdControl?.value);
-      } else {
-        console.warn('⚠️ ID utilisateur non trouvé localement, tentative de récupération depuis le backend...');
-        // Essayer de récupérer l'ID depuis le backend
-        this.authService.getUserIdFromBackend().then(backendUserId => {
-          if (backendUserId && !isNaN(Number(backendUserId))) {
-            agentCreateurIdControl?.setValue(parseInt(backendUserId));
-            console.log('✅ ID utilisateur récupéré depuis le backend:', backendUserId);
-            console.log('🔍 Valeur du contrôle après setValue:', agentCreateurIdControl?.value);
-          } else {
-            console.error('❌ Impossible de récupérer l\'ID utilisateur depuis le backend');
-            console.error('🔧 SOLUTION: Vérifier que l\'endpoint GET /api/utilisateurs/by-email/{email} fonctionne');
-            agentCreateurIdControl?.setValue(null);
-            this.toastService.error('Erreur: Impossible de récupérer l\'ID utilisateur. Vérifiez l\'endpoint backend.');
-          }
-        }).catch(error => {
-          console.error('❌ Erreur lors de la récupération de l\'ID utilisateur:', error);
-          agentCreateurIdControl?.setValue(null);
-          this.toastService.error('Erreur: Impossible de récupérer l\'ID utilisateur.');
-        });
-      }
+    // TOUJOURS définir l'agentCreateurId avec l'utilisateur connecté
+    const userId = this.authService.getCurrentUserId();
+    console.log('🔍 ID utilisateur actuel:', userId);
+    
+    if (userId && !isNaN(Number(userId))) {
+      agentCreateurIdControl?.setValue(parseInt(userId));
+      console.log('✅ agentCreateurId défini à:', userId);
+      console.log('🔍 Valeur du contrôle après setValue:', agentCreateurIdControl?.value);
     } else {
-      // Quand la case est décochée, réinitialiser agentCreateurId à null
-      agentCreateurIdControl?.setValue(null);
-      console.log('❌ Case "Créer en tant que Chef" décochée - agentCreateurId réinitialisé à null');
-    }
-  }
-
-  /**
-   * Valide un dossier (pour les chefs)
-   */
-  validerDossier(dossier: Dossier): void {
-    if (!this.authService.canValidateDossiers()) {
-      this.toastService.showError('Vous n\'avez pas les droits pour valider des dossiers');
-      return;
-    }
-
-    const dossierId = parseInt(dossier.id);
-    if (isNaN(dossierId)) {
-      this.toastService.showError('ID de dossier invalide');
-      return;
-    }
-
-    const currentUser = this.authService.getCurrentUser();
-    if (!currentUser) {
-      this.toastService.showError('Utilisateur non connecté');
-      return;
-    }
-    
-    this.dossierApiService.validerDossier(dossierId, parseInt(currentUser.id))
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (response) => {
-          console.log('✅ Dossier validé:', response);
-          this.toastService.showSuccess('Dossier validé avec succès');
-          // Recharger les dossiers
-          this.loadDossiers();
-        },
-        error: (error) => {
-          console.error('❌ Erreur lors de la validation:', error);
-          this.toastService.showError('Erreur lors de la validation du dossier');
+      console.warn('⚠️ ID utilisateur non trouvé localement, tentative de récupération depuis le backend...');
+      // Essayer de récupérer l'ID depuis le backend
+      this.authService.getUserIdFromBackend().then(backendUserId => {
+        if (backendUserId && !isNaN(Number(backendUserId))) {
+          agentCreateurIdControl?.setValue(parseInt(backendUserId));
+          console.log('✅ ID utilisateur récupéré depuis le backend:', backendUserId);
+          console.log('🔍 Valeur du contrôle après setValue:', agentCreateurIdControl?.value);
+        } else {
+          console.error('❌ Impossible de récupérer l\'ID utilisateur depuis le backend');
+          console.error('🔧 SOLUTION: Vérifier que l\'endpoint GET /api/utilisateurs/by-email/{email} fonctionne');
+          agentCreateurIdControl?.setValue(null);
+          this.toastService.error('Erreur: Impossible de récupérer l\'ID utilisateur. Vérifiez l\'endpoint backend.');
         }
+      }).catch(error => {
+        console.error('❌ Erreur lors de la récupération de l\'ID utilisateur:', error);
+        agentCreateurIdControl?.setValue(null);
+        this.toastService.error('Erreur: Impossible de récupérer l\'ID utilisateur.');
       });
-  }
-
-  /**
-   * Rejette un dossier (pour les chefs)
-   */
-  rejeterDossier(dossier: Dossier): void {
-    if (!this.authService.canValidateDossiers()) {
-      this.toastService.showError('Vous n\'avez pas les droits pour rejeter des dossiers');
-      return;
-    }
-
-    const dossierId = parseInt(dossier.id);
-    if (isNaN(dossierId)) {
-      this.toastService.showError('ID de dossier invalide');
-      return;
-    }
-
-    const commentaire = prompt('Commentaire de rejet (optionnel):');
-    this.dossierApiService.rejeterDossier(dossierId, commentaire || '')
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (response) => {
-          console.log('✅ Dossier rejeté:', response);
-          this.toastService.showSuccess('Dossier rejeté');
-          // Recharger les dossiers
-          this.loadDossiers();
-        },
-        error: (error) => {
-          console.error('❌ Erreur lors du rejet:', error);
-          this.toastService.showError('Erreur lors du rejet du dossier');
-        }
-      });
-  }
-
-  /**
-   * Clôture un dossier
-   */
-  cloturerDossier(dossier: Dossier): void {
-    if (!this.authService.canValidateDossiers()) {
-      this.toastService.showError('Vous n\'avez pas les droits pour clôturer des dossiers');
-      return;
-    }
-
-    const dossierId = parseInt(dossier.id);
-    if (isNaN(dossierId)) {
-      this.toastService.showError('ID de dossier invalide');
-      return;
-    }
-
-    this.dossierApiService.cloturerDossier(dossierId)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (response) => {
-          console.log('✅ Dossier clôturé:', response);
-          this.toastService.showSuccess('Dossier clôturé avec succès');
-          // Recharger les dossiers
-          this.loadDossiers();
-        },
-        error: (error) => {
-          console.error('❌ Erreur lors de la clôture:', error);
-          this.toastService.showError('Erreur lors de la clôture du dossier');
-        }
-      });
-  }
-
-  /**
-   * Retourne le statut de validation pour l'affichage
-   */
-  getValidationStatus(dossier: Dossier): string {
-    if (dossier.dossierStatus === 'CLOTURE') {
-      return 'CLÔTURÉ';
-    }
-    
-    switch (dossier.statut) {
-      case 'EN_ATTENTE_VALIDATION':
-        return 'EN ATTENTE';
-      case 'VALIDE':
-        return 'VALIDÉ';
-      case 'REJETE':
-        return 'REJETÉ';
-      case 'EN_COURS':
-        return 'EN COURS';
-      default:
-        return 'INCONNU';
     }
   }
 
-  /**
-   * Retourne la classe CSS pour le statut de validation
-   */
-  getValidationClass(dossier: Dossier): string {
-    if (dossier.dossierStatus === 'CLOTURE') {
-      return 'status-cloture';
-    }
-    
-    switch (dossier.statut) {
-      case 'EN_ATTENTE_VALIDATION':
-        return 'status-en-attente';
-      case 'VALIDE':
-        return 'status-valide';
-      case 'REJETE':
-        return 'status-rejete';
-      case 'EN_COURS':
-        return 'status-en-cours';
-      default:
-        return 'status-inconnu';
-    }
-  }
+
 
   // Méthodes pour l'autocomplétion des créanciers
   onCreancierInput(event: any): void {
@@ -896,7 +976,7 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
           this.creancierSuggestions = creanciers.slice(0, 5); // Limiter à 5 suggestions
           this.showCreancierSuggestions = this.creancierSuggestions.length > 0;
         },
-        error: (error) => {
+        error: (error: any) => {
           console.error('Erreur lors de la recherche de créanciers:', error);
           this.creancierSuggestions = [];
           this.showCreancierSuggestions = false;
@@ -951,7 +1031,7 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
           this.debiteurSuggestions = debiteurs.slice(0, 5); // Limiter à 5 suggestions
           this.showDebiteurSuggestions = this.debiteurSuggestions.length > 0;
         },
-        error: (error) => {
+        error: (error: any) => {
           console.error('Erreur lors de la recherche de débiteurs:', error);
           this.debiteurSuggestions = [];
           this.showDebiteurSuggestions = false;
@@ -1041,13 +1121,13 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
                   observer.next({ creancierId, debiteurId });
                   observer.complete();
                 },
-                error: (error) => {
+                error: (error: any) => {
                   console.error('Erreur lors de la recherche des débiteurs:', error);
                   observer.error('Erreur lors de la recherche du débiteur: ' + error);
                 }
               });
           },
-          error: (error) => {
+          error: (error: any) => {
             console.error('Erreur lors de la recherche des créanciers:', error);
             observer.error('Erreur lors de la recherche du créancier: ' + error);
           }
@@ -1190,6 +1270,148 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
 
   isDossierValidated(dossier: Dossier): boolean {
     return dossier.valide;
+  }
+
+  private createValidationForDossier(dossier: any): void {
+    const validationRequest: CreateValidationRequest = {
+      dossier: { id: Number(dossier.id) },
+      agentCreateur: { id: Number(this.currentUser?.id) },
+      commentaires: 'Dossier créé par l\'agent et en attente de validation'
+    };
+
+    this.validationDossierService.createValidationDossier(validationRequest)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (validation) => {
+          console.log('✅ Validation créée avec succès:', validation);
+          this.toastService.success('Dossier créé avec succès et soumis à validation.');
+          this.cancelForm();
+          setTimeout(() => {
+            this.loadDossiers();
+          }, 500);
+        },
+        error: (error: any) => {
+          console.error('❌ Erreur lors de la création de la validation:', error);
+          this.toastService.error('Dossier créé mais erreur lors de la soumission à validation.');
+          this.cancelForm();
+          setTimeout(() => {
+            this.loadDossiers();
+          }, 500);
+        }
+      });
+  }
+
+  // ==================== MÉTHODES DE GESTION DES STATUTS ====================
+
+  validerDossier(dossier: Dossier): void {
+    this.selectedDossierForValidation = dossier;
+    this.showValidationModal = true;
+  }
+
+  confirmValidation(): void {
+    if (!this.selectedDossierForValidation) return;
+
+    const chefId = Number(this.currentUser?.id);
+    const commentaire = this.validationComment.trim() || undefined;
+
+    this.validationDossierService.validerDossier(
+      Number(this.selectedDossierForValidation.id),
+      chefId,
+      commentaire
+    )
+    .pipe(takeUntil(this.destroy$))
+    .subscribe({
+      next: (response) => {
+        this.toastService.showSuccess('Dossier validé avec succès.');
+        this.closeValidationModal();
+        this.loadDossiers();
+      },
+      error: (error: any) => {
+        console.error('Erreur lors de la validation:', error);
+        this.toastService.showError('Erreur lors de la validation du dossier.');
+      }
+    });
+  }
+
+  rejeterDossier(dossier: Dossier): void {
+    this.selectedDossierForValidation = dossier;
+    this.showValidationModal = true;
+  }
+
+  confirmRejection(): void {
+    if (!this.selectedDossierForValidation) return;
+
+    const chefId = Number(this.currentUser?.id);
+    const commentaire = this.validationComment.trim() || undefined;
+
+    this.validationDossierService.rejeterDossier(
+      Number(this.selectedDossierForValidation.id),
+      chefId,
+      commentaire
+    )
+    .pipe(takeUntil(this.destroy$))
+    .subscribe({
+      next: (response) => {
+        this.toastService.showSuccess('Dossier rejeté avec succès.');
+        this.closeValidationModal();
+        this.loadDossiers();
+      },
+      error: (error: any) => {
+        console.error('Erreur lors du rejet:', error);
+        this.toastService.showError('Erreur lors du rejet du dossier.');
+      }
+    });
+  }
+
+  closeValidationModal(): void {
+    this.showValidationModal = false;
+    this.selectedDossierForValidation = null;
+    this.validationComment = '';
+  }
+
+  cloturerDossier(dossier: Dossier): void {
+    if (confirm('Êtes-vous sûr de vouloir clôturer ce dossier ?')) {
+      this.dossierApiService.cloturerDossier(Number(dossier.id))
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (response) => {
+            this.toastService.showSuccess('Dossier clôturé avec succès.');
+            this.loadDossiers();
+          },
+          error: (error: any) => {
+            console.error('Erreur lors de la clôture:', error);
+            this.toastService.showError('Erreur lors de la clôture du dossier.');
+          }
+        });
+    }
+  }
+
+  // ==================== MÉTHODES D'AFFICHAGE ====================
+
+  getValidationStatus(dossier: Dossier): string {
+    if (dossier.dossierStatus === 'CLOTURE') {
+      return 'CLÔTURÉ';
+    }
+    if (dossier.valide) {
+      return 'VALIDÉ';
+    }
+    if (dossier.statut === 'REJETE') {
+      return 'REJETÉ';
+    }
+    return 'EN ATTENTE';
+  }
+
+  getValidationClass(dossier: Dossier): string {
+    if (dossier.dossierStatus === 'CLOTURE') {
+      return 'status-cloture';
+    }
+    if (dossier.valide) {
+      return 'status-valide';
+    }
+    if (dossier.statut === 'REJETE') {
+      return 'status-rejete';
+    }
+    return 'status-en-attente';
   }
 
 }

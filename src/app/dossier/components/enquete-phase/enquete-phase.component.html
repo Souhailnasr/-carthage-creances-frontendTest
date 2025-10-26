@@ -28,6 +28,7 @@
           <th>Créancier</th>
           <th>Débiteur</th>
           <th>Urgence</th>
+          <th>Statut</th>
           <th>Date Création</th>
           <th>Actions</th>
         </tr>
@@ -36,11 +37,30 @@
         <tr *ngFor="let dossier of filteredDossiers">
           <td>{{ dossier.numeroDossier }}</td>
           <td>{{ dossier.getFormattedAmount() }}</td>
-          <td>{{ dossier.creancier.getFullName() }}</td>
-          <td>{{ dossier.debiteur.getFullName() }}</td>
+          <td>
+            <div class="party-info">
+              <div class="party-name">{{ dossier.creancier.getFullName() }}</div>
+              <div class="party-type" [ngClass]="'type-' + dossier.creancier.type?.toLowerCase()">
+                {{ dossier.creancier.type }}
+              </div>
+            </div>
+          </td>
+          <td>
+            <div class="party-info">
+              <div class="party-name">{{ dossier.debiteur.getFullName() }}</div>
+              <div class="party-type" [ngClass]="'type-' + dossier.debiteur.type?.toLowerCase()">
+                {{ dossier.debiteur.type }}
+              </div>
+            </div>
+          </td>
           <td>
             <span class="urgence-badge" [ngClass]="'urgence-' + dossier.urgence.toLowerCase()">
               {{ dossier.urgence }}
+            </span>
+          </td>
+          <td>
+            <span class="statut-badge" [ngClass]="'statut-' + dossier.statut.toLowerCase()">
+              {{ dossier.statut }}
             </span>
           </td>
           <td>{{ dossier.getFormattedDate() }}</td>

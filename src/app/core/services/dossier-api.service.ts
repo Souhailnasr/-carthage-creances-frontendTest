@@ -65,7 +65,13 @@ export class DossierApiService {
       const tryCreate = (payload: DossierRequest, attempt: number = 1) => {
         console.log(`🔄 Tentative ${attempt} de création avec numeroDossier: ${payload.numeroDossier}`);
         
-        this.http.post<DossierApi>(`${this.apiUrl}/create`, payload, { params: { isChef: String(isChef) } })
+        // CORRECTION: Utiliser FormData avec la partie 'dossier' comme Blob même sans fichiers
+        const formData = new FormData();
+        const dossierBlob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+        formData.append('dossier', dossierBlob);
+        console.log('✅ Partie dossier ajoutée au FormData comme Blob (sans fichiers):', JSON.stringify(payload, null, 2));
+        
+        this.http.post<DossierApi>(`${this.apiUrl}/create`, formData, { params: { isChef: String(isChef) } })
           .subscribe({
             next: d => { 
               console.log(`✅ Dossier créé avec succès avec numeroDossier: ${payload.numeroDossier}`);
@@ -132,28 +138,33 @@ export class DossierApiService {
     isChef: boolean
   ): Observable<DossierApi> {
     const formData = new FormData();
-    // Champs simples attendus par le DTO backend
-    if (dossier.titre !== undefined) formData.append('titre', String(dossier.titre));
-    if (dossier.description !== undefined) formData.append('description', String(dossier.description));
-    if (dossier.numeroDossier !== undefined) formData.append('numeroDossier', String(dossier.numeroDossier));
-    if (dossier.montantCreance !== undefined) formData.append('montantCreance', String(dossier.montantCreance as any));
-    if (dossier.typeDocumentJustificatif !== undefined) formData.append('typeDocumentJustificatif', String(dossier.typeDocumentJustificatif));
-    if (dossier.urgence !== undefined) formData.append('urgence', String(dossier.urgence));
-    if ((dossier as any).dossierStatus !== undefined) formData.append('dossierStatus', String((dossier as any).dossierStatus));
-    if ((dossier as any).statut !== undefined) formData.append('statut', String((dossier as any).statut));
-    if ((dossier as any).nomCreancier !== undefined) formData.append('nomCreancier', String((dossier as any).nomCreancier));
-    if ((dossier as any).nomDebiteur !== undefined) formData.append('nomDebiteur', String((dossier as any).nomDebiteur));
-    // Optionnel: agentCreateurId si disponible
-    if ((dossier as any).agentCreateurId !== undefined && (dossier as any).agentCreateurId !== null) {
-      formData.append('agentCreateurId', String((dossier as any).agentCreateurId));
-    }
-
+    
+    // CORRECTION: Ajouter la partie 'dossier' que le backend attend comme Blob
+    const dossierBlob = new Blob([JSON.stringify(dossier)], { type: 'application/json' });
+    formData.append('dossier', dossierBlob);
+    console.log('✅ Partie dossier ajoutée au FormData comme Blob:', JSON.stringify(dossier, null, 2));
+    
     // Fichiers (clés conformes au DTO: contratSigneFile, pouvoirFile)
     if (contratSigne) formData.append('contratSigneFile', contratSigne);
     if (pouvoir) formData.append('pouvoirFile', pouvoir);
 
+    // Log du contenu du FormData
+    console.log('🔍 Contenu du FormData:');
+    try {
+      for (let [key, value] of (formData as any).entries()) {
+        if (key === 'dossier') {
+          console.log(`  ${key}:`, JSON.parse(value as string));
+        } else {
+          console.log(`  ${key}:`, value);
+        }
+      }
+    } catch (error) {
+      console.log('  Impossible d\'afficher le contenu du FormData');
+    }
+
     return this.http.post<DossierApi>(`${this.apiUrl}/create`, formData, { params: { isChef: String(isChef) } });
   }
+
 
   /**
    * Récupère un dossier par ID

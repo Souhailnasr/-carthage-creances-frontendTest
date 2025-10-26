@@ -66,3 +66,7 @@
 - Les dossiers créés par les chefs sont automatiquement validés mais pas fermés
 - Le statut `EN_COURS` est maintenant cohérent entre frontend et backend
 
+
+
+
+

@@ -209,6 +209,46 @@
     </div>
   </div>
 
+  <!-- Interface spécifique pour les agents -->
+  <div class="agent-dashboard" *ngIf="currentUser?.role === 'AGENT_DOSSIER'">
+    <div class="agent-stats">
+      <div class="stat-card">
+        <div class="stat-number">{{ getDossiersByStatus('EN_ATTENTE_VALIDATION').length }}</div>
+        <div class="stat-label">En Attente</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number">{{ getDossiersByStatus('VALIDE').length }}</div>
+        <div class="stat-label">Validés</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number">{{ getDossiersByStatus('ENCOURSDETRAITEMENT').length }}</div>
+        <div class="stat-label">En Cours</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number">{{ dossiers.length }}</div>
+        <div class="stat-label">Total</div>
+      </div>
+    </div>
+
+    <div class="agent-dossiers-section">
+      <h3>Mes Dossiers Créés</h3>
+      <div class="dossier-status-tabs">
+        <button class="tab-btn" [class.active]="selectedStatus === 'all'" (click)="filterByStatus('all')">
+          Tous ({{ dossiers.length }})
+        </button>
+        <button class="tab-btn" [class.active]="selectedStatus === 'EN_ATTENTE_VALIDATION'" (click)="filterByStatus('EN_ATTENTE_VALIDATION')">
+          En Attente ({{ getDossiersByStatus('EN_ATTENTE_VALIDATION').length }})
+        </button>
+        <button class="tab-btn" [class.active]="selectedStatus === 'VALIDE'" (click)="filterByStatus('VALIDE')">
+          Validés ({{ getDossiersByStatus('VALIDE').length }})
+        </button>
+        <button class="tab-btn" [class.active]="selectedStatus === 'ENCOURSDETRAITEMENT'" (click)="filterByStatus('ENCOURSDETRAITEMENT')">
+          En Cours ({{ getDossiersByStatus('ENCOURSDETRAITEMENT').length }})
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Tableau des dossiers -->
   <div class="table-container">
     <!-- Controls: sorting & pagination -->
@@ -240,48 +280,46 @@
     <table class="dossiers-table">
       <thead>
         <tr>
-          <th>ID</th>
           <th>Numéro</th>
           <th>Titre</th>
           <th>Montant</th>
           <th>Créancier</th>
-          <th>Type Créancier</th>
           <th>Débiteur</th>
-          <th>Type Débiteur</th>
           <th>Urgence</th>
           <th>Date Création</th>
-          <th>Agent Créateur</th>
           <th>Statut</th>
+          <th>Dossier Status</th>
+          <th>Validation</th>
           <th>Actions</th>
         </tr>
       </thead>
       <tbody>
         <tr *ngFor="let dossier of pagedDossiers">
-          <td>{{ dossier.id }}</td>
           <td>{{ dossier.numeroDossier }}</td>
           <td>{{ dossier.titre }}</td>
           <td>{{ dossier.getFormattedAmount() }}</td>
           <td>{{ dossier.creancier.getFullName() }}</td>
-          <td>
-            <span class="type-badge" [ngClass]="getTypeClass(dossier.typeCreancier)">
-              {{ getTypeLabel(dossier.typeCreancier) }}
-            </span>
-          </td>
           <td>{{ dossier.debiteur.getFullName() }}</td>
-          <td>
-            <span class="type-badge" [ngClass]="getTypeClass(dossier.typeDebiteur)">
-              {{ getTypeLabel(dossier.typeDebiteur) }}
-            </span>
-          </td>
           <td>
             <span class="urgence-badge" [ngClass]="getUrgenceClass(dossier.urgence)">
               {{ getUrgenceLabel(dossier.urgence) }}
             </span>
           </td>
           <td>{{ dossier.getFormattedDate() }}</td>
-          <td>{{ dossier.agentCreateur }}</td>
           <td>
-            <span class="status-badge" [ngClass]="getValidationClass(dossier)">{{ getValidationStatus(dossier) }}</span>
+            <span class="status-badge" [ngClass]="getStatutClass(dossier.statut)">
+              {{ getStatutLabel(dossier.statut) }}
+            </span>
+          </td>
+          <td>
+            <span class="dossier-status-badge" [ngClass]="getDossierStatusClass(dossier.dossierStatus)">
+              {{ getDossierStatusLabel(dossier.dossierStatus) }}
+            </span>
+          </td>
+          <td>
+            <span class="validation-badge" [ngClass]="getValidationClass(dossier)">
+              {{ getValidationStatus(dossier) }}
+            </span>
           </td>
           <td class="actions">
             <button class="btn btn-sm btn-info" (click)="viewDossierDetails(dossier)" title="Voir détails">
@@ -326,6 +364,47 @@
     <div *ngIf="filteredDossiers.length === 0" class="no-data">
       <i class="fas fa-folder-open"></i>
       <p>Aucun dossier trouvé</p>
+    </div>
+  </div>
+
+  <!-- Modal de validation/rejet -->
+  <div class="modal-overlay" *ngIf="showValidationModal" (click)="closeValidationModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Validation du Dossier</h3>
+        <button class="btn-close" (click)="closeValidationModal()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="dossier-info">
+          <h4>{{ selectedDossierForValidation?.titre }}</h4>
+          <p><strong>Numéro:</strong> {{ selectedDossierForValidation?.numeroDossier }}</p>
+          <p><strong>Montant:</strong> {{ selectedDossierForValidation?.montantCreance | currency:'TND':'symbol':'1.3-3' }}</p>
+        </div>
+        
+        <div class="form-group">
+          <label for="validationComment">Commentaire (optionnel)</label>
+          <textarea 
+            id="validationComment" 
+            [(ngModel)]="validationComment" 
+            class="form-control" 
+            rows="3" 
+            placeholder="Ajoutez un commentaire pour cette action..."
+          ></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeValidationModal()">
+          <i class="fas fa-times"></i> Annuler
+        </button>
+        <button class="btn btn-success" (click)="confirmValidation()">
+          <i class="fas fa-check"></i> Valider
+        </button>
+        <button class="btn btn-warning" (click)="confirmRejection()">
+          <i class="fas fa-times"></i> Rejeter
+        </button>
+      </div>
     </div>
   </div>
 </div>

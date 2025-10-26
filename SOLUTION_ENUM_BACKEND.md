@@ -119,3 +119,7 @@ this.dossierApiService.list('CHEF', parseInt(this.currentUser.id))
 3. **API** : Utiliser des APIs spécifiques plutôt que génériques quand possible
 4. **Tests** : Tester tous les scénarios de création et de chargement
 
+
+
+
+

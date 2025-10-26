@@ -38,10 +38,26 @@ export interface DossierRequest {
   pouvoir?: string;
   urgence: Urgence;
   typeDocumentJustificatif: TypeDocumentJustificatif;
-  creancierId: number;
-  debiteurId: number;
   agentCreateurId?: number;
   agentResponsableId?: number;
+  // Champs pour compatibilité backend (recherche par nom)
+  typeCreancier?: string;
+  nomCreancier?: string;
+  prenomCreancier?: string;
+  typeDebiteur?: string;
+  nomDebiteur?: string;
+  prenomDebiteur?: string;
+  // Champs supplémentaires pour le backend
+  statut?: string;
+  dossierStatus?: string;
+  contratSigneFile?: File;
+  pouvoirFile?: File;
+  contratSigneFilePath?: string;
+  pouvoirFilePath?: string;
+  codeCreancier?: string;
+  codeDebiteur?: string;
+  codeCreanceCreancier?: string;
+  codeCreanceDebiteur?: string;
 }
 
 export interface CreancierApi {

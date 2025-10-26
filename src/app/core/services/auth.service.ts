@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, BehaviorSubject, throwError } from 'rxjs';
-import { tap } from 'rxjs/operators';
+import { tap, catchError } from 'rxjs/operators';
 import { User } from '../../shared/models/user.model';
 import { Role } from '../../shared/models/enums.model';
 
@@ -33,7 +33,47 @@ export class AuthService {
   }
 
   login(credentials: LoginRequest): Observable<LoginResponse> {
-    // Mock authentication for development
+    console.log('🔐 Tentative de connexion avec:', credentials.email);
+    
+    return this.http.post<LoginResponse>(`${this.apiUrl}/login`, credentials)
+      .pipe(
+        tap(response => {
+          console.log('✅ Réponse d\'authentification complète:', response);
+          
+          if (response && response.token) {
+            // Créer un utilisateur basique avec l'ID du token
+            const tokenPayload = this.parseJwtToken(response.token);
+            console.log('🔍 Payload du token:', tokenPayload);
+            
+            const user = new User({
+              id: tokenPayload.sub || '1', // Utiliser l'email comme ID temporaire
+              email: tokenPayload.sub || credentials.email,
+              nom: tokenPayload.nom || 'Utilisateur',
+              prenom: tokenPayload.prenom || 'Connecté',
+              role: this.mapRoleFromToken(tokenPayload.role?.authority),
+              actif: true
+            });
+            
+            console.log('👤 Utilisateur créé:', user);
+            console.log('🔑 Rôle de l\'utilisateur:', user.role);
+            
+            // Sauvegarder l'utilisateur et le token
+            localStorage.setItem('currentUser', JSON.stringify(user));
+            localStorage.setItem('token', response.token);
+            this.currentUserSubject.next(user);
+            
+            console.log('✅ Utilisateur sauvegardé avec succès');
+          }
+        }),
+        catchError(error => {
+          console.error('❌ Erreur de connexion API:', error);
+          return this.loginWithMock(credentials);
+        })
+      );
+  }
+
+  private loginWithMock(credentials: LoginRequest): Observable<LoginResponse> {
+    // Fallback vers les données mock
     return new Observable<LoginResponse>(observer => {
       setTimeout(() => {
         const mockUsers = [
@@ -75,6 +115,14 @@ export class AuthService {
             prenom: 'Chef',
             email: 'chef.amiable@carthage-creance.tn',
             role: Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE,
+            actif: true
+          },
+          {
+            id: '33',
+            nom: 'Utilisateur',
+            prenom: 'Connecté',
+            email: 'souhailnsrpro98@gmail.com',
+            role: Role.AGENT_DOSSIER,
             actif: true
           }
         ];
@@ -152,6 +200,7 @@ export class AuthService {
     localStorage.setItem('currentUser', JSON.stringify(user));
     localStorage.setItem('token', token);
     this.currentUserSubject.next(user);
+    console.log('✅ Utilisateur sauvegardé:', user);
   }
 
   getRole(): string | null {
@@ -258,28 +307,14 @@ export class AuthService {
   }
 
   /**
-   * Obtient l'ID utilisateur depuis le token ou l'utilisateur actuel
+   * Obtient l'ID utilisateur depuis l'utilisateur actuel
    */
   getCurrentUserId(): string | null {
     const user = this.getCurrentUser();
-    console.log('🔍 getCurrentUserId - user:', user);
-    console.log('🔍 getCurrentUserId - user.id:', user?.id);
-    
-    if (user && user.id && user.id !== 'null' && user.id !== 'undefined' && !isNaN(Number(user.id))) {
-      console.log('✅ ID utilisateur trouvé dans user:', user.id);
+    if (user && user.id) {
       return user.id;
     }
-    
-    // Fallback 1: extraire depuis localStorage
-    const storageId = this.getUserIdFromStorage();
-    console.log('🔍 getCurrentUserId - storageId:', storageId);
-    if (storageId && !isNaN(Number(storageId))) {
-      return storageId;
-    }
-    
-    // Fallback 2: essayer de récupérer depuis le backend
-    console.log('⚠️ ID utilisateur non trouvé localement, tentative depuis le backend...');
-    return null; // Retourner null pour forcer l'appel à getUserIdFromBackend()
+    return null;
   }
 
   /**
@@ -394,5 +429,47 @@ export class AuthService {
       newPassword
     });
   }
+
+  /**
+   * Parse un token JWT pour extraire le payload
+   */
+  private parseJwtToken(token: string): any {
+    try {
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+      return JSON.parse(jsonPayload);
+    } catch (error) {
+      console.error('❌ Erreur lors du parsing du token JWT:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Mappe le rôle depuis le token vers l'enum Role
+   */
+  private mapRoleFromToken(roleAuthority: string): Role {
+    if (!roleAuthority) return Role.AGENT_DOSSIER;
+    
+    switch (roleAuthority) {
+      case 'ROLE_UTILISATEUR_SUPER_ADMIN':
+        return Role.SUPER_ADMIN;
+      case 'ROLE_UTILISATEUR_CHEF_DEPARTEMENT_DOSSIER':
+        return Role.CHEF_DEPARTEMENT_DOSSIER;
+      case 'ROLE_UTILISATEUR_AGENT_DOSSIER':
+        return Role.AGENT_DOSSIER;
+      case 'ROLE_UTILISATEUR_CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE':
+        return Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE;
+      case 'ROLE_UTILISATEUR_CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE':
+        return Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE;
+      case 'ROLE_UTILISATEUR_CHEF_DEPARTEMENT_FINANCE':
+        return Role.CHEF_DEPARTEMENT_FINANCE;
+      default:
+        return Role.AGENT_DOSSIER;
+    }
+  }
+
 
 }
