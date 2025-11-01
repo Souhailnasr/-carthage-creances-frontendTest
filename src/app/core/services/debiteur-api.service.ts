@@ -18,9 +18,9 @@ export class DebiteurApiService {
     private apiLogger: ApiLoggerService
   ) { }
 
-  private getHeaders(): HttpHeaders {
+  /**private getHeaders(): HttpHeaders {
     return this.jwtAuthService.getAuthHeaders();
-  }
+  }**/
 
   // ===== CRUD OPERATIONS =====
   

@@ -8,6 +8,8 @@ import { Subject, takeUntil } from 'rxjs';
 import { Role } from '../../../shared/models';
 import { jwtDecode } from 'jwt-decode';
 import { TokenStorageService } from '../../../core/services/token-storage.service';
+import { JwtAuthService } from '../../../core/services/jwt-auth.service';
+import { RoleUtilisateur } from '../../../shared/models/dossier-api.model';
 
 
 @Component({
@@ -54,6 +56,7 @@ export class LoginComponent implements OnInit, OnDestroy {
   constructor(
     private fb: FormBuilder,
     private authService: AuthService,
+    private jwtAuthService: JwtAuthService,
     private toastService: ToastService,
     private router: Router,
     private tokenStorage: TokenStorageService
@@ -68,7 +71,7 @@ export class LoginComponent implements OnInit, OnDestroy {
     // Redirect if already logged in
     if (this.authService.isAuthenticated()) {
       const currentUser = this.authService.getCurrentUser();
-      const redirectUrl = currentUser ? this.getRedirectUrlByRole(currentUser.role) : this.returnUrl;
+      const redirectUrl = currentUser ? this.getRedirectUrlByRole(currentUser.roleUtilisateur) : this.returnUrl;
       this.router.navigate([redirectUrl]);
     }
 
@@ -90,7 +93,155 @@ export class LoginComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  /**
+   * Récupère le chemin de redirection selon le rôle depuis le token
+   */
+  private getRedirectPathByRoleAuthority(roleAuthority: string): string {
+    // Normaliser le rôle (supprimer le préfixe RoleUtilisateur_ si présent)
+    const normalizedRole = roleAuthority.replace(/^RoleUtilisateur_/, '');
+    
+    console.log('🔍 Rôle reçu pour redirection:', roleAuthority);
+    console.log('🔍 Rôle normalisé:', normalizedRole);
+    
+    switch (normalizedRole) {
+      case 'SUPER_ADMIN':
+        return '/dashboard';
+        
+      case 'CHEF_DEPARTEMENT_DOSSIER':
+        return '/dossier';
+        
+      case 'AGENT_DOSSIER':
+        return '/dossier';
+        
+      case 'CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE':
+        return '/juridique';
+        
+      case 'AGENT_RECOUVREMENT_JURIDIQUE':
+        return '/juridique/dashboard';
+        
+      case 'CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE':
+        return '/chef-amiable';
+        
+      case 'AGENT_RECOUVREMENT_AMIABLE':
+        return '/chef-amiable/dashboard';
+        
+      case 'CHEF_DEPARTEMENT_FINANCE':
+        return '/dashboard';
+        
+      case 'AGENT_FINANCE':
+        return '/dashboard';
+        
+      default:
+        console.warn('⚠️ Rôle non reconnu:', roleAuthority, '- Redirection vers dashboard par défaut');
+        return '/dashboard';
+    }
+  }
+
+  /**
+   * Récupère le nom d'affichage du rôle
+   * Gère les deux formats : avec ou sans préfixe RoleUtilisateur_
+   */
+  private getRoleDisplayName(role: string): string {
+    // Normaliser le rôle (supprimer le préfixe RoleUtilisateur_ si présent)
+    const normalizedRole = role.replace(/^RoleUtilisateur_/, '');
+    
+    const roleNames: { [key: string]: string } = {
+      'SUPER_ADMIN': 'Super Administrateur',
+      'CHEF_DEPARTEMENT_DOSSIER': 'Chef Département Dossier',
+      'AGENT_DOSSIER': 'Agent Dossier',
+      'CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE': 'Chef Département Recouvrement Juridique',
+      'AGENT_RECOUVREMENT_JURIDIQUE': 'Agent Recouvrement Juridique',
+      'CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE': 'Chef Département Recouvrement Amiable',
+      'AGENT_RECOUVREMENT_AMIABLE': 'Agent Recouvrement Amiable',
+      'CHEF_DEPARTEMENT_FINANCE': 'Chef Département Finance',
+      'AGENT_FINANCE': 'Agent Finance'
+    };
+    
+    return roleNames[normalizedRole] || normalizedRole;
+  }
+
+  login() {
+    if (this.loginForm.invalid) {
+      this.loginForm.markAllAsTouched();
+      this.toastService.error('Veuillez corriger les erreurs du formulaire.');
+      return;
+    }
+
+    const email = this.loginForm.get('email')?.value;
+    const password = this.loginForm.get('password')?.value;
+
+    this.loading = true;
+    this.invalidLogin = false;
+
+    this.jwtAuthService.login(email, password).subscribe({
+      next: (data) => {
+        this.loading = false;
+        
+        // 🔧 Stocker le token dans sessionStorage (auth-token et auth-user)
+        this.tokenStorage.saveToken(data.accessToken);
+        this.tokenStorage.saveUser(data);
+        
+        // 🔧 CORRECTION: Stocker aussi le token directement dans auth-user pour jwtAuthService.isUserLoggedIn()
+        // Car jwtAuthService.isUserLoggedIn() vérifie auth-user, pas auth-token
+        if (data.accessToken) {
+          sessionStorage.setItem('auth-user', data.accessToken);
+        }
+
+        // Récupérer le token depuis auth-user (utilisé par jwtAuthService)
+        const token = sessionStorage.getItem('auth-user') || data.accessToken || sessionStorage.getItem('auth-token');
+        const tokenInfo = this.getDecodedAccessToken(token);
+
+        console.log('✅ Token reçu:', token ? 'présent' : 'absent');
+        console.log('✅ TokenInfo:', tokenInfo);
+
+        if (!tokenInfo || !tokenInfo.role || !tokenInfo.role[0] || !tokenInfo.role[0].authority) {
+          console.error('❌ Structure de rôle invalide dans le token');
+          this.toastService.error('Erreur: Structure de rôle invalide');
+          this.invalidLogin = true;
+          return;
+        }
+
+        const roleAuthority = tokenInfo.role[0].authority;
+        console.log('✅ Rôle extrait du token:', roleAuthority);
+
+        this.isLoggedIn = true;
+        this.invalidLogin = false;
+
+        // Redirection selon le rôle
+        const redirectPath = this.getRedirectPathByRoleAuthority(roleAuthority);
+        const roleDisplayName = this.getRoleDisplayName(roleAuthority);
+        
+        console.log('✅ Redirection vers:', redirectPath);
+        console.log('✅ Rôle affiché:', roleDisplayName);
+        
+        this.toastService.success(`Connexion réussie - ${roleDisplayName}`);
+        this.router.navigate([redirectPath]);
+      },
+      error: (error) => {
+        this.loading = false;
+        this.invalidLogin = true;
+        this.error = error.message || 'Erreur de connexion';
+        this.toastService.error('Email ou mot de passe incorrect.');
+        console.error('❌ Erreur de connexion:', error);
+      }
+    });
+  }
+
+
+  /**
+   * @deprecated Utilisez onSubmit() à la place
+   * Cette méthode est conservée pour compatibilité mais redirige vers onSubmit()
+   */
   checkLogin() {
+    // 🔧 CORRECTION: Utiliser directement onSubmit() qui utilise login() correctement
+    console.warn('⚠️ checkLogin() est dépréciée, redirection vers onSubmit()');
+    this.onSubmit();
+  }
+
+  /**
+   * @deprecated Cette méthode n'est plus utilisée - login() dans AuthService fait maintenant tout
+   */
+  private oldCheckLoginMethod() {
     // Récupérer les valeurs du formulaire
     this.email = this.loginForm.get('email')?.value || '';
     this.password = this.loginForm.get('password')?.value || '';
@@ -216,7 +367,7 @@ export class LoginComponent implements OnInit, OnDestroy {
       nom: userData.nom,
       prenom: userData.prenom,
       email: userData.email,
-      role: userData.role || userData.roleUtilisateur,
+      roleUtilisateur: userData.role || userData.roleUtilisateur,
       actif: userData.actif !== undefined ? userData.actif : true,
       getFullName: function() {
         return `${this.prenom} ${this.nom}`;
@@ -224,7 +375,7 @@ export class LoginComponent implements OnInit, OnDestroy {
     };
     
     console.log('🔍 Utilisateur créé:', user);
-    console.log('🔍 Rôle de l\'utilisateur:', user.role);
+    console.log('🔍 Rôle de l\'utilisateur:', user.roleUtilisateur);
     
     // Sauvegarder les données utilisateur
     this.tokenStorage.saveUser(user);
@@ -237,7 +388,7 @@ export class LoginComponent implements OnInit, OnDestroy {
     this.invalidLogin = false;
     
     // Redirection selon le rôle
-    this.redirectByRole(user.role);
+    this.redirectByRole(user.roleUtilisateur);
   }
 
   private extractNameFromEmail(email: string): string {
@@ -363,21 +514,26 @@ export class LoginComponent implements OnInit, OnDestroy {
           this.loading = false;
           console.log('✅ Connexion réussie, redirection en cours...');
           
-          // Récupérer l'utilisateur actuel pour la redirection
-          const currentUser = this.authService.getCurrentUser();
-          if (currentUser && currentUser.role) {
-            const redirectUrl = this.getRedirectUrlByRole(currentUser.role);
+          // 🔧 CORRECTION: Utiliser DIRECTEMENT getCurrentUser() car login() a déjà créé et stocké l'utilisateur
+          // Pas besoin d'attendre /api/users/me car toutes les données sont dans la réponse d'authentification
+          const user = this.authService.getCurrentUser();
+          
+          if (user && user.roleUtilisateur && user.id) {
+            const redirectUrl = this.getRedirectUrlByRole(user.roleUtilisateur);
             console.log('✅ Redirection vers:', redirectUrl);
+            console.log('✅ Utilisateur connecté:', {
+              id: user.id,
+              nom: user.nom,
+              prenom: user.prenom,
+              email: user.email,
+              role: user.roleUtilisateur
+            });
             
-            this.toastService.success(`Connexion réussie - ${this.getRoleDisplayName(currentUser.role)}`);
-            
-            // Redirection immédiate
-            setTimeout(() => {
-              this.router.navigate([redirectUrl]);
-            }, 100);
+            this.toastService.success(`Connexion réussie - ${this.getRoleDisplayName(user.roleUtilisateur)}`);
+            this.router.navigate([redirectUrl]);
           } else {
-            console.error('❌ Utilisateur non trouvé après connexion');
-            this.toastService.error('Erreur: Utilisateur non trouvé');
+            console.error('❌ Utilisateur non trouvé ou incomplet après login:', user);
+            this.toastService.error('Erreur: Impossible de récupérer les données utilisateur');
           }
         },
         error: (error) => {
@@ -437,27 +593,6 @@ export class LoginComponent implements OnInit, OnDestroy {
     }
   }
 
-  private getRoleDisplayName(role: string): string {
-    switch (role) {
-      case 'SUPER_ADMIN':
-      case 'RoleUtilisateur_SUPER_ADMIN':
-        return 'Super Admin';
-      case 'CHEF_DEPARTEMENT_DOSSIER':
-      case 'RoleUtilisateur_CHEF_DEPARTEMENT_DOSSIER':
-        return 'Chef Dossier';
-      case 'AGENT_DOSSIER':
-      case 'RoleUtilisateur_AGENT_DOSSIER':
-        return 'Agent Dossier';
-      case 'CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE':
-      case 'RoleUtilisateur_CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE':
-        return 'Chef Juridique';
-      case 'CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE':
-      case 'RoleUtilisateur_CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE':
-        return 'Chef Recouvrement Amiable';
-      default:
-        return 'Utilisateur';
-    }
-  }
 
   private getRedirectUrlByRole(role: string): string {
     switch (role) {

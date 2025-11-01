@@ -1,8 +1,40 @@
 import { Injectable } from '@angular/core';
 import { CanActivate, CanActivateChild, Router, ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
 import { Observable } from 'rxjs';
-import { AuthService } from '../services/auth.service';
+import { JwtAuthService } from '../services/jwt-auth.service';
 import { Role } from '../../shared/models/enums.model';
+
+/**
+ * Convertit un rôle authority (ex: RoleUtilisateur_AGENT_DOSSIER) vers l'enum Role
+ */
+function mapRoleAuthorityToEnum(roleAuthority: string | null): Role | null {
+  if (!roleAuthority) return null;
+  
+  const normalizedRole = roleAuthority.replace(/^RoleUtilisateur_/, '');
+  
+  switch (normalizedRole) {
+    case 'SUPER_ADMIN':
+      return Role.SUPER_ADMIN;
+    case 'CHEF_DEPARTEMENT_DOSSIER':
+      return Role.CHEF_DEPARTEMENT_DOSSIER;
+    case 'AGENT_DOSSIER':
+      return Role.AGENT_DOSSIER;
+    case 'CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE':
+      return Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE;
+    case 'AGENT_RECOUVREMENT_JURIDIQUE':
+      return Role.AGENT_RECOUVREMENT_JURIDIQUE;
+    case 'CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE':
+      return Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE;
+    case 'AGENT_RECOUVREMENT_AMIABLE':
+      return Role.AGENT_RECOUVREMENT_AMIABLE;
+    case 'CHEF_DEPARTEMENT_FINANCE':
+      return Role.CHEF_DEPARTEMENT_FINANCE;
+    case 'AGENT_FINANCE':
+      return Role.AGENT_FINANCE;
+    default:
+      return null;
+  }
+}
 
 @Injectable({
   providedIn: 'root'
@@ -19,7 +51,7 @@ export class ValidationGuard implements CanActivate, CanActivateChild {
   ];
 
   constructor(
-    private authService: AuthService,
+    private jwtAuthService: JwtAuthService,
     private router: Router
   ) {}
 
@@ -38,8 +70,8 @@ export class ValidationGuard implements CanActivate, CanActivateChild {
   }
 
   private checkValidationAccess(): boolean {
-    // Vérifier si l'utilisateur est authentifié
-    if (!this.authService.isAuthenticated()) {
+    // 🔧 CORRECTION: Utiliser jwtAuthService.isUserLoggedIn() qui vérifie sessionStorage
+    if (!this.jwtAuthService.isUserLoggedIn()) {
       console.warn('❌ Utilisateur non authentifié - redirection vers login');
       this.router.navigate(['/login'], { 
         queryParams: { returnUrl: this.router.url } 
@@ -47,10 +79,12 @@ export class ValidationGuard implements CanActivate, CanActivateChild {
       return false;
     }
 
-    // Récupérer l'utilisateur actuel
-    const currentUser = this.authService.getCurrentUser();
-    if (!currentUser) {
-      console.warn('❌ Utilisateur non trouvé - redirection vers login');
+    // 🔧 CORRECTION: Récupérer le rôle depuis jwtAuthService
+    const roleAuthority = this.jwtAuthService.loggedUserAuthority();
+    const userRole = mapRoleAuthorityToEnum(roleAuthority);
+    
+    if (!userRole) {
+      console.warn('❌ Rôle non trouvé ou non reconnu - redirection vers login');
       this.router.navigate(['/login'], { 
         queryParams: { returnUrl: this.router.url } 
       });
@@ -58,17 +92,17 @@ export class ValidationGuard implements CanActivate, CanActivateChild {
     }
 
     // Vérifier le rôle de l'utilisateur
-    const hasValidRole = this.authorizedRoles.includes(currentUser.role);
+    const hasValidRole = this.authorizedRoles.includes(userRole);
     
     if (!hasValidRole) {
-      console.warn(`❌ Rôle non autorisé: ${currentUser.role} - redirection vers dashboard`);
+      console.warn(`❌ Rôle non autorisé: ${roleAuthority} (${userRole}) - redirection vers dashboard`);
       this.router.navigate(['/dashboard'], { 
         queryParams: { error: 'access_denied' } 
       });
       return false;
     }
 
-    console.log(`✅ Accès autorisé pour le rôle: ${currentUser.role}`);
+    console.log(`✅ Accès autorisé pour le rôle: ${roleAuthority} (${userRole})`);
     return true;
   }
 
@@ -76,27 +110,45 @@ export class ValidationGuard implements CanActivate, CanActivateChild {
    * Vérifie si l'utilisateur peut valider des dossiers
    */
   canValidateDossiers(): boolean {
-    const currentUser = this.authService.getCurrentUser();
-    return currentUser ? this.authorizedRoles.includes(currentUser.role) : false;
+    if (!this.jwtAuthService.isUserLoggedIn()) {
+      return false;
+    }
+    
+    const roleAuthority = this.jwtAuthService.loggedUserAuthority();
+    const userRole = mapRoleAuthorityToEnum(roleAuthority);
+    
+    return userRole ? this.authorizedRoles.includes(userRole) : false;
   }
 
   /**
    * Vérifie si l'utilisateur peut créer des validations
    */
   canCreateValidations(): boolean {
-    const currentUser = this.authService.getCurrentUser();
-    if (!currentUser) return false;
+    if (!this.jwtAuthService.isUserLoggedIn()) {
+      return false;
+    }
+    
+    const roleAuthority = this.jwtAuthService.loggedUserAuthority();
+    const userRole = mapRoleAuthorityToEnum(roleAuthority);
+    
+    if (!userRole) return false;
     
     // Tous les rôles autorisés peuvent créer des validations
-    return this.authorizedRoles.includes(currentUser.role);
+    return this.authorizedRoles.includes(userRole);
   }
 
   /**
    * Vérifie si l'utilisateur peut voir les statistiques
    */
   canViewStats(): boolean {
-    const currentUser = this.authService.getCurrentUser();
-    if (!currentUser) return false;
+    if (!this.jwtAuthService.isUserLoggedIn()) {
+      return false;
+    }
+    
+    const roleAuthority = this.jwtAuthService.loggedUserAuthority();
+    const userRole = mapRoleAuthorityToEnum(roleAuthority);
+    
+    if (!userRole) return false;
     
     // Seuls les chefs et super admin peuvent voir les stats
     return [
@@ -105,9 +157,13 @@ export class ValidationGuard implements CanActivate, CanActivateChild {
       Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE,
       Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE,
       Role.CHEF_DEPARTEMENT_FINANCE
-    ].includes(currentUser.role);
+    ].includes(userRole);
   }
 }
+
+
+
+
 
 
 

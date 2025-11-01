@@ -21,7 +21,7 @@ export interface ValidationDossier {
 
 export interface ValidationDossierRequest {
   dossierId: number;
-  agentCreateurId: number;
+  agent_createur_id: number;
   commentaires?: string;
 }
 

@@ -66,7 +66,7 @@ export class BackendBypassService {
       role: 'SUPER_ADMIN'
     };
 
-    return this.http.post(`${this.baseUrl}/api/auth/register`, testUser, {
+    return this.http.post(`${this.baseUrl}/auth/register`, testUser, {
       headers: this.getBypassHeaders()
     }).pipe(
       catchError(error => {

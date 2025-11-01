@@ -53,23 +53,14 @@ export class CreancierGestionComponent implements OnInit {
 
   authenticateAndLoadCreanciers(): void {
     // Vérifier si on a déjà un token
-    if (this.jwtAuthService.isAuthenticated()) {
-      console.log('Token JWT déjà disponible');
+    if (this.jwtAuthService.isUserLoggedIn()) {
+      console.log('✅ Token JWT déjà disponible, chargement des créanciers');
       this.loadCreanciers();
     } else {
-      // Essayer de se connecter automatiquement
-      console.log('Tentative de connexion automatique...');
-      this.jwtAuthService.loginDev().subscribe({
-        next: (response) => {
-          console.log('Connexion réussie:', response);
+      console.warn('⚠️ Aucun token JWT disponible. Redirection vers la page de connexion recommandée.');
+      // Au lieu de tenter une connexion automatique, charger directement les données
+      // Si l'utilisateur n'est pas authentifié, les données ne s'afficheront pas
           this.loadCreanciers();
-        },
-        error: (error) => {
-          console.error('Échec de la connexion automatique:', error);
-          console.log('Utilisation du mode développement avec données mock');
-          this.loadCreanciers();
-        }
-      });
     }
   }
 

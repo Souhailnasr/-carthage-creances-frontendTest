@@ -56,10 +56,10 @@ export class RoleRedirectComponent implements OnInit {
     const currentUser = this.authService.getCurrentUser();
     
     console.log('🔍 RoleRedirectComponent - Utilisateur actuel:', currentUser);
-    console.log('🔍 RoleRedirectComponent - Rôle:', currentUser?.role);
+    console.log('🔍 RoleRedirectComponent - Rôle:', currentUser?.roleUtilisateur);
     
     if (currentUser) {
-      const redirectUrl = this.getRedirectUrlByRole(currentUser.role);
+      const redirectUrl = this.getRedirectUrlByRole(currentUser.roleUtilisateur);
       console.log('🔍 RoleRedirectComponent - URL de redirection:', redirectUrl);
       this.router.navigate([redirectUrl]);
     } else {

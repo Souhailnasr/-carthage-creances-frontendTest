@@ -10,7 +10,7 @@
     </div>
 
     <!-- Formulaire de connexion -->
-    <form class="login-form" [formGroup]="loginForm">
+    <form class="login-form" [formGroup]="loginForm" (ngSubmit)="login()">
       <div class="form-group">
         <label for="email">Email</label>
         <input
@@ -55,8 +55,7 @@
       </div>
 
       <button
-        (click)="checkLogin()"
-        type="button"
+        type="submit"
         class="btn btn-primary btn-login"
         [disabled]="loading || loginForm.invalid">
         <i class="fas fa-spinner fa-spin" *ngIf="loading"></i>

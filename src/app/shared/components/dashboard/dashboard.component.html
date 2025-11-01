@@ -112,7 +112,7 @@
 
           <!-- Performance par Agent -->
           <div class="agent-performance-section" *ngIf="roleService.canManageDossiers()">
-            <h3>{{ currentUser?.role === 'AGENT_DOSSIER' ? 'Mes Performances' : 'Performance par Agent' }}</h3>
+            <h3>{{ currentUser?.roleUtilisateur === 'AGENT_DOSSIER' ? 'Mes Performances' : 'Performance par Agent' }}</h3>
             <div class="performance-table-container">
               <table class="performance-table">
                 <thead>
@@ -159,7 +159,7 @@
           </div>
 
           <!-- Tâches Urgentes pour l'Agent -->
-          <div class="urgent-tasks-section" *ngIf="currentUser?.role === 'AGENT_DOSSIER'">
+          <div class="urgent-tasks-section" *ngIf="currentUser?.roleUtilisateur === 'AGENT_DOSSIER'">
             <h3>Mes Tâches Urgentes</h3>
             <div class="tasks-container">
               <div class="task-card" *ngFor="let task of filteredUrgentTasks" [ngClass]="getUrgentTasksClass(task.urgence)">
@@ -232,7 +232,7 @@
           </div>
 
           <!-- Section spécifique Chef Dossier -->
-          <div class="chef-section" *ngIf="currentUser?.role === 'CHEF_DEPARTEMENT_DOSSIER'">
+          <div class="chef-section" *ngIf="currentUser?.roleUtilisateur === 'CHEF_DEPARTEMENT_DOSSIER'">
             <h3>Interface Chef Dossier</h3>
             <div class="chef-cards">
               <div class="chef-card">
@@ -257,7 +257,7 @@
           </div>
 
           <!-- Section spécifique Chef Juridique -->
-          <div class="chef-section" *ngIf="currentUser?.role === 'CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE'">
+          <div class="chef-section" *ngIf="currentUser?.roleUtilisateur === 'CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE'">
             <h3>Interface Chef Juridique</h3>
             <div class="chef-cards">
               <div class="chef-card">
@@ -282,7 +282,7 @@
           </div>
 
           <!-- Section spécifique Chef Amiable -->
-          <div class="chef-section" *ngIf="currentUser?.role === 'CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE'">
+          <div class="chef-section" *ngIf="currentUser?.roleUtilisateur === 'CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE'">
             <h3>Interface Chef Amiable</h3>
             <div class="chef-cards">
               <div class="chef-card">
@@ -307,7 +307,7 @@
           </div>
 
           <!-- Section spécifique Agent Dossier -->
-          <div class="agent-section" *ngIf="currentUser?.role === 'AGENT_DOSSIER'">
+          <div class="agent-section" *ngIf="currentUser?.roleUtilisateur === 'AGENT_DOSSIER'">
             <h3>Mes Actions</h3>
             <div class="agent-cards">
               <div class="agent-card">

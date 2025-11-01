@@ -5,6 +5,8 @@ import { DossierApiService } from './dossier-api.service';
 import { DossierApi, DossierRequest } from '../../shared/models/dossier-api.model';
 import { AuthService } from './auth.service';
 import { Role } from '../../shared/models/enums.model';
+import { JwtAuthService } from './jwt-auth.service';
+import { User } from '../../shared/models';
 
 @Injectable({
   providedIn: 'root'
@@ -18,10 +20,10 @@ export class AgentDossierService {
 
   private statistiquesPersonnellesSubject = new BehaviorSubject<any>({});
   public statistiquesPersonnelles$ = this.statistiquesPersonnellesSubject.asObservable();
-
+ currentUser: User | null = null;
   constructor(
     private dossierApiService: DossierApiService,
-    private authService: AuthService
+    private jwtAuthService: JwtAuthService
   ) {}
 
   // ==================== GESTION DES MES DOSSIERS ====================
@@ -30,12 +32,14 @@ export class AgentDossierService {
    * Charge les dossiers créés par l'agent
    */
   loadMesDossiers(): Observable<DossierApi[]> {
-    const currentUser = this.authService.getCurrentUser();
-    if (!currentUser) {
+    this.jwtAuthService.getCurrentUser().subscribe(user => {
+      this.currentUser = user;
+    });
+    if (!this.currentUser) {
       throw new Error('Utilisateur non connecté');
     }
 
-    return this.dossierApiService.getDossiersCreesByAgent(Number(currentUser.id)).pipe(
+    return this.dossierApiService.getDossiersCreesByAgent(Number(this.currentUser.id)).pipe(
       tap(dossiers => {
         this.mesDossiersSubject.next(dossiers);
         console.log('Mes dossiers chargés:', dossiers);
@@ -54,12 +58,14 @@ export class AgentDossierService {
    * Charge les dossiers assignés à l'agent
    */
   loadDossiersAssignes(): Observable<DossierApi[]> {
-    const currentUser = this.authService.getCurrentUser();
-    if (!currentUser) {
+    this.jwtAuthService.getCurrentUser().subscribe(user => {
+      this.currentUser = user;
+    });
+    if (!this.currentUser) {
       throw new Error('Utilisateur non connecté');
     }
 
-    return this.dossierApiService.getDossiersByAgent(Number(currentUser.id)).pipe(
+    return this.dossierApiService.getDossiersByAgent(Number(this.currentUser.id)).pipe(
       tap(dossiers => {
         this.dossiersAssignesSubject.next(dossiers);
         console.log('Dossiers assignés chargés:', dossiers);
@@ -80,13 +86,15 @@ export class AgentDossierService {
    * Crée un nouveau dossier
    */
   creerDossier(dossierRequest: DossierRequest, isChefOverride?: boolean): Observable<DossierApi> {
-    const currentUser = this.authService.getCurrentUser();
+    this.jwtAuthService.getCurrentUser().subscribe(user => {
+      this.currentUser = user;
+    });
     // Pas d'auth obligatoire: ne pas forcer l'agentCreateurId si inexistant
 
     // Si chef, le backend valide automatiquement (isChef=true)
     const isChef: boolean = typeof isChefOverride === 'boolean'
       ? isChefOverride
-      : !!(currentUser && (currentUser.role === Role.CHEF_DEPARTEMENT_DOSSIER || currentUser.role === Role.SUPER_ADMIN));
+      : !!(this.currentUser && (this.currentUser.roleUtilisateur === Role.CHEF_DEPARTEMENT_DOSSIER || this.currentUser.roleUtilisateur === Role.SUPER_ADMIN));
 
     // Utiliser une création robuste avec fallback si la route /create échoue
     return this.dossierApiService.createWithFallback(dossierRequest, isChef).pipe(
@@ -109,12 +117,14 @@ export class AgentDossierService {
     pouvoir?: File,
     isChefOverride?: boolean
   ): Observable<DossierApi> {
-    const currentUser = this.authService.getCurrentUser();
+    this.jwtAuthService.getCurrentUser().subscribe(user => {
+      this.currentUser = user;
+    });
     // Ne pas envoyer agentCreateurId si non nécessaire (pas d'auth)
 
     const isChef: boolean = typeof isChefOverride === 'boolean'
       ? isChefOverride
-      : !!(currentUser && (currentUser.role === Role.CHEF_DEPARTEMENT_DOSSIER || currentUser.role === Role.SUPER_ADMIN));
+      : !!(this.currentUser && (this.currentUser.roleUtilisateur === Role.CHEF_DEPARTEMENT_DOSSIER || this.currentUser.roleUtilisateur === Role.SUPER_ADMIN));
 
     return this.dossierApiService.createWithFiles(dossierRequest, contratSigne, pouvoir, isChef).pipe(
       tap(nouveauDossier => {
@@ -168,12 +178,14 @@ export class AgentDossierService {
    * Charge les statistiques personnelles de l'agent
    */
   loadStatistiquesPersonnelles(): Observable<any> {
-    const currentUser = this.authService.getCurrentUser();
-    if (!currentUser) {
+    this.jwtAuthService.getCurrentUser().subscribe(user => {
+      this.currentUser = user;
+    });
+    if (!this.currentUser) {
       throw new Error('Utilisateur non connecté');
     }
 
-    const agentId = Number(currentUser.id);
+    const agentId = Number(this.currentUser.id);
     
     return this.dossierApiService.countDossiersCreesByAgent(agentId).pipe(
       tap(dossiersCrees => {

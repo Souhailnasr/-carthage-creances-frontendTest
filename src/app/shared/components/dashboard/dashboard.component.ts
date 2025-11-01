@@ -8,6 +8,7 @@ import { AuthService } from '../../../core/services/auth.service';
 import { User, Role, Dossier, StatutDossier, Urgence } from '../../models';
 import { Subject, takeUntil } from 'rxjs';
 import { NotificationComponent } from '../notification/notification.component';
+import { JwtAuthService } from '../../../core/services/jwt-auth.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -70,24 +71,41 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private dossierService: DossierService,
     public roleService: RoleService, // Public to be accessible in template
     private authService: AuthService,
+    private jwtAuthService: JwtAuthService,
     private router: Router
   ) { }
 
   ngOnInit(): void {
-    // Récupérer l'utilisateur actuel depuis le service d'authentification
-    this.currentUser = this.authService.getCurrentUser();
+    // 🔧 CORRECTION: S'abonner aux changements d'utilisateur au lieu de lire une seule fois
+    this.jwtAuthService.getCurrentUser().subscribe(user => {
+      console.log('🔍 Dashboard - Utilisateur mis à jour:', user);
+      
+      if (!user) {
+        console.warn('⚠️ Dashboard - Aucun utilisateur connecté, redirection vers login');
+        this.router.navigate(['/login']);
+        return;
+      }
+      
+      this.currentUser = user;
+      
+      // 🔍 Debug: Vérifier l'état de l'authentification
+      console.log('🔍 Dashboard - Utilisateur actuel:', this.currentUser);
+      console.log('🔍 Dashboard - AuthToken sessionStorage:', sessionStorage.getItem('authToken'));
+      console.log('🔍 Dashboard - ID utilisateur:', this.currentUser?.id);
     
     console.log('🔍 DashboardComponent - Utilisateur actuel:', this.currentUser);
-    console.log('🔍 DashboardComponent - Rôle:', this.currentUser?.role);
-    console.log('🔍 DashboardComponent - Token:', this.authService.getToken());
-    console.log('🔍 DashboardComponent - Authentifié:', this.authService.isAuthenticated());
+    console.log('🔍 DashboardComponent - Rôle:', this.currentUser?.roleUtilisateur);
     
-    if (!this.currentUser) {
-      console.error('❌ Aucun utilisateur connecté trouvé - redirection vers login');
-      // Rediriger vers login si pas d'utilisateur
-      this.router.navigate(['/login']);
-      return;
-    }
+      // Charger les données du dashboard seulement quand l'utilisateur est disponible
+      this.loadDashboardData();
+    });
+  }
+
+  /**
+   * Charge toutes les données du dashboard quand l'utilisateur est disponible
+   */
+  private loadDashboardData(): void {
+    console.log('🔍 Chargement des données du dashboard pour l\'utilisateur:', this.currentUser);
     
     // Charger les données selon le rôle
     this.loadRoleSpecificData();
@@ -97,10 +115,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   loadRoleSpecificData(): void {
-    console.log('🔍 Chargement des données spécifiques au rôle:', this.currentUser?.role);
+    console.log('🔍 Chargement des données spécifiques au rôle:', this.currentUser?.roleUtilisateur);
     
     // Charger des données différentes selon le rôle
-    switch (this.currentUser?.role) {
+    switch (this.currentUser?.roleUtilisateur) {
       case 'SUPER_ADMIN':
         this.loadSuperAdminData();
         break;
@@ -123,7 +141,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.loadAgentAmiableData();
         break;
       default:
-        console.warn('⚠️ Rôle non reconnu pour le dashboard:', this.currentUser?.role);
+        console.warn('⚠️ Rôle non reconnu pour le dashboard:', this.currentUser?.roleUtilisateur);
         this.loadDefaultData();
         break;
     }
@@ -184,7 +202,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   loadUrgentTasks(): void {
     // Simulation des tâches urgentes pour l'agent connecté
-    if (this.currentUser?.role === 'AGENT_DOSSIER') {
+    if (this.currentUser?.roleUtilisateur === 'AGENT_DOSSIER') {
       // Tâches spécifiques à l'agent connecté
       this.urgentTasks = [
         {
@@ -326,7 +344,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     ];
 
     // Filtrer selon le rôle de l'utilisateur
-    if (this.currentUser?.role === 'AGENT_DOSSIER') {
+    if (this.currentUser?.roleUtilisateur === 'AGENT_DOSSIER') {
       // L'agent ne voit que ses propres performances
       this.agentPerformance = allAgentPerformance.filter(agent => 
         Number(agent.id) === Number(this.currentUser!.id)
@@ -396,7 +414,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       'AGENT_FINANCE': 'Agent Finance'
     };
 
-    return roleNames[this.currentUser.role] || this.currentUser.role;
+    return roleNames[this.currentUser.roleUtilisateur] || this.currentUser.roleUtilisateur;
   }
 
   getDashboardTitle(): string {
@@ -414,7 +432,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       'AGENT_FINANCE': 'Tableau de Bord Agent Finance'
     };
 
-    return titles[this.currentUser.role] || 'Tableau de Bord';
+    return titles[this.currentUser.roleUtilisateur] || 'Tableau de Bord';
   }
 
   getWelcomeMessage(): string {
@@ -432,24 +450,24 @@ export class DashboardComponent implements OnInit, OnDestroy {
       'AGENT_FINANCE': `Bienvenue, ${this.currentUser.prenom} ${this.currentUser.nom}`
     };
 
-    return messages[this.currentUser.role] || `Bienvenue, ${this.currentUser.prenom} ${this.currentUser.nom}`;
+    return messages[this.currentUser.roleUtilisateur] || `Bienvenue, ${this.currentUser.prenom} ${this.currentUser.nom}`;
   }
 
   isChefRole(): boolean {
-    return this.currentUser?.role?.includes('CHEF_DEPARTEMENT') || false;
+    return this.currentUser?.roleUtilisateur?.includes('CHEF_DEPARTEMENT') || false;
   }
 
   isAgentRole(): boolean {
-    return this.currentUser?.role?.includes('AGENT') || false;
+    return this.currentUser?.roleUtilisateur?.includes('AGENT') || false;
   }
 
   isSuperAdmin(): boolean {
-    return this.currentUser?.role === 'SUPER_ADMIN';
+    return this.currentUser?.roleUtilisateur === 'SUPER_ADMIN';
   }
 
   getRoleClass(): string {
-    if (!this.currentUser?.role) return 'user-role';
-    const normalizedRole = this.currentUser.role.toLowerCase().replace(/_/g, '-');
+    if (!this.currentUser?.roleUtilisateur) return 'user-role';
+    const normalizedRole = this.currentUser.roleUtilisateur.toLowerCase().replace(/_/g, '-');
     return `user-role role-${normalizedRole}`;
   }
 

@@ -5,6 +5,7 @@ import { RoleService } from '../../../core/services/role.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { User, Role } from '../../models';
 import { Subject, takeUntil, filter } from 'rxjs';
+import { JwtAuthService } from '../../../core/services/jwt-auth.service';
 
 interface MenuItem {
   label: string;
@@ -233,13 +234,15 @@ export class SidebarComponent implements OnInit, OnDestroy {
 
   constructor(
     private router: Router,
-    private authService: AuthService,
+    private jwtAuthService: JwtAuthService,
     private roleService: RoleService
   ) {}
 
   ngOnInit(): void {
     // Récupérer l'utilisateur actuel
-    this.currentUser = this.authService.getCurrentUser();
+   this.jwtAuthService.getCurrentUser().subscribe(user => {
+      this.currentUser = user;
+    })
 
     // Suivre les changements de route
     this.router.events
@@ -265,18 +268,18 @@ export class SidebarComponent implements OnInit, OnDestroy {
   }
 
   logout(): void {
-    this.authService.logout();
+    this.jwtAuthService.logOut();
     this.router.navigate(['/login']);
   }
 
   isMenuItemVisible(item: MenuItem): boolean {
     if (!this.currentUser) return false;
-    return item.roles.includes(this.currentUser.role);
+    return item.roles.includes(this.currentUser.roleUtilisateur);
   }
 
   isChildMenuItemVisible(item: MenuItem): boolean {
     if (!this.currentUser) return false;
-    return item.roles.includes(this.currentUser.role);
+    return item.roles.includes(this.currentUser.roleUtilisateur);
   }
 
   isActiveRoute(route: string): boolean {
@@ -338,12 +341,12 @@ export class SidebarComponent implements OnInit, OnDestroy {
       [Role.AGENT_FINANCE]: 'Agent Finance'
     };
 
-    return roleNames[this.currentUser.role] || this.currentUser.role;
+    return roleNames[this.currentUser.roleUtilisateur] || this.currentUser.roleUtilisateur;
   }
 
   getRoleClass(): string {
-    if (!this.currentUser?.role) return 'user-role';
-    const normalizedRole = this.currentUser.role.toLowerCase().replace(/_/g, '-');
+    if (!this.currentUser?.roleUtilisateur) return 'user-role';
+    const normalizedRole = this.currentUser.roleUtilisateur.toLowerCase().replace(/_/g, '-');
     return `user-role role-${normalizedRole}`;
   }
 

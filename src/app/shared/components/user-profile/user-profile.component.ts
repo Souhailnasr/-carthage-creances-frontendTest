@@ -86,7 +86,7 @@ export class UserProfileComponent implements OnInit, OnDestroy {
         nom: this.currentUser.nom,
         prenom: this.currentUser.prenom,
         email: this.currentUser.email,
-        role: this.currentUser.role
+        role: this.currentUser.roleUtilisateur
       });
     }
   }
@@ -136,7 +136,7 @@ export class UserProfileComponent implements OnInit, OnDestroy {
   }
 
   getRoleClass(): string {
-    const role = this.currentUser?.role || 'AGENT_DOSSIER';
+    const role = this.currentUser?.roleUtilisateur || 'AGENT_DOSSIER';
     const normalizedRole = role.toLowerCase().replace(/_/g, '-');
     return `user-role role-${normalizedRole}`;
   }

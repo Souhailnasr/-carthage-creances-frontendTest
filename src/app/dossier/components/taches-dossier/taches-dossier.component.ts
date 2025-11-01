@@ -52,7 +52,6 @@ export class TachesDossierComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadTaches();
-    this.loadAgents();
   }
 
   loadTaches(): void {
@@ -63,16 +62,7 @@ export class TachesDossierComponent implements OnInit {
     );
   }
 
-  loadAgents(): void {
-    // Mock data for agents since getAgents doesn't exist
-    this.agents = [
-      { id: '1', nom: 'Ben Salah', prenom: 'Leila', email: 'leila@example.com', role: 'AGENT_DOSSIER', actif: true, getFullName: () => 'Leila Ben Salah' } as User,
-      { id: '2', nom: 'Mansouri', prenom: 'Omar', email: 'omar@example.com', role: 'AGENT_DOSSIER', actif: true, getFullName: () => 'Omar Mansouri' } as User,
-      { id: '3', nom: 'Hammami', prenom: 'Sonia', email: 'sonia@example.com', role: 'AGENT_DOSSIER', actif: true, getFullName: () => 'Sonia Hammami' } as User,
-      { id: '4', nom: 'Ben Ammar', prenom: 'Ali', email: 'ali@example.com', role: 'AGENT_DOSSIER', actif: true, getFullName: () => 'Ali Ben Ammar' } as User,
-      { id: '5', nom: 'Khelil', prenom: 'Nadia', email: 'nadia@example.com', role: 'AGENT_DOSSIER', actif: true, getFullName: () => 'Nadia Khelil' } as User
-    ];
-  }
+  
 
   toggleAddForm(): void {
     this.showAddForm = !this.showAddForm;

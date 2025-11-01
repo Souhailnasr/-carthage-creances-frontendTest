@@ -99,7 +99,7 @@ export class ProfilChefAmiableComponent implements OnInit {
       'AGENT_FINANCE': 'Agent Finance'
     };
 
-    return roleNames[this.currentUser.role] || this.currentUser.role;
+    return roleNames[this.currentUser.roleUtilisateur] || this.currentUser.roleUtilisateur || '';
   }
 
   getFieldError(fieldName: string): string {

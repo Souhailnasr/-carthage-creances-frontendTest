@@ -205,7 +205,7 @@ export class MockDataService {
         dateCreation: '2024-01-15',
         statut: 'EN_ATTENTE',
         urgence: 'NORMALE',
-        agentCreateurId: 3,
+        agent_createur_id: 3,
         description: 'Créance bancaire - Prêt immobilier',
         documents: ['Contrat de prêt', 'Relevé de compte'],
         dateEcheance: '2024-06-15'
@@ -220,7 +220,7 @@ export class MockDataService {
         dateCreation: '2024-01-20',
         statut: 'VALIDE',
         urgence: 'HAUTE',
-        agentCreateurId: 3,
+        agent_createur_id: 3,
         description: 'Créance télécom - Factures impayées',
         documents: ['Factures', 'Relances'],
         dateEcheance: '2024-05-20'
@@ -235,7 +235,7 @@ export class MockDataService {
         dateCreation: '2024-02-01',
         statut: 'EN_COURS',
         urgence: 'NORMALE',
-        agentCreateurId: 3,
+        agent_createur_id: 3,
         description: 'Créance télécom - Abonnement mobile',
         documents: ['Contrat d\'abonnement', 'Factures'],
         dateEcheance: '2024-08-01'
@@ -250,7 +250,7 @@ export class MockDataService {
         dateCreation: '2024-02-10',
         statut: 'EN_ATTENTE',
         urgence: 'URGENTE',
-        agentCreateurId: 3,
+        agent_createur_id: 3,
         description: 'Créance télécom - Ligne professionnelle',
         documents: ['Contrat professionnel', 'Factures'],
         dateEcheance: '2024-07-10'

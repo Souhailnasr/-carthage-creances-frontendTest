@@ -264,7 +264,7 @@ export class DossierDetailComponent implements OnInit, OnDestroy {
     const user = this.authService.getCurrentUser();
     if (!user || !this.dossier) return false;
     // Agents: uniquement leurs dossiers; Chefs: tous
-    if (user.role === Role.CHEF_DEPARTEMENT_DOSSIER || user.role === Role.SUPER_ADMIN) return true;
+    if (user.roleUtilisateur === Role.CHEF_DEPARTEMENT_DOSSIER || user.roleUtilisateur === Role.SUPER_ADMIN) return true;
     return this.dossier.agentResponsable === user.getFullName();
   }
 

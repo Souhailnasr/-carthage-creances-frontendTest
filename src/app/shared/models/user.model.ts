@@ -5,7 +5,7 @@ export class User {
   nom: string = '';
   prenom: string = '';
   email: string = '';
-  role: Role = Role.AGENT_DOSSIER;
+  roleUtilisateur: Role = Role.AGENT_DOSSIER;
   actif: boolean = true;
   motDePasse?: string = '';
 

@@ -119,7 +119,7 @@ export class ChefAmiableService {
           nom: utilisateur.nom,
           prenom: utilisateur.prenom,
           email: utilisateur.email,
-          role: Role.AGENT_RECOUVREMENT_AMIABLE,
+          roleUtilisateur: Role.AGENT_RECOUVREMENT_AMIABLE,
           actif: utilisateur.actif
         }));
       })
@@ -214,7 +214,7 @@ export class ChefAmiableService {
           nom: agent.nom || '',
           prenom: agent.prenom || '',
           email: agent.email || '',
-          role: Role.AGENT_RECOUVREMENT_AMIABLE,
+          roleUtilisateur: Role.AGENT_RECOUVREMENT_AMIABLE,
           actif: true
         });
         return user;

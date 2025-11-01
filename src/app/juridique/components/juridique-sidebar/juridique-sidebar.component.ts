@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { ToastService } from '../../../core/services/toast.service';
+import { JwtAuthService } from '../../../core/services/jwt-auth.service';
 
 @Component({
   selector: 'app-juridique-sidebar',
@@ -21,7 +22,7 @@ export class JuridiqueSidebarComponent implements OnInit {
 
   constructor(
     private router: Router,
-    private authService: AuthService,
+    private jwtAuthService: JwtAuthService,
     private toastService: ToastService
   ) {}
 
@@ -63,7 +64,7 @@ export class JuridiqueSidebarComponent implements OnInit {
   logout(): void {
     // Confirmer la déconnexion
     if (confirm('Êtes-vous sûr de vouloir vous déconnecter ?')) {
-      this.authService.logout();
+      this.jwtAuthService.logOut();
       this.toastService.success('Déconnexion réussie !');
       this.router.navigate(['/login']);
     }

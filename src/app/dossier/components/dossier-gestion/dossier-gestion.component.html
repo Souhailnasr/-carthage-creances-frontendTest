@@ -146,7 +146,7 @@
         </div>
 
         <!-- Option visible uniquement pour les chefs (le code ts forcerait aussi automatiquement) -->
-        <div class="form-group checkbox-group" *ngIf="currentUser?.role === 'CHEF_DEPARTEMENT_DOSSIER' || currentUser?.role === 'SUPER_ADMIN'">
+        <div class="form-group checkbox-group" *ngIf="currentUser?.roleUtilisateur === 'CHEF_DEPARTEMENT_DOSSIER' || currentUser?.roleUtilisateur === 'SUPER_ADMIN'">
           <label class="checkbox-label" title="Si activée, le dossier sera validé automatiquement à la création.">
             <input type="checkbox" formControlName="isChef">
             <span class="checkmark"></span>
@@ -154,8 +154,7 @@
           </label>
         </div>
 
-        <!-- Champ caché pour agentCreateurId (géré automatiquement par la logique isChef) -->
-        <input type="hidden" formControlName="agentCreateurId">
+        <!-- agent_createur_id sera automatiquement récupéré par le backend depuis l'utilisateur connecté -->
       </div>
 
       <div class="form-actions">
@@ -210,7 +209,7 @@
   </div>
 
   <!-- Interface spécifique pour les agents -->
-  <div class="agent-dashboard" *ngIf="currentUser?.role === 'AGENT_DOSSIER'">
+  <div class="agent-dashboard" *ngIf="currentUser?.roleUtilisateur === 'AGENT_DOSSIER'">
     <div class="agent-stats">
       <div class="stat-card">
         <div class="stat-number">{{ getDossiersByStatus('EN_ATTENTE_VALIDATION').length }}</div>

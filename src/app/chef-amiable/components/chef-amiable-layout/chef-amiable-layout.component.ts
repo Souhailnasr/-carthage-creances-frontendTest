@@ -4,6 +4,7 @@ import { RouterModule, Router } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { User } from '../../../shared/models';
 import { NotificationComponent } from '../../../shared/components/notification/notification.component';
+import { JwtAuthService } from '../../../core/services/jwt-auth.service';
 
 @Component({
   selector: 'app-chef-amiable-layout',
@@ -13,17 +14,17 @@ import { NotificationComponent } from '../../../shared/components/notification/n
   styleUrls: ['./chef-amiable-layout.component.scss']
 })
 export class ChefAmiableLayoutComponent implements OnInit {
-  currentUser: User | null = null;
+  currentUser: any = null;
   sidebarOpen: boolean = true;
   expandedMenus: { [key: string]: boolean } = { notifications: true };
 
   constructor(
-    private authService: AuthService,
+    private jwtAuthService: JwtAuthService,
     private router: Router
   ) { }
 
   ngOnInit(): void {
-    this.currentUser = this.authService.getCurrentUser();
+    this.currentUser = this.jwtAuthService.getCurrentUser();
   }
 
   toggleSidebar(): void {
@@ -31,7 +32,7 @@ export class ChefAmiableLayoutComponent implements OnInit {
   }
 
   logout(): void {
-    this.authService.logout();
+    this.jwtAuthService.logOut();
     this.router.navigate(['/login']);
   }
 
@@ -65,7 +66,7 @@ export class ChefAmiableLayoutComponent implements OnInit {
       'AGENT_FINANCE': 'Agent Finance'
     };
 
-    return roleNames[this.currentUser.role] || this.currentUser.role;
+    return roleNames[this.currentUser.roleUtilisateur] || this.currentUser.roleUtilisateur || '';
   }
 
   toggleSubmenu(menuName: string): void {

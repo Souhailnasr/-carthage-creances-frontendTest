@@ -4,12 +4,13 @@ import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { AuthService } from '../services/auth.service';
 import { Router } from '@angular/router';
+import { JwtAuthService } from '../services/jwt-auth.service';
 
 @Injectable()
 export class ValidationAuthInterceptor implements HttpInterceptor {
   
   constructor(
-    private authService: AuthService,
+    private jwtAuthService: JwtAuthService,
     private router: Router
   ) {}
 
@@ -17,7 +18,7 @@ export class ValidationAuthInterceptor implements HttpInterceptor {
     // Vérifier si la requête est pour l'API de validation
     if (req.url.includes('/api/validation/')) {
       // Ajouter le token d'authentification
-      const token = this.authService.getToken();
+      const token = sessionStorage.getItem('auth-user');;
       if (token) {
         req = req.clone({
           setHeaders: {
@@ -33,7 +34,7 @@ export class ValidationAuthInterceptor implements HttpInterceptor {
         // Gestion des erreurs d'authentification
         if (error.status === 401) {
           console.warn('Token expiré ou invalide - redirection vers login');
-          this.authService.logout();
+          this.jwtAuthService.logout()s;
           this.router.navigate(['/login'], { 
             queryParams: { returnUrl: this.router.url } 
           });
@@ -65,6 +66,10 @@ export class ValidationAuthInterceptor implements HttpInterceptor {
     );
   }
 }
+
+
+
+
 
 
 

@@ -44,7 +44,7 @@ export class DossierApiService {
    * Crée un nouveau dossier
    */
   createDossier(dossier: DossierRequest): Observable<DossierApi> {
-    return this.http.post<DossierApi>(this.apiUrl, dossier);
+    return this.http.post<DossierApi>(`${this.apiUrl}`, dossier);
   }
 
   /**
@@ -61,50 +61,73 @@ export class DossierApiService {
    * on régénère un numeroDossier unique et on retente sur la même route /create.
    */
   createWithFallback(dossier: DossierRequest, isChef: boolean): Observable<DossierApi> {
-    return new Observable<DossierApi>(observer => {
-      const tryCreate = (payload: DossierRequest, attempt: number = 1) => {
-        console.log(`🔄 Tentative ${attempt} de création avec numeroDossier: ${payload.numeroDossier}`);
-        
-        // CORRECTION: Utiliser FormData avec la partie 'dossier' comme Blob même sans fichiers
-        const formData = new FormData();
-        const dossierBlob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
-        formData.append('dossier', dossierBlob);
-        console.log('✅ Partie dossier ajoutée au FormData comme Blob (sans fichiers):', JSON.stringify(payload, null, 2));
-        
-        this.http.post<DossierApi>(`${this.apiUrl}/create`, formData, { params: { isChef: String(isChef) } })
-          .subscribe({
-            next: d => { 
-              console.log(`✅ Dossier créé avec succès avec numeroDossier: ${payload.numeroDossier}`);
-              observer.next(d); 
-              observer.complete(); 
-            },
-            error: err => {
-              console.log(`❌ Erreur tentative ${attempt}:`, err);
-              
-              const msg: string = (err?.error?.error || err?.error?.message || err?.message || '').toString();
-              console.log(`📝 Message d'erreur: ${msg}`);
-              
-              // Détection plus robuste des erreurs de duplicate entry
-              const isDuplicate = msg.includes('Duplicate entry') || 
-                                 msg.includes('duplicate') || 
-                                 msg.includes('UK511v1d6q4d0pvftyg9hc3qyfw') ||
-                                 msg.includes('numero_dossier');
-              
-              if (err.status === 500 && isDuplicate && attempt < 3) {
-                const uniqueNumero = `${payload.numeroDossier}-${Date.now().toString().slice(-6)}-${attempt}`;
-                console.log(`🔄 Duplicate entry détecté, retry avec nouveau numeroDossier: ${uniqueNumero}`);
-                const secondPayload: DossierRequest = { ...payload, numeroDossier: uniqueNumero } as DossierRequest;
-                tryCreate(secondPayload, attempt + 1);
-              } else {
-                console.error(`❌ Échec définitif après ${attempt} tentatives:`, err);
-                observer.error(err);
-              }
-            }
-          });
-      };
-      tryCreate(dossier);
-    });
-  }
+  return new Observable<DossierApi>(observer => {
+
+    const tryCreate = (payload: DossierRequest, attempt: number = 1) => {
+      console.log(`🔄 Tentative ${attempt} de création pour numeroDossier: ${payload.numeroDossier}`);
+
+      // 1️⃣ Construction du FormData
+      const formData = new FormData();
+      formData.append('dossier', new Blob([JSON.stringify(payload)], { type: 'application/json' }));
+
+      // Ajouter les fichiers PDF si présents
+      if (payload.contratSigneFile) formData.append('contratSigne', payload.contratSigneFile);
+      if (payload.pouvoirFile) formData.append('pouvoir', payload.pouvoirFile);
+
+      // 2️⃣ Récupérer l'ID utilisateur
+      const userId = payload.agentCreateurId;
+      if (!userId) {
+        console.error('❌ Aucun userId trouvé (agentCreateurId)');
+        observer.error('User ID manquant');
+        return;
+      }
+
+      // 3️⃣ Ajouter le token JWT si disponible
+      const token = sessionStorage.getItem('auth-user');
+      const headers: any = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      // 4️⃣ Appel HTTP vers Spring Boot
+      this.http.post<DossierApi>(
+        `${this.apiUrl}/create/${userId}`,
+        formData,
+        {
+          params: new HttpParams().set('isChef', isChef.toString()),
+          headers: headers
+        }
+      ).subscribe({
+        next: d => {
+          console.log(`✅ Dossier créé avec succès: ${payload.numeroDossier}`);
+          observer.next(d);
+          observer.complete();
+        },
+        error: err => {
+          console.warn(`❌ Erreur tentative ${attempt}:`, err);
+
+          const msg: string = (err?.error?.error || err?.error?.message || err?.message || '').toString();
+
+          // 5️⃣ Gestion numéro de dossier dupliqué
+          const isDuplicate = msg.toLowerCase().includes('duplicate') || msg.includes('numero_dossier');
+
+          if (err.status === 500 && isDuplicate && attempt < 3) {
+            const uniqueNumero = `${payload.numeroDossier}-${Date.now().toString().slice(-6)}-${attempt}`;
+            console.log(`🔄 Duplicate détecté, retry avec numeroDossier: ${uniqueNumero}`);
+
+            const newPayload: DossierRequest = { ...payload, numeroDossier: uniqueNumero } as DossierRequest;
+            tryCreate(newPayload, attempt + 1);
+          } else {
+            console.error(`❌ Échec définitif après ${attempt} tentatives`);
+            observer.error({ message: 'Impossible de créer le dossier après plusieurs tentatives', details: err });
+          }
+        }
+      });
+    };
+
+    tryCreate(dossier);
+  });
+}
+
+
 
   /**
    * Crée un nouveau dossier avec fichiers
@@ -162,7 +185,20 @@ export class DossierApiService {
       console.log('  Impossible d\'afficher le contenu du FormData');
     }
 
-    return this.http.post<DossierApi>(`${this.apiUrl}/create`, formData, { params: { isChef: String(isChef) } });
+    // 🔧 CORRECTION: Ajouter le token JWT explicitement aux headers
+    const token = sessionStorage.getItem('auth-user');
+    const headers: any = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+      console.log('🔑 Token JWT ajouté explicitement aux headers:', token.substring(0, 20) + '...');
+    } else {
+      console.warn('⚠️ Aucun token JWT trouvé dans sessionStorage');
+    }
+
+    return this.http.post<DossierApi>(`${this.apiUrl}/create`, formData, { 
+      params: { isChef: String(isChef) },
+      headers: headers
+    });
   }
 
 

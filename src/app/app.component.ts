@@ -5,6 +5,7 @@ import { Subject, takeUntil, filter } from 'rxjs';
 import { AuthService } from './core/services/auth.service';
 import { SidebarComponent } from './shared/components/sidebar/sidebar.component';
 import { ToastComponent } from './shared/components/toast/toast.component';
+import { JwtAuthService } from './core/services/jwt-auth.service';
 
 @Component({
   selector: 'app-root',
@@ -19,7 +20,7 @@ export class AppComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   constructor(
-    private authService: AuthService,
+    private jwtAuthService: JwtAuthService,
     private router: Router
   ) {}
 
@@ -48,6 +49,6 @@ export class AppComponent implements OnInit, OnDestroy {
   private shouldShowSidebar(url: string): boolean {
     // Ne pas afficher la sidebar sur les pages de login, erreur, et modules avec leur propre layout
     const hideSidebarRoutes = ['/login', '/unauthorized', '/chef-amiable', '/juridique'];
-    return !hideSidebarRoutes.some(route => url.startsWith(route)) && this.authService.isAuthenticated();
+    return !hideSidebarRoutes.some(route => url.startsWith(route)) && this.jwtAuthService.isUserLoggedIn();
   }
 }

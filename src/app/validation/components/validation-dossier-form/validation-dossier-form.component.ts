@@ -96,7 +96,7 @@ export class ValidationDossierFormComponent implements OnInit, OnDestroy {
     const formValue = this.validationForm.value;
     const validationRequest: ValidationDossierRequest = {
       dossierId: parseInt(formValue.dossierId),
-      agentCreateurId: parseInt(currentUser.id),
+      agent_createur_id: parseInt(currentUser.id),
       commentaires: formValue.commentaires || undefined
     };
 
@@ -105,7 +105,7 @@ export class ValidationDossierFormComponent implements OnInit, OnDestroy {
 
     const createRequest: CreateValidationRequest = {
       dossier: { id: validationRequest.dossierId },
-      agentCreateur: { id: validationRequest.agentCreateurId },
+      agentCreateur: { id: validationRequest.agent_createur_id },
       commentaires: validationRequest.commentaires
     };
     

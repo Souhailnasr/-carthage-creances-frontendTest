@@ -99,7 +99,7 @@ export class GestionUtilisateursComponent implements OnInit {
       
       // Filtre par rôle
       const matchesRole = this.selectedRole === 'Tous les rôles' || 
-        agent.role === this.selectedRole;
+        agent.roleUtilisateur === this.selectedRole;
       
       // Filtre par statut
       const matchesStatus = this.selectedStatus === 'Tous les statuts' || 
@@ -124,12 +124,12 @@ export class GestionUtilisateursComponent implements OnInit {
       case 'Email':
         return agent.email.toLowerCase().includes(term);
       case 'Rôle':
-        return agent.role.toLowerCase().includes(term);
+        return agent.roleUtilisateur.toLowerCase().includes(term);
       default: // 'Tout'
         return agent.nom.toLowerCase().includes(term) ||
                agent.prenom.toLowerCase().includes(term) ||
                agent.email.toLowerCase().includes(term) ||
-               agent.role.toLowerCase().includes(term);
+               agent.roleUtilisateur.toLowerCase().includes(term);
     }
   }
 
