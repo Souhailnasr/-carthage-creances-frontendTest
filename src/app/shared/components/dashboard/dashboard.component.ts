@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { DossierService, DossierStats } from '../../../core/services/dossier.service';
+import { DossierApiService } from '../../../core/services/dossier-api.service';
 import { RoleService } from '../../../core/services/role.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { User, Role, Dossier, StatutDossier, Urgence } from '../../models';
@@ -69,6 +70,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   constructor(
     private dossierService: DossierService,
+    private dossierApiService: DossierApiService,
     public roleService: RoleService, // Public to be accessible in template
     private authService: AuthService,
     private jwtAuthService: JwtAuthService,
@@ -188,10 +190,46 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   loadStatistics(): void {
-    this.dossierService.refreshStats()
+    // Déterminer le rôle et l'ID agent pour les statistiques
+    const role = this.currentUser?.roleUtilisateur === 'AGENT_DOSSIER' ? 'AGENT' : 'CHEF';
+    const agentId = this.currentUser?.roleUtilisateur === 'AGENT_DOSSIER' ? Number(this.currentUser?.id) : undefined;
+    
+    // Charger les vraies statistiques depuis l'API
+    this.dossierApiService.stats(role as 'CHEF' | 'AGENT', agentId)
       .pipe(takeUntil(this.destroy$))
-      .subscribe((s: DossierStats) => {
-        this.stats = s;
+      .subscribe({
+        next: (stats: any) => {
+          console.log('✅ Statistiques chargées:', stats);
+          this.stats = {
+            totalDossiers: stats.totalDossiers || 0,
+            dossiersEnCours: stats.dossiersEnCours || 0,
+            dossiersValides: stats.dossiersValides || 0,
+            dossiersRejetes: stats.dossiersRejetes || 0,
+            dossiersAmiables: stats.dossiersAmiables || 0,
+            dossiersJuridiques: stats.dossiersJuridiques || 0,
+            dossiersClotures: stats.dossiersClotures || 0,
+            dossiersCrees: stats.dossiersCreesCeMois || 0,
+            agentsActifs: stats.agentsActifs || 0,
+            performanceAgents: stats.performanceAgents || 0,
+            dossiersCreesParAgent: stats.dossiersCreesParAgent || 0,
+            dossiersAssignes: stats.dossiersAssignes || 0
+          };
+        },
+        error: (error: any) => {
+          console.error('❌ Erreur lors du chargement des statistiques:', error);
+          // En cas d'erreur, utiliser le service de dossier
+          this.dossierService.refreshStats()
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+              next: (s: DossierStats) => {
+                this.stats = s;
+              },
+              error: (err: any) => {
+                console.error('❌ Erreur lors du chargement des statistiques (fallback):', err);
+                // Garder les valeurs par défaut (0)
+              }
+            });
+        }
       });
   }
 
@@ -201,158 +239,84 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   loadUrgentTasks(): void {
-    // Simulation des tâches urgentes pour l'agent connecté
-    if (this.currentUser?.roleUtilisateur === 'AGENT_DOSSIER') {
-      // Tâches spécifiques à l'agent connecté
-      this.urgentTasks = [
-        {
-          id: 1,
-          titre: 'Dossier Client ABC - Enquête urgente',
-          description: 'Compléter l\'enquête financière pour le dossier ABC avant le 25/01/2024',
-          urgence: 'TRES_URGENT',
-          dateEcheance: new Date('2024-01-25'),
-          type: 'ENQUETE',
-          dossierId: '1'
-        },
-        {
-          id: 2,
-          titre: 'Relance Client XYZ',
-          description: 'Effectuer une relance téléphonique pour le dossier XYZ',
-          urgence: 'MOYENNE',
-          dateEcheance: new Date('2024-01-30'),
-          type: 'RELANCE',
-          dossierId: '2'
-        },
-        {
-          id: 3,
-          titre: 'Nouveau dossier à traiter',
-          description: 'Analyser et traiter le nouveau dossier DEF assigné par le chef',
-          urgence: 'FAIBLE',
-          dateEcheance: new Date('2024-02-05'),
-          type: 'DOSSIER',
-          dossierId: '3'
-        }
-      ];
-    } else {
-      // Pour les autres rôles, pas de tâches urgentes spécifiques
-      this.urgentTasks = [];
-    }
-    this.filteredUrgentTasks = [...this.urgentTasks];
+    // Pour l'instant, on garde une liste vide car il n'y a pas encore d'API pour les tâches urgentes
+    // TODO: Implémenter l'API pour récupérer les tâches urgentes
+    this.urgentTasks = [];
+    this.filteredUrgentTasks = [];
+    
+    // Si une API existe plus tard, l'utiliser ici :
+    // this.tacheUrgenteService.getTachesUrgentes(this.currentUser?.id)
+    //   .pipe(takeUntil(this.destroy$))
+    //   .subscribe({
+    //     next: (taches: any[]) => {
+    //       this.urgentTasks = taches.map(t => ({
+    //         id: t.id,
+    //         titre: t.titre,
+    //         description: t.description,
+    //         urgence: t.urgence,
+    //         dateEcheance: new Date(t.dateEcheance),
+    //         type: t.type,
+    //         dossierId: t.dossierId?.toString()
+    //       }));
+    //       this.filteredUrgentTasks = [...this.urgentTasks];
+    //     },
+    //     error: (error: any) => {
+    //       console.error('❌ Erreur lors du chargement des tâches urgentes:', error);
+    //     }
+    //   });
   }
 
   loadAgentPerformance(): void {
-    // Simulation des données de performance - dans une vraie app, ceci viendrait d'une API
-    const allAgentPerformance: Array<{
-      id: number;
-      nom: string;
-      prenom: string;
-      role: string;
-      dossiersTraites: number;
-      dossiersClotures: number;
-      tauxReussite: number;
-      montantRecupere: number;
-      performance: 'excellent' | 'bon' | 'moyen' | 'faible';
-    }> = [
-      {
-        id: 1,
-        nom: 'Ben Ali',
-        prenom: 'Ahmed',
-        role: 'Agent de Dossier',
-        dossiersTraites: 45,
-        dossiersClotures: 38,
-        tauxReussite: 84.4,
-        montantRecupere: 125000,
-        performance: 'excellent' as const
-      },
-      {
-        id: 2,
-        nom: 'Trabelsi',
-        prenom: 'Fatma',
-        role: 'Agent de Dossier',
-        dossiersTraites: 38,
-        dossiersClotures: 32,
-        tauxReussite: 84.2,
-        montantRecupere: 98000,
-        performance: 'excellent' as const
-      },
-      {
-        id: 3,
-        nom: 'Khelil',
-        prenom: 'Mohamed',
-        role: 'Agent de Dossier',
-        dossiersTraites: 32,
-        dossiersClotures: 25,
-        tauxReussite: 78.1,
-        montantRecupere: 87000,
-        performance: 'bon' as const
-      },
-      {
-        id: 4,
-        nom: 'Ben Salah',
-        prenom: 'Leila',
-        role: 'Agent de Dossier',
-        dossiersTraites: 28,
-        dossiersClotures: 20,
-        tauxReussite: 71.4,
-        montantRecupere: 65000,
-        performance: 'bon' as const
-      },
-      {
-        id: 5,
-        nom: 'Mansouri',
-        prenom: 'Omar',
-        role: 'Agent de Dossier',
-        dossiersTraites: 25,
-        dossiersClotures: 16,
-        tauxReussite: 64.0,
-        montantRecupere: 52000,
-        performance: 'moyen' as const
-      },
-      {
-        id: 6,
-        nom: 'Hammami',
-        prenom: 'Sonia',
-        role: 'Agent de Dossier',
-        dossiersTraites: 22,
-        dossiersClotures: 12,
-        tauxReussite: 54.5,
-        montantRecupere: 38000,
-        performance: 'moyen' as const
-      },
-      {
-        id: 7,
-        nom: 'Ben Ammar',
-        prenom: 'Ali',
-        role: 'Agent de Dossier',
-        dossiersTraites: 18,
-        dossiersClotures: 8,
-        tauxReussite: 44.4,
-        montantRecupere: 25000,
-        performance: 'faible' as const
-      },
-      {
-        id: 8,
-        nom: 'Khelil',
-        prenom: 'Nadia',
-        role: 'Agent de Dossier',
-        dossiersTraites: 15,
-        dossiersClotures: 6,
-        tauxReussite: 40.0,
-        montantRecupere: 18000,
-        performance: 'faible' as const
-      }
-    ];
+    // Pour l'instant, on garde une liste vide car il n'y a pas encore d'API pour les performances
+    // TODO: Implémenter l'API pour récupérer les performances des agents
+    this.agentPerformance = [];
+    
+    // Si une API existe plus tard, l'utiliser ici :
+    // this.dossierApiService.getAgentPerformance()
+    //   .pipe(takeUntil(this.destroy$))
+    //   .subscribe({
+    //     next: (performance: any[]) => {
+    //       if (this.currentUser?.roleUtilisateur === 'AGENT_DOSSIER') {
+    //         // L'agent ne voit que ses propres performances
+    //         this.agentPerformance = performance.filter(p => 
+    //           Number(p.agentId) === Number(this.currentUser!.id)
+    //         ).map(p => ({
+    //           id: p.agentId,
+    //           nom: p.nom,
+    //           prenom: p.prenom,
+    //           role: p.role,
+    //           dossiersTraites: p.dossiersTraites,
+    //           dossiersClotures: p.dossiersClotures,
+    //           tauxReussite: p.tauxReussite,
+    //           montantRecupere: p.montantRecupere,
+    //           performance: this.calculatePerformance(p.tauxReussite)
+    //         }));
+    //       } else {
+    //         // Les autres rôles (chef, super admin) voient toutes les performances
+    //         this.agentPerformance = performance.map(p => ({
+    //           id: p.agentId,
+    //           nom: p.nom,
+    //           prenom: p.prenom,
+    //           role: p.role,
+    //           dossiersTraites: p.dossiersTraites,
+    //           dossiersClotures: p.dossiersClotures,
+    //           tauxReussite: p.tauxReussite,
+    //           montantRecupere: p.montantRecupere,
+    //           performance: this.calculatePerformance(p.tauxReussite)
+    //         }));
+    //       }
+    //     },
+    //     error: (error: any) => {
+    //       console.error('❌ Erreur lors du chargement des performances:', error);
+    //     }
+    //   });
+  }
 
-    // Filtrer selon le rôle de l'utilisateur
-    if (this.currentUser?.roleUtilisateur === 'AGENT_DOSSIER') {
-      // L'agent ne voit que ses propres performances
-      this.agentPerformance = allAgentPerformance.filter(agent => 
-        Number(agent.id) === Number(this.currentUser!.id)
-      );
-    } else {
-      // Les autres rôles (chef, super admin) voient toutes les performances
-      this.agentPerformance = allAgentPerformance;
-    }
+  private calculatePerformance(tauxReussite: number): 'excellent' | 'bon' | 'moyen' | 'faible' {
+    if (tauxReussite >= 80) return 'excellent';
+    if (tauxReussite >= 60) return 'bon';
+    if (tauxReussite >= 40) return 'moyen';
+    return 'faible';
   }
 
   getPerformanceClass(performance: string): string {

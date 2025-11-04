@@ -4,7 +4,7 @@
     <div class="chef-info">
       <h1><i class="fas fa-user-tie"></i> Interface Chef Dossier</h1>
       <p>Bienvenue, {{ currentUser?.prenom }} {{ currentUser?.nom }}</p>
-      <span class="role-badge">{{ getRoleDisplayName(currentUser?.role) }}</span>
+      <span class="role-badge">{{ getRoleDisplayName(currentUser?.roleUtilisateur!) }}</span>
     </div>
     <!-- Suppression des boutons pour épurer le header -->
   </div>

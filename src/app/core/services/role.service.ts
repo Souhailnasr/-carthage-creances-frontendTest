@@ -14,8 +14,15 @@ export class RoleService {
   }
 
   private loadCurrentUser() {
-    this.jwtAuthService.getCurrentUser().subscribe(user => {
-      this.currentUser = user;
+    this.jwtAuthService.getCurrentUser().subscribe({
+      next: (user) => {
+        this.currentUser = user;
+        console.log('🔍 RoleService - Utilisateur chargé:', user);
+        console.log('🔍 RoleService - Rôle:', user?.roleUtilisateur);
+      },
+      error: (error) => {
+        console.error('❌ RoleService - Erreur lors du chargement de l\'utilisateur:', error);
+      }
     });
   }
 
@@ -24,15 +31,28 @@ export class RoleService {
   }
 
   hasRole(requiredRole: Role): boolean {
-    return this.getRole() === requiredRole.toString();
+    const userRole = this.getRole();
+    if (!userRole) {
+      console.warn('⚠️ RoleService.hasRole - Aucun rôle utilisateur trouvé');
+      return false;
+    }
+    
+    // Comparer les enums directement
+    const hasRole = userRole === requiredRole;
+    console.log(`🔍 RoleService.hasRole - userRole: ${userRole}, requiredRole: ${requiredRole}, match: ${hasRole}`);
+    return hasRole;
   }
 
   isSuperAdmin(): boolean {
-    return this.hasRole(Role.SUPER_ADMIN);
+    const result = this.hasRole(Role.SUPER_ADMIN);
+    console.log('🔍 RoleService.isSuperAdmin:', result);
+    return result;
   }
 
   isChefDossier(): boolean {
-    return this.hasRole(Role.CHEF_DEPARTEMENT_DOSSIER);
+    const result = this.hasRole(Role.CHEF_DEPARTEMENT_DOSSIER);
+    console.log('🔍 RoleService.isChefDossier:', result, 'userRole:', this.getRole());
+    return result;
   }
 
   isAgentDossier(): boolean {

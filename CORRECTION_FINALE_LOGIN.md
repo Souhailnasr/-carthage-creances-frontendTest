@@ -146,3 +146,4 @@ Dans le dashboard, vous devriez voir :
 
 Si après ces vérifications le problème persiste, partagez les logs de la console et de Network.
 
+

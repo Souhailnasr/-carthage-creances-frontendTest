@@ -1,0 +1,74 @@
+h2 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 16px 0;
+  color: #2c3e50;
+
+  mat-icon {
+    color: #dc3545;
+  }
+}
+
+mat-dialog-content {
+  padding: 24px;
+  min-width: 400px;
+
+  .dossier-info {
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 24px;
+
+    p {
+      margin: 8px 0;
+      color: #495057;
+
+      strong {
+        color: #2c3e50;
+      }
+    }
+  }
+
+  .warning-box {
+    background-color: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 24px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+
+    mat-icon {
+      color: #ffc107;
+      margin-top: 2px;
+    }
+
+    p {
+      margin: 0;
+      color: #856404;
+      line-height: 1.5;
+    }
+  }
+
+  .full-width {
+    width: 100%;
+  }
+
+  .required {
+    color: #dc3545;
+  }
+}
+
+mat-dialog-actions {
+  padding: 16px 24px;
+  border-top: 1px solid #e9ecef;
+
+  button {
+    mat-icon {
+      margin-right: 4px;
+    }
+  }
+}
+

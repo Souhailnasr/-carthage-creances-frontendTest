@@ -1,0 +1,40 @@
+<h2 mat-dialog-title>
+  <mat-icon>check_circle</mat-icon>
+  Valider le Dossier
+</h2>
+
+<mat-dialog-content>
+  <div class="dossier-info">
+    <p><strong>Numéro dossier:</strong> {{ data.dossier.numeroDossier }}</p>
+    <p><strong>Titre:</strong> {{ data.dossier.titre }}</p>
+    <p *ngIf="data.dossier.montantCreance">
+      <strong>Montant:</strong> {{ data.dossier.montantCreance | number:'1.2-2' }} TND
+    </p>
+  </div>
+
+  <form [formGroup]="validationForm">
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Commentaire de validation (optionnel)</mat-label>
+      <textarea matInput 
+                formControlName="commentaire"
+                rows="4"
+                placeholder="Ajoutez un commentaire pour cette validation..."></textarea>
+      <mat-hint>Maximum 500 caractères</mat-hint>
+      <mat-error *ngIf="validationForm.get('commentaire')?.hasError('maxlength')">
+        Le commentaire ne peut pas dépasser 500 caractères
+      </mat-error>
+    </mat-form-field>
+  </form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="onCancel()">Annuler</button>
+  <button mat-raised-button 
+          color="primary" 
+          (click)="onConfirm()"
+          [disabled]="!validationForm.valid">
+    <mat-icon>check</mat-icon>
+    Valider
+  </button>
+</mat-dialog-actions>
+

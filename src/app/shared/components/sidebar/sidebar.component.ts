@@ -41,7 +41,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
     {
       label: 'Tableau de bord',
       icon: 'fas fa-tachometer-alt',
-      route: '/dossier/chef-dashboard',
+      route: '/dossier/dashboard',
       roles: [Role.CHEF_DEPARTEMENT_DOSSIER]
     },
     // Agent Dossier dashboard
@@ -74,6 +74,18 @@ export class SidebarComponent implements OnInit, OnDestroy {
       label: 'Gestion des Dossiers',
       icon: 'fas fa-folder-open',
       route: '/dossier/gestion',
+      roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER]
+    },
+    {
+      label: 'Dossiers en Attente',
+      icon: 'fas fa-clock',
+      route: '/dossier/en-attente',
+      roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_DOSSIER]
+    },
+    {
+      label: 'Mes Validations',
+      icon: 'fas fa-history',
+      route: '/dossier/mes-validations',
       roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER]
     },
     {

@@ -1,0 +1,46 @@
+<h2 mat-dialog-title>
+  <mat-icon>cancel</mat-icon>
+  Rejeter le Dossier
+</h2>
+
+<mat-dialog-content>
+  <div class="dossier-info">
+    <p><strong>Numéro dossier:</strong> {{ data.dossier.numeroDossier }}</p>
+    <p><strong>Titre:</strong> {{ data.dossier.titre }}</p>
+    <p *ngIf="data.dossier.montantCreance">
+      <strong>Montant:</strong> {{ data.dossier.montantCreance | number:'1.2-2' }} TND
+    </p>
+  </div>
+
+  <div class="warning-box">
+    <mat-icon>warning</mat-icon>
+    <p>Cette action rejettera le dossier et notifiera l'agent créateur. Veuillez fournir un commentaire expliquant les raisons du rejet.</p>
+  </div>
+
+  <form [formGroup]="rejetForm">
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Commentaire de rejet <span class="required">*</span></mat-label>
+      <textarea matInput 
+                formControlName="commentaire"
+                rows="6"
+                placeholder="Expliquez les raisons du rejet du dossier (minimum 10 caractères)..."
+                required></textarea>
+      <mat-hint>Minimum 10 caractères, maximum 500 caractères</mat-hint>
+      <mat-error *ngIf="rejetForm.get('commentaire')?.invalid && rejetForm.get('commentaire')?.touched">
+        {{ getErrorMessage() }}
+      </mat-error>
+    </mat-form-field>
+  </form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="onCancel()">Annuler</button>
+  <button mat-raised-button 
+          color="warn" 
+          (click)="onConfirm()"
+          [disabled]="!rejetForm.valid">
+    <mat-icon>cancel</mat-icon>
+    Rejeter
+  </button>
+</mat-dialog-actions>
+

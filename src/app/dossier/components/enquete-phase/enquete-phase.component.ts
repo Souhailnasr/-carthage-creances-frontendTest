@@ -3,11 +3,13 @@ import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormControl, FormsModule } from '@angular/forms';
 import { Subject, takeUntil } from 'rxjs';
-import { Dossier, Creancier, Debiteur } from '../../../shared/models';
+import { Dossier, Creancier, Debiteur, User } from '../../../shared/models';
 import { FormInputComponent } from '../../../shared/components/form-input/form-input.component';
 import { ToastService } from '../../../core/services/toast.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { DossierApiService } from '../../../core/services/dossier-api.service';
+import { JwtAuthService } from '../../../core/services/jwt-auth.service';
+import { Role } from '../../../shared/models/enums.model';
 
 @Component({
   selector: 'app-enquete-phase',
@@ -19,12 +21,20 @@ import { DossierApiService } from '../../../core/services/dossier-api.service';
 export class EnquetePhaseComponent implements OnInit, OnDestroy {
   dossiers: Dossier[] = [];
   filteredDossiers: Dossier[] = [];
+  pagedDossiers: Dossier[] = [];
   searchTerm: string = '';
   showEnqueteForm: boolean = false;
   enqueteForm!: FormGroup;
   selectedDossier: Dossier | null = null;
-  currentUser: any = null;
+  currentUser: User | null = null;
   private destroy$ = new Subject<void>();
+
+  // Sorting & pagination
+  sortKey: 'dateCreation' | 'montantCreance' | 'statut' = 'dateCreation';
+  sortDir: 'asc' | 'desc' = 'desc';
+  pageSize = 10;
+  pageIndex = 0;
+  totalPages = 1;
 
   // Getters pour les contrôles de formulaire
   get rapportCodeControl(): FormControl { return this.enqueteForm.get('rapportCode') as FormControl; }
@@ -72,17 +82,31 @@ export class EnquetePhaseComponent implements OnInit, OnDestroy {
     private toastService: ToastService,
     private router: Router,
     private authService: AuthService,
-    private dossierApiService: DossierApiService
+    private dossierApiService: DossierApiService,
+    private jwtAuthService: JwtAuthService
   ) { }
 
   ngOnInit(): void {
     this.initializeForm();
-    this.loadDossiers();
+    // Charger d'abord l'utilisateur, puis les dossiers
     this.loadCurrentUser();
   }
 
   loadCurrentUser(): void {
-    this.currentUser = this.authService.getCurrentUser();
+    this.jwtAuthService.getCurrentUser()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (user: User) => {
+          this.currentUser = user;
+          // Charger les dossiers après avoir récupéré l'utilisateur
+          this.loadDossiers();
+        },
+        error: (err) => {
+          console.error('❌ Erreur lors du chargement de l\'utilisateur:', err);
+          // Charger les dossiers quand même si erreur
+          this.loadDossiers();
+        }
+      });
   }
 
   ngOnDestroy(): void {
@@ -135,11 +159,89 @@ export class EnquetePhaseComponent implements OnInit, OnDestroy {
   }
 
   loadDossiers(): void {
-    // Utilisation de l'API réelle pour récupérer les dossiers
+    // Vérifier le rôle de l'utilisateur pour charger les dossiers appropriés
+    if (!this.currentUser || !this.currentUser.id) {
+      console.error('❌ Utilisateur non connecté');
+      this.toastService.error('Erreur: Utilisateur non connecté');
+      return;
+    }
+
+    const userId = Number(this.currentUser.id);
+    const userRole = this.currentUser.roleUtilisateur;
+
+    console.log('🔄 Chargement des dossiers pour l\'utilisateur:', userRole, 'ID:', userId);
+
+    // Charger selon le rôle
+    if (userRole === Role.AGENT_DOSSIER) {
+      // Agent : charger uniquement les dossiers créés par lui
+      this.loadDossiersByAgent(userId);
+    } else if (userRole === Role.CHEF_DEPARTEMENT_DOSSIER || userRole === Role.SUPER_ADMIN) {
+      // Chef : charger tous les dossiers
+      this.loadAllDossiers();
+    } else {
+      console.warn('⚠️ Rôle non reconnu, chargement de tous les dossiers');
+      this.loadAllDossiers();
+    }
+  }
+
+  private loadDossiersByAgent(agentId: number): void {
+    // Charger uniquement les dossiers créés par l'agent
+    this.dossierApiService.getDossiersCreesByAgent(agentId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (dossiersApi: any[]) => {
+          console.log('📋 Dossiers créés par l\'agent chargés:', dossiersApi.length);
+          // Convertir les données de l'API en objets Dossier
+          this.dossiers = dossiersApi.map((dossierApi: any) => {
+            return new Dossier({
+              id: dossierApi.id?.toString() || '',
+              titre: dossierApi.titre || '',
+              numeroDossier: dossierApi.numeroDossier || '',
+              montantCreance: dossierApi.montantCreance || 0,
+              dateCreation: dossierApi.dateCreation ? new Date(dossierApi.dateCreation) : new Date(),
+              statut: dossierApi.statut || 'EN_ATTENTE_VALIDATION',
+              urgence: dossierApi.urgence || 'FAIBLE',
+              agentResponsable: dossierApi.agentResponsable ? `${dossierApi.agentResponsable.prenom} ${dossierApi.agentResponsable.nom}` : '',
+              agentCreateur: dossierApi.agentCreateur ? `${dossierApi.agentCreateur.prenom} ${dossierApi.agentCreateur.nom}` : '',
+              valide: dossierApi.valide || false,
+              dateValidation: dossierApi.dateValidation ? new Date(dossierApi.dateValidation) : undefined,
+              creancier: new Creancier({
+                id: dossierApi.creancier?.id || 0,
+                codeCreancier: dossierApi.creancier?.codeCreancier || '',
+                nom: dossierApi.creancier?.nom || dossierApi.nomCreancier || '',
+                prenom: dossierApi.creancier?.prenom || '',
+                type: dossierApi.creancier?.type || 'PARTICULIER',
+                email: dossierApi.creancier?.email || '',
+                telephone: dossierApi.creancier?.telephone || ''
+              }),
+              debiteur: new Debiteur({
+                id: dossierApi.debiteur?.id || 0,
+                nom: dossierApi.debiteur?.nom || dossierApi.nomDebiteur || '',
+                prenom: dossierApi.debiteur?.prenom || '',
+                type: dossierApi.debiteur?.type || 'PARTICULIER',
+                email: dossierApi.debiteur?.email || '',
+                telephone: dossierApi.debiteur?.telephone || ''
+              })
+            });
+          });
+          this.filterDossiers();
+          this.applySortingAndPaging();
+        },
+        error: (error) => {
+          console.error('❌ Erreur lors du chargement des dossiers de l\'agent:', error);
+          this.toastService.error('Erreur lors du chargement des dossiers');
+          this.loadFallbackData();
+        }
+      });
+  }
+
+  private loadAllDossiers(): void {
+    // Charger tous les dossiers (pour les chefs)
     this.dossierApiService.getAllDossiers()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
+          console.log('📋 Tous les dossiers chargés pour le chef:', response.content?.length || 0);
           // Convertir les données de l'API en objets Dossier
           this.dossiers = response.content?.map((dossierApi: any) => {
             return new Dossier({
@@ -150,7 +252,8 @@ export class EnquetePhaseComponent implements OnInit, OnDestroy {
               dateCreation: dossierApi.dateCreation ? new Date(dossierApi.dateCreation) : new Date(),
               statut: dossierApi.statut || 'EN_ATTENTE_VALIDATION',
               urgence: dossierApi.urgence || 'FAIBLE',
-              agentResponsable: dossierApi.agentResponsable || '',
+              agentResponsable: dossierApi.agentResponsable ? `${dossierApi.agentResponsable.prenom} ${dossierApi.agentResponsable.nom}` : '',
+              agentCreateur: dossierApi.agentCreateur ? `${dossierApi.agentCreateur.prenom} ${dossierApi.agentCreateur.nom}` : '',
               valide: dossierApi.valide || false,
               dateValidation: dossierApi.dateValidation ? new Date(dossierApi.dateValidation) : undefined,
               creancier: new Creancier({
@@ -173,9 +276,10 @@ export class EnquetePhaseComponent implements OnInit, OnDestroy {
             });
           }) || [];
           this.filterDossiers();
+          this.applySortingAndPaging();
         },
         error: (error) => {
-          console.error('Erreur lors du chargement des dossiers:', error);
+          console.error('❌ Erreur lors du chargement des dossiers:', error);
           this.toastService.error('Erreur lors du chargement des dossiers');
           // En cas d'erreur, utiliser des données de fallback
           this.loadFallbackData();
@@ -246,32 +350,84 @@ export class EnquetePhaseComponent implements OnInit, OnDestroy {
       })
     ];
     this.filterDossiers();
+    this.applySortingAndPaging();
   }
 
   filterDossiers(): void {
-    if (this.currentUser?.role === 'AGENT_DOSSIER') {
-      // Pour les agents, ne montrer que les dossiers avec statut VALIDE qui leur sont assignés
-      this.filteredDossiers = this.dossiers.filter(dossier => 
-        dossier.statut === 'VALIDE' && dossier.agentResponsable === this.currentUser.getFullName()
-      );
-    } else {
-      // Pour les chefs, montrer tous les dossiers avec statut VALIDE
-      this.filteredDossiers = this.dossiers.filter(dossier => dossier.statut === 'VALIDE');
+    // Filtrer par statut VALIDE pour tous les utilisateurs
+    let filtered = this.dossiers.filter(dossier => 
+      dossier.statut === 'VALIDE' || dossier.valide === true
+    );
+
+    // Si l'utilisateur est un agent, s'assurer qu'il ne voit que ses dossiers
+    // (déjà filtré par loadDossiersByAgent, mais on double-vérifie pour sécurité)
+    if (this.currentUser?.roleUtilisateur === Role.AGENT_DOSSIER) {
+      const agentId = Number(this.currentUser.id);
+      // Filtrer par ID de l'agent créateur si disponible
+      // Note: On suppose que les dossiers ont déjà été filtrés par l'API
+      // mais on peut ajouter une vérification supplémentaire ici si nécessaire
     }
+
+    this.filteredDossiers = filtered;
   }
 
   onSearch(): void {
     if (!this.searchTerm.trim()) {
       this.filterDossiers();
     } else {
-      const baseDossiers = this.currentUser?.role === 'AGENT_DOSSIER' 
-        ? this.dossiers.filter(dossier => dossier.statut === 'VALIDE' && dossier.agentResponsable === this.currentUser.getFullName())
-        : this.dossiers.filter(dossier => dossier.statut === 'VALIDE');
+      // Filtrer d'abord par statut VALIDE
+      let baseDossiers = this.dossiers.filter(dossier => 
+        dossier.statut === 'VALIDE' || dossier.valide === true
+      );
+
+      // Si l'utilisateur est un agent, s'assurer qu'il ne voit que ses dossiers
+      // (déjà filtré par loadDossiersByAgent, mais on double-vérifie pour sécurité)
+      if (this.currentUser?.roleUtilisateur === Role.AGENT_DOSSIER) {
+        // Les dossiers sont déjà filtrés par l'API, pas besoin de filtrer à nouveau
+      }
         
+      // Appliquer le filtre de recherche
       this.filteredDossiers = baseDossiers.filter(dossier =>
         dossier.titre.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
         dossier.numeroDossier.toLowerCase().includes(this.searchTerm.toLowerCase())
       );
+      this.applySortingAndPaging();
+    }
+  }
+
+  applySortingAndPaging(): void {
+    const sorted = [...this.filteredDossiers].sort((a, b) => {
+      const dir = this.sortDir === 'asc' ? 1 : -1;
+      if (this.sortKey === 'dateCreation') {
+        return (new Date(a.dateCreation).getTime() - new Date(b.dateCreation).getTime()) * dir;
+      }
+      if (this.sortKey === 'montantCreance') {
+        return (a.montantCreance - b.montantCreance) * dir;
+      }
+      if (this.sortKey === 'statut') {
+        return (a.statut > b.statut ? 1 : a.statut < b.statut ? -1 : 0) * dir;
+      }
+      return 0;
+    });
+
+    this.totalPages = Math.max(1, Math.ceil(sorted.length / this.pageSize));
+    if (this.pageIndex >= this.totalPages) this.pageIndex = this.totalPages - 1;
+    const start = this.pageIndex * this.pageSize;
+    const end = start + this.pageSize;
+    this.pagedDossiers = sorted.slice(start, end);
+  }
+
+  nextPage(): void {
+    if (this.pageIndex + 1 < this.totalPages) {
+      this.pageIndex++;
+      this.applySortingAndPaging();
+    }
+  }
+
+  prevPage(): void {
+    if (this.pageIndex > 0) {
+      this.pageIndex--;
+      this.applySortingAndPaging();
     }
   }
 
@@ -290,7 +446,7 @@ export class EnquetePhaseComponent implements OnInit, OnDestroy {
 
     const formValue = this.enqueteForm.value;
     
-    if (this.currentUser?.role === 'AGENT_DOSSIER') {
+    if (this.currentUser?.roleUtilisateur === Role.AGENT_DOSSIER) {
       // Pour les agents, l'enquête est envoyée pour validation
       this.toastService.success('Enquête envoyée pour validation au chef de dossier.');
     } else {

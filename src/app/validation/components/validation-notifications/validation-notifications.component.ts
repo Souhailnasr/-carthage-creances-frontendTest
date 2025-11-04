@@ -242,7 +242,13 @@ export class ValidationNotificationsComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.validationService.rejeterDossier(notification.validation.id, parseInt(currentUser.id))
+    // Note: rejeterDossier attend (dossierId, commentaire) - pas de chefId
+    const commentaire = prompt('Commentaire de rejet (obligatoire):');
+    if (!commentaire || commentaire.trim() === '') {
+      this.toastService.showError('Le commentaire est obligatoire pour rejeter un dossier');
+      return;
+    }
+    this.validationService.rejeterDossier(notification.validation.dossier.id, commentaire)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {

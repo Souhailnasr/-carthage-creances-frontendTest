@@ -171,7 +171,8 @@ export class ValidationDossierListComponent implements OnInit, OnDestroy {
 
     const commentaire = prompt('Commentaire (optionnel):');
     
-    this.validationService.validerDossier(validation.id, parseInt(currentUser.id), commentaire || undefined)
+    // Note: validerDossier attend (dossierId, chefId) - pas de commentaire
+    this.validationService.validerDossier(validation.dossier.id, parseInt(currentUser.id))
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (result) => {
@@ -195,7 +196,12 @@ export class ValidationDossierListComponent implements OnInit, OnDestroy {
 
     const commentaire = prompt('Commentaire (optionnel):');
     
-    this.validationService.rejeterDossier(validation.id, parseInt(currentUser.id), commentaire || undefined)
+    // Note: rejeterDossier attend (dossierId, commentaire) - pas de chefId
+    if (!commentaire || commentaire.trim() === '') {
+      this.toastService.showError('Le commentaire est obligatoire pour rejeter un dossier');
+      return;
+    }
+    this.validationService.rejeterDossier(validation.dossier.id, commentaire)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (result) => {

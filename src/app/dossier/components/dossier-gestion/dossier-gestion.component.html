@@ -266,14 +266,15 @@
       </div>
       <div class="pagination-controls">
         <label>Par page</label>
-        <select [(ngModel)]="pageSize" (change)="applySortingAndPaging()">
+        <select [(ngModel)]="pageSize" (change)="applySortingAndPaging()" style="padding: 6px 12px; border-radius: 4px; border: 1px solid #ddd; margin: 0 8px;">
           <option [value]="5">5</option>
           <option [value]="10">10</option>
           <option [value]="20">20</option>
+          <option [value]="50">50</option>
         </select>
-        <button class="btn" (click)="prevPage()" [disabled]="pageIndex===0">Préc</button>
-        <span>{{ pageIndex+1 }} / {{ totalPages }}</span>
-        <button class="btn" (click)="nextPage()" [disabled]="pageIndex+1>=totalPages">Suiv</button>
+        <button class="btn btn-secondary" (click)="prevPage()" [disabled]="pageIndex===0" style="padding: 8px 16px; margin: 0 4px;">Préc</button>
+        <span style="margin: 0 12px; font-weight: 600; color: #495057;">{{ pageIndex+1 }} / {{ totalPages }}</span>
+        <button class="btn btn-secondary" (click)="nextPage()" [disabled]="pageIndex+1>=totalPages" style="padding: 8px 16px; margin: 0 4px;">Suiv</button>
       </div>
     </div>
     <table class="dossiers-table">
@@ -286,6 +287,7 @@
           <th>Débiteur</th>
           <th>Urgence</th>
           <th>Date Création</th>
+          <th>Créateur</th>
           <th>Statut</th>
           <th>Dossier Status</th>
           <th>Validation</th>
@@ -305,6 +307,7 @@
             </span>
           </td>
           <td>{{ dossier.getFormattedDate() }}</td>
+          <td>{{ dossier.agentCreateur || 'Non défini' }}</td>
           <td>
             <span class="status-badge" [ngClass]="getStatutClass(dossier.statut)">
               {{ getStatutLabel(dossier.statut) }}
@@ -326,23 +329,6 @@
             </button>
             <button class="btn btn-sm btn-warning" (click)="showEditDossierForm(dossier)" title="Modifier">
               <i class="fas fa-edit"></i>
-            </button>
-            <!-- Boutons de validation pour les chefs -->
-            <button 
-              *ngIf="authService.canValidateDossiers() && dossier.statut === 'EN_ATTENTE_VALIDATION'" 
-              class="btn btn-sm btn-success" 
-              (click)="validerDossier(dossier)" 
-              title="Valider le dossier"
-            >
-              <i class="fas fa-check"></i>
-            </button>
-            <button 
-              *ngIf="authService.canValidateDossiers() && dossier.statut === 'EN_ATTENTE_VALIDATION'" 
-              class="btn btn-sm btn-warning" 
-              (click)="rejeterDossier(dossier)" 
-              title="Rejeter le dossier"
-            >
-              <i class="fas fa-times"></i>
             </button>
             <button 
               *ngIf="authService.canValidateDossiers() && dossier.statut === 'VALIDE' && dossier.dossierStatus !== 'CLOTURE'" 
@@ -397,10 +383,10 @@
         <button class="btn btn-secondary" (click)="closeValidationModal()">
           <i class="fas fa-times"></i> Annuler
         </button>
-        <button class="btn btn-success" (click)="confirmValidation()">
+        <button class="btn btn-success" (click)="confirmValidation()" type="button">
           <i class="fas fa-check"></i> Valider
         </button>
-        <button class="btn btn-warning" (click)="confirmRejection()">
+        <button class="btn btn-warning" (click)="confirmRejection()" type="button">
           <i class="fas fa-times"></i> Rejeter
         </button>
       </div>

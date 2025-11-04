@@ -244,7 +244,7 @@ export class AgentDossierService {
     return this.mesDossiers$.pipe(
       map(dossiers => dossiers.filter(d => 
         d.titre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        d.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (d.description?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
         d.numeroDossier.toLowerCase().includes(searchTerm.toLowerCase())
       ))
     );

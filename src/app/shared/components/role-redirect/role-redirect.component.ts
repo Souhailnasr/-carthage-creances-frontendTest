@@ -88,7 +88,7 @@ export class RoleRedirectComponent implements OnInit {
         return '/juridique/dashboard';
       case 'CHEF_DEPARTEMENT_DOSSIER':
         console.log('🔍 getRedirectUrlByRole - Cas CHEF_DEPARTEMENT_DOSSIER');
-        return '/dossier/chef-dashboard';
+        return '/dossier/dashboard';
       case 'AGENT_RECOUVREMENT_AMIABLE':
         console.log('🔍 getRedirectUrlByRole - Cas AGENT_RECOUVREMENT_AMIABLE');
         return '/amiable/dashboard';

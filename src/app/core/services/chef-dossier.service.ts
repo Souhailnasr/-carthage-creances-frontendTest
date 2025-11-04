@@ -208,10 +208,10 @@ export class ChefDossierService {
           if (criteres.statut && dossier.dossierStatus !== criteres.statut) {
             return false;
           }
-          if (criteres.montantMin && dossier.montantCreance < criteres.montantMin) {
+          if (criteres.montantMin && dossier.montantCreance && dossier.montantCreance < criteres.montantMin) {
             return false;
           }
-          if (criteres.montantMax && dossier.montantCreance > criteres.montantMax) {
+          if (criteres.montantMax && dossier.montantCreance && dossier.montantCreance > criteres.montantMax) {
             return false;
           }
           return true;

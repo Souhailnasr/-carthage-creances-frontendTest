@@ -20,6 +20,33 @@
 
   <!-- Tableau des dossiers -->
   <div class="table-container">
+    <!-- Controls: sorting & pagination -->
+    <div class="table-controls" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding: 12px; background: #f5f5f5; border-radius: 8px;">
+      <div class="sort-controls" style="display: flex; gap: 12px; align-items: center;">
+        <label>Trier par</label>
+        <select [(ngModel)]="sortKey" (change)="applySortingAndPaging()" style="padding: 6px 12px; border-radius: 4px; border: 1px solid #ddd;">
+          <option value="dateCreation">Date création</option>
+          <option value="montantCreance">Montant</option>
+          <option value="statut">Statut</option>
+        </select>
+        <select [(ngModel)]="sortDir" (change)="applySortingAndPaging()" style="padding: 6px 12px; border-radius: 4px; border: 1px solid #ddd;">
+          <option value="desc">Desc</option>
+          <option value="asc">Asc</option>
+        </select>
+      </div>
+      <div class="pagination-controls" style="display: flex; gap: 12px; align-items: center;">
+        <label>Par page</label>
+        <select [(ngModel)]="pageSize" (change)="applySortingAndPaging()" style="padding: 6px 12px; border-radius: 4px; border: 1px solid #ddd;">
+          <option [value]="5">5</option>
+          <option [value]="10">10</option>
+          <option [value]="20">20</option>
+          <option [value]="50">50</option>
+        </select>
+        <button class="btn" (click)="prevPage()" [disabled]="pageIndex===0" style="padding: 6px 12px; border-radius: 4px; border: 1px solid #ddd; background: white; cursor: pointer;">Préc</button>
+        <span>{{ pageIndex+1 }} / {{ totalPages }}</span>
+        <button class="btn" (click)="nextPage()" [disabled]="pageIndex+1>=totalPages" style="padding: 6px 12px; border-radius: 4px; border: 1px solid #ddd; background: white; cursor: pointer;">Suiv</button>
+      </div>
+    </div>
     <table class="dossiers-table">
       <thead>
         <tr>
@@ -34,7 +61,7 @@
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let dossier of filteredDossiers">
+        <tr *ngFor="let dossier of pagedDossiers">
           <td>{{ dossier.numeroDossier }}</td>
           <td>{{ dossier.getFormattedAmount() }}</td>
           <td>
@@ -185,8 +212,8 @@
       <div class="form-actions">
         <button type="submit" class="btn btn-primary" [disabled]="enqueteForm.invalid">
           <i class="fas fa-save"></i> 
-          <span *ngIf="currentUser?.role === 'AGENT_DOSSIER'">Envoyer pour Validation</span>
-          <span *ngIf="currentUser?.role !== 'AGENT_DOSSIER'">Valider l'Enquête</span>
+          <span *ngIf="currentUser?.roleUtilisateur === 'AGENT_DOSSIER'">Envoyer pour Validation</span>
+          <span *ngIf="currentUser?.roleUtilisateur !== 'AGENT_DOSSIER'">Valider l'Enquête</span>
         </button>
         <button type="button" class="btn btn-secondary" (click)="cancelForm()">
           <i class="fas fa-times"></i> Annuler

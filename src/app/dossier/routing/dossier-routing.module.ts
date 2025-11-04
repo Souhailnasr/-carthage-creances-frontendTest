@@ -21,9 +21,8 @@ const routes: Routes = [
   },
   {
     path: 'chef-dashboard',
-    loadComponent: () => import('../../chef-dossier/chef-dossier.component').then(m => m.ChefDossierComponent),
-    canActivate: [AuthGuard],
-    data: { allowedRoles: [Role.CHEF_DEPARTEMENT_DOSSIER, Role.SUPER_ADMIN] }
+    redirectTo: 'dashboard',
+    pathMatch: 'full'
   },
   {
     path: 'parties-prenantes',
@@ -89,6 +88,18 @@ const routes: Routes = [
     loadComponent: () => import('../components/taches-dossier/taches-dossier.component').then(m => m.TachesDossierComponent),
     canActivate: [AuthGuard],
     data: { allowedRoles: [Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER, Role.SUPER_ADMIN] }
+  },
+  {
+    path: 'en-attente',
+    loadComponent: () => import('../components/dossiers-en-attente/dossiers-en-attente.component').then(m => m.DossiersEnAttenteComponent),
+    canActivate: [AuthGuard, ChefDossierGuard],
+    data: { allowedRoles: [Role.CHEF_DEPARTEMENT_DOSSIER, Role.SUPER_ADMIN] }
+  },
+  {
+    path: 'mes-validations',
+    loadComponent: () => import('../components/mes-validations/mes-validations.component').then(m => m.MesValidationsComponent),
+    canActivate: [AuthGuard],
+    data: { allowedRoles: [Role.AGENT_DOSSIER, Role.CHEF_DEPARTEMENT_DOSSIER, Role.SUPER_ADMIN] }
   },
   { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
 ];

@@ -153,3 +153,4 @@ Assurez-vous que ces routes sont bien définies dans vos fichiers de routing :
 | `souhailnsrpro98@gmail.com` | `AGENT_DOSSIER` | `/dossier/dashboard` |
 | `souhailnasr80@gmail.com` | `CHEF_DEPARTEMENT_DOSSIER` | `/dossier/chef-dashboard` |
 
+

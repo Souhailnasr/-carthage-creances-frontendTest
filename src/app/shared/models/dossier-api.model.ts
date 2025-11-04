@@ -2,9 +2,9 @@
 export interface DossierApi {
   id: number;
   titre: string;
-  description: string;
+  description?: string;
   numeroDossier: string;
-  montantCreance: number;
+  montantCreance?: number;
   dateCreation: string;
   dateCloture?: string;
   contratSigne?: string;
@@ -16,9 +16,11 @@ export interface DossierApi {
   debiteur: DebiteurApi;
   agentCreateur?: UtilisateurApi;
   agentResponsable?: UtilisateurApi;
-  valide: boolean;
-  dateValidation?: string;
-  commentaireValidation?: string;
+  // Champs pour la validation
+  statut?: 'EN_ATTENTE_VALIDATION' | 'VALIDE' | 'REJETE' | 'EN_COURS' | 'CLOTURE';
+  valide: boolean; // true si validé, false sinon
+  dateValidation?: string | null; // Date de validation
+  commentaireValidation?: string | null; // Commentaire si rejeté
   avocat?: AvocatApi;
   huissier?: HuissierApi;
   avocatId?: number;
