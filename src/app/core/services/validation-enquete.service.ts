@@ -171,28 +171,43 @@ export class ValidationEnqueteService {
   /**
    * Récupère les validations d'un agent créateur
    * GET /api/validation/enquetes/agent/{agentId}
-   * Si l'endpoint n'existe pas (404), charge toutes les validations et filtre côté client
+   * Si l'endpoint n'existe pas (404) ou erreur (500), charge toutes les validations et filtre côté client
    */
   getValidationsByAgent(agentId: number): Observable<ValidationEnquete[]> {
     return this.http.get<ValidationEnquete[]>(`${this.API_URL}/agent/${agentId}`)
       .pipe(
         catchError(error => {
-          console.error(`Erreur lors de la récupération des validations de l'agent ${agentId}:`, error);
+          console.error(`❌ Erreur lors de la récupération des validations de l'agent ${agentId}:`, error);
+          console.error(`❌ Détails:`, {
+            status: error.status,
+            statusText: error.statusText,
+            message: error.error?.message,
+            error: error.error?.error,
+            url: error.url
+          });
           
-          // Si l'endpoint n'existe pas (404), charger toutes les validations et filtrer côté client
-          if (error.status === 404) {
-            console.warn('⚠️ Endpoint /agent/{id} non disponible, chargement de toutes les validations');
+          // Si l'endpoint n'existe pas (404) ou erreur serveur (500), charger toutes les validations et filtrer côté client
+          if (error.status === 404 || error.status === 500) {
+            console.warn(`⚠️ Endpoint /agent/${agentId} non disponible (${error.status}), chargement de toutes les validations avec filtre côté client`);
             return this.getAllValidationsEnquete().pipe(
-              map(validations => validations.filter(v => {
-                // Comparer agentCreateurId (number)
-                if (v.agentCreateurId === agentId) return true;
-                // Comparer agentCreateur.id (peut être string ou number)
-                if (v.agentCreateur?.id) {
-                  const createurId = Number(v.agentCreateur.id);
-                  return !isNaN(createurId) && createurId === agentId;
-                }
-                return false;
-              }))
+              map(validations => {
+                const filtered = validations.filter(v => {
+                  // Comparer agentCreateurId (number)
+                  if (v.agentCreateurId === agentId) return true;
+                  // Comparer agentCreateur.id (peut être string ou number)
+                  if (v.agentCreateur?.id) {
+                    const createurId = Number(v.agentCreateur.id);
+                    return !isNaN(createurId) && createurId === agentId;
+                  }
+                  return false;
+                });
+                console.log(`✅ ${filtered.length} validations trouvées pour l'agent ${agentId} (sur ${validations.length} totales)`);
+                return filtered;
+              }),
+              catchError(secondError => {
+                console.error(`❌ Erreur également lors du chargement de toutes les validations:`, secondError);
+                return of([]);
+              })
             );
           }
           
@@ -204,12 +219,46 @@ export class ValidationEnqueteService {
   /**
    * Récupère les validations d'un chef validateur
    * GET /api/validation/enquetes/chef/{chefId}
+   * Si l'endpoint n'existe pas (404) ou erreur (500), charge toutes les validations et filtre côté client
    */
   getValidationsByChef(chefId: number): Observable<ValidationEnquete[]> {
     return this.http.get<ValidationEnquete[]>(`${this.API_URL}/chef/${chefId}`)
       .pipe(
         catchError(error => {
-          console.error(`Erreur lors de la récupération des validations du chef ${chefId}:`, error);
+          console.error(`❌ Erreur lors de la récupération des validations du chef ${chefId}:`, error);
+          console.error(`❌ Détails:`, {
+            status: error.status,
+            statusText: error.statusText,
+            message: error.error?.message,
+            error: error.error?.error,
+            url: error.url
+          });
+          
+          // Si l'endpoint n'existe pas (404) ou erreur serveur (500), charger toutes les validations et filtrer côté client
+          if (error.status === 404 || error.status === 500) {
+            console.warn(`⚠️ Endpoint /chef/${chefId} non disponible (${error.status}), chargement de toutes les validations avec filtre côté client`);
+            return this.getAllValidationsEnquete().pipe(
+              map(validations => {
+                const filtered = validations.filter(v => {
+                  // Comparer chefValidateurId (number)
+                  if (v.chefValidateurId === chefId) return true;
+                  // Comparer chefValidateur.id (peut être string ou number)
+                  if (v.chefValidateur?.id) {
+                    const validateurId = Number(v.chefValidateur.id);
+                    return !isNaN(validateurId) && validateurId === chefId;
+                  }
+                  return false;
+                });
+                console.log(`✅ ${filtered.length} validations trouvées pour le chef ${chefId} (sur ${validations.length} totales)`);
+                return filtered;
+              }),
+              catchError(secondError => {
+                console.error(`❌ Erreur également lors du chargement de toutes les validations:`, secondError);
+                return of([]);
+              })
+            );
+          }
+          
           return of([]);
         })
       );

@@ -192,10 +192,70 @@ export class MesValidationsEnqueteComponent implements OnInit, OnDestroy {
           
           console.log(`✅ ${validationsValides.length} validations valides (${validations.length - validationsValides.length} ignorées)`);
           
-          // Pour les chefs : afficher directement les validations (pas besoin de charger les enquêtes en attente)
+          // Pour les chefs : charger aussi les enquêtes créées par les agents pour avoir une vue complète
           if (isChef) {
-            // Charger les dossiers manquants pour les validations existantes
-            this.loadDossiersForValidations(validationsValides);
+            // Charger toutes les enquêtes pour voir celles créées par les agents
+            this.enqueteService.getAllEnquetes()
+              .pipe(
+                takeUntil(this.destroy$),
+                finalize(() => {
+                  this.loading = false;
+                  this.calculateStats();
+                })
+              )
+              .subscribe({
+                next: (allEnquetes) => {
+                  console.log('✅ Toutes les enquêtes chargées pour le chef:', allEnquetes.length);
+                  
+                  // Pour les chefs : combiner les validations qu'ils ont effectuées avec les enquêtes créées par les agents
+                  // Cela leur permet de voir toutes les enquêtes qu'ils ont validées ET celles créées par les agents
+                  const enquetesAgents = allEnquetes.filter(e => {
+                    // Enquêtes créées par des agents (pas par le chef lui-même)
+                    const agentId = e.agentCreateurId || (e.agentCreateur?.id ? Number(e.agentCreateur.id) : null);
+                    return agentId !== null && agentId !== userId;
+                  });
+                  
+                  console.log(`✅ ${enquetesAgents.length} enquêtes créées par les agents trouvées`);
+                  
+                  // Pour chaque enquête créée par un agent, créer une ValidationEnquete virtuelle si elle n'a pas déjà de validation
+                  const validationsVirtuelles: ValidationEnquete[] = enquetesAgents
+                    .filter(enquete => {
+                      // Ne pas créer de validation virtuelle si une validation existe déjà
+                      return !validationsValides.some(v => {
+                        const vEnqueteId = v.enquete?.id || v.enqueteId;
+                        return vEnqueteId === enquete.id;
+                      });
+                    })
+                    .map(enquete => ({
+                      id: undefined,
+                      enquete: enquete,
+                      enqueteId: enquete.id,
+                      agentCreateurId: enquete.agentCreateurId,
+                      agentCreateur: enquete.agentCreateur,
+                      chefValidateur: null,
+                      chefValidateurId: undefined,
+                      dateValidation: null,
+                      statut: enquete.statut === 'VALIDE' ? StatutValidation.VALIDE :
+                              enquete.statut === 'REJETE' ? StatutValidation.REJETE :
+                              StatutValidation.EN_ATTENTE,
+                      commentaires: null,
+                      dateCreation: enquete.dateCreation || new Date().toISOString(),
+                      dateModification: null
+                    } as ValidationEnquete));
+                  
+                  // Combiner les validations réelles avec les validations virtuelles
+                  const allValidations = [...validationsValides, ...validationsVirtuelles];
+                  console.log(`✅ Total validations à afficher pour le chef: ${allValidations.length} (${validationsValides.length} réelles, ${validationsVirtuelles.length} virtuelles)`);
+                  
+                  // Charger les dossiers manquants
+                  this.loadDossiersForValidations(allValidations);
+                },
+                error: (error) => {
+                  console.error('❌ Erreur lors du chargement des enquêtes pour le chef:', error);
+                  // Afficher quand même les validations chargées
+                  this.loadDossiersForValidations(validationsValides);
+                }
+              });
             return;
           }
           
@@ -214,39 +274,85 @@ export class MesValidationsEnqueteComponent implements OnInit, OnDestroy {
               next: (allEnquetes) => {
                 console.log('✅ Toutes les enquêtes chargées:', allEnquetes.length);
                 
-                // Filtrer les enquêtes de l'agent
-                const enquetes = allEnquetes.filter(e => {
-                  // Comparer agentCreateurId (number)
-                  if (e.agentCreateurId === userId) return true;
-                  // Comparer agentCreateur.id (peut être string ou number)
-                  if (e.agentCreateur?.id) {
-                    const createurId = Number(e.agentCreateur.id);
-                    return !isNaN(createurId) && createurId === userId;
+                // Filtrer les enquêtes de l'agent avec logging détaillé
+                // IMPORTANT: Après validation, agent_createur_id peut être NULL dans enquette
+                // Il faut aussi vérifier dans validation_enquetes via validationsValides
+                console.log(`🔍 Filtrage des enquêtes pour l'agent ${userId} parmi ${allEnquetes.length} enquêtes totales`);
+                
+                // Créer un map des enquete_id -> agent_createur_id depuis les validations
+                const agentCreateurFromValidations = new Map<number, number>();
+                validationsValides.forEach(v => {
+                  const enqueteId = v.enqueteId || v.enquete?.id;
+                  const agentCreateurId = v.agentCreateurId || (v.agentCreateur?.id ? Number(v.agentCreateur.id) : null);
+                  if (enqueteId && agentCreateurId) {
+                    agentCreateurFromValidations.set(Number(enqueteId), Number(agentCreateurId));
+                    console.log(`📋 Validation ${v.id}: enqueteId=${enqueteId}, agentCreateurId=${agentCreateurId}`);
                   }
+                });
+                
+                const enquetes = allEnquetes.filter(e => {
+                  if (!e.id) return false;
+                  
+                  const agentCreateurId = e.agentCreateurId;
+                  const agentCreateurIdFromObject = e.agentCreateur?.id ? Number(e.agentCreateur.id) : null;
+                  const agentCreateurIdFromValidation = agentCreateurFromValidations.get(e.id);
+                  
+                  // Comparer agentCreateurId (number) depuis enquette
+                  if (agentCreateurId === userId) {
+                    console.log(`✅ Enquête ${e.id} correspond (agentCreateurId: ${agentCreateurId})`);
+                    return true;
+                  }
+                  
+                  // Comparer agentCreateur.id (peut être string ou number) depuis enquette
+                  if (agentCreateurIdFromObject !== null && !isNaN(agentCreateurIdFromObject) && agentCreateurIdFromObject === userId) {
+                    console.log(`✅ Enquête ${e.id} correspond (agentCreateur.id: ${agentCreateurIdFromObject})`);
+                    return true;
+                  }
+                  
+                  // Si agent_createur_id est NULL dans enquette, utiliser validation_enquetes
+                  if ((!agentCreateurId && !agentCreateurIdFromObject) && agentCreateurIdFromValidation === userId) {
+                    console.log(`✅ Enquête ${e.id} correspond (agentCreateurId depuis validation: ${agentCreateurIdFromValidation})`);
+                    // Mettre à jour l'enquête avec l'agentCreateurId trouvé dans les validations
+                    e.agentCreateurId = agentCreateurIdFromValidation;
+                    return true;
+                  }
+                  
+                  // Log pour debug
+                  console.log(`❌ Enquête ${e.id} ne correspond pas:`, {
+                    userIdRecherche: userId,
+                    agentCreateurId: agentCreateurId,
+                    agentCreateurIdFromObject: agentCreateurIdFromObject,
+                    agentCreateurIdFromValidation: agentCreateurIdFromValidation,
+                    rapportCode: e.rapportCode
+                  });
+                  
                   return false;
                 });
                 console.log(`✅ ${enquetes.length} enquêtes trouvées pour l'agent ${userId}`);
+                console.log(`📋 Détails des enquêtes trouvées:`, enquetes.map(e => ({
+                  id: e.id,
+                  rapportCode: e.rapportCode,
+                  agentCreateurId: e.agentCreateurId,
+                  agentCreateurIdFromObject: e.agentCreateur?.id,
+                  dossierId: e.dossierId
+                })));
                 
-                // Filtrer les enquêtes en attente de validation
-                // (comme pour les dossiers : afficher celles qui ne sont pas encore validées)
-                const enquetesEnAttente = enquetes.filter(e => {
-                  // Enquête avec statut EN_ATTENTE_VALIDATION
-                  if (e.statut === 'EN_ATTENTE_VALIDATION') return true;
-                  // Enquête non validée (valide = false ou undefined) et pas encore validée/rejetée
-                  if (!e.valide && e.statut !== 'VALIDE' && e.statut !== 'REJETE') return true;
-                  return false;
-                });
+                // Pour les agents : afficher TOUTES leurs enquêtes (pas seulement celles en attente)
+                // Cela leur permet de voir toutes leurs enquêtes et leur statut de validation
+                console.log('📋 Toutes les enquêtes de l\'agent seront affichées (pas seulement en attente)');
                 
-                console.log('📋 Enquêtes en attente de validation:', enquetesEnAttente.length);
-                
-                // Filtrer les enquêtes qui n'ont pas déjà une validation valide
-                const enquetesSansValidation = enquetesEnAttente.filter(enquete => {
+                // Filtrer les enquêtes qui n'ont pas déjà une validation valide dans validationsValides
+                // Si une validation existe déjà, elle sera affichée depuis validationsValides
+                // Sinon, on crée une validation virtuelle pour l'afficher
+                const enquetesSansValidation = enquetes.filter(enquete => {
                   const hasValidation = validationsValides.some(v => {
                     const vEnqueteId = v.enquete?.id || v.enqueteId;
                     return vEnqueteId === enquete.id;
                   });
                   return !hasValidation;
                 });
+                
+                console.log(`📋 ${enquetesSansValidation.length} enquêtes sans validation existante (seront créées virtuellement)`);
                 
                 // Charger les dossiers manquants pour les enquêtes
                 this.loadDossiersForEnquetes(enquetesSansValidation, validationsValides, userId);
@@ -304,32 +410,98 @@ export class MesValidationsEnqueteComponent implements OnInit, OnDestroy {
         next: (allEnquetes) => {
           console.log('✅ Toutes les enquêtes chargées (fallback):', allEnquetes.length);
           
-          // Filtrer les enquêtes de l'agent
-          const enquetes = allEnquetes.filter(e => {
-            // Comparer agentCreateurId (number)
-            if (e.agentCreateurId === agentId) return true;
-            // Comparer agentCreateur.id (peut être string ou number)
-            if (e.agentCreateur?.id) {
-              const createurId = Number(e.agentCreateur.id);
-              return !isNaN(createurId) && createurId === agentId;
-            }
-            return false;
-          });
+          // Filtrer les enquêtes de l'agent avec logging détaillé
+          // IMPORTANT: Après validation, agent_createur_id peut être NULL dans enquette
+          // Il faut charger les validations pour trouver l'agent_createur_id
+          console.log(`🔍 Filtrage des enquêtes pour l'agent ${agentId} parmi ${allEnquetes.length} enquêtes totales (fallback)`);
           
-          console.log(`✅ ${enquetes.length} enquêtes trouvées pour l'agent ${agentId} (fallback)`);
-          
-          // Filtrer les enquêtes en attente de validation
-          // (comme pour les dossiers : afficher celles qui ne sont pas encore validées)
-          const enquetesEnAttente = enquetes.filter(e => {
-            // Enquête avec statut EN_ATTENTE_VALIDATION
-            if (e.statut === 'EN_ATTENTE_VALIDATION') return true;
-            // Enquête non validée (valide = false ou undefined) et pas encore validée/rejetée
-            if (!e.valide && e.statut !== 'VALIDE' && e.statut !== 'REJETE') return true;
-            return false;
-          });
-          
-          // Charger les dossiers manquants pour les enquêtes
-          this.loadDossiersForEnquetes(enquetesEnAttente, [], agentId);
+          // Charger les validations pour trouver agent_createur_id si NULL dans enquette
+          this.validationEnqueteService.getAllValidationsEnquete()
+            .pipe(
+              takeUntil(this.destroy$),
+              map(validations => {
+                // Créer un map des enquete_id -> agent_createur_id depuis les validations
+                const agentCreateurFromValidations = new Map<number, number>();
+                validations.forEach(v => {
+                  const enqueteId = v.enqueteId || v.enquete?.id;
+                  const agentCreateurId = v.agentCreateurId || (v.agentCreateur?.id ? Number(v.agentCreateur.id) : null);
+                  if (enqueteId && agentCreateurId) {
+                    agentCreateurFromValidations.set(Number(enqueteId), Number(agentCreateurId));
+                  }
+                });
+                
+                const enquetes = allEnquetes.filter(e => {
+                  if (!e.id) return false;
+                  
+                  const agentCreateurId = e.agentCreateurId;
+                  const agentCreateurIdFromObject = e.agentCreateur?.id ? Number(e.agentCreateur.id) : null;
+                  const agentCreateurIdFromValidation = agentCreateurFromValidations.get(e.id);
+                  
+                  // Comparer agentCreateurId (number) depuis enquette
+                  if (agentCreateurId === agentId) {
+                    console.log(`✅ Enquête ${e.id} correspond (agentCreateurId: ${agentCreateurId})`);
+                    return true;
+                  }
+                  
+                  // Comparer agentCreateur.id (peut être string ou number) depuis enquette
+                  if (agentCreateurIdFromObject !== null && !isNaN(agentCreateurIdFromObject) && agentCreateurIdFromObject === agentId) {
+                    console.log(`✅ Enquête ${e.id} correspond (agentCreateur.id: ${agentCreateurIdFromObject})`);
+                    return true;
+                  }
+                  
+                  // Si agent_createur_id est NULL dans enquette, utiliser validation_enquetes
+                  if ((!agentCreateurId && !agentCreateurIdFromObject) && agentCreateurIdFromValidation === agentId) {
+                    console.log(`✅ Enquête ${e.id} correspond (agentCreateurId depuis validation: ${agentCreateurIdFromValidation})`);
+                    // Mettre à jour l'enquête avec l'agentCreateurId trouvé dans les validations
+                    e.agentCreateurId = agentCreateurIdFromValidation;
+                    return true;
+                  }
+                  
+                  // Log pour debug
+                  console.log(`❌ Enquête ${e.id} ne correspond pas:`, {
+                    agentIdRecherche: agentId,
+                    agentCreateurId: agentCreateurId,
+                    agentCreateurIdFromObject: agentCreateurIdFromObject,
+                    agentCreateurIdFromValidation: agentCreateurIdFromValidation,
+                    rapportCode: e.rapportCode
+                  });
+                  
+                  return false;
+                });
+                
+                return enquetes;
+              }),
+              catchError(error => {
+                console.error('❌ Erreur lors du chargement des validations pour le fallback:', error);
+                // Continuer avec le filtrage basique sans validations
+                return of(allEnquetes.filter(e => {
+                  const agentCreateurId = e.agentCreateurId;
+                  const agentCreateurIdFromObject = e.agentCreateur?.id ? Number(e.agentCreateur.id) : null;
+                  return agentCreateurId === agentId || (agentCreateurIdFromObject !== null && agentCreateurIdFromObject === agentId);
+                }));
+              })
+            )
+            .subscribe({
+              next: (enquetes) => {
+                console.log(`✅ ${enquetes.length} enquêtes trouvées pour l'agent ${agentId} (fallback)`);
+                console.log(`📋 Détails des enquêtes trouvées:`, enquetes.map(e => ({
+                  id: e.id,
+                  rapportCode: e.rapportCode,
+                  agentCreateurId: e.agentCreateurId,
+                  agentCreateurIdFromObject: e.agentCreateur?.id,
+                  dossierId: e.dossierId
+                })));
+                
+                // Pour les agents : afficher TOUTES leurs enquêtes (pas seulement celles en attente)
+                // Charger les dossiers manquants pour toutes les enquêtes
+                this.loadDossiersForEnquetes(enquetes, [], agentId);
+              },
+              error: (error) => {
+                console.error('❌ Erreur lors du chargement des enquêtes:', error);
+                const message = error.error?.message || 'Erreur lors du chargement des données';
+                this.snackBar.open(message, 'Fermer', { duration: 5000 });
+              }
+            });
         },
         error: (error) => {
           console.error('❌ Erreur lors du chargement des enquêtes:', error);
@@ -354,7 +526,9 @@ export class MesValidationsEnqueteComponent implements OnInit, OnDestroy {
   }
 
   applyFilters(statut: string, searchTerm: string): void {
-    let filtered = [...this.dataSource.data];
+    // Utiliser filteredData comme source si disponible, sinon dataSource.data
+    const sourceData = this.filteredData.length > 0 ? this.filteredData : this.dataSource.data;
+    let filtered = [...sourceData];
 
     if (statut) {
       filtered = filtered.filter(v => v.statut === statut);
@@ -371,16 +545,29 @@ export class MesValidationsEnqueteComponent implements OnInit, OnDestroy {
 
     this.filteredData = filtered;
     this.dataSource.data = filtered;
+    
+    // Recalculer les statistiques après le filtrage
+    this.calculateStats();
   }
 
   calculateStats(): void {
-    const data = this.dataSource.data;
+    // Utiliser filteredData pour les statistiques (données filtrées mais pas paginées)
+    const data = this.filteredData.length > 0 ? this.filteredData : this.dataSource.data;
     this.stats = {
       total: data.length,
       enAttente: data.filter(v => v.statut === StatutValidation.EN_ATTENTE).length,
       validees: data.filter(v => v.statut === StatutValidation.VALIDE).length,
       rejetees: data.filter(v => v.statut === StatutValidation.REJETE).length
     };
+    
+    console.log('📊 Statistiques calculées:', {
+      total: this.stats.total,
+      enAttente: this.stats.enAttente,
+      validees: this.stats.validees,
+      rejetees: this.stats.rejetees,
+      role: this.currentUser?.roleUtilisateur,
+      source: this.filteredData.length > 0 ? 'filteredData' : 'dataSource.data'
+    });
   }
 
   voirDetails(validation: ValidationEnquete): void {
@@ -760,11 +947,31 @@ export class MesValidationsEnqueteComponent implements OnInit, OnDestroy {
   }
 
   getDossierNumero(validation: ValidationEnquete): string {
-    return validation.enquete?.dossier?.numeroDossier || 'N/A';
+    // Essayer d'abord depuis validation.enquete.dossier
+    if (validation.enquete?.dossier?.numeroDossier) {
+      return validation.enquete.dossier.numeroDossier;
+    }
+    // Si pas de dossier chargé mais dossierId existe, essayer de charger
+    const dossierId = validation.enquete?.dossierId || validation.enquete?.dossier?.id;
+    if (dossierId && !validation.enquete?.dossier) {
+      // Le dossier sera chargé par loadDossiersForValidations
+      return 'Chargement...';
+    }
+    return 'N/A';
   }
 
   getDossierTitre(validation: ValidationEnquete): string {
-    return validation.enquete?.dossier?.titre || 'N/A';
+    // Essayer d'abord depuis validation.enquete.dossier
+    if (validation.enquete?.dossier?.titre) {
+      return validation.enquete.dossier.titre;
+    }
+    // Si pas de dossier chargé mais dossierId existe, essayer de charger
+    const dossierId = validation.enquete?.dossierId || validation.enquete?.dossier?.id;
+    if (dossierId && !validation.enquete?.dossier) {
+      // Le dossier sera chargé par loadDossiersForValidations
+      return 'Chargement...';
+    }
+    return 'N/A';
   }
 
   getChefName(validation: ValidationEnquete): string {
@@ -860,11 +1067,15 @@ export class MesValidationsEnqueteComponent implements OnInit, OnDestroy {
       const enquete = v.enquete;
       if (!enquete) return false;
       const dossierId = enquete.dossierId || enquete.dossier?.id;
-      return dossierId && !enquete.dossier?.numeroDossier && !enquete.dossier?.titre;
+      // Charger le dossier si dossierId existe mais que les infos ne sont pas chargées
+      return dossierId && (!enquete.dossier?.numeroDossier || !enquete.dossier?.titre);
     });
+
+    console.log(`📥 ${validationsAvecDossierId.length} validation(s) nécessitant le chargement du dossier sur ${validations.length} total`);
 
     if (validationsAvecDossierId.length === 0) {
       // Pas de dossiers à charger, afficher directement
+      console.log('✅ Tous les dossiers sont déjà chargés, affichage direct');
       this.dataSource.data = validations;
       this.filteredData = [...validations];
       if (this.paginator) {
@@ -882,14 +1093,21 @@ export class MesValidationsEnqueteComponent implements OnInit, OnDestroy {
       const enquete = validation.enquete!;
       const dossierId = enquete.dossierId || enquete.dossier?.id;
       if (!dossierId) {
+        console.warn(`⚠️ Validation ${validation.id} a une enquête sans dossierId`);
         return of({ validation, dossierApi: null });
       }
+      console.log(`📥 Chargement du dossier ${dossierId} pour l'enquête ${enquete.id}`);
       return this.dossierApiService.getDossierById(Number(dossierId)).pipe(
         catchError(error => {
           console.warn(`⚠️ Erreur lors du chargement du dossier ${dossierId}:`, error);
           return of(null);
         }),
-        map((dossierApi: DossierApi | null) => ({ validation, dossierApi }))
+        map((dossierApi: DossierApi | null) => {
+          if (dossierApi) {
+            console.log(`✅ Dossier ${dossierId} chargé:`, { numero: dossierApi.numeroDossier, titre: dossierApi.titre });
+          }
+          return { validation, dossierApi };
+        })
       );
     });
 
@@ -906,10 +1124,17 @@ export class MesValidationsEnqueteComponent implements OnInit, OnDestroy {
                 numeroDossier: dossierApi.numeroDossier || '',
                 titre: dossierApi.titre || ''
               } as any;
+              console.log(`✅ Dossier associé à l'enquête ${validation.enquete.id}:`, {
+                numero: validation.enquete.dossier?.numeroDossier || 'N/A',
+                titre: validation.enquete.dossier?.titre || 'N/A'
+              });
+            } else if (validation?.enquete && !dossierApi) {
+              console.warn(`⚠️ Impossible de charger le dossier pour l'enquête ${validation.enquete.id}`);
             }
           });
 
           // Afficher les validations avec les dossiers chargés
+          console.log(`✅ Affichage de ${validations.length} validation(s) avec dossiers chargés`);
           this.dataSource.data = validations;
           this.filteredData = [...validations];
           if (this.paginator) {
@@ -956,7 +1181,10 @@ export class MesValidationsEnqueteComponent implements OnInit, OnDestroy {
         chefValidateur: null,
         chefValidateurId: undefined,
         dateValidation: null,
-        statut: StatutValidation.EN_ATTENTE,
+        // Utiliser le statut réel de l'enquête au lieu de toujours EN_ATTENTE
+        statut: enquete.statut === 'VALIDE' ? StatutValidation.VALIDE :
+                enquete.statut === 'REJETE' ? StatutValidation.REJETE :
+                StatutValidation.EN_ATTENTE,
         commentaires: null,
         dateCreation: enquete.dateCreation || new Date().toISOString(),
         dateModification: null

@@ -5,11 +5,16 @@
       Mes validations d'enquêtes
     </h1>
     <p class="subtitle" *ngIf="currentUser?.roleUtilisateur === 'CHEF_DEPARTEMENT_DOSSIER' || currentUser?.roleUtilisateur === 'SUPER_ADMIN'">
-      Historique de toutes mes validations d'enquêtes
+      Enquêtes validées par moi et enquêtes créées par les agents
     </p>
     <p class="subtitle" *ngIf="currentUser?.roleUtilisateur === 'AGENT_DOSSIER'">
-      Historique de toutes mes enquêtes en attente de validation
+      Historique de toutes mes enquêtes et leur statut de validation
     </p>
+    <div class="header-actions">
+      <button mat-icon-button (click)="loadValidations()" [disabled]="loading" matTooltip="Rafraîchir">
+        <mat-icon>refresh</mat-icon>
+      </button>
+    </div>
   </div>
 
   <!-- Statistiques -->
@@ -55,7 +60,8 @@
         </mat-form-field>
         <mat-form-field appearance="outline">
           <mat-label>Recherche</mat-label>
-          <input matInput formControlName="searchTerm" placeholder="Code rapport ou numéro dossier">
+          <input matInput formControlName="searchTerm" placeholder="Code rapport, numéro dossier, titre dossier...">
+          <mat-icon matSuffix>search</mat-icon>
         </mat-form-field>
       </form>
     </mat-card-content>

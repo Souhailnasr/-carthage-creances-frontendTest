@@ -22,6 +22,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatCardModule } from '@angular/material/card';
 import { RejetEnqueteDialogComponent } from '../dialogs/rejet-enquete-dialog/rejet-enquete-dialog.component';
+import { ConfirmDeleteEnqueteDialogComponent } from '../dialogs/confirm-delete-enquete-dialog/confirm-delete-enquete-dialog.component';
 
 @Component({
   selector: 'app-enquete-gestion',
@@ -220,14 +221,62 @@ export class EnqueteGestionComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (enquetes: Enquette[]) => {
+          console.log(`✅ ${enquetes.length} enquêtes chargées pour l'agent ${agentId}`);
           this.enquetes = enquetes || [];
           this.applyFilters();
           this.loading = false;
         },
         error: (error) => {
           console.error('❌ Erreur lors du chargement des enquêtes de l\'agent:', error);
-          // Fallback : charger toutes les enquêtes
-          this.loadAllEnquetes();
+          console.error('❌ Détails:', {
+            status: error.status,
+            statusText: error.statusText,
+            message: error.error?.message,
+            error: error.error?.error,
+            url: error.url
+          });
+          
+          // Fallback : charger toutes les enquêtes et filtrer côté client
+          console.warn('⚠️ Fallback : chargement de toutes les enquêtes avec filtre côté client');
+          this.enqueteService.getAllEnquetes()
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+              next: (allEnquetes: Enquette[]) => {
+                console.log(`✅ ${allEnquetes.length} enquêtes totales chargées, filtrage pour l'agent ${agentId}`);
+                console.log(`🔍 Détails de toutes les enquêtes:`, allEnquetes.map(e => ({
+                  id: e.id,
+                  rapportCode: e.rapportCode,
+                  agentCreateurId: e.agentCreateurId,
+                  agentCreateurIdFromObject: e.agentCreateur?.id,
+                  dossierId: e.dossierId
+                })));
+                
+                // IMPORTANT: Après validation, agent_createur_id peut être NULL dans enquette
+                // Il faut charger les validations pour trouver l'agent_createur_id
+                // Utiliser directement getEnquetesByAgent qui gère déjà ce cas
+                this.enqueteService.getEnquetesByAgent(agentId)
+                  .pipe(takeUntil(this.destroy$))
+                  .subscribe({
+                    next: (enquetesAgent) => {
+                      console.log(`✅ ${enquetesAgent.length} enquêtes trouvées pour l'agent ${agentId} (via getEnquetesByAgent)`);
+                      this.enquetes = enquetesAgent || [];
+                      this.applyFilters();
+                      this.loading = false;
+                    },
+                    error: (error) => {
+                      console.error('❌ Erreur lors du chargement des enquêtes:', error);
+                      this.enquetes = [];
+                      this.applyFilters();
+                      this.loading = false;
+                    }
+                  });
+              },
+              error: (fallbackError) => {
+                console.error('❌ Erreur également lors du chargement de toutes les enquêtes:', fallbackError);
+                this.snackBar.open('Erreur lors du chargement des enquêtes', 'Fermer', { duration: 3000 });
+                this.loading = false;
+              }
+            });
         }
       });
   }
@@ -419,6 +468,154 @@ export class EnqueteGestionComponent implements OnInit, OnDestroy {
     if (enquete.id) {
       this.router.navigate(['/enquetes', enquete.id]);
     }
+  }
+
+  canModify(enquete: Enquette): boolean {
+    if (!this.currentUser || !enquete.id) return false;
+    
+    const userId = this.jwtAuthService.getCurrentUserId();
+    if (!userId) return false;
+
+    // Les chefs peuvent modifier toutes les enquêtes (même validées)
+    const isChef = this.currentUser.roleUtilisateur === Role.CHEF_DEPARTEMENT_DOSSIER ||
+                   this.currentUser.roleUtilisateur === Role.SUPER_ADMIN;
+    
+    if (isChef) {
+      return true;
+    }
+
+    // Un agent peut modifier uniquement ses propres enquêtes (quel que soit le statut)
+    const isOwner = enquete.agentCreateurId === userId || 
+                    enquete.agentCreateur?.id === userId?.toString() ||
+                    Number(enquete.agentCreateur?.id) === userId;
+    
+    return isOwner;
+  }
+
+  canDelete(enquete: Enquette): boolean {
+    if (!this.currentUser || !enquete.id) return false;
+    
+    const userId = this.jwtAuthService.getCurrentUserId();
+    if (!userId) return false;
+
+    // Les chefs peuvent supprimer toutes les enquêtes (même validées)
+    const isChef = this.currentUser.roleUtilisateur === Role.CHEF_DEPARTEMENT_DOSSIER ||
+                   this.currentUser.roleUtilisateur === Role.SUPER_ADMIN;
+    
+    if (isChef) {
+      return true;
+    }
+
+    // Un agent peut supprimer uniquement ses propres enquêtes (quel que soit le statut)
+    const isOwner = enquete.agentCreateurId === userId || 
+                    enquete.agentCreateur?.id === userId?.toString() ||
+                    Number(enquete.agentCreateur?.id) === userId;
+    
+    return isOwner;
+  }
+
+  modifierEnquete(enquete: Enquette): void {
+    if (!enquete.id) {
+      this.snackBar.open('Erreur: ID de l\'enquête manquant', 'Fermer', { duration: 3000 });
+      return;
+    }
+
+    // Les chefs peuvent modifier toutes les enquêtes, même validées
+    // Les agents peuvent modifier leurs propres enquêtes, même validées
+    // Plus besoin de vérifier le statut ici, c'est géré par canModify()
+
+    // Naviguer vers la page de modification (route: /enquetes/edit/:id)
+    this.router.navigate(['/enquetes/edit', enquete.id]);
+  }
+
+  supprimerEnquete(enquete: Enquette): void {
+    if (!enquete.id) {
+      this.snackBar.open('Erreur: ID de l\'enquête manquant', 'Fermer', { duration: 3000 });
+      return;
+    }
+
+    // Les chefs peuvent supprimer toutes les enquêtes, même validées
+    // Les agents peuvent supprimer leurs propres enquêtes, même validées
+    // Plus besoin de vérifier le statut ici, c'est géré par canDelete()
+
+    // Confirmer la suppression
+    const rapportCode = enquete.rapportCode || `ID ${enquete.id}`;
+    const statutLabel = this.getStatutLabel(enquete.statut);
+    const dialogRef = this.dialog.open(ConfirmDeleteEnqueteDialogComponent, {
+      width: '400px',
+      data: {
+        title: 'Supprimer l\'enquête',
+        message: `Êtes-vous sûr de vouloir supprimer l'enquête "${rapportCode}" (${statutLabel}) ?`,
+        details: 'Cette action supprimera également toutes les validations associées. Cette action est irréversible.'
+      }
+    });
+
+    dialogRef.afterClosed().subscribe(confirmed => {
+      if (confirmed) {
+        this.loading = true;
+        
+        this.enqueteService.deleteEnquete(enquete.id!)
+          .pipe(
+            takeUntil(this.destroy$),
+            finalize(() => {
+              this.loading = false;
+            })
+          )
+          .subscribe({
+            next: (result) => {
+              if (result === 'success') {
+                this.snackBar.open(
+                  'Enquête supprimée avec succès. Les validations associées ont également été supprimées.', 
+                  'Fermer', 
+                  { 
+                    duration: 5000,
+                    panelClass: ['success-snackbar']
+                  }
+                );
+                
+                // Rafraîchir la liste
+                this.loadEnquetes();
+              } else {
+                this.snackBar.open(
+                  result || 'Erreur lors de la suppression', 
+                  'Fermer', 
+                  { 
+                    duration: 7000,
+                    panelClass: ['error-snackbar']
+                  }
+                );
+              }
+            },
+            error: (error) => {
+              let errorMessage = 'Erreur lors de la suppression de l\'enquête';
+              
+              if (error.message) {
+                errorMessage = error.message;
+              } else if (error.error) {
+                errorMessage = typeof error.error === 'string' 
+                  ? error.error 
+                  : error.error.message || errorMessage;
+              }
+              
+              console.error('❌ Erreur lors de la suppression:', {
+                message: errorMessage,
+                status: error.status,
+                error: error.error,
+                enqueteId: enquete.id
+              });
+              
+              this.snackBar.open(
+                errorMessage, 
+                'Fermer', 
+                { 
+                  duration: 7000,
+                  panelClass: ['error-snackbar']
+                }
+              );
+            }
+          });
+      }
+    });
   }
 
   formatDate(date?: string): string {

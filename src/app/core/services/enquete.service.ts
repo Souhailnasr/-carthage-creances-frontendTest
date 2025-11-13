@@ -1,9 +1,9 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, throwError, of } from 'rxjs';
+import { Observable, throwError, of, forkJoin } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
-import { Enquette } from '../../shared/models';
+import { Enquette, ValidationEnquete } from '../../shared/models';
 
 @Injectable({
   providedIn: 'root'
@@ -110,36 +110,100 @@ export class EnqueteService {
    * Si l'endpoint n'existe pas (404 ou 500), charge toutes les enquêtes et filtre côté client
    */
   getEnquetesByAgent(agentId: number): Observable<Enquette[]> {
-    return this.http.get<Enquette[]>(`${this.API_URL}/agent/${agentId}`)
-      .pipe(
+    // L'endpoint /agent/{id} n'existe pas dans le backend (retourne "No static resource")
+    // Problème : Après validation, agent_createur_id devient NULL dans la table enquette
+    // Solution : Utiliser getAllEnquetes() + getAllValidationsEnquete() pour trouver les enquêtes
+    // via validation_enquetes.agent_createur_id si enquette.agent_createur_id est NULL
+    
+    console.log(`📤 Chargement des enquêtes pour l'agent ${agentId} (via getAllEnquetes + getAllValidationsEnquete)`);
+    
+    // Charger toutes les enquêtes et toutes les validations en parallèle
+    return forkJoin({
+      enquetes: this.getAllEnquetes(),
+      validations: this.http.get<ValidationEnquete[]>(`${environment.apiUrl}/api/validation/enquetes`).pipe(
         catchError(error => {
-          console.error(`Erreur lors de la récupération des enquêtes de l'agent ${agentId}:`, error);
-          
-          // Si l'endpoint n'existe pas (404) ou erreur serveur (500), charger toutes les enquêtes et filtrer côté client
-          if (error.status === 404 || error.status === 500) {
-            console.warn(`⚠️ Endpoint /agent/${agentId} non disponible (${error.status}), chargement de toutes les enquêtes et filtrage côté client`);
-            return this.getAllEnquetes().pipe(
-              map(enquetes => {
-                const filtered = enquetes.filter(e => {
-                  // Comparer agentCreateurId (number)
-                  if (e.agentCreateurId === agentId) return true;
-                  // Comparer agentCreateur.id (peut être string ou number)
-                  if (e.agentCreateur?.id) {
-                    const createurId = Number(e.agentCreateur.id);
-                    return !isNaN(createurId) && createurId === agentId;
-                  }
-                  return false;
-                });
-                console.log(`✅ ${filtered.length} enquêtes trouvées pour l'agent ${agentId} (sur ${enquetes.length} totales)`);
-                return filtered;
-              })
-            );
-          }
-          
-          // Pour les autres erreurs, retourner un tableau vide
+          console.warn('⚠️ Erreur lors du chargement des validations, continuation sans:', error);
           return of([]);
         })
-      );
+      )
+    }).pipe(
+      map(({ enquetes, validations }: { enquetes: Enquette[], validations: ValidationEnquete[] }) => {
+        console.log(`📥 ${enquetes.length} enquêtes totales chargées, ${validations.length} validations chargées`);
+        
+        // Créer un map des enquete_id -> agent_createur_id depuis les validations
+        const agentCreateurFromValidations = new Map<number, number>();
+        validations.forEach((v: ValidationEnquete) => {
+          const enqueteId = v.enqueteId || v.enquete?.id;
+          const agentCreateurId = v.agentCreateurId || (v.agentCreateur?.id ? Number(v.agentCreateur.id) : null);
+          if (enqueteId && agentCreateurId) {
+            agentCreateurFromValidations.set(Number(enqueteId), Number(agentCreateurId));
+            console.log(`📋 Validation ${v.id}: enqueteId=${enqueteId}, agentCreateurId=${agentCreateurId}`);
+          }
+        });
+        
+        const filtered = enquetes.filter((e: Enquette) => {
+          if (!e.id) return false;
+          
+          // Log détaillé pour chaque enquête
+          const agentCreateurId = e.agentCreateurId;
+          const agentCreateurIdFromObject = e.agentCreateur?.id ? Number(e.agentCreateur.id) : null;
+          const agentCreateurIdFromValidation = agentCreateurFromValidations.get(e.id);
+          
+          console.log(`🔍 Enquête ${e.id}:`, {
+            agentCreateurId: agentCreateurId,
+            agentCreateurIdFromObject: agentCreateurIdFromObject,
+            agentCreateurIdFromValidation: agentCreateurIdFromValidation,
+            rapportCode: e.rapportCode
+          });
+          
+          // Comparer agentCreateurId (number) depuis enquette
+          if (agentCreateurId === agentId) {
+            console.log(`✅ Enquête ${e.id} correspond (agentCreateurId: ${agentCreateurId})`);
+            return true;
+          }
+          
+          // Comparer agentCreateur.id (peut être string ou number) depuis enquette
+          if (agentCreateurIdFromObject !== null && !isNaN(agentCreateurIdFromObject) && agentCreateurIdFromObject === agentId) {
+            console.log(`✅ Enquête ${e.id} correspond (agentCreateur.id: ${agentCreateurIdFromObject})`);
+            return true;
+          }
+          
+          // Si agent_createur_id est NULL dans enquette, utiliser validation_enquetes
+          if ((!agentCreateurId && !agentCreateurIdFromObject) && agentCreateurIdFromValidation === agentId) {
+            console.log(`✅ Enquête ${e.id} correspond (agentCreateurId depuis validation: ${agentCreateurIdFromValidation})`);
+            // Mettre à jour l'enquête avec l'agentCreateurId trouvé dans les validations
+            e.agentCreateurId = agentCreateurIdFromValidation;
+            return true;
+          }
+          
+          // Log pour debug si l'enquête ne correspond pas
+          console.log(`❌ Enquête ${e.id} ne correspond pas:`, {
+            agentIdRecherche: agentId,
+            agentCreateurId: agentCreateurId,
+            agentCreateurIdFromObject: agentCreateurIdFromObject,
+            agentCreateurIdFromValidation: agentCreateurIdFromValidation,
+            rapportCode: e.rapportCode
+          });
+          
+          return false;
+        });
+        
+        console.log(`✅ ${filtered.length} enquêtes trouvées pour l'agent ${agentId} (sur ${enquetes.length} totales)`);
+        console.log(`📋 Détails des enquêtes trouvées:`, filtered.map((e: Enquette) => ({
+          id: e.id,
+          rapportCode: e.rapportCode,
+          agentCreateurId: e.agentCreateurId,
+          agentCreateurIdFromObject: e.agentCreateur?.id,
+          dossierId: e.dossierId
+        })));
+        
+        return filtered;
+      }),
+      catchError(error => {
+        console.error(`❌ Erreur lors du chargement des enquêtes pour l'agent ${agentId}:`, error);
+        return of([]);
+      })
+    );
   }
 
   /**

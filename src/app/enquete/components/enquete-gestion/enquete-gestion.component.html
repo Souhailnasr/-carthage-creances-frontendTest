@@ -140,6 +140,23 @@
           </button>
           <button 
             mat-icon-button 
+            color="accent"
+            *ngIf="canModify(enquete)"
+            (click)="modifierEnquete(enquete)" 
+            matTooltip="Modifier l'enquête">
+            <mat-icon>edit</mat-icon>
+          </button>
+          <button 
+            mat-icon-button 
+            color="warn"
+            *ngIf="canDelete(enquete)"
+            (click)="supprimerEnquete(enquete)" 
+            [disabled]="loading"
+            matTooltip="Supprimer l'enquête">
+            <mat-icon>delete</mat-icon>
+          </button>
+          <button 
+            mat-icon-button 
             (click)="voirDetails(enquete)" 
             matTooltip="Voir détails">
             <mat-icon>visibility</mat-icon>
