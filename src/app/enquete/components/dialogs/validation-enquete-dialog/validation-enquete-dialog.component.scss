@@ -1,0 +1,36 @@
+.dialog-info {
+  margin-bottom: 20px;
+  
+  .info-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #e0e0e0;
+    
+    &:last-child {
+      border-bottom: none;
+    }
+    
+    strong {
+      color: #666;
+    }
+    
+    span {
+      font-weight: 500;
+      color: #333;
+    }
+  }
+}
+
+.full-width {
+  width: 100%;
+}
+
+mat-dialog-content {
+  min-width: 400px;
+}
+
+mat-dialog-actions {
+  padding: 16px 24px;
+}
+

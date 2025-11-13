@@ -1,0 +1,253 @@
+<div class="affectation-dossiers-container">
+  <!-- Header -->
+  <div class="page-header">
+    <div class="header-content">
+      <h1>
+        <mat-icon>assignment</mat-icon>
+        Affectation des Dossiers
+      </h1>
+      <p class="subtitle">Gérer l'affectation des dossiers validés aux différents services de recouvrement</p>
+    </div>
+  </div>
+
+  <!-- Zone d'Affectation -->
+  <mat-card class="affectation-zone-card">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>assignment_ind</mat-icon>
+        Zone d'Affectation
+      </mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="affectation-form">
+        <div class="dossier-selection">
+          <mat-form-field appearance="outline" class="dossier-input">
+            <mat-label>Numéro de Dossier</mat-label>
+            <input matInput [(ngModel)]="dossierNumber" 
+                   placeholder="Entrez le numéro de dossier"
+                   (keyup.enter)="selectDossierByNumber()">
+            <mat-icon matSuffix>search</mat-icon>
+            <button mat-icon-button matSuffix (click)="selectDossierByNumber()" matTooltip="Rechercher le dossier">
+              <mat-icon>search</mat-icon>
+            </button>
+          </mat-form-field>
+          
+          <div class="selected-dossier-info" *ngIf="selectedDossier">
+            <div class="dossier-card">
+              <div class="dossier-header">
+                <mat-icon>folder</mat-icon>
+                <div class="dossier-details">
+                  <h3>{{ selectedDossier.numeroDossier }}</h3>
+                  <p>{{ selectedDossier.titre }}</p>
+                  <div class="dossier-meta">
+                    <span class="meta-item">
+                      <mat-icon>attach_money</mat-icon>
+                      {{ formatAmount(selectedDossier.montantCreance) }}
+                    </span>
+                    <span class="meta-item">
+                      <mat-icon>person</mat-icon>
+                      Créancier: {{ selectedDossier ? selectedDossier.creancier.nom : 'N/A' }}
+                    </span>
+                    <span class="meta-item">
+                      <mat-icon>person_outline</mat-icon>
+                      Débiteur: {{ selectedDossier ? selectedDossier.debiteur.nom : 'N/A' }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="affectation-buttons">
+          <button mat-raised-button color="primary" class="affect-btn amiable-btn" 
+                  (click)="affecterAmiable()" 
+                  [disabled]="!selectedDossier || loading"
+                  matTooltip="Affecter ce dossier au recouvrement amiable">
+            <mat-icon>handshake</mat-icon>
+            Affecter au Recouvrement Amiable
+          </button>
+          
+          <button mat-raised-button color="accent" class="affect-btn juridique-btn" 
+                  (click)="affecterJuridique()" 
+                  [disabled]="!selectedDossier || loading"
+                  matTooltip="Affecter ce dossier au recouvrement juridique">
+            <mat-icon>gavel</mat-icon>
+            Affecter au Recouvrement Juridique
+          </button>
+          
+          <button mat-raised-button color="warn" class="affect-btn cloture-btn" 
+                  (click)="cloturer()" 
+                  [disabled]="!selectedDossier || loading"
+                  matTooltip="Clôturer ce dossier">
+            <mat-icon>check_circle</mat-icon>
+            Clôturer
+          </button>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Liste des dossiers validés -->
+  <mat-card class="dossiers-list-card">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>folder_open</mat-icon>
+        Dossiers Validés Disponibles
+      </mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <!-- Barre de recherche et filtres -->
+      <div class="search-filters">
+        <mat-form-field appearance="outline" class="search-field">
+          <mat-label>Rechercher un dossier</mat-label>
+          <input matInput [(ngModel)]="searchTerm" (input)="onSearch()" 
+                 placeholder="Numéro, titre, créancier, débiteur...">
+          <mat-icon matSuffix>search</mat-icon>
+        </mat-form-field>
+
+        <div class="table-controls">
+          <div class="sort-controls">
+            <mat-form-field appearance="outline">
+              <mat-label>Trier par</mat-label>
+              <mat-select [(ngModel)]="sortKey" (selectionChange)="onSortChange()">
+                <mat-option value="dateCreation">Date création</mat-option>
+                <mat-option value="montantCreance">Montant</mat-option>
+                <mat-option value="statut">Statut</mat-option>
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Ordre</mat-label>
+              <mat-select [(ngModel)]="sortDir" (selectionChange)="onSortChange()">
+                <mat-option value="desc">Décroissant</mat-option>
+                <mat-option value="asc">Croissant</mat-option>
+              </mat-select>
+            </mat-form-field>
+          </div>
+          <div class="pagination-controls">
+            <mat-form-field appearance="outline">
+              <mat-label>Par page</mat-label>
+              <mat-select [(ngModel)]="pageSize" (selectionChange)="onPageSizeChange()">
+                <mat-option [value]="5">5</mat-option>
+                <mat-option [value]="10">10</mat-option>
+                <mat-option [value]="20">20</mat-option>
+                <mat-option [value]="50">50</mat-option>
+              </mat-select>
+            </mat-form-field>
+            <div class="pagination-info">
+              <button mat-icon-button (click)="prevPage()" [disabled]="pageIndex === 0">
+                <mat-icon>chevron_left</mat-icon>
+              </button>
+              <span>{{ pageIndex + 1 }} / {{ totalPages }}</span>
+              <button mat-icon-button (click)="nextPage()" [disabled]="pageIndex + 1 >= totalPages">
+                <mat-icon>chevron_right</mat-icon>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tableau des dossiers -->
+      <div *ngIf="loadingDossiers" class="loading-container">
+        <mat-spinner diameter="50"></mat-spinner>
+        <p>Chargement des dossiers validés...</p>
+      </div>
+
+      <div *ngIf="!loadingDossiers && pagedDossiers.length === 0" class="empty-message">
+        <mat-icon>info</mat-icon>
+        <p>Aucun dossier validé disponible pour l'affectation.</p>
+      </div>
+
+      <table mat-table [dataSource]="pagedDossiers" *ngIf="!loadingDossiers && pagedDossiers.length > 0" class="dossiers-table">
+        <!-- Numéro Column -->
+        <ng-container matColumnDef="numeroDossier">
+          <th mat-header-cell *matHeaderCellDef>Numéro</th>
+          <td mat-cell *matCellDef="let dossier">{{ dossier.numeroDossier || 'N/A' }}</td>
+        </ng-container>
+
+        <!-- Titre Column -->
+        <ng-container matColumnDef="titre">
+          <th mat-header-cell *matHeaderCellDef>Titre</th>
+          <td mat-cell *matCellDef="let dossier">{{ dossier.titre || 'N/A' }}</td>
+        </ng-container>
+
+        <!-- Montant Column -->
+        <ng-container matColumnDef="montantCreance">
+          <th mat-header-cell *matHeaderCellDef>Montant</th>
+          <td mat-cell *matCellDef="let dossier">{{ formatAmount(dossier.montantCreance) }}</td>
+        </ng-container>
+
+        <!-- Créancier Column -->
+        <ng-container matColumnDef="creancier">
+          <th mat-header-cell *matHeaderCellDef>Créancier</th>
+          <td mat-cell *matCellDef="let dossier">
+            <div class="party-info">
+              <div class="party-name">{{ dossier.creancier?.nom || 'N/A' }}</div>
+              <span class="party-type" [ngClass]="'type-' + (dossier.creancier?.type?.toLowerCase() || 'particulier')">
+                {{ dossier.creancier?.type || 'PARTICULIER' }}
+              </span>
+            </div>
+          </td>
+        </ng-container>
+
+        <!-- Débiteur Column -->
+        <ng-container matColumnDef="debiteur">
+          <th mat-header-cell *matHeaderCellDef>Débiteur</th>
+          <td mat-cell *matCellDef="let dossier">
+            <div class="party-info">
+              <div class="party-name">{{ dossier.debiteur?.nom || 'N/A' }}</div>
+              <span class="party-type" [ngClass]="'type-' + (dossier.debiteur?.type?.toLowerCase() || 'particulier')">
+                {{ dossier.debiteur?.type || 'PARTICULIER' }}
+              </span>
+            </div>
+          </td>
+        </ng-container>
+
+        <!-- Urgence Column -->
+        <ng-container matColumnDef="urgence">
+          <th mat-header-cell *matHeaderCellDef>Urgence</th>
+          <td mat-cell *matCellDef="let dossier">
+            <span class="urgence-badge" [ngClass]="getUrgenceClass(dossier.urgence)">
+              {{ dossier.urgence || 'FAIBLE' }}
+            </span>
+          </td>
+        </ng-container>
+
+        <!-- Statut Column -->
+        <ng-container matColumnDef="statut">
+          <th mat-header-cell *matHeaderCellDef>Statut</th>
+          <td mat-cell *matCellDef="let dossier">
+            <span class="statut-badge" [ngClass]="getStatutClass(dossier.statut || '')">
+              {{ dossier.statut || 'N/A' }}
+            </span>
+          </td>
+        </ng-container>
+
+        <!-- Date Création Column -->
+        <ng-container matColumnDef="dateCreation">
+          <th mat-header-cell *matHeaderCellDef>Date Création</th>
+          <td mat-cell *matCellDef="let dossier">{{ formatDate(dossier.dateCreation) }}</td>
+        </ng-container>
+
+        <!-- Actions Column -->
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef>Actions</th>
+          <td mat-cell *matCellDef="let dossier">
+            <button mat-icon-button color="primary" 
+                    (click)="selectDossierFromTable(dossier)" 
+                    [class.selected]="selectedDossier?.id === dossier.id"
+                    matTooltip="Sélectionner ce dossier pour l'affectation">
+              <mat-icon>{{ selectedDossier?.id === dossier.id ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns;" 
+            [class.selected-row]="selectedDossier?.id === row.id"></tr>
+      </table>
+    </mat-card-content>
+  </mat-card>
+</div>
+
+

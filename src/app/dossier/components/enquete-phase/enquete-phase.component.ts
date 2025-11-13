@@ -2,14 +2,19 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormControl, FormsModule } from '@angular/forms';
-import { Subject, takeUntil } from 'rxjs';
+import { Subject, takeUntil, finalize, switchMap } from 'rxjs';
 import { Dossier, Creancier, Debiteur, User } from '../../../shared/models';
 import { FormInputComponent } from '../../../shared/components/form-input/form-input.component';
 import { ToastService } from '../../../core/services/toast.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { DossierApiService } from '../../../core/services/dossier-api.service';
 import { JwtAuthService } from '../../../core/services/jwt-auth.service';
+import { EnqueteService } from '../../../core/services/enquete.service';
+import { ValidationEnqueteService } from '../../../core/services/validation-enquete.service';
 import { Role } from '../../../shared/models/enums.model';
+import { DossierApi } from '../../../shared/models/dossier-api.model';
+import { Page } from '../../../shared/models/pagination.model';
+import { Enquette, StatutValidation } from '../../../shared/models';
 
 @Component({
   selector: 'app-enquete-phase',
@@ -77,13 +82,17 @@ export class EnquetePhaseComponent implements OnInit, OnDestroy {
   get marquesControl(): FormControl { return this.enqueteForm.get('marques') as FormControl; }
   get groupeControl(): FormControl { return this.enqueteForm.get('groupe') as FormControl; }
 
+  loading = false;
+
   constructor(
     private fb: FormBuilder,
     private toastService: ToastService,
     private router: Router,
     private authService: AuthService,
     private dossierApiService: DossierApiService,
-    private jwtAuthService: JwtAuthService
+    private jwtAuthService: JwtAuthService,
+    private enqueteService: EnqueteService,
+    private validationEnqueteService: ValidationEnqueteService
   ) { }
 
   ngOnInit(): void {
@@ -185,14 +194,25 @@ export class EnquetePhaseComponent implements OnInit, OnDestroy {
   }
 
   private loadDossiersByAgent(agentId: number): void {
-    // Charger uniquement les dossiers créés par l'agent
-    this.dossierApiService.getDossiersCreesByAgent(agentId)
-      .pipe(takeUntil(this.destroy$))
+    // Charger uniquement les dossiers créés par l'agent avec pagination
+    this.loading = true;
+    this.dossierApiService.getDossiersCreesByAgent(agentId, 0, 1000) // Charger toutes les pages pour ce composant
+      .pipe(
+        takeUntil(this.destroy$),
+        finalize(() => this.loading = false)
+      )
       .subscribe({
-        next: (dossiersApi: any[]) => {
-          console.log('📋 Dossiers créés par l\'agent chargés:', dossiersApi.length);
+        next: (page: Page<DossierApi>) => {
+          // Gérer le cas où page.content est undefined ou null
+          const content = page?.content || [];
+          console.log('📋 Dossiers créés par l\'agent chargés:', content.length, 'sur', page?.totalElements || 0);
           // Convertir les données de l'API en objets Dossier
-          this.dossiers = dossiersApi.map((dossierApi: any) => {
+          // Filtrer uniquement les dossiers validés (valide = true et statut = VALIDE)
+          const dossiersValides = content.filter((dossierApi: any) => 
+            dossierApi.valide === true && dossierApi.statut === 'VALIDE'
+          );
+          console.log('📋 Dossiers validés pour créer une enquête:', dossiersValides.length);
+          this.dossiers = dossiersValides.map((dossierApi: any) => {
             return new Dossier({
               id: dossierApi.id?.toString() || '',
               titre: dossierApi.titre || '',
@@ -229,8 +249,68 @@ export class EnquetePhaseComponent implements OnInit, OnDestroy {
         },
         error: (error) => {
           console.error('❌ Erreur lors du chargement des dossiers de l\'agent:', error);
+          console.error('❌ Détails de l\'erreur:', {
+            status: error?.status,
+            statusText: error?.statusText,
+            message: error?.message,
+            error: error?.error,
+            url: error?.url
+          });
+          
+          // Essayer sans pagination en cas d'erreur
+          console.log('⚠️ Erreur avec pagination, essai sans pagination...');
+          this.dossierApiService.getDossiersCreesByAgentSimple(agentId)
+            .pipe(
+              takeUntil(this.destroy$),
+              finalize(() => this.loading = false)
+            )
+            .subscribe({
+              next: (dossiers: DossierApi[]) => {
+                console.log('✅ Réponse API sans pagination:', dossiers);
+                const dossiersValides = dossiers.filter((dossierApi: any) => 
+                  dossierApi.valide === true && dossierApi.statut === 'VALIDE'
+                );
+                this.dossiers = dossiersValides.map((dossierApi: any) => {
+                  return new Dossier({
+                    id: dossierApi.id?.toString() || '',
+                    titre: dossierApi.titre || '',
+                    numeroDossier: dossierApi.numeroDossier || '',
+                    montantCreance: dossierApi.montantCreance || 0,
+                    dateCreation: dossierApi.dateCreation ? new Date(dossierApi.dateCreation) : new Date(),
+                    statut: dossierApi.statut || 'EN_ATTENTE_VALIDATION',
+                    urgence: dossierApi.urgence || 'FAIBLE',
+                    agentResponsable: dossierApi.agentResponsable ? `${dossierApi.agentResponsable.prenom} ${dossierApi.agentResponsable.nom}` : '',
+                    agentCreateur: dossierApi.agentCreateur ? `${dossierApi.agentCreateur.prenom} ${dossierApi.agentCreateur.nom}` : '',
+                    valide: dossierApi.valide || false,
+                    dateValidation: dossierApi.dateValidation ? new Date(dossierApi.dateValidation) : undefined,
+                    creancier: new Creancier({
+                      id: dossierApi.creancier?.id || 0,
+                      codeCreancier: dossierApi.creancier?.codeCreancier || '',
+                      nom: dossierApi.creancier?.nom || dossierApi.nomCreancier || '',
+                      prenom: dossierApi.creancier?.prenom || '',
+                      type: dossierApi.creancier?.type || 'PARTICULIER',
+                      email: dossierApi.creancier?.email || '',
+                      telephone: dossierApi.creancier?.telephone || ''
+                    }),
+                    debiteur: new Debiteur({
+                      id: dossierApi.debiteur?.id || 0,
+                      nom: dossierApi.debiteur?.nom || dossierApi.nomDebiteur || '',
+                      prenom: dossierApi.debiteur?.prenom || '',
+                      type: dossierApi.debiteur?.type || 'PARTICULIER',
+                      email: dossierApi.debiteur?.email || '',
+                      telephone: dossierApi.debiteur?.telephone || ''
+                    })
+                  });
+                });
+                this.filterDossiers();
+                this.applySortingAndPaging();
+              },
+              error: (err) => {
+                console.error('❌ Erreur lors du chargement sans pagination:', err);
           this.toastService.error('Erreur lors du chargement des dossiers');
           this.loadFallbackData();
+              }
+            });
         }
       });
   }
@@ -241,9 +321,16 @@ export class EnquetePhaseComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
-          console.log('📋 Tous les dossiers chargés pour le chef:', response.content?.length || 0);
+          // Gérer le cas où response.content est undefined ou null
+          const content = response?.content || [];
+          console.log('📋 Tous les dossiers chargés pour le chef:', content.length);
           // Convertir les données de l'API en objets Dossier
-          this.dossiers = response.content?.map((dossierApi: any) => {
+          // Filtrer uniquement les dossiers validés (valide = true et statut = VALIDE)
+          const dossiersValides = content.filter((dossierApi: any) => 
+            dossierApi.valide === true && dossierApi.statut === 'VALIDE'
+          );
+          console.log('📋 Dossiers validés pour créer une enquête:', dossiersValides.length);
+          this.dossiers = dossiersValides.map((dossierApi: any) => {
             return new Dossier({
               id: dossierApi.id?.toString() || '',
               titre: dossierApi.titre || '',
@@ -444,17 +531,141 @@ export class EnquetePhaseComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const formValue = this.enqueteForm.value;
+    if (!this.selectedDossier) {
+      this.toastService.error('Erreur: Dossier non sélectionné.');
+      return;
+    }
+
+    // Récupérer l'ID utilisateur depuis le token JWT (méthode principale)
+    let agentCreateurId: number | null = this.jwtAuthService.getCurrentUserId();
     
-    if (this.currentUser?.roleUtilisateur === Role.AGENT_DOSSIER) {
-      // Pour les agents, l'enquête est envoyée pour validation
-      this.toastService.success('Enquête envoyée pour validation au chef de dossier.');
-    } else {
-      // Pour les chefs, l'enquête est validée directement
-      this.toastService.success('Enquête validée avec succès.');
+    // Fallback sur currentUser.id si getCurrentUserId() retourne null
+    if (!agentCreateurId && this.currentUser?.id) {
+      agentCreateurId = Number(this.currentUser.id);
+      console.warn('⚠️ Utilisation de currentUser.id comme fallback');
     }
     
+    if (!agentCreateurId || isNaN(agentCreateurId) || agentCreateurId <= 0) {
+      this.toastService.error('Erreur: ID utilisateur invalide. Veuillez vous reconnecter.');
+      return;
+    }
+
+    // Vérifier le rôle pour déterminer si c'est un chef
+    const isChef = this.currentUser?.roleUtilisateur === Role.CHEF_DEPARTEMENT_DOSSIER || 
+                   this.currentUser?.roleUtilisateur === Role.SUPER_ADMIN;
+
+    const formValue = this.enqueteForm.value;
+    
+    // Le backend n'accepte pas dossierId directement, on envoie un objet dossier minimal
+    // Le backend n'accepte pas agentCreateur (objet complet), seulement agentCreateurId
+    const enqueteData: Partial<Enquette> = {
+      ...formValue,
+      dossier: { id: Number(this.selectedDossier.id) } as any, // Objet Dossier minimal avec juste l'id
+      agentCreateurId: agentCreateurId, // ID numérique, pas l'objet complet
+      dateCreation: new Date().toISOString().split('T')[0], // Format YYYY-MM-DD
+      // Pour les chefs, marquer l'enquête comme validée directement
+      valide: isChef ? true : false,
+      // Statut (statut fonctionnel) - logique de validation
+      statut: isChef ? 'VALIDE' : 'EN_ATTENTE_VALIDATION' // EN_ATTENTE_VALIDATION pour les agents, VALIDE pour les chefs
+    };
+    
+    // Supprimer les champs non acceptés par le backend
+    delete (enqueteData as any).dossierId;
+    delete (enqueteData as any).agentCreateur; // Ne pas envoyer l'objet complet
+    delete (enqueteData as any).agentResponsable; // Ne pas envoyer l'objet complet
+    
+    // Log pour vérifier le format des données envoyées
+    console.log('📤 Données à envoyer au backend:', JSON.stringify(enqueteData, null, 2));
+    console.log('🔍 agentCreateurId (type):', typeof enqueteData.agentCreateurId, 'valeur:', enqueteData.agentCreateurId);
+
+    this.loading = true;
+    
+    // Créer l'enquête (même logique que pour les dossiers)
+    this.enqueteService.createEnquete(enqueteData as any)
+      .pipe(
+        takeUntil(this.destroy$),
+        finalize(() => {
+          this.loading = false;
+        })
+      )
+      .subscribe({
+        next: (enquete: Enquette) => {
+          console.log('✅ Enquête créée avec succès:', enquete);
+          
+          const message = isChef
+            ? `Enquête créée et validée avec succès ! ID: ${enquete.id}`
+            : `Enquête créée avec succès ! ID: ${enquete.id} (en attente de validation)`;
+          this.toastService.success(message);
+
+          // Pour les agents : créer une validation avec statut EN_ATTENTE
+          // Pour les chefs : pas besoin de validation car l'enquête est déjà validée
+    if (this.currentUser?.roleUtilisateur === Role.AGENT_DOSSIER) {
+            this.createValidationForEnquete(enquete);
+    } else {
+            // Pour les chefs : juste annuler le formulaire et recharger les dossiers
+            this.cancelForm();
+            setTimeout(() => {
+              this.loadDossiers();
+            }, 500);
+          }
+        },
+        error: (error: any) => {
+          console.error('❌ Erreur lors de la création de l\'enquête:', error);
+          const errorMessage = error.error?.message || error.message || 'Erreur lors de la création de l\'enquête. Veuillez réessayer.';
+          this.toastService.error(errorMessage);
+        }
+      });
+  }
+
+  /**
+   * Crée une validation pour l'enquête (même logique que createValidationForDossier)
+   * Appelé uniquement pour les agents après création d'une enquête
+   */
+  private createValidationForEnquete(enquete: Enquette): void {
+    // Récupérer l'ID utilisateur depuis le token JWT (méthode principale)
+    let agentCreateurId: number | null = this.jwtAuthService.getCurrentUserId();
+    
+    // Fallback sur currentUser.id si getCurrentUserId() retourne null
+    if (!agentCreateurId && this.currentUser?.id) {
+      agentCreateurId = Number(this.currentUser.id);
+      console.warn('⚠️ Utilisation de currentUser.id comme fallback');
+    }
+    
+    if (!agentCreateurId || isNaN(agentCreateurId) || agentCreateurId <= 0) {
+      console.error('❌ Utilisateur non connecté, impossible de créer la validation');
+      this.toastService.error('Erreur: ID utilisateur invalide. Veuillez vous reconnecter.');
+      this.cancelForm();
+      return;
+    }
+
+    const validationData = {
+      enquete: { id: Number(enquete.id) } as any, // Objet Enquete minimal avec juste l'id
+      agentCreateurId: agentCreateurId, // ID numérique, pas l'objet complet
+      statut: StatutValidation.EN_ATTENTE // Statut initial pour les agents
+    };
+
+    console.log('📤 Création de validation pour l\'enquête:', validationData);
+
+    this.validationEnqueteService.createValidationEnquete(validationData)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (validation) => {
+          console.log('✅ Validation créée avec succès:', validation);
+          this.toastService.success('Enquête créée avec succès et soumise à validation.');
+          this.cancelForm();
+          setTimeout(() => {
+            this.loadDossiers();
+          }, 500);
+        },
+        error: (error: any) => {
+          console.error('❌ Erreur lors de la création de la validation:', error);
+          this.toastService.error('Enquête créée mais erreur lors de la soumission à validation.');
     this.cancelForm();
+          setTimeout(() => {
+            this.loadDossiers();
+          }, 500);
+        }
+      });
   }
 
   affecterAmiable(dossier: Dossier): void {

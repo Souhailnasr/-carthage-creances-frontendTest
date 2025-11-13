@@ -22,6 +22,7 @@ export class ValidationDossierListComponent implements OnInit, OnDestroy {
   stats: ValidationStats | null = null;
   loading = false;
   error: string | null = null;
+  currentUser: any = null;
   
   // Filtres
   filterForm: FormGroup;
@@ -55,8 +56,10 @@ export class ValidationDossierListComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    this.loadValidations();
-    this.loadStats();
+    // Charger l'utilisateur courant et adapter le chargement
+    this.currentUser = this.authService.getCurrentUser();
+    this.loadValidationsForRole();
+    // Les stats seront calculées après le chargement des validations dans loadValidationsForRole()
     this.setupFilterListeners();
   }
 
@@ -98,17 +101,124 @@ export class ValidationDossierListComponent implements OnInit, OnDestroy {
       });
   }
 
+  loadValidationsForRole(): void {
+    this.loading = true;
+    this.error = null;
+
+    const user = this.authService.getCurrentUser();
+    const role = user?.roleUtilisateur;
+
+    if (role === Role.AGENT_DOSSIER && user && user.id) {
+      const agentId = Number(user.id);
+      this.validationService.getValidationsByAgent(agentId)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (validations) => {
+            this.validations = validations;
+            this.applyFilters();
+            // Recalculer les stats après chargement pour l'agent
+            if (role === Role.AGENT_DOSSIER) {
+              this.calculateStatsFromValidations();
+            }
+            this.loading = false;
+          },
+          error: (error) => {
+            console.error('Erreur lors du chargement des validations (agent):', error);
+            this.error = 'Erreur lors du chargement des validations';
+            this.loading = false;
+          }
+        });
+    } else {
+      // Pour le chef, charger toutes les validations
+      this.validationService.getAllValidationsDossier()
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (validations) => {
+            this.validations = validations;
+            this.applyFilters();
+            // Recalculer les stats depuis toutes les validations pour le chef
+            this.calculateStatsFromValidations();
+            this.loading = false;
+          },
+          error: (error) => {
+            console.error('Erreur lors du chargement des validations:', error);
+            this.error = 'Erreur lors du chargement des validations';
+            this.loading = false;
+          }
+        });
+    }
+  }
+
   loadStats(): void {
-    this.validationService.getValidationStats()
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (stats: any) => {
-          this.stats = stats;
-        },
-        error: (error: any) => {
-          console.error('Erreur lors du chargement des statistiques:', error);
-        }
-      });
+    const user = this.authService.getCurrentUser();
+    const role = user?.roleUtilisateur;
+
+    // Pour le chef, calculer les stats depuis toutes les validations chargées
+    // Cela garantit que les stats reflètent toutes les validations, pas seulement celles du chef connecté
+    if (role === Role.CHEF_DEPARTEMENT_DOSSIER || this.authService.canValidateDossiers()) {
+      // Si les validations sont déjà chargées, calculer les stats
+      if (this.validations && this.validations.length > 0) {
+        this.calculateStatsFromValidations();
+      } else {
+        // Sinon, essayer de charger depuis l'API et utiliser comme fallback
+        this.validationService.getValidationStats()
+          .pipe(takeUntil(this.destroy$))
+          .subscribe({
+            next: (stats: any) => {
+              this.stats = stats;
+            },
+            error: (error: any) => {
+              console.error('Erreur lors du chargement des statistiques:', error);
+              // Fallback: calculer depuis les validations chargées
+              this.calculateStatsFromValidations();
+            }
+          });
+      }
+    } else {
+      // Pour l'agent, calculer les stats depuis ses validations
+      this.calculateStatsFromValidations();
+    }
+  }
+
+  private calculateStatsFromValidations(): void {
+    if (!this.validations || this.validations.length === 0) {
+      this.stats = {
+        total: 0,
+        enAttente: 0,
+        valides: 0,
+        rejetes: 0,
+        parAgent: {},
+        parChef: {}
+      };
+      return;
+    }
+
+    // Calculer les stats par agent et par chef
+    const parAgent: { [agentId: number]: number } = {};
+    const parChef: { [chefId: number]: number } = {};
+
+    this.validations.forEach(v => {
+      // Par agent
+      if (v.agentCreateur?.id) {
+        const agentId = Number(v.agentCreateur.id);
+        parAgent[agentId] = (parAgent[agentId] || 0) + 1;
+      }
+
+      // Par chef (si présent)
+      if (v.chefValidateur?.id) {
+        const chefId = Number(v.chefValidateur.id);
+        parChef[chefId] = (parChef[chefId] || 0) + 1;
+      }
+    });
+
+    this.stats = {
+      total: this.validations.length,
+      enAttente: this.validations.filter(v => v.statut === 'EN_ATTENTE').length,
+      valides: this.validations.filter(v => v.statut === 'VALIDE').length,
+      rejetes: this.validations.filter(v => v.statut === 'REJETE').length,
+      parAgent,
+      parChef
+    };
   }
 
   applyFilters(): void {
@@ -177,8 +287,8 @@ export class ValidationDossierListComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (result) => {
           this.toastService.showSuccess('Dossier validé avec succès');
-          this.loadValidations();
-          this.loadStats();
+          this.loadValidationsForRole();
+          // Les stats seront recalculées automatiquement dans loadValidationsForRole()
         },
         error: (error) => {
           console.error('Erreur lors de la validation:', error);
@@ -206,8 +316,8 @@ export class ValidationDossierListComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (result) => {
           this.toastService.showSuccess('Dossier rejeté');
-          this.loadValidations();
-          this.loadStats();
+          this.loadValidationsForRole();
+          // Les stats seront recalculées automatiquement dans loadValidationsForRole()
         },
         error: (error) => {
           console.error('Erreur lors du rejet:', error);
@@ -224,8 +334,8 @@ export class ValidationDossierListComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (result) => {
           this.toastService.showSuccess('Dossier remis en attente');
-          this.loadValidations();
-          this.loadStats();
+          this.loadValidationsForRole();
+          // Les stats seront recalculées automatiquement dans loadValidationsForRole()
         },
         error: (error) => {
           console.error('Erreur lors de la remise en attente:', error);
@@ -283,6 +393,63 @@ export class ValidationDossierListComponent implements OnInit, OnDestroy {
         return 'statut-rejete';
       default:
         return 'statut-inconnu';
+    }
+  }
+
+  // Statuts du dossier (workflow + validation dossier)
+  getDossierValidationLabel(statut?: string): string {
+    switch (statut) {
+      case 'EN_ATTENTE_VALIDATION':
+        return 'En Attente de Validation';
+      case 'VALIDE':
+        return 'Validé';
+      case 'REJETE':
+        return 'Rejeté';
+      case 'EN_COURS':
+        return 'En Cours';
+      case 'CLOTURE':
+        return 'Clôturé';
+      default:
+        return 'Inconnu';
+    }
+  }
+
+  getDossierValidationClass(statut?: string): string {
+    switch (statut) {
+      case 'EN_ATTENTE_VALIDATION':
+        return 'statut-en-attente';
+      case 'VALIDE':
+        return 'statut-valide';
+      case 'REJETE':
+        return 'statut-rejete';
+      case 'EN_COURS':
+        return 'statut-en-cours';
+      case 'CLOTURE':
+        return 'statut-cloture';
+      default:
+        return 'statut-inconnu';
+    }
+  }
+
+  getDossierWorkflowLabel(status?: string): string {
+    switch (status) {
+      case 'ENCOURSDETRAITEMENT':
+        return 'En Cours de Traitement';
+      case 'CLOTURE':
+        return 'Clôturé';
+      default:
+        return status || 'Inconnu';
+    }
+  }
+
+  getDossierWorkflowClass(status?: string): string {
+    switch (status) {
+      case 'ENCOURSDETRAITEMENT':
+        return 'status-encours';
+      case 'CLOTURE':
+        return 'status-cloture';
+      default:
+        return 'status-default';
     }
   }
 

@@ -154,3 +154,11 @@ Assurez-vous que ces routes sont bien définies dans vos fichiers de routing :
 | `souhailnasr80@gmail.com` | `CHEF_DEPARTEMENT_DOSSIER` | `/dossier/chef-dashboard` |
 
 
+
+
+
+
+
+
+
+

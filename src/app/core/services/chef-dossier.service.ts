@@ -3,6 +3,7 @@ import { Observable, BehaviorSubject } from 'rxjs';
 import { tap, map } from 'rxjs/operators';
 import { DossierApiService } from './dossier-api.service';
 import { DossierApi, DossiersResponse } from '../../shared/models/dossier-api.model';
+import { Page } from '../../shared/models/pagination.model';
 import { AuthService } from './auth.service';
 
 @Injectable({
@@ -161,8 +162,10 @@ export class ChefDossierService {
   /**
    * Récupère les dossiers créés par un agent
    */
-  getDossiersCreesByAgent(agentId: number): Observable<DossierApi[]> {
-    return this.dossierApiService.getDossiersCreesByAgent(agentId);
+  getDossiersCreesByAgent(agentId: number, page: number = 0, size: number = 100): Observable<DossierApi[]> {
+    return this.dossierApiService.getDossiersCreesByAgent(agentId, page, size).pipe(
+      map((page: Page<DossierApi>) => page.content)
+    );
   }
 
   /**

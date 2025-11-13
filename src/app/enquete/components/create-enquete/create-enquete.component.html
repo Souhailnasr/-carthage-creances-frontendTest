@@ -1,0 +1,468 @@
+<div class="create-enquete-container">
+  <!-- Header -->
+  <div class="page-header">
+    <div class="header-content">
+      <h1>
+        <mat-icon>add_circle</mat-icon>
+        Créer une nouvelle enquête
+      </h1>
+      <p class="subtitle">Sélectionnez un dossier validé pour créer une enquête</p>
+    </div>
+    <button mat-button (click)="onCancel()" *ngIf="showForm">
+      <mat-icon>arrow_back</mat-icon>
+      Retour à la liste
+    </button>
+  </div>
+
+  <!-- Liste des dossiers validés -->
+  <div class="dossiers-section" *ngIf="!showForm">
+    <!-- Barre de recherche et filtres -->
+    <mat-card class="search-card">
+      <mat-card-content>
+        <div class="search-bar">
+          <mat-form-field appearance="outline" class="search-field">
+            <mat-label>Rechercher un dossier</mat-label>
+            <input matInput [(ngModel)]="searchTerm" (input)="onSearch()" 
+                   placeholder="Numéro, titre, créancier, débiteur...">
+            <mat-icon matSuffix>search</mat-icon>
+          </mat-form-field>
+        </div>
+
+        <div class="table-controls">
+          <div class="sort-controls">
+            <mat-form-field appearance="outline">
+              <mat-label>Trier par</mat-label>
+              <mat-select [(ngModel)]="sortKey" (selectionChange)="onSortChange()">
+                <mat-option value="dateCreation">Date création</mat-option>
+                <mat-option value="montantCreance">Montant</mat-option>
+                <mat-option value="statut">Statut</mat-option>
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Ordre</mat-label>
+              <mat-select [(ngModel)]="sortDir" (selectionChange)="onSortChange()">
+                <mat-option value="desc">Décroissant</mat-option>
+                <mat-option value="asc">Croissant</mat-option>
+              </mat-select>
+            </mat-form-field>
+          </div>
+          <div class="pagination-controls">
+            <mat-form-field appearance="outline">
+              <mat-label>Par page</mat-label>
+              <mat-select [(ngModel)]="pageSize" (selectionChange)="onPageSizeChange()">
+                <mat-option [value]="5">5</mat-option>
+                <mat-option [value]="10">10</mat-option>
+                <mat-option [value]="20">20</mat-option>
+                <mat-option [value]="50">50</mat-option>
+              </mat-select>
+            </mat-form-field>
+            <div class="pagination-info">
+              <button mat-icon-button (click)="prevPage()" [disabled]="pageIndex === 0">
+                <mat-icon>chevron_left</mat-icon>
+              </button>
+              <span>{{ pageIndex + 1 }} / {{ totalPages }}</span>
+              <button mat-icon-button (click)="nextPage()" [disabled]="pageIndex + 1 >= totalPages">
+                <mat-icon>chevron_right</mat-icon>
+              </button>
+            </div>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Tableau des dossiers -->
+    <mat-card class="table-card">
+      <mat-card-content>
+        <div *ngIf="loadingDossiers" class="loading-container">
+          <mat-spinner diameter="50"></mat-spinner>
+          <p>Chargement des dossiers validés...</p>
+        </div>
+
+        <div *ngIf="!loadingDossiers && pagedDossiers.length === 0" class="empty-message">
+          <mat-icon>info</mat-icon>
+          <p>Aucun dossier validé disponible pour créer une enquête.</p>
+        </div>
+
+        <table mat-table [dataSource]="pagedDossiers" *ngIf="!loadingDossiers && pagedDossiers.length > 0" class="dossiers-table">
+          <!-- Numéro Column -->
+          <ng-container matColumnDef="numeroDossier">
+            <th mat-header-cell *matHeaderCellDef>Numéro</th>
+            <td mat-cell *matCellDef="let dossier">{{ dossier.numeroDossier || 'N/A' }}</td>
+          </ng-container>
+
+          <!-- Titre Column -->
+          <ng-container matColumnDef="titre">
+            <th mat-header-cell *matHeaderCellDef>Titre</th>
+            <td mat-cell *matCellDef="let dossier">{{ dossier.titre || 'N/A' }}</td>
+          </ng-container>
+
+          <!-- Montant Column -->
+          <ng-container matColumnDef="montantCreance">
+            <th mat-header-cell *matHeaderCellDef>Montant</th>
+            <td mat-cell *matCellDef="let dossier">{{ formatAmount(dossier.montantCreance) }}</td>
+          </ng-container>
+
+          <!-- Créancier Column -->
+          <ng-container matColumnDef="creancier">
+            <th mat-header-cell *matHeaderCellDef>Créancier</th>
+            <td mat-cell *matCellDef="let dossier">
+              <div class="party-info">
+                <div class="party-name">{{ dossier.creancier?.nom || 'N/A' }}</div>
+                <span class="party-type" [ngClass]="'type-' + (dossier.creancier?.type?.toLowerCase() || 'particulier')">
+                  {{ dossier.creancier?.type || 'PARTICULIER' }}
+                </span>
+              </div>
+            </td>
+          </ng-container>
+
+          <!-- Débiteur Column -->
+          <ng-container matColumnDef="debiteur">
+            <th mat-header-cell *matHeaderCellDef>Débiteur</th>
+            <td mat-cell *matCellDef="let dossier">
+              <div class="party-info">
+                <div class="party-name">{{ dossier.debiteur?.nom || 'N/A' }}</div>
+                <span class="party-type" [ngClass]="'type-' + (dossier.debiteur?.type?.toLowerCase() || 'particulier')">
+                  {{ dossier.debiteur?.type || 'PARTICULIER' }}
+                </span>
+              </div>
+            </td>
+          </ng-container>
+
+          <!-- Urgence Column -->
+          <ng-container matColumnDef="urgence">
+            <th mat-header-cell *matHeaderCellDef>Urgence</th>
+            <td mat-cell *matCellDef="let dossier">
+              <span class="urgence-badge" [ngClass]="getUrgenceClass(dossier.urgence)">
+                {{ dossier.urgence || 'FAIBLE' }}
+              </span>
+            </td>
+          </ng-container>
+
+          <!-- Statut Column -->
+          <ng-container matColumnDef="statut">
+            <th mat-header-cell *matHeaderCellDef>Statut</th>
+            <td mat-cell *matCellDef="let dossier">
+              <span class="statut-badge" [ngClass]="getStatutClass(dossier.statut || '')">
+                {{ dossier.statut || 'N/A' }}
+              </span>
+            </td>
+          </ng-container>
+
+          <!-- Date Création Column -->
+          <ng-container matColumnDef="dateCreation">
+            <th mat-header-cell *matHeaderCellDef>Date Création</th>
+            <td mat-cell *matCellDef="let dossier">{{ formatDate(dossier.dateCreation) }}</td>
+          </ng-container>
+
+          <!-- Actions Column -->
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef>Actions</th>
+            <td mat-cell *matCellDef="let dossier">
+              <button mat-icon-button color="primary" (click)="selectDossier(dossier)" matTooltip="Créer une enquête pour ce dossier">
+                <mat-icon>add_circle</mat-icon>
+              </button>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+        </table>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Formulaire de création d'enquête -->
+  <div class="enquete-form-section" *ngIf="showForm && selectedDossier">
+    <mat-card class="form-card">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>description</mat-icon>
+          Créer une enquête pour : {{ selectedDossier.numeroDossier }} - {{ selectedDossier.titre }}
+        </mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <form [formGroup]="enqueteForm" (ngSubmit)="onSubmit()">
+          <!-- Informations générales -->
+          <mat-expansion-panel expanded>
+            <mat-expansion-panel-header>
+              <mat-panel-title>Informations générales</mat-panel-title>
+            </mat-expansion-panel-header>
+            <div class="form-row">
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Code rapport</mat-label>
+                <input matInput formControlName="rapportCode" placeholder="Ex: CC6008">
+              </mat-form-field>
+            </div>
+          </mat-expansion-panel>
+
+          <!-- Éléments financiers -->
+          <mat-expansion-panel>
+            <mat-expansion-panel-header>
+              <mat-panel-title>Éléments financiers</mat-panel-title>
+            </mat-expansion-panel-header>
+            <div class="form-row">
+              <mat-form-field appearance="outline">
+                <mat-label>Nom élément financier</mat-label>
+                <input matInput formControlName="nomElementFinancier">
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Pourcentage</mat-label>
+                <input matInput type="number" formControlName="pourcentage">
+              </mat-form-field>
+            </div>
+            <div class="form-row">
+              <mat-form-field appearance="outline">
+                <mat-label>Banque/Agence</mat-label>
+                <input matInput formControlName="banqueAgence">
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Banques</mat-label>
+                <input matInput formControlName="banques">
+              </mat-form-field>
+            </div>
+            <div class="form-row">
+              <mat-form-field appearance="outline">
+                <mat-label>Exercices</mat-label>
+                <input matInput formControlName="exercices">
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Chiffre d'affaires</mat-label>
+                <input matInput type="number" formControlName="chiffreAffaire">
+              </mat-form-field>
+            </div>
+            <div class="form-row">
+              <mat-form-field appearance="outline">
+                <mat-label>Résultat net</mat-label>
+                <input matInput type="number" formControlName="resultatNet">
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Disponibilité bilan</mat-label>
+                <input matInput formControlName="disponibiliteBilan">
+              </mat-form-field>
+            </div>
+          </mat-expansion-panel>
+
+          <!-- Solvabilité -->
+          <mat-expansion-panel>
+            <mat-expansion-panel-header>
+              <mat-panel-title>Solvabilité</mat-panel-title>
+            </mat-expansion-panel-header>
+            <div class="form-row">
+              <mat-form-field appearance="outline">
+                <mat-label>Appréciation bancaire</mat-label>
+                <input matInput formControlName="appreciationBancaire">
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Paiements couverture</mat-label>
+                <input matInput formControlName="paiementsCouverture">
+              </mat-form-field>
+            </div>
+            <div class="form-row">
+              <mat-form-field appearance="outline">
+                <mat-label>Réputation commerciale</mat-label>
+                <input matInput formControlName="reputationCommerciale">
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Incidents</mat-label>
+                <input matInput formControlName="incidents">
+              </mat-form-field>
+            </div>
+          </mat-expansion-panel>
+
+          <!-- Patrimoine Débiteur -->
+          <mat-expansion-panel>
+            <mat-expansion-panel-header>
+              <mat-panel-title>Patrimoine Débiteur</mat-panel-title>
+            </mat-expansion-panel-header>
+            <div class="form-row">
+              <mat-form-field appearance="outline">
+                <mat-label>Bien immobilier</mat-label>
+                <input matInput formControlName="bienImmobilier">
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Situation juridique immobilier</mat-label>
+                <input matInput formControlName="situationJuridiqueImmobilier">
+              </mat-form-field>
+            </div>
+            <div class="form-row">
+              <mat-form-field appearance="outline">
+                <mat-label>Bien mobilier</mat-label>
+                <input matInput formControlName="bienMobilier">
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Situation juridique mobilier</mat-label>
+                <input matInput formControlName="situationJuridiqueMobilier">
+              </mat-form-field>
+            </div>
+          </mat-expansion-panel>
+
+          <!-- Autres Affaires & Observations -->
+          <mat-expansion-panel>
+            <mat-expansion-panel-header>
+              <mat-panel-title>Autres Affaires & Observations</mat-panel-title>
+            </mat-expansion-panel-header>
+            <div class="form-row">
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Autres affaires</mat-label>
+                <textarea matInput formControlName="autresAffaires" rows="3"></textarea>
+              </mat-form-field>
+            </div>
+            <div class="form-row">
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Observations</mat-label>
+                <textarea matInput formControlName="observations" rows="3"></textarea>
+              </mat-form-field>
+            </div>
+          </mat-expansion-panel>
+
+          <!-- Décision Comité Recouvrement -->
+          <mat-expansion-panel>
+            <mat-expansion-panel-header>
+              <mat-panel-title>Décision Comité Recouvrement</mat-panel-title>
+            </mat-expansion-panel-header>
+            <div class="form-row">
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Décision comité</mat-label>
+                <textarea matInput formControlName="decisionComite" rows="3"></textarea>
+              </mat-form-field>
+            </div>
+            <div class="form-row">
+              <mat-form-field appearance="outline">
+                <mat-label>Visa Directeur Juridique</mat-label>
+                <input matInput formControlName="visaDirecteurJuridique">
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Visa Enquêteur</mat-label>
+                <input matInput formControlName="visaEnqueteur">
+              </mat-form-field>
+            </div>
+            <div class="form-row">
+              <mat-form-field appearance="outline">
+                <mat-label>Visa Directeur Commercial</mat-label>
+                <input matInput formControlName="visaDirecteurCommercial">
+              </mat-form-field>
+            </div>
+          </mat-expansion-panel>
+
+          <!-- Informations Légales & Générales -->
+          <mat-expansion-panel>
+            <mat-expansion-panel-header>
+              <mat-panel-title>Informations Légales & Générales</mat-panel-title>
+            </mat-expansion-panel-header>
+            <div class="form-row">
+              <mat-form-field appearance="outline">
+                <mat-label>Registre Commerce</mat-label>
+                <input matInput formControlName="registreCommerce">
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Code Douane</mat-label>
+                <input matInput formControlName="codeDouane">
+              </mat-form-field>
+            </div>
+            <div class="form-row">
+              <mat-form-field appearance="outline">
+                <mat-label>Matricule Fiscale</mat-label>
+                <input matInput formControlName="matriculeFiscale">
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Forme Juridique</mat-label>
+                <input matInput formControlName="formeJuridique">
+              </mat-form-field>
+            </div>
+            <div class="form-row">
+              <mat-form-field appearance="outline">
+                <mat-label>Capital</mat-label>
+                <input matInput type="number" formControlName="capital">
+              </mat-form-field>
+            </div>
+          </mat-expansion-panel>
+
+          <!-- Dirigeants -->
+          <mat-expansion-panel>
+            <mat-expansion-panel-header>
+              <mat-panel-title>Dirigeants</mat-panel-title>
+            </mat-expansion-panel-header>
+            <div class="form-row">
+              <mat-form-field appearance="outline">
+                <mat-label>PDG</mat-label>
+                <input matInput formControlName="pdg">
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Directeur Adjoint</mat-label>
+                <input matInput formControlName="directeurAdjoint">
+              </mat-form-field>
+            </div>
+            <div class="form-row">
+              <mat-form-field appearance="outline">
+                <mat-label>Directeur Financier</mat-label>
+                <input matInput formControlName="directeurFinancier">
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Directeur Commercial</mat-label>
+                <input matInput formControlName="directeurCommercial">
+              </mat-form-field>
+            </div>
+          </mat-expansion-panel>
+
+          <!-- Activité & Effectif -->
+          <mat-expansion-panel>
+            <mat-expansion-panel-header>
+              <mat-panel-title>Activité & Effectif</mat-panel-title>
+            </mat-expansion-panel-header>
+            <div class="form-row">
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Description Activité</mat-label>
+                <textarea matInput formControlName="descriptionActivite" rows="3"></textarea>
+              </mat-form-field>
+            </div>
+            <div class="form-row">
+              <mat-form-field appearance="outline">
+                <mat-label>Secteur Activité</mat-label>
+                <input matInput formControlName="secteurActivite">
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Effectif</mat-label>
+                <input matInput type="number" formControlName="effectif">
+              </mat-form-field>
+            </div>
+          </mat-expansion-panel>
+
+          <!-- Informations Diverses -->
+          <mat-expansion-panel>
+            <mat-expansion-panel-header>
+              <mat-panel-title>Informations Diverses</mat-panel-title>
+            </mat-expansion-panel-header>
+            <div class="form-row">
+              <mat-form-field appearance="outline">
+                <mat-label>Email</mat-label>
+                <input matInput type="email" formControlName="email">
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Marques</mat-label>
+                <input matInput formControlName="marques">
+              </mat-form-field>
+            </div>
+            <div class="form-row">
+              <mat-form-field appearance="outline">
+                <mat-label>Groupe</mat-label>
+                <input matInput formControlName="groupe">
+              </mat-form-field>
+            </div>
+          </mat-expansion-panel>
+
+          <!-- Actions -->
+          <div class="form-actions">
+            <button mat-button type="button" (click)="onCancel()" [disabled]="loading">
+              Annuler
+            </button>
+            <button mat-raised-button color="primary" type="submit" [disabled]="enqueteForm.invalid || loading">
+              <mat-icon *ngIf="!loading">check_circle</mat-icon>
+              <mat-spinner *ngIf="loading" diameter="20" style="display: inline-block; margin-right: 8px;"></mat-spinner>
+              {{ (currentUser?.roleUtilisateur === Role.CHEF_DEPARTEMENT_DOSSIER || currentUser?.roleUtilisateur === Role.SUPER_ADMIN) ? 'Créer et valider' : 'Créer et demander validation' }}
+            </button>
+          </div>
+        </form>
+      </mat-card-content>
+    </mat-card>
+  </div>
+</div>

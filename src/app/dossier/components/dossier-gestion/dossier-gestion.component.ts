@@ -76,6 +76,7 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
   pageSize = 10;
   pageIndex = 0;
   totalPages = 1;
+  totalElements = 0; // Total d'éléments depuis le backend
 
   // Getters pour les contrôles de formulaire
   get titreControl(): FormControl { return this.dossierForm.get('titre') as FormControl; }
@@ -235,18 +236,74 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
   }
 
   loadDossiers(): void {
+  // Essayer d'abord avec AuthService si disponible
+  const currentUserFromAuth = this.authService.getCurrentUser();
+  if (currentUserFromAuth && currentUserFromAuth.id) {
+    console.log('✅ Utilisateur trouvé via AuthService:', currentUserFromAuth);
+    this.currentUser = currentUserFromAuth;
+    const userId = Number(currentUserFromAuth.id);
+    if (!isNaN(userId) && userId > 0) {
+      console.log('✅ ID utilisateur valide depuis AuthService:', userId);
+      if (currentUserFromAuth.roleUtilisateur === Role.AGENT_DOSSIER) {
+        this.loadDossiersByAgent(userId);
+      } else if (currentUserFromAuth.roleUtilisateur === Role.CHEF_DEPARTEMENT_DOSSIER) {
+        this.loadAllDossiers();
+      }
+      return;
+    }
+  }
+
+  // Sinon, utiliser JwtAuthService
   this.jwtAuthService.getCurrentUser()
     .pipe(takeUntil(this.destroy$))
     .subscribe({
       next: (user: User) => {
         this.currentUser = user;
         console.log('🔄 Chargement des dossiers pour l\'utilisateur:', this.currentUser.roleUtilisateur);
+        console.log('🔄 Utilisateur complet:', this.currentUser);
+        console.log('🔄 ID utilisateur brut:', this.currentUser.id);
+        console.log('🔄 Type de ID:', typeof this.currentUser.id);
 
-        const userId = Number(this.currentUser.id);
-        console.log('ℹ️ ID utilisateur:', userId);
-        if (!userId) {
-          console.error('❌ ID utilisateur non disponible');
-          this.toastService.showError('Erreur: Impossible de récupérer l\'ID utilisateur');
+        // Essayer plusieurs façons d'obtenir l'ID
+        let userId: number | null = null;
+        
+        // Méthode 1: Directement depuis user.id
+        if (this.currentUser.id) {
+          userId = Number(this.currentUser.id);
+          if (!isNaN(userId) && userId > 0) {
+            console.log('✅ ID trouvé via user.id:', userId);
+          }
+        }
+        
+        // Méthode 2: Si pas d'ID, essayer depuis le token
+        if (!userId || isNaN(userId) || userId <= 0) {
+          const token = sessionStorage.getItem('auth-user');
+          if (token) {
+            try {
+              const decoded = this.jwtAuthService.getDecodedAccessToken(token);
+              if (decoded?.userId) {
+                userId = Number(decoded.userId);
+                console.log('✅ ID trouvé via token decoded.userId:', userId);
+              } else if (decoded?.sub) {
+                // Si sub contient l'email, on doit faire un appel API
+                console.log('⚠️ Token contient sub (email), pas userId direct');
+              }
+            } catch (e) {
+              console.error('❌ Erreur lors du décodage du token:', e);
+            }
+          }
+        }
+
+        console.log('ℹ️ ID utilisateur final:', userId);
+        console.log('ℹ️ ID est valide?', !isNaN(userId || 0) && (userId || 0) > 0);
+        
+        if (!userId || isNaN(userId) || userId <= 0) {
+          console.error('❌ ID utilisateur non disponible ou invalide:', {
+            user: this.currentUser,
+            userId: userId,
+            token: sessionStorage.getItem('auth-user') ? 'présent' : 'absent'
+          });
+          this.toastService.showError('Erreur: Impossible de récupérer l\'ID utilisateur valide. Veuillez vous reconnecter.');
           return;
         }
 
@@ -271,31 +328,127 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
 }
 
 private loadDossiersByAgent(userId: number): void {
-  // Utiliser getDossiersCreesByAgent pour récupérer uniquement les dossiers créés par l'agent
+  // Utiliser getDossiersCreesByAgent avec pagination pour récupérer uniquement les dossiers créés par l'agent
   // Cela inclut même les dossiers non validés
-  this.dossierApiService.getDossiersCreesByAgent(userId)
+  console.log('🔍 loadDossiersByAgent appelé avec userId:', userId);
+  console.log('🔍 Type de userId:', typeof userId);
+  console.log('🔍 pageIndex:', this.pageIndex, 'pageSize:', this.pageSize);
+  
+  if (!userId || isNaN(userId)) {
+    console.error('❌ ID utilisateur invalide:', userId);
+    this.toastService.showError('Erreur: ID utilisateur invalide');
+    this.dossiers = [];
+    this.pagedDossiers = [];
+    return;
+  }
+
+  const sortParam = this.getSortParameter();
+  const apiUrl = `http://localhost:8089/carthage-creance/api/dossiers/agent/${userId}/crees`;
+  console.log('🔍 URL API appelée:', apiUrl);
+  console.log('🔍 Paramètres:', { page: this.pageIndex, size: this.pageSize, sort: sortParam });
+  
+  // Essayer d'abord avec pagination
+  this.dossierApiService.getDossiersCreesByAgent(userId, this.pageIndex, this.pageSize, sortParam)
     .pipe(takeUntil(this.destroy$))
     .subscribe({
-      next: (dossiersApi: DossierApi[]) => {
-        console.log('📋 Dossiers créés par l\'agent chargés:', dossiersApi.length);
-        this.dossiers = this.convertApiDossiersToLocal(dossiersApi);
-        this.filterDossiers();
+      next: (page: Page<DossierApi>) => {
+        console.log('✅ Réponse API reçue (avec pagination):', page);
+        // Gérer le cas où page.content est undefined ou null
+        const content = page?.content || [];
+        console.log('📋 Dossiers créés par l\'agent chargés:', content.length, 'sur', page?.totalElements || 0);
+        console.log('📋 Contenu brut:', content);
+        
+        if (content.length > 0) {
+          console.log('📋 Premier dossier:', content[0]);
+          console.log('📋 Agent créateur du premier dossier:', content[0]?.agentCreateur);
+        }
+        
+        // Si aucun dossier trouvé avec pagination, essayer sans pagination
+        if (content.length === 0 && page?.totalElements === 0) {
+          console.log('⚠️ Aucun dossier avec pagination, essai sans pagination...');
+          this.dossierApiService.getDossiersCreesByAgentSimple(userId)
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+              next: (dossiers: DossierApi[]) => {
+                console.log('✅ Réponse API sans pagination:', dossiers);
+                console.log('📋 Nombre de dossiers:', dossiers.length);
+                if (dossiers.length > 0) {
+                  console.log('📋 Premier dossier:', dossiers[0]);
+                  console.log('📋 Agent créateur:', dossiers[0]?.agentCreateur);
+                }
+                this.dossiers = this.convertApiDossiersToLocal(dossiers);
+                this.totalElements = dossiers.length;
+                this.totalPages = Math.ceil(dossiers.length / this.pageSize);
+                this.pagedDossiers = this.dossiers;
+              },
+              error: (err) => {
+                console.error('❌ Erreur lors du chargement sans pagination:', err);
+                this.dossiers = [];
+                this.pagedDossiers = [];
+              }
+            });
+        } else {
+          this.dossiers = this.convertApiDossiersToLocal(content);
+          console.log('📋 Dossiers convertis:', this.dossiers.length);
+          this.totalElements = page?.totalElements || 0;
+          this.totalPages = page?.totalPages || 0;
+        // Pas besoin de filterDossiers car on utilise la pagination backend
+        this.pagedDossiers = this.dossiers;
+        }
+        
+        if (this.dossiers.length === 0) {
+          console.warn('⚠️ Aucun dossier trouvé pour l\'agent ID:', userId);
+          console.warn('⚠️ Vérifiez dans la base de données que les dossiers ont bien agent_createur_id =', userId);
+        }
       },
       error: (error) => {
         console.error('❌ Erreur lors du chargement des dossiers créés par l\'agent:', error);
-        this.toastService.showError('Erreur lors du chargement des dossiers');
+        console.error('❌ Détails de l\'erreur:', {
+          status: error?.status,
+          statusText: error?.statusText,
+          message: error?.message,
+          error: error?.error,
+          url: error?.url
+        });
+        
+        // Essayer sans pagination en cas d'erreur
+        console.log('⚠️ Erreur avec pagination, essai sans pagination...');
+        this.dossierApiService.getDossiersCreesByAgentSimple(userId)
+          .pipe(takeUntil(this.destroy$))
+          .subscribe({
+            next: (dossiers: DossierApi[]) => {
+              console.log('✅ Réponse API sans pagination:', dossiers);
+              this.dossiers = this.convertApiDossiersToLocal(dossiers);
+              this.totalElements = dossiers.length;
+              this.totalPages = Math.ceil(dossiers.length / this.pageSize);
+              this.pagedDossiers = this.dossiers;
+            },
+            error: (err) => {
+              console.error('❌ Erreur lors du chargement sans pagination:', err);
+              this.toastService.showError(`Erreur lors du chargement des dossiers: ${error?.status || 'Erreur inconnue'}`);
+              this.dossiers = [];
+              this.pagedDossiers = [];
+            }
+          });
       }
     });
 }
 
 private loadAllDossiers(): void {
-  this.dossierApiService.getAllDossiers()
+  // Utiliser getAllDossiers avec pagination pour charger tous les dossiers
+  const sortParam = this.getSortParameter();
+  this.dossierApiService.getAllDossiers(this.pageIndex, this.pageSize, sortParam)
     .pipe(takeUntil(this.destroy$))
     .subscribe({
-      next: (response: any) => {
-        console.log('📋 Tous les dossiers chargés pour le chef:', response.content?.length || 0);
-        this.dossiers = this.convertApiDossiersToLocal(response.content || []);
-        this.filterDossiers();
+      next: (page: Page<DossierApi>) => {
+        // Gérer le cas où page.content est undefined ou null
+        const content = page?.content || [];
+        console.log('📋 Tous les dossiers chargés pour le chef:', content.length, 'sur', page?.totalElements || 0);
+        this.dossiers = this.convertApiDossiersToLocal(content);
+        this.totalElements = page?.totalElements || 0;
+        this.totalPages = page?.totalPages || 0;
+        // Pas besoin de filterDossiers car on utilise la pagination backend
+        this.pagedDossiers = this.dossiers;
       },
       error: (error: any) => {
         console.error('❌ Erreur lors du chargement des dossiers:', error);
@@ -304,16 +457,28 @@ private loadAllDossiers(): void {
     });
 }
 
+private getSortParameter(): string {
+  // Convertir le sortKey et sortDir en paramètre de tri pour le backend
+  // Format attendu: "dateCreation,desc" ou "montantCreance,asc"
+  const sortField = this.sortKey === 'dateCreation' ? 'dateCreation' : 
+                   this.sortKey === 'montantCreance' ? 'montantCreance' : 
+                   'statut';
+  return `${sortField},${this.sortDir}`;
+}
+
 
   private loadAllDossiersFallback(): void {
     console.log('🔄 Tentative de chargement de tous les dossiers...');
-    this.dossierApiService.getAllDossiers()
+    const sortParam = this.getSortParameter();
+    this.dossierApiService.getAllDossiers(this.pageIndex, this.pageSize, sortParam)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (dossiersPage: Page<DossierApi>) => {
-          console.log('📋 Tous les dossiers chargés (fallback):', dossiersPage.content.length);
+          console.log('📋 Tous les dossiers chargés (fallback):', dossiersPage.content.length, 'sur', dossiersPage.totalElements);
           this.dossiers = this.convertApiDossiersToLocal(dossiersPage.content);
-          this.filterDossiers();
+          this.totalElements = dossiersPage.totalElements;
+          this.totalPages = dossiersPage.totalPages;
+          this.pagedDossiers = this.dossiers;
         },
         error: (error: any) => {
           console.error('❌ Erreur lors du chargement des dossiers (fallback):', error);
@@ -348,13 +513,16 @@ private loadAllDossiers(): void {
     setTimeout(() => {
       if (this.currentUser?.roleUtilisateur === Role.CHEF_DEPARTEMENT_DOSSIER) {
         // Pour les chefs, essayer de charger tous les dossiers
-        this.dossierApiService.getAllDossiers()
+        const sortParam = this.getSortParameter();
+        this.dossierApiService.getAllDossiers(this.pageIndex, this.pageSize, sortParam)
           .pipe(takeUntil(this.destroy$))
           .subscribe({
-            next: (response: any) => {
-              console.log('✅ Dossiers chargés avec retry:', response.content?.length || 0);
-              this.dossiers = this.convertApiDossiersToLocal(response.content || []);
-              this.filterDossiers();
+            next: (page: Page<DossierApi>) => {
+              console.log('✅ Dossiers chargés avec retry:', page.content.length, 'sur', page.totalElements);
+              this.dossiers = this.convertApiDossiersToLocal(page.content);
+              this.totalElements = page.totalElements;
+              this.totalPages = page.totalPages;
+              this.pagedDossiers = this.dossiers;
             },
             error: (error: any) => {
               console.error('❌ Erreur persistante lors du chargement:', error);
@@ -366,13 +534,16 @@ private loadAllDossiers(): void {
         // Pour les agents, essayer de charger leurs dossiers créés
         const userId = this.currentUser?.id;
         if (userId) {
-          this.dossierApiService.getDossiersCreesByAgent(Number(userId))
+          const sortParam = this.getSortParameter();
+          this.dossierApiService.getDossiersCreesByAgent(Number(userId), this.pageIndex, this.pageSize, sortParam)
             .pipe(takeUntil(this.destroy$))
             .subscribe({
-              next: (dossiers) => {
-                console.log('✅ Dossiers créés par l\'agent chargés avec retry:', dossiers.length);
-                this.dossiers = this.convertApiDossiersToLocal(dossiers);
-                this.filterDossiers();
+              next: (page: Page<DossierApi>) => {
+                console.log('✅ Dossiers créés par l\'agent chargés avec retry:', page.content.length, 'sur', page.totalElements);
+                this.dossiers = this.convertApiDossiersToLocal(page.content);
+                this.totalElements = page.totalElements;
+                this.totalPages = page.totalPages;
+                this.pagedDossiers = this.dossiers;
               },
               error: (error: any) => {
                 console.error('❌ Erreur persistante lors du chargement des dossiers créés par l\'agent:', error);
@@ -390,23 +561,9 @@ private loadAllDossiers(): void {
 
 
   filterDossiers(): void {
-    if (this.currentUser?.roleUtilisateur === 'AGENT_DOSSIER') {
-      // Pour les agents, on charge déjà uniquement les dossiers créés par l'agent
-      // via getDossiersCreesByAgent, donc on affiche tous les dossiers chargés
-      // (même ceux non validés)
-      this.filteredDossiers = [...this.dossiers];
-    } else {
-      // Pour les chefs, montrer tous les dossiers
-      this.filteredDossiers = [...this.dossiers];
-    }
-    
-    // Appliquer le filtre de statut si sélectionné
-    if (this.selectedStatus !== 'all') {
-      this.filteredDossiers = this.filteredDossiers.filter(dossier => 
-        dossier.statut === this.selectedStatus
-      );
-    }
-    
+    // Avec la pagination backend, on applique les filtres côté backend
+    // Réinitialiser à la première page quand on change de filtre
+    this.pageIndex = 0;
     this.applySortingAndPaging();
   }
 
@@ -574,30 +731,15 @@ private loadAllDossiers(): void {
   }
 
   applySortingAndPaging(): void {
-    console.log('🔄 applySortingAndPaging - filteredDossiers:', this.filteredDossiers.length);
-
-    const sorted = [...this.filteredDossiers].sort((a, b) => {
-      const dir = this.sortDir === 'asc' ? 1 : -1;
-      if (this.sortKey === 'dateCreation') {
-        return (new Date(a.dateCreation).getTime() - new Date(b.dateCreation).getTime()) * dir;
-      }
-      if (this.sortKey === 'montantCreance') {
-        return (a.montantCreance - b.montantCreance) * dir;
-      }
-      if (this.sortKey === 'statut') {
-        return (a.statut > b.statut ? 1 : a.statut < b.statut ? -1 : 0) * dir;
-      }
-      return 0;
-    });
-
-    this.totalPages = Math.max(1, Math.ceil(sorted.length / this.pageSize));
-    if (this.pageIndex >= this.totalPages) this.pageIndex = this.totalPages - 1;
-    const start = this.pageIndex * this.pageSize;
-    const end = start + this.pageSize;
-    this.pagedDossiers = sorted.slice(start, end);
-
-    console.log('📄 Pagination - totalPages:', this.totalPages, 'pageIndex:', this.pageIndex, 'pagedDossiers:', this.pagedDossiers.length);
-    console.log('📄 pagedDossiers:', this.pagedDossiers);
+    // Recharger les dossiers avec la nouvelle pagination/tri depuis le backend
+    console.log('🔄 applySortingAndPaging - pageIndex:', this.pageIndex, 'pageSize:', this.pageSize, 'sort:', this.sortKey, this.sortDir);
+    
+    if (this.currentUser?.roleUtilisateur === Role.AGENT_DOSSIER) {
+      const userId = Number(this.currentUser.id);
+      this.loadDossiersByAgent(userId);
+    } else if (this.currentUser?.roleUtilisateur === Role.CHEF_DEPARTEMENT_DOSSIER) {
+      this.loadAllDossiers();
+    }
   }
 
   nextPage(): void {
@@ -612,6 +754,19 @@ private loadAllDossiers(): void {
       this.pageIndex--;
       this.applySortingAndPaging();
     }
+  }
+
+  goToPage(page: number): void {
+    if (page >= 0 && page < this.totalPages) {
+      this.pageIndex = page;
+      this.applySortingAndPaging();
+    }
+  }
+
+  onPageSizeChange(): void {
+    // Réinitialiser à la première page quand on change la taille de page
+    this.pageIndex = 0;
+    this.applySortingAndPaging();
   }
 
   showCreateDossierForm(): void {

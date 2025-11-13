@@ -1,0 +1,459 @@
+<div class="enquete-details-container">
+  <div class="dialog-header">
+    <h2 mat-dialog-title>
+      <mat-icon>description</mat-icon>
+      Détails de l'enquête
+      <span *ngIf="enquete?.dossier" class="dossier-info">
+        {{ enquete?.dossier?.numeroDossier }} - {{ enquete?.dossier?.titre }}
+      </span>
+      <span *ngIf="!enquete?.dossier && enquete?.rapportCode" class="rapport-code">
+        {{ enquete?.rapportCode }}
+      </span>
+    </h2>
+    <button mat-icon-button (click)="onClose()" *ngIf="isDialog">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <!-- Message d'erreur si ID manquant -->
+  <div *ngIf="!enqueteId && !loading" class="error-message">
+    <mat-icon>error</mat-icon>
+    <p>ID d'enquête manquant</p>
+  </div>
+
+  <!-- Message d'erreur si chargement échoué -->
+  <div *ngIf="!loading && !enquete && enqueteId" class="error-message">
+    <mat-icon>error</mat-icon>
+    <p>Impossible de charger les détails de l'enquête</p>
+  </div>
+
+  <!-- Contenu principal -->
+  <mat-dialog-content *ngIf="!loading && enquete" class="details-content">
+    <mat-accordion multi="true">
+      <!-- Informations générales -->
+      <mat-expansion-panel expanded="true">
+        <mat-expansion-panel-header>
+          <mat-panel-title>
+            <mat-icon>info</mat-icon>
+            Informations générales
+          </mat-panel-title>
+        </mat-expansion-panel-header>
+        <div class="info-grid">
+          <div class="info-item" *ngIf="enquete.dossier">
+            <label>Numéro de dossier:</label>
+            <span>{{ enquete.dossier.numeroDossier || 'N/A' }}</span>
+          </div>
+          <div class="info-item" *ngIf="enquete.dossier">
+            <label>Titre du dossier:</label>
+            <span>{{ enquete.dossier.titre || 'N/A' }}</span>
+          </div>
+          <div class="info-item" *ngIf="enquete.rapportCode">
+            <label>Code rapport:</label>
+            <span>{{ enquete.rapportCode }}</span>
+          </div>
+          <div class="info-item">
+            <label>Date création:</label>
+            <span>{{ formatDate(enquete.dateCreation) }}</span>
+          </div>
+          <div class="info-item">
+            <label>Statut:</label>
+            <mat-chip [color]="getStatutColor(enquete.statut)" *ngIf="enquete.statut">
+              {{ getStatutLabel(enquete.statut) }}
+            </mat-chip>
+            <span *ngIf="!enquete.statut" class="statut-badge statut-default">Non défini</span>
+          </div>
+          <div class="info-item" *ngIf="enquete.agentCreateur">
+            <label>Agent créateur:</label>
+            <span>{{ enquete.agentCreateur.prenom }} {{ enquete.agentCreateur.nom }}</span>
+          </div>
+          <div class="info-item" *ngIf="enquete.agentResponsable">
+            <label>Agent responsable:</label>
+            <span>{{ enquete.agentResponsable.prenom }} {{ enquete.agentResponsable.nom }}</span>
+          </div>
+          <div class="info-item" *ngIf="enquete.dateValidation">
+            <label>Date validation:</label>
+            <span>{{ formatDate(enquete.dateValidation) }}</span>
+          </div>
+          <div class="info-item" *ngIf="enquete.commentaireValidation">
+            <label>{{ (enquete.statut === 'REJETE' || enquete.statut === ValidationStatut.REJETE) ? 'Commentaire de rejet' : 'Commentaire de validation' }}:</label>
+            <span class="commentaire-text">{{ enquete.commentaireValidation }}</span>
+          </div>
+        </div>
+      </mat-expansion-panel>
+
+      <!-- Éléments financiers -->
+      <mat-expansion-panel *ngIf="hasFinancialInfo()">
+        <mat-expansion-panel-header>
+          <mat-panel-title>
+            <mat-icon>account_balance</mat-icon>
+            Éléments financiers
+          </mat-panel-title>
+        </mat-expansion-panel-header>
+        <div class="info-grid">
+          <div class="info-item" *ngIf="enquete.nomElementFinancier">
+            <label>Nom élément financier:</label>
+            <span>{{ enquete.nomElementFinancier }}</span>
+          </div>
+          <div class="info-item" *ngIf="enquete.pourcentage !== undefined">
+            <label>Pourcentage:</label>
+            <span>{{ enquete.pourcentage }}%</span>
+          </div>
+          <div class="info-item" *ngIf="enquete.banqueAgence">
+            <label>Banque/Agence:</label>
+            <span>{{ enquete.banqueAgence }}</span>
+          </div>
+          <div class="info-item" *ngIf="enquete.banques">
+            <label>Banques:</label>
+            <span>{{ enquete.banques }}</span>
+          </div>
+          <div class="info-item" *ngIf="enquete.exercices">
+            <label>Exercices:</label>
+            <span>{{ enquete.exercices }}</span>
+          </div>
+          <div class="info-item" *ngIf="enquete.chiffreAffaire !== undefined">
+            <label>Chiffre d'affaires:</label>
+            <span>{{ enquete.chiffreAffaire | number:'1.2-2' }} TND</span>
+          </div>
+          <div class="info-item" *ngIf="enquete.resultatNet !== undefined">
+            <label>Résultat net:</label>
+            <span>{{ enquete.resultatNet | number:'1.2-2' }} TND</span>
+          </div>
+          <div class="info-item" *ngIf="enquete.disponibiliteBilan">
+            <label>Disponibilité bilan:</label>
+            <span>{{ enquete.disponibiliteBilan }}</span>
+          </div>
+        </div>
+      </mat-expansion-panel>
+
+      <!-- Solvabilité -->
+      <mat-expansion-panel *ngIf="hasSolvabilityInfo()">
+        <mat-expansion-panel-header>
+          <mat-panel-title>
+            <mat-icon>assessment</mat-icon>
+            Solvabilité
+          </mat-panel-title>
+        </mat-expansion-panel-header>
+        <div class="info-grid">
+          <div class="info-item" *ngIf="enquete.appreciationBancaire">
+            <label>Appréciation bancaire:</label>
+            <span>{{ enquete.appreciationBancaire }}</span>
+          </div>
+          <div class="info-item" *ngIf="enquete.paiementsCouverture">
+            <label>Paiements/Couverture:</label>
+            <span>{{ enquete.paiementsCouverture }}</span>
+          </div>
+          <div class="info-item" *ngIf="enquete.reputationCommerciale">
+            <label>Réputation commerciale:</label>
+            <span>{{ enquete.reputationCommerciale }}</span>
+          </div>
+          <div class="info-item" *ngIf="enquete.incidents">
+            <label>Incidents:</label>
+            <span>{{ enquete.incidents }}</span>
+          </div>
+        </div>
+      </mat-expansion-panel>
+
+      <!-- Patrimoine débiteur -->
+      <mat-expansion-panel *ngIf="hasPatrimoineInfo()">
+        <mat-expansion-panel-header>
+          <mat-panel-title>
+            <mat-icon>home</mat-icon>
+            Patrimoine débiteur
+          </mat-panel-title>
+        </mat-expansion-panel-header>
+        <div class="info-grid">
+          <div class="info-item" *ngIf="enquete.bienImmobilier">
+            <label>Bien immobilier:</label>
+            <span>{{ enquete.bienImmobilier }}</span>
+          </div>
+          <div class="info-item" *ngIf="enquete.situationJuridiqueImmobilier">
+            <label>Situation juridique immobilier:</label>
+            <span>{{ enquete.situationJuridiqueImmobilier }}</span>
+          </div>
+          <div class="info-item" *ngIf="enquete.bienMobilier">
+            <label>Bien mobilier:</label>
+            <span>{{ enquete.bienMobilier }}</span>
+          </div>
+          <div class="info-item" *ngIf="enquete.situationJuridiqueMobilier">
+            <label>Situation juridique mobilier:</label>
+            <span>{{ enquete.situationJuridiqueMobilier }}</span>
+          </div>
+        </div>
+      </mat-expansion-panel>
+
+      <!-- Informations entreprise -->
+      <mat-expansion-panel *ngIf="hasCompanyInfo()">
+        <mat-expansion-panel-header>
+          <mat-panel-title>
+            <mat-icon>business</mat-icon>
+            Informations entreprise
+          </mat-panel-title>
+        </mat-expansion-panel-header>
+        <div class="info-grid">
+          <div class="info-item" *ngIf="enquete.registreCommerce">
+            <label>Registre de commerce:</label>
+            <span>{{ enquete.registreCommerce }}</span>
+          </div>
+          <div class="info-item" *ngIf="enquete.codeDouane">
+            <label>Code douane:</label>
+            <span>{{ enquete.codeDouane }}</span>
+          </div>
+          <div class="info-item" *ngIf="enquete.matriculeFiscale">
+            <label>Matricule fiscale:</label>
+            <span>{{ enquete.matriculeFiscale }}</span>
+          </div>
+          <div class="info-item" *ngIf="enquete.formeJuridique">
+            <label>Forme juridique:</label>
+            <span>{{ enquete.formeJuridique }}</span>
+          </div>
+          <div class="info-item" *ngIf="enquete.capital !== undefined">
+            <label>Capital:</label>
+            <span>{{ enquete.capital | number:'1.2-2' }} TND</span>
+          </div>
+          <div class="info-item" *ngIf="enquete.secteurActivite">
+            <label>Secteur d'activité:</label>
+            <span>{{ enquete.secteurActivite }}</span>
+          </div>
+          <div class="info-item" *ngIf="enquete.descriptionActivite">
+            <label>Description activité:</label>
+            <span>{{ enquete.descriptionActivite }}</span>
+          </div>
+          <div class="info-item" *ngIf="enquete.effectif !== undefined">
+            <label>Effectif:</label>
+            <span>{{ enquete.effectif }} personnes</span>
+          </div>
+          <div class="info-item" *ngIf="enquete.email">
+            <label>Email:</label>
+            <span>{{ enquete.email }}</span>
+          </div>
+        </div>
+      </mat-expansion-panel>
+
+      <!-- Dirigeants -->
+      <mat-expansion-panel *ngIf="hasDirigeantsInfo()">
+        <mat-expansion-panel-header>
+          <mat-panel-title>
+            <mat-icon>people</mat-icon>
+            Dirigeants
+          </mat-panel-title>
+        </mat-expansion-panel-header>
+        <div class="info-grid">
+          <div class="info-item" *ngIf="enquete.pdg">
+            <label>PDG:</label>
+            <span>{{ enquete.pdg }}</span>
+          </div>
+          <div class="info-item" *ngIf="enquete.directeurAdjoint">
+            <label>Directeur adjoint:</label>
+            <span>{{ enquete.directeurAdjoint }}</span>
+          </div>
+          <div class="info-item" *ngIf="enquete.directeurFinancier">
+            <label>Directeur financier:</label>
+            <span>{{ enquete.directeurFinancier }}</span>
+          </div>
+          <div class="info-item" *ngIf="enquete.directeurCommercial">
+            <label>Directeur commercial:</label>
+            <span>{{ enquete.directeurCommercial }}</span>
+          </div>
+        </div>
+      </mat-expansion-panel>
+
+      <!-- Décisions et visas -->
+      <mat-expansion-panel *ngIf="hasDecisionInfo()">
+        <mat-expansion-panel-header>
+          <mat-panel-title>
+            <mat-icon>verified</mat-icon>
+            Décisions et visas
+          </mat-panel-title>
+        </mat-expansion-panel-header>
+        <div class="info-grid">
+          <div class="info-item" *ngIf="enquete.decisionComite">
+            <label>Décision comité:</label>
+            <span>{{ enquete.decisionComite }}</span>
+          </div>
+          <div class="info-item" *ngIf="enquete.visaDirecteurJuridique">
+            <label>Visa directeur juridique:</label>
+            <span>{{ enquete.visaDirecteurJuridique }}</span>
+          </div>
+          <div class="info-item" *ngIf="enquete.visaEnqueteur">
+            <label>Visa enquêteur:</label>
+            <span>{{ enquete.visaEnqueteur }}</span>
+          </div>
+          <div class="info-item" *ngIf="enquete.visaDirecteurCommercial">
+            <label>Visa directeur commercial:</label>
+            <span>{{ enquete.visaDirecteurCommercial }}</span>
+          </div>
+        </div>
+      </mat-expansion-panel>
+
+      <!-- Autres informations -->
+      <mat-expansion-panel *ngIf="hasOtherInfo()">
+        <mat-expansion-panel-header>
+          <mat-panel-title>
+            <mat-icon>note</mat-icon>
+            Autres informations
+          </mat-panel-title>
+        </mat-expansion-panel-header>
+        <div class="info-grid">
+          <div class="info-item" *ngIf="enquete.autresAffaires">
+            <label>Autres affaires:</label>
+            <span>{{ enquete.autresAffaires }}</span>
+          </div>
+          <div class="info-item" *ngIf="enquete.observations">
+            <label>Observations:</label>
+            <span class="text-block">{{ enquete.observations }}</span>
+          </div>
+          <div class="info-item" *ngIf="enquete.marques">
+            <label>Marques:</label>
+            <span>{{ enquete.marques }}</span>
+          </div>
+          <div class="info-item" *ngIf="enquete.groupe">
+            <label>Groupe:</label>
+            <span>{{ enquete.groupe }}</span>
+          </div>
+        </div>
+      </mat-expansion-panel>
+
+      <!-- Historique des validations -->
+      <mat-expansion-panel>
+        <mat-expansion-panel-header>
+          <mat-panel-title>
+            <mat-icon>history</mat-icon>
+            Historique des validations
+            <span class="badge-count" *ngIf="validations.length > 0">({{ validations.length }})</span>
+          </mat-panel-title>
+        </mat-expansion-panel-header>
+        <div *ngIf="validations.length === 0" class="empty-message">
+          <mat-icon>info</mat-icon>
+          <p>Aucune validation trouvée</p>
+        </div>
+        <div *ngFor="let validation of validations" class="validation-item">
+          <div class="validation-header">
+            <span class="statut-badge" [class]="getStatutBadgeClass(validation.statut)">
+              {{ getStatutLabel(validation.statut) }}
+            </span>
+            <span class="validation-date">{{ formatDate(validation.dateCreation) }}</span>
+          </div>
+          <div class="validation-details" *ngIf="validation.chefValidateur">
+            <div class="detail-item">
+              <label>Chef validateur:</label>
+              <span>{{ validation.chefValidateur.prenom }} {{ validation.chefValidateur.nom }}</span>
+            </div>
+          </div>
+          <div class="validation-details" *ngIf="validation.dateValidation">
+            <div class="detail-item">
+              <label>Date validation:</label>
+              <span>{{ formatDate(validation.dateValidation) }}</span>
+            </div>
+          </div>
+          <div *ngIf="validation.commentaires" class="validation-comment">
+            <label>Commentaires:</label>
+            <p>{{ validation.commentaires }}</p>
+          </div>
+        </div>
+      </mat-expansion-panel>
+
+      <!-- Commentaire de validation/rejet -->
+      <mat-expansion-panel *ngIf="enquete.commentaireValidation || enquete.dateValidation">
+        <mat-expansion-panel-header>
+          <mat-panel-title>
+            <mat-icon>{{ (enquete.statut === 'REJETE' || enquete.statut === ValidationStatut.REJETE) ? 'error' : 'check_circle' }}</mat-icon>
+            {{ (enquete.statut === 'REJETE' || enquete.statut === ValidationStatut.REJETE) ? 'Commentaire de rejet' : 'Commentaire de validation' }}
+          </mat-panel-title>
+        </mat-expansion-panel-header>
+        <div class="info-grid">
+          <div class="info-item" *ngIf="enquete.commentaireValidation">
+            <label>Commentaire:</label>
+            <span class="commentaire-text">{{ enquete.commentaireValidation }}</span>
+          </div>
+          <div class="info-item" *ngIf="enquete.dateValidation">
+            <label>Date:</label>
+            <span>{{ formatDate(enquete.dateValidation) }}</span>
+          </div>
+        </div>
+      </mat-expansion-panel>
+    </mat-accordion>
+  </mat-dialog-content>
+
+  <!-- Actions de validation/rejet pour les chefs -->
+  <div class="validation-actions" *ngIf="canValidate() && !loading">
+    <mat-card class="action-card">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>verified</mat-icon>
+          Actions de validation
+        </mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <p class="action-description">Vous pouvez valider ou rejeter cette enquête. Un commentaire optionnel peut être ajouté.</p>
+        <div class="action-buttons">
+          <button 
+            mat-raised-button 
+            color="primary" 
+            (click)="validerEnquete()"
+            [disabled]="loading"
+            class="action-button">
+            <mat-icon>check_circle</mat-icon>
+            Valider l'enquête
+          </button>
+          <button 
+            mat-raised-button 
+            color="warn" 
+            (click)="rejeterEnquete()"
+            [disabled]="loading"
+            class="action-button">
+            <mat-icon>cancel</mat-icon>
+            Rejeter l'enquête
+          </button>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Actions de suppression -->
+  <div class="delete-actions" *ngIf="canDelete() && !loading">
+    <mat-card class="action-card warning-card">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>delete</mat-icon>
+          Actions de suppression
+        </mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <p class="warning-text">
+          <mat-icon>warning</mat-icon>
+          Cette action supprimera également toutes les validations associées. Cette action est irréversible.
+        </p>
+        <div class="action-buttons">
+          <button 
+            mat-raised-button 
+            color="warn" 
+            (click)="confirmDeleteEnquete()"
+            [disabled]="loading"
+            class="action-button">
+            <mat-icon>delete</mat-icon>
+            Supprimer l'enquête
+          </button>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Loading spinner -->
+  <div class="loading-container" *ngIf="loading">
+    <mat-spinner diameter="50"></mat-spinner>
+    <p>Chargement des détails...</p>
+  </div>
+
+  <!-- Actions -->
+  <mat-dialog-actions align="end" *ngIf="isDialog">
+    <button mat-button (click)="onClose()">Fermer</button>
+  </mat-dialog-actions>
+
+  <div class="page-actions" *ngIf="!isDialog">
+    <button mat-button routerLink="/enquetes">
+      <mat-icon>arrow_back</mat-icon>
+      Retour
+    </button>
+  </div>
+</div>
+

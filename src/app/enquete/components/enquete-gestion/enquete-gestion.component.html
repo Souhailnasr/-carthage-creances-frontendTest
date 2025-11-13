@@ -1,0 +1,176 @@
+<div class="enquete-gestion-container">
+  <div class="page-header">
+    <h1>
+      <mat-icon>assignment</mat-icon>
+      Gestion des Enquêtes
+    </h1>
+    <div class="header-actions">
+      <button mat-raised-button color="primary" (click)="router.navigate(['/enquetes/nouvelle'])" *ngIf="currentUser?.roleUtilisateur === Role.AGENT_DOSSIER || currentUser?.roleUtilisateur === Role.CHEF_DEPARTEMENT_DOSSIER">
+        <mat-icon>add</mat-icon>
+        Créer une enquête
+      </button>
+      <button mat-icon-button (click)="refreshData()" [disabled]="loading || loadingStats" matTooltip="Rafraîchir">
+        <mat-icon>refresh</mat-icon>
+      </button>
+    </div>
+  </div>
+
+  <!-- Statistiques -->
+  <div class="stats-container" *ngIf="currentUser?.roleUtilisateur === Role.CHEF_DEPARTEMENT_DOSSIER || currentUser?.roleUtilisateur === Role.SUPER_ADMIN">
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-icon">
+          <mat-icon>assignment</mat-icon>
+        </div>
+        <div class="stat-number">{{ totalEnquetes || 0 }}</div>
+        <div class="stat-label">Total d'enquêtes</div>
+      </mat-card-content>
+    </mat-card>
+    <mat-card class="stat-card stat-card-success">
+      <mat-card-content>
+        <div class="stat-icon">
+          <mat-icon>check_circle</mat-icon>
+        </div>
+        <div class="stat-number">{{ enquetesValides || 0 }}</div>
+        <div class="stat-label">Enquêtes validées</div>
+      </mat-card-content>
+    </mat-card>
+    <mat-card class="stat-card stat-card-warning">
+      <mat-card-content>
+        <div class="stat-icon">
+          <mat-icon>pending</mat-icon>
+        </div>
+        <div class="stat-number">{{ enquetesNonValides || 0 }}</div>
+        <div class="stat-label">Enquêtes non validées</div>
+      </mat-card-content>
+    </mat-card>
+    <mat-card class="stat-card stat-card-info">
+      <mat-card-content>
+        <div class="stat-icon">
+          <mat-icon>calendar_today</mat-icon>
+        </div>
+        <div class="stat-number">{{ enquetesCeMois || 0 }}</div>
+        <div class="stat-label">Créées ce mois</div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Filtres -->
+  <div class="filters-container">
+    <mat-form-field appearance="outline" class="search-field">
+      <mat-label>Rechercher</mat-label>
+      <input matInput [(ngModel)]="searchTerm" (keyup.enter)="onSearch()" placeholder="Code rapport, dossier, agent...">
+      <mat-icon matSuffix>search</mat-icon>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="statut-field">
+      <mat-label>Filtrer par statut</mat-label>
+      <mat-select [(ngModel)]="selectedStatut" (selectionChange)="filterByStatut(selectedStatut)">
+        <mat-option *ngFor="let option of statutOptions" [value]="option.value">
+          {{ option.label }} ({{ getEnquetesByStatut(option.value) }})
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+  </div>
+
+  <!-- Tableau des enquêtes -->
+  <div class="table-container" *ngIf="!loading && pagedEnquetes.length > 0">
+    <table mat-table [dataSource]="pagedEnquetes" class="mat-elevation-z2">
+      <!-- Code rapport Column -->
+      <ng-container matColumnDef="rapportCode">
+        <th mat-header-cell *matHeaderCellDef>Code rapport</th>
+        <td mat-cell *matCellDef="let enquete">
+          <strong>{{ enquete.rapportCode || 'N/A' }}</strong>
+        </td>
+      </ng-container>
+
+      <!-- Dossier Column -->
+      <ng-container matColumnDef="dossier">
+        <th mat-header-cell *matHeaderCellDef>Dossier</th>
+        <td mat-cell *matCellDef="let enquete">
+          {{ getDossierInfo(enquete) }}
+        </td>
+      </ng-container>
+
+      <!-- Agent créateur Column -->
+      <ng-container matColumnDef="agentCreateur">
+        <th mat-header-cell *matHeaderCellDef>Agent créateur</th>
+        <td mat-cell *matCellDef="let enquete">
+          {{ getAgentName(enquete) }}
+        </td>
+      </ng-container>
+
+      <!-- Date création Column -->
+      <ng-container matColumnDef="dateCreation">
+        <th mat-header-cell *matHeaderCellDef>Date création</th>
+        <td mat-cell *matCellDef="let enquete">
+          {{ formatDate(enquete.dateCreation) }}
+        </td>
+      </ng-container>
+
+      <!-- Statut Column -->
+      <ng-container matColumnDef="statut">
+        <th mat-header-cell *matHeaderCellDef>Statut</th>
+        <td mat-cell *matCellDef="let enquete">
+          <mat-chip [color]="getStatutColor(enquete.statut)">
+            {{ getStatutLabel(enquete.statut) }}
+          </mat-chip>
+        </td>
+      </ng-container>
+
+      <!-- Actions Column -->
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef>Actions</th>
+        <td mat-cell *matCellDef="let enquete">
+          <button 
+            mat-icon-button 
+            color="primary" 
+            *ngIf="canValidate(enquete)"
+            (click)="validerEnquete(enquete)" 
+            matTooltip="Valider">
+            <mat-icon>check_circle</mat-icon>
+          </button>
+          <button 
+            mat-icon-button 
+            color="warn" 
+            *ngIf="canValidate(enquete)"
+            (click)="rejeterEnquete(enquete)" 
+            matTooltip="Rejeter">
+            <mat-icon>cancel</mat-icon>
+          </button>
+          <button 
+            mat-icon-button 
+            (click)="voirDetails(enquete)" 
+            matTooltip="Voir détails">
+            <mat-icon>visibility</mat-icon>
+          </button>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+    </table>
+
+    <mat-paginator 
+      [length]="totalElements"
+      [pageSize]="pageSize"
+      [pageIndex]="pageIndex"
+      [pageSizeOptions]="[5, 10, 20, 50]"
+      (page)="onPageChange($event)"
+      showFirstLastButtons>
+    </mat-paginator>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading-container" *ngIf="loading">
+    <mat-spinner diameter="50"></mat-spinner>
+    <p>Chargement des enquêtes...</p>
+  </div>
+
+  <!-- Empty state -->
+  <div class="empty-container" *ngIf="!loading && pagedEnquetes.length === 0">
+    <mat-icon>inbox</mat-icon>
+    <p>Aucune enquête trouvée</p>
+  </div>
+</div>
+

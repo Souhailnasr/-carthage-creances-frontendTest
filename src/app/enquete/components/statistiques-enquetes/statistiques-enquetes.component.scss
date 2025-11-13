@@ -1,0 +1,154 @@
+.statistiques-container {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+
+  h1 {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0;
+    font-size: 28px;
+    font-weight: 500;
+
+    mat-icon {
+      font-size: 32px;
+      width: 32px;
+      height: 32px;
+    }
+  }
+}
+
+.filters-card {
+  margin-bottom: 24px;
+
+  .filters-row {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    flex-wrap: wrap;
+
+    mat-form-field {
+      min-width: 200px;
+    }
+
+    .date-fields {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+  }
+}
+
+.stats-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  transition: transform 0.2s, box-shadow 0.2s;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+  }
+
+  mat-card-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 24px !important;
+  }
+
+  .stat-icon {
+    margin-bottom: 12px;
+
+    mat-icon {
+      font-size: 48px;
+      width: 48px;
+      height: 48px;
+      color: rgba(0, 0, 0, 0.54);
+    }
+  }
+
+  .stat-number {
+    font-size: 36px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: rgba(0, 0, 0, 0.87);
+  }
+
+  .stat-label {
+    font-size: 14px;
+    color: rgba(0, 0, 0, 0.54);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  &.stat-card-success {
+    .stat-icon mat-icon,
+    .stat-number {
+      color: #4caf50;
+    }
+  }
+
+  &.stat-card-warning {
+    .stat-icon mat-icon,
+    .stat-number {
+      color: #ff9800;
+    }
+  }
+
+  &.stat-card-info {
+    .stat-icon mat-icon,
+    .stat-number {
+      color: #2196f3;
+    }
+  }
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px;
+  gap: 16px;
+
+  p {
+    margin: 0;
+    color: rgba(0, 0, 0, 0.54);
+  }
+}
+
+// Responsive
+@media (max-width: 768px) {
+  .statistiques-container {
+    padding: 16px;
+  }
+
+  .stats-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .filters-row {
+    flex-direction: column;
+    align-items: stretch;
+
+    mat-form-field {
+      width: 100%;
+    }
+  }
+}
+

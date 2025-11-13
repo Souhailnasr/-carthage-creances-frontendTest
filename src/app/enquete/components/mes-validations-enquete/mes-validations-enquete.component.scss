@@ -1,0 +1,110 @@
+.mes-validations-container {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.page-header {
+  margin-bottom: 24px;
+
+  h1 {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0;
+    font-size: 24px;
+    font-weight: 500;
+  }
+}
+
+.stats-container {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  text-align: center;
+
+  .stat-value {
+    font-size: 32px;
+    font-weight: bold;
+    color: #3f51b5;
+  }
+
+  .stat-label {
+    font-size: 14px;
+    color: #666;
+    margin-top: 8px;
+  }
+}
+
+.filters-card {
+  margin-bottom: 24px;
+}
+
+.filters-form {
+  display: flex;
+  gap: 16px;
+}
+
+.table-container {
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.loading-container,
+.empty-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px;
+  background: white;
+  border-radius: 8px;
+
+  mat-icon {
+    font-size: 64px;
+    width: 64px;
+    height: 64px;
+    color: #ccc;
+    margin-bottom: 16px;
+  }
+
+  p {
+    color: #666;
+    font-size: 16px;
+  }
+}
+
+.statut-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.statut-en-attente {
+  background-color: #ff9800;
+  color: white;
+}
+
+.statut-valide {
+  background-color: #4caf50;
+  color: white;
+}
+
+.statut-rejete {
+  background-color: #f44336;
+  color: white;
+}
+
+table {
+  width: 100%;
+}
+

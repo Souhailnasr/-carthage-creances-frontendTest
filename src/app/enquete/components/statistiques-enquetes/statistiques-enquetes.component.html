@@ -1,0 +1,98 @@
+<div class="statistiques-container">
+  <div class="page-header">
+    <h1>
+      <mat-icon>bar_chart</mat-icon>
+      Statistiques des Enquêtes
+    </h1>
+  </div>
+
+  <!-- Filtres temporels -->
+  <mat-card class="filters-card">
+    <mat-card-header>
+      <mat-card-title>Période</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="filters-row">
+        <mat-form-field appearance="outline">
+          <mat-label>Période</mat-label>
+          <mat-select [(ngModel)]="selectedPeriod" (selectionChange)="onPeriodChange()">
+            <mat-option value="ce-mois">Ce mois</mat-option>
+            <mat-option value="ce-trimestre">Ce trimestre</mat-option>
+            <mat-option value="cette-annee">Cette année</mat-option>
+            <mat-option value="personnalise">Personnalisé</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <div *ngIf="selectedPeriod === 'personnalise'" class="date-fields">
+          <mat-form-field appearance="outline">
+            <mat-label>Date de début</mat-label>
+            <input matInput [matDatepicker]="startPicker" [(ngModel)]="startDate">
+            <mat-datepicker-toggle matSuffix [for]="startPicker"></mat-datepicker-toggle>
+            <mat-datepicker #startPicker></mat-datepicker>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Date de fin</mat-label>
+            <input matInput [matDatepicker]="endPicker" [(ngModel)]="endDate">
+            <mat-datepicker-toggle matSuffix [for]="endPicker"></mat-datepicker-toggle>
+            <mat-datepicker #endPicker></mat-datepicker>
+          </mat-form-field>
+
+          <button mat-raised-button color="primary" (click)="applyCustomPeriod()">
+            Appliquer
+          </button>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Cartes de statistiques -->
+  <div class="stats-cards" *ngIf="!loading">
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-icon">
+          <mat-icon>assignment</mat-icon>
+        </div>
+        <div class="stat-number">{{ totalEnquetes }}</div>
+        <div class="stat-label">Total d'enquêtes</div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card stat-card-success">
+      <mat-card-content>
+        <div class="stat-icon">
+          <mat-icon>check_circle</mat-icon>
+        </div>
+        <div class="stat-number">{{ enquetesValides }}</div>
+        <div class="stat-label">Enquêtes validées</div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card stat-card-warning">
+      <mat-card-content>
+        <div class="stat-icon">
+          <mat-icon>pending</mat-icon>
+        </div>
+        <div class="stat-number">{{ enquetesNonValides }}</div>
+        <div class="stat-label">Enquêtes non validées</div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card stat-card-info">
+      <mat-card-content>
+        <div class="stat-icon">
+          <mat-icon>calendar_today</mat-icon>
+        </div>
+        <div class="stat-number">{{ enquetesCeMois }}</div>
+        <div class="stat-label">Créées ce mois</div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading-container" *ngIf="loading">
+    <mat-spinner diameter="50"></mat-spinner>
+    <p>Chargement des statistiques...</p>
+  </div>
+</div>
+

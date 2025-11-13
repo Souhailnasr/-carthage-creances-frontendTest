@@ -266,14 +266,14 @@
       </div>
       <div class="pagination-controls">
         <label>Par page</label>
-        <select [(ngModel)]="pageSize" (change)="applySortingAndPaging()" style="padding: 6px 12px; border-radius: 4px; border: 1px solid #ddd; margin: 0 8px;">
+        <select [(ngModel)]="pageSize" (change)="onPageSizeChange()" style="padding: 6px 12px; border-radius: 4px; border: 1px solid #ddd; margin: 0 8px;">
           <option [value]="5">5</option>
           <option [value]="10">10</option>
           <option [value]="20">20</option>
           <option [value]="50">50</option>
         </select>
         <button class="btn btn-secondary" (click)="prevPage()" [disabled]="pageIndex===0" style="padding: 8px 16px; margin: 0 4px;">Préc</button>
-        <span style="margin: 0 12px; font-weight: 600; color: #495057;">{{ pageIndex+1 }} / {{ totalPages }}</span>
+        <span style="margin: 0 12px; font-weight: 600; color: #495057;">{{ pageIndex+1 }} / {{ totalPages }} ({{ totalElements }} éléments)</span>
         <button class="btn btn-secondary" (click)="nextPage()" [disabled]="pageIndex+1>=totalPages" style="padding: 8px 16px; margin: 0 4px;">Suiv</button>
       </div>
     </div>

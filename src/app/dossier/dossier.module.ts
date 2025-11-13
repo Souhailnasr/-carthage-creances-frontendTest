@@ -6,7 +6,6 @@ import { PartiePrenanteListComponent } from './components/partie-prenante-list/p
 import { PartiePrenanteDetailComponent } from './components/partie-prenante-detail/partie-prenante-detail.component';
 import { DossierGestionComponent } from './components/dossier-gestion/dossier-gestion.component';
 import { DossierDetailComponent } from './components/dossier-detail/dossier-detail.component';
-import { EnquetePhaseComponent } from './components/enquete-phase/enquete-phase.component';
 import { EnqueteDetailComponent } from './components/enquete-detail/enquete-detail.component';
 import { UserManagementComponent } from './components/user-management/user-management.component';
 import { UserProfileComponent } from '../shared/components/user-profile/user-profile.component';
@@ -29,7 +28,6 @@ import { DossierDemoComponent } from './components/dossier-demo/dossier-demo.com
     PartiePrenanteDetailComponent,
     DossierGestionComponent,
     DossierDetailComponent,
-    EnquetePhaseComponent,
     EnqueteDetailComponent,
     UserManagementComponent,
     UserProfileComponent,

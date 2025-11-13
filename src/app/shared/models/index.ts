@@ -13,3 +13,4 @@ export * from './finance.model';
 export * from './tache.model';
 export * from './statistique.model';
 export * from './notification.model';
+export * from './enquete.model';

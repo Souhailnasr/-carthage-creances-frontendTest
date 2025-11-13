@@ -52,6 +52,66 @@ export const routes: Routes = [
     canActivate: [AuthGuard]
   },
   {
+    path: 'enquetes',
+    children: [
+      {
+        path: '',
+        redirectTo: 'gestion',
+        pathMatch: 'full'
+      },
+      {
+        path: 'gestion',
+        loadComponent: () => import('./enquete/components/enquete-gestion/enquete-gestion.component').then(m => m.EnqueteGestionComponent),
+        canActivate: [AuthGuard]
+      },
+      {
+        path: 'statistiques',
+        loadComponent: () => import('./enquete/components/statistiques-enquetes/statistiques-enquetes.component').then(m => m.StatistiquesEnquetesComponent),
+        canActivate: [AuthGuard]
+      },
+      {
+        path: 'validation',
+        loadComponent: () => import('./enquete/components/enquetes-en-attente/enquetes-en-attente.component').then(m => m.EnquetesEnAttenteComponent),
+        canActivate: [AuthGuard]
+      },
+      {
+        path: 'en-attente',
+        loadComponent: () => import('./enquete/components/enquetes-en-attente/enquetes-en-attente.component').then(m => m.EnquetesEnAttenteComponent),
+        canActivate: [AuthGuard]
+      },
+      {
+        path: 'nouvelle',
+        loadComponent: () => import('./enquete/components/create-enquete/create-enquete.component').then(m => m.CreateEnqueteComponent),
+        canActivate: [AuthGuard]
+      },
+      {
+        path: 'create',
+        redirectTo: 'nouvelle',
+        pathMatch: 'full'
+      },
+      {
+        path: 'edit/:id',
+        loadComponent: () => import('./enquete/components/edit-enquete/edit-enquete.component').then(m => m.EditEnqueteComponent),
+        canActivate: [AuthGuard]
+      },
+      {
+        path: ':id/modifier',
+        redirectTo: 'edit/:id',
+        pathMatch: 'full'
+      },
+      {
+        path: 'mes-validations',
+        loadComponent: () => import('./enquete/components/mes-validations-enquete/mes-validations-enquete.component').then(m => m.MesValidationsEnqueteComponent),
+        canActivate: [AuthGuard]
+      },
+      {
+        path: ':id',
+        loadComponent: () => import('./enquete/components/enquete-details/enquete-details.component').then(m => m.EnqueteDetailsComponent),
+        canActivate: [AuthGuard]
+      }
+    ]
+  },
+  {
     path: 'admin',
     loadChildren: () => import('./admin/admin.module').then(m => m.AdminModule),
     canActivate: [AuthGuard]

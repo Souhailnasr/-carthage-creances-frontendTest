@@ -3,6 +3,7 @@ import { Observable, BehaviorSubject } from 'rxjs';
 import { tap, map } from 'rxjs/operators';
 import { DossierApiService } from './dossier-api.service';
 import { DossierApi, DossierRequest } from '../../shared/models/dossier-api.model';
+import { Page } from '../../shared/models/pagination.model';
 import { AuthService } from './auth.service';
 import { Role } from '../../shared/models/enums.model';
 import { JwtAuthService } from './jwt-auth.service';
@@ -31,7 +32,7 @@ export class AgentDossierService {
   /**
    * Charge les dossiers créés par l'agent
    */
-  loadMesDossiers(): Observable<DossierApi[]> {
+  loadMesDossiers(page: number = 0, size: number = 100): Observable<DossierApi[]> {
     this.jwtAuthService.getCurrentUser().subscribe(user => {
       this.currentUser = user;
     });
@@ -39,10 +40,11 @@ export class AgentDossierService {
       throw new Error('Utilisateur non connecté');
     }
 
-    return this.dossierApiService.getDossiersCreesByAgent(Number(this.currentUser.id)).pipe(
+    return this.dossierApiService.getDossiersCreesByAgent(Number(this.currentUser.id), page, size).pipe(
+      map((page: Page<DossierApi>) => page.content),
       tap(dossiers => {
         this.mesDossiersSubject.next(dossiers);
-        console.log('Mes dossiers chargés:', dossiers);
+        console.log('Mes dossiers chargés:', dossiers.length);
       })
     );
   }

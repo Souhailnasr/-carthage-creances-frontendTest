@@ -1,0 +1,37 @@
+<h2 mat-dialog-title>
+  <mat-icon>check_circle</mat-icon>
+  Valider l'enquête
+</h2>
+
+<mat-dialog-content>
+  <div class="dialog-info">
+    <div class="info-item">
+      <strong>Code rapport:</strong>
+      <span>{{ enquete?.rapportCode || 'N/A' }}</span>
+    </div>
+    <div class="info-item" *ngIf="enquete?.dossier">
+      <strong>Numéro dossier:</strong>
+      <span>{{ enquete?.dossier?.numeroDossier || 'N/A' }}</span>
+    </div>
+    <div class="info-item" *ngIf="enquete?.dossier">
+      <strong>Titre du dossier:</strong>
+      <span>{{ enquete?.dossier?.titre || 'N/A' }}</span>
+    </div>
+  </div>
+
+  <form [formGroup]="validationForm">
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Commentaire de validation (optionnel)</mat-label>
+      <textarea matInput formControlName="commentaire" rows="4" maxlength="500"></textarea>
+      <mat-hint>{{ validationForm.get('commentaire')?.value?.length || 0 }}/500</mat-hint>
+    </mat-form-field>
+  </form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="onCancel()">Annuler</button>
+  <button mat-button color="primary" (click)="onConfirm()" [disabled]="!validationForm.valid">
+    Valider
+  </button>
+</mat-dialog-actions>
+

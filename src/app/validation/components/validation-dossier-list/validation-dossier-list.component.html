@@ -1,31 +1,37 @@
 <div class="validation-dossier-list">
   <div class="header">
-    <h1>Validation des Dossiers</h1>
+    <h1>{{ canValidate() ? 'Validation des Dossiers' : 'Mes Validations' }}</h1>
+    <div *ngIf="canValidate()" class="subtitle">
+      <p>Gestion de toutes les validations de dossiers</p>
+    </div>
+    <div *ngIf="!canValidate()" class="subtitle">
+      <p>Historique de toutes mes validations de dossiers</p>
+    </div>
     <div class="header-actions">
-      <button class="btn btn-primary" (click)="loadValidations()" [disabled]="loading">
+      <button class="btn btn-primary" (click)="loadValidationsForRole()" [disabled]="loading">
         <i class="fas fa-sync-alt" [class.fa-spin]="loading"></i>
         Actualiser
       </button>
     </div>
   </div>
 
-  <!-- Statistiques -->
-  <div class="stats-container" *ngIf="stats">
+  <!-- Statistiques - Affichées uniquement pour le chef -->
+  <div class="stats-container" *ngIf="stats && canValidate()">
     <div class="stat-card">
       <div class="stat-number">{{ stats.total }}</div>
-      <div class="stat-label">Total</div>
+      <div class="stat-label">TOTAL</div>
     </div>
     <div class="stat-card stat-en-attente">
       <div class="stat-number">{{ stats.enAttente }}</div>
-      <div class="stat-label">En Attente</div>
+      <div class="stat-label">EN ATTENTE</div>
     </div>
     <div class="stat-card stat-valide">
       <div class="stat-number">{{ stats.valides }}</div>
-      <div class="stat-label">Validés</div>
+      <div class="stat-label">VALIDÉS</div>
     </div>
     <div class="stat-card stat-rejete">
       <div class="stat-number">{{ stats.rejetes }}</div>
-      <div class="stat-label">Rejetés</div>
+      <div class="stat-label">REJETÉS</div>
     </div>
   </div>
 
@@ -79,7 +85,7 @@
     <div class="error" *ngIf="error">
       <i class="fas fa-exclamation-triangle"></i>
       <span>{{ error }}</span>
-      <button class="btn btn-primary" (click)="loadValidations()">Réessayer</button>
+      <button class="btn btn-primary" (click)="loadValidationsForRole()">Réessayer</button>
     </div>
 
     <div class="no-data" *ngIf="!loading && !error && filteredValidations.length === 0">
@@ -96,6 +102,8 @@
             <th>Agent Créateur</th>
             <th>Chef Validateur</th>
             <th>Statut</th>
+            <th>Statut Dossier</th>
+            <th>État Dossier</th>
             <th>Date Création</th>
             <th>Date Validation</th>
             <th>Actions</th>
@@ -127,6 +135,16 @@
             <td>
               <span class="statut-badge" [ngClass]="getStatutClass(validation.statut)">
                 {{ getStatutLabel(validation.statut) }}
+              </span>
+            </td>
+            <td>
+              <span class="statut-badge" [ngClass]="getDossierValidationClass(validation.dossier.statut)">
+                {{ getDossierValidationLabel(validation.dossier.statut) }}
+              </span>
+            </td>
+            <td>
+              <span class="dossier-status-badge" [ngClass]="getDossierWorkflowClass(validation.dossier.dossierStatus)">
+                {{ getDossierWorkflowLabel(validation.dossier.dossierStatus) }}
               </span>
             </td>
             <td>{{ formatDate(validation.dateCreation) }}</td>

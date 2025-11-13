@@ -71,22 +71,30 @@ export class SidebarComponent implements OnInit, OnDestroy {
       roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER]
     },
     {
-      label: 'Gestion des Dossiers',
+      label: 'Dossiers',
       icon: 'fas fa-folder-open',
-      route: '/dossier/gestion',
-      roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER]
-    },
-    {
-      label: 'Dossiers en Attente',
-      icon: 'fas fa-clock',
-      route: '/dossier/en-attente',
-      roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_DOSSIER]
-    },
-    {
-      label: 'Mes Validations',
-      icon: 'fas fa-history',
-      route: '/dossier/mes-validations',
-      roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER]
+      route: '/dossier',
+      roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER],
+      children: [
+        {
+          label: 'Gestion des Dossiers',
+          icon: 'fas fa-folder-open',
+          route: '/dossier/gestion',
+          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER]
+        },
+        {
+          label: 'Dossiers en Attente',
+          icon: 'fas fa-clock',
+          route: '/dossier/en-attente',
+          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_DOSSIER]
+        },
+        {
+          label: 'Mes Validations',
+          icon: 'fas fa-history',
+          route: '/dossier/mes-validations',
+          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER]
+        }
+      ]
     },
     {
       label: 'Utilisateurs',
@@ -95,9 +103,41 @@ export class SidebarComponent implements OnInit, OnDestroy {
       roles: [Role.SUPER_ADMIN]
     },
     {
-      label: 'Phase d\'Enquête',
-      icon: 'fas fa-search',
-      route: '/dossier/enquete',
+      label: 'Enquêtes',
+      icon: 'fas fa-clipboard-list',
+      route: '/enquetes',
+      roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER],
+      children: [
+        {
+          label: 'Gestion des Enquêtes',
+          icon: 'fas fa-list-alt',
+          route: '/enquetes/gestion',
+          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER]
+        },
+        {
+          label: 'Créer une Enquête',
+          icon: 'fas fa-plus-circle',
+          route: '/enquetes/nouvelle',
+          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER]
+        },
+        {
+          label: 'Enquêtes en Attente',
+          icon: 'fas fa-clock',
+          route: '/enquetes/en-attente',
+          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_DOSSIER]
+        },
+        {
+          label: 'Mes Validations',
+          icon: 'fas fa-history',
+          route: '/enquetes/mes-validations',
+          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER]
+        }
+      ]
+    },
+    {
+      label: 'Affectation des Dossiers',
+      icon: 'fas fa-assignment',
+      route: '/dossier/affectation',
       roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER]
     },
     {
@@ -286,7 +326,14 @@ export class SidebarComponent implements OnInit, OnDestroy {
 
   isMenuItemVisible(item: MenuItem): boolean {
     if (!this.currentUser) return false;
-    return item.roles.includes(this.currentUser.roleUtilisateur);
+    const userRole = this.currentUser.roleUtilisateur;
+    // Si le menu a des enfants, vérifier si au moins un enfant est visible
+    if (item.children && item.children.length > 0) {
+      return item.roles.includes(userRole) && 
+             item.children.some(child => child.roles.includes(userRole));
+    }
+    // Sinon, vérifier simplement les rôles du menu
+    return item.roles.includes(userRole);
   }
 
   isChildMenuItemVisible(item: MenuItem): boolean {

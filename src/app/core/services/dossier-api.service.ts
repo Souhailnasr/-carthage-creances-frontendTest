@@ -1,6 +1,8 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { tap, map, catchError } from 'rxjs/operators';
+import { of } from 'rxjs';
 import { 
   DossierApi, 
   DossierRequest, 
@@ -220,8 +222,15 @@ export class DossierApiService {
   /**
    * Récupère tous les dossiers avec pagination
    */
-  getAllDossiers(): Observable<Page<DossierApi>> {
-    return this.http.get<Page<DossierApi>>(this.apiUrl);
+  getAllDossiers(page: number = 0, size: number = 10, sort?: string): Observable<Page<DossierApi>> {
+    const params: any = {
+      page: page.toString(),
+      size: size.toString()
+    };
+    if (sort) {
+      params.sort = sort;
+    }
+    return this.http.get<Page<DossierApi>>(this.apiUrl, { params });
   }
 
   /**
@@ -421,10 +430,118 @@ export class DossierApiService {
   }
 
   /**
-   * Récupère les dossiers créés par un agent
+   * Récupère les dossiers créés par un agent (sans pagination - alternative)
+   * Utilise l'endpoint /agent/{agentId}/crees sans paramètres de pagination
    */
-  getDossiersCreesByAgent(agentId: number): Observable<DossierApi[]> {
-    return this.http.get<DossierApi[]>(`${this.apiUrl}/agent/${agentId}/crees`);
+  getDossiersCreesByAgentSimple(agentId: number): Observable<DossierApi[]> {
+    console.log('🔍 DossierApiService.getDossiersCreesByAgentSimple appelé avec agentId:', agentId);
+    const url = `${this.apiUrl}/agent/${agentId}/crees`;
+    console.log('🔍 URL simple:', url);
+    
+    return this.http.get<DossierApi[]>(url).pipe(
+      tap(response => {
+        console.log('✅ Réponse API getDossiersCreesByAgentSimple:', response);
+        console.log('✅ Type:', Array.isArray(response) ? 'Array' : typeof response);
+        console.log('✅ Nombre de dossiers:', Array.isArray(response) ? response.length : 0);
+        if (Array.isArray(response) && response.length > 0) {
+          console.log('✅ Premier dossier:', response[0]);
+          console.log('✅ Agent créateur du premier dossier:', response[0]?.agentCreateur);
+        }
+      }),
+      catchError(error => {
+        console.error('❌ Erreur dans getDossiersCreesByAgentSimple:', error);
+        return of([]);
+      })
+    );
+  }
+
+  /**
+   * Récupère les dossiers créés par un agent avec pagination
+   */
+  getDossiersCreesByAgent(agentId: number, page: number = 0, size: number = 10, sort?: string): Observable<Page<DossierApi>> {
+    console.log('🔍 DossierApiService.getDossiersCreesByAgent appelé avec:', { agentId, page, size, sort });
+    
+    if (!agentId || isNaN(agentId)) {
+      console.error('❌ AgentId invalide:', agentId);
+      throw new Error(`AgentId invalide: ${agentId}`);
+    }
+    
+    const params: any = {
+      page: page.toString(),
+      size: size.toString()
+    };
+    if (sort) {
+      params.sort = sort;
+    }
+    
+    const url = `${this.apiUrl}/agent/${agentId}/crees`;
+    console.log('🔍 URL complète:', url);
+    console.log('🔍 Paramètres:', params);
+    
+    return this.http.get<any>(url, { params }).pipe(
+      map((response: any) => {
+        console.log('✅ Réponse API brute getDossiersCreesByAgent:', response);
+        console.log('✅ Type de réponse:', Array.isArray(response) ? 'Array' : typeof response);
+        
+        // Si la réponse est un tableau directement
+        if (Array.isArray(response)) {
+          console.log('✅ Réponse est un tableau, conversion en Page');
+          const pageResponse: Page<DossierApi> = {
+            content: response,
+            totalElements: response.length,
+            totalPages: Math.ceil(response.length / size),
+            size: size,
+            number: page,
+            first: page === 0,
+            last: page >= Math.ceil(response.length / size) - 1,
+            empty: response.length === 0
+          };
+          console.log('✅ Page convertie:', pageResponse);
+          console.log('✅ Nombre de dossiers:', pageResponse.content.length);
+          if (pageResponse.content.length > 0) {
+            console.log('✅ Premier dossier:', pageResponse.content[0]);
+          }
+          return pageResponse;
+        }
+        
+        // Si la réponse est déjà un objet Page
+        if (response && response.content !== undefined) {
+          console.log('✅ Réponse est déjà un objet Page');
+          console.log('✅ Nombre de dossiers:', response.content?.length || 0);
+          if (response.content && response.content.length > 0) {
+            console.log('✅ Premier dossier:', response.content[0]);
+          }
+          return response as Page<DossierApi>;
+        }
+        
+        // Si la réponse est vide ou invalide
+        console.warn('⚠️ Format de réponse inattendu, création d\'une Page vide');
+        return {
+          content: [],
+          totalElements: 0,
+          totalPages: 0,
+          size: size,
+          number: page,
+          first: true,
+          last: true,
+          empty: true
+        } as Page<DossierApi>;
+      }),
+      catchError(error => {
+        console.error('❌ Erreur dans getDossiersCreesByAgent:', error);
+        // Retourner une Page vide en cas d'erreur
+        return of({
+          content: [],
+          totalElements: 0,
+          totalPages: 0,
+          size: size,
+          number: page,
+          first: true,
+          last: true,
+          empty: true
+        } as Page<DossierApi>);
+      })
+    );
   }
 
   /**

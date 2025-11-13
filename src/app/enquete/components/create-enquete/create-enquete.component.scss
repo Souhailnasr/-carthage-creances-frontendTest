@@ -1,0 +1,328 @@
+.create-enquete-container {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+  background-color: #f9f9f9;
+  min-height: 100vh;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding: 20px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+  .header-content {
+    h1 {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 0 0 8px 0;
+      font-size: 28px;
+      font-weight: 600;
+      color: #3f51b5;
+
+      mat-icon {
+        font-size: 32px;
+        color: #3f51b5;
+      }
+    }
+
+    .subtitle {
+      margin: 0;
+      color: #666;
+      font-size: 14px;
+    }
+  }
+}
+
+// Section des dossiers
+.dossiers-section {
+  .search-card {
+    margin-bottom: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+    .search-bar {
+      margin-bottom: 16px;
+
+      .search-field {
+        width: 100%;
+      }
+    }
+
+    .table-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+
+      .sort-controls,
+      .pagination-controls {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+
+        mat-form-field {
+          width: 150px;
+        }
+      }
+
+      .pagination-info {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        span {
+          font-weight: 500;
+          color: #666;
+        }
+      }
+    }
+  }
+
+  .table-card {
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+    .loading-container,
+    .empty-message {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 48px;
+      color: #666;
+
+      mat-spinner {
+        margin-bottom: 16px;
+      }
+
+      mat-icon {
+        font-size: 48px;
+        color: #999;
+        margin-bottom: 16px;
+      }
+
+      p {
+        font-size: 16px;
+      }
+    }
+
+    .dossiers-table {
+      width: 100%;
+
+      th {
+        background-color: #f5f5f5;
+        font-weight: 600;
+        color: #333;
+        text-transform: uppercase;
+        font-size: 12px;
+        padding: 12px 16px;
+      }
+
+      td {
+        padding: 12px 16px;
+        border-bottom: 1px solid #e0e0e0;
+      }
+
+      tr:hover {
+        background-color: #f9f9f9;
+      }
+
+      .party-info {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+
+        .party-name {
+          font-weight: 500;
+          color: #333;
+        }
+
+        .party-type {
+          font-size: 11px;
+          padding: 2px 8px;
+          border-radius: 12px;
+          display: inline-block;
+          width: fit-content;
+
+          &.type-particulier {
+            background-color: #e3f2fd;
+            color: #1976d2;
+          }
+
+          &.type-entreprise {
+            background-color: #f3e5f5;
+            color: #7b1fa2;
+          }
+        }
+      }
+
+      .urgence-badge,
+      .statut-badge {
+        padding: 4px 12px;
+        border-radius: 16px;
+        font-size: 11px;
+        font-weight: 500;
+        text-transform: uppercase;
+        display: inline-block;
+      }
+
+      .urgence-badge {
+        &.urgence-faible {
+          background-color: #c8e6c9;
+          color: #2e7d32;
+        }
+
+        &.urgence-moyenne {
+          background-color: #fff9c4;
+          color: #f57f17;
+        }
+
+        &.urgence-elevee {
+          background-color: #ffccbc;
+          color: #e64a19;
+        }
+      }
+
+      .statut-badge {
+        &.statut-valide {
+          background-color: #c8e6c9;
+          color: #2e7d32;
+        }
+
+        &.statut-en-attente-validation {
+          background-color: #fff9c4;
+          color: #f57f17;
+        }
+
+        &.statut-rejete {
+          background-color: #ffcdd2;
+          color: #c62828;
+        }
+      }
+    }
+  }
+}
+
+// Section du formulaire
+.enquete-form-section {
+  margin-top: 24px;
+
+  .form-card {
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+    mat-card-header {
+      background-color: #e8eaf6;
+      padding: 16px 24px;
+      border-radius: 8px 8px 0 0;
+
+      mat-card-title {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 20px;
+        font-weight: 600;
+        color: #3f51b5;
+
+        mat-icon {
+          font-size: 24px;
+        }
+      }
+    }
+
+    mat-card-content {
+      padding: 24px;
+    }
+
+    mat-expansion-panel {
+      margin-bottom: 12px;
+      border-radius: 4px;
+
+      .mat-expansion-panel-header {
+        background-color: #f5f5f5;
+        font-weight: 600;
+      }
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+
+      &.full-width {
+        grid-column: 1 / -1;
+      }
+    }
+
+    .full-width {
+      grid-column: 1 / -1;
+    }
+
+    mat-form-field {
+      width: 100%;
+    }
+
+    .form-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 1px solid #e0e0e0;
+
+      button {
+        min-width: 150px;
+      }
+    }
+  }
+}
+
+// Responsive
+@media (max-width: 768px) {
+  .create-enquete-container {
+    padding: 16px;
+  }
+
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .dossiers-section {
+    .table-controls {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .dossiers-table {
+      font-size: 12px;
+
+      th,
+      td {
+        padding: 8px;
+      }
+    }
+  }
+
+  .enquete-form-section {
+    .form-card {
+      mat-card-content {
+        padding: 16px;
+      }
+
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+    }
+  }
+}

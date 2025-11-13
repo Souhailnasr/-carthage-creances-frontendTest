@@ -1,0 +1,48 @@
+<h2 mat-dialog-title>
+  <mat-icon>cancel</mat-icon>
+  Rejeter l'enquête
+</h2>
+
+<mat-dialog-content>
+  <div class="dialog-info">
+    <div class="info-item">
+      <strong>Code rapport:</strong>
+      <span>{{ enquete?.rapportCode || 'N/A' }}</span>
+    </div>
+    <div class="info-item" *ngIf="enquete?.dossier">
+      <strong>Numéro dossier:</strong>
+      <span>{{ enquete?.dossier?.numeroDossier || 'N/A' }}</span>
+    </div>
+    <div class="info-item" *ngIf="enquete?.dossier">
+      <strong>Titre du dossier:</strong>
+      <span>{{ enquete?.dossier?.titre || 'N/A' }}</span>
+    </div>
+  </div>
+
+  <div class="warning-message">
+    <mat-icon>warning</mat-icon>
+    <span>Cette action rejettera l'enquête et notifiera l'agent créateur.</span>
+  </div>
+
+  <form [formGroup]="rejetForm">
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Commentaire de rejet *</mat-label>
+      <textarea matInput formControlName="commentaire" rows="4" maxlength="500" required></textarea>
+      <mat-hint>{{ rejetForm.get('commentaire')?.value?.length || 0 }}/500</mat-hint>
+      <mat-error *ngIf="rejetForm.get('commentaire')?.hasError('required')">
+        Le commentaire est obligatoire
+      </mat-error>
+      <mat-error *ngIf="rejetForm.get('commentaire')?.hasError('minlength')">
+        Le commentaire doit contenir au moins 10 caractères
+      </mat-error>
+    </mat-form-field>
+  </form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="onCancel()">Annuler</button>
+  <button mat-button color="warn" (click)="onConfirm()" [disabled]="!rejetForm.valid">
+    Rejeter
+  </button>
+</mat-dialog-actions>
+

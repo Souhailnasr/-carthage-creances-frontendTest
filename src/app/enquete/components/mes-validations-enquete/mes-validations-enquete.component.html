@@ -1,0 +1,154 @@
+<div class="mes-validations-container">
+  <div class="page-header">
+    <h1>
+      <mat-icon>history</mat-icon>
+      Mes validations d'enquêtes
+    </h1>
+    <p class="subtitle" *ngIf="currentUser?.roleUtilisateur === 'CHEF_DEPARTEMENT_DOSSIER' || currentUser?.roleUtilisateur === 'SUPER_ADMIN'">
+      Historique de toutes mes validations d'enquêtes
+    </p>
+    <p class="subtitle" *ngIf="currentUser?.roleUtilisateur === 'AGENT_DOSSIER'">
+      Historique de toutes mes enquêtes en attente de validation
+    </p>
+  </div>
+
+  <!-- Statistiques -->
+  <div class="stats-container" *ngIf="!loading">
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-value">{{ stats.total }}</div>
+        <div class="stat-label">Total</div>
+      </mat-card-content>
+    </mat-card>
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-value">{{ stats.enAttente }}</div>
+        <div class="stat-label">En attente</div>
+      </mat-card-content>
+    </mat-card>
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-value">{{ stats.validees }}</div>
+        <div class="stat-label">Validées</div>
+      </mat-card-content>
+    </mat-card>
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-value">{{ stats.rejetees }}</div>
+        <div class="stat-label">Rejetées</div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Filtres -->
+  <mat-card class="filters-card" *ngIf="!loading">
+    <mat-card-content>
+      <form [formGroup]="filterForm" class="filters-form">
+        <mat-form-field appearance="outline">
+          <mat-label>Statut</mat-label>
+          <mat-select formControlName="statut">
+            <mat-option value="">Tous</mat-option>
+            <mat-option *ngFor="let statut of statutOptions" [value]="statut">
+              {{ statut }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Recherche</mat-label>
+          <input matInput formControlName="searchTerm" placeholder="Code rapport ou numéro dossier">
+        </mat-form-field>
+      </form>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Tableau -->
+  <div class="table-container" *ngIf="!loading && dataSource.data.length > 0">
+    <table mat-table [dataSource]="dataSource" class="mat-elevation-z2">
+      <ng-container matColumnDef="rapportCode">
+        <th mat-header-cell *matHeaderCellDef>Code rapport</th>
+        <td mat-cell *matCellDef="let validation">{{ validation.enquete?.rapportCode || 'N/A' }}</td>
+      </ng-container>
+      <ng-container matColumnDef="numeroDossier">
+        <th mat-header-cell *matHeaderCellDef>NUMÉRO</th>
+        <td mat-cell *matCellDef="let validation">{{ getDossierNumero(validation) }}</td>
+      </ng-container>
+      <ng-container matColumnDef="titreDossier">
+        <th mat-header-cell *matHeaderCellDef>TITRE</th>
+        <td mat-cell *matCellDef="let validation">{{ getDossierTitre(validation) }}</td>
+      </ng-container>
+      <ng-container matColumnDef="statut">
+        <th mat-header-cell *matHeaderCellDef>Statut</th>
+        <td mat-cell *matCellDef="let validation">
+          <mat-chip [color]="getStatutColor(validation.statut)">
+            {{ getStatutLabel(validation.statut) }}
+          </mat-chip>
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="dateCreation">
+        <th mat-header-cell *matHeaderCellDef>Date création</th>
+        <td mat-cell *matCellDef="let validation">{{ formatDate(validation.dateCreation) }}</td>
+      </ng-container>
+      <ng-container matColumnDef="dateValidation">
+        <th mat-header-cell *matHeaderCellDef>Date validation</th>
+        <td mat-cell *matCellDef="let validation">{{ formatDate(validation.dateValidation) }}</td>
+      </ng-container>
+      <ng-container matColumnDef="chefValidateur">
+        <th mat-header-cell *matHeaderCellDef>Chef validateur</th>
+        <td mat-cell *matCellDef="let validation">{{ getChefName(validation) }}</td>
+      </ng-container>
+      <ng-container matColumnDef="commentaires">
+        <th mat-header-cell *matHeaderCellDef>Commentaires</th>
+        <td mat-cell *matCellDef="let validation">{{ validation.commentaires || 'N/A' }}</td>
+      </ng-container>
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef>Actions</th>
+        <td mat-cell *matCellDef="let validation">
+          <button mat-icon-button (click)="voirDetails(validation)" matTooltip="Voir détails" color="primary">
+            <mat-icon>visibility</mat-icon>
+          </button>
+          <button mat-icon-button 
+                  *ngIf="canModify(validation)"
+                  (click)="modifierEnquete(validation)" 
+                  matTooltip="Modifier l'enquête"
+                  color="accent">
+            <mat-icon>edit</mat-icon>
+          </button>
+          <button mat-icon-button 
+                  *ngIf="canDelete(validation)"
+                  (click)="supprimerEnquete(validation)" 
+                  [disabled]="isDeleting(validation.enquete?.id)"
+                  matTooltip="Supprimer l'enquête"
+                  color="warn">
+            <mat-icon *ngIf="!isDeleting(validation.enquete?.id)">delete</mat-icon>
+            <mat-spinner *ngIf="isDeleting(validation.enquete?.id)" diameter="20"></mat-spinner>
+          </button>
+          <button mat-icon-button 
+                  *ngIf="validation.statut === StatutValidation.REJETE" 
+                  (click)="demanderNouvelleValidation(validation)" 
+                  matTooltip="Demander nouvelle validation"
+                  color="primary">
+            <mat-icon>refresh</mat-icon>
+          </button>
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="agentCreateur">
+        <th mat-header-cell *matHeaderCellDef>Agent créateur</th>
+        <td mat-cell *matCellDef="let validation">{{ getAgentName(validation) }}</td>
+      </ng-container>
+      <tr mat-header-row *matHeaderRowDef="getDisplayedColumns()"></tr>
+      <tr mat-row *matRowDef="let row; columns: getDisplayedColumns()"></tr>
+    </table>
+    <mat-paginator [pageSizeOptions]="[5, 10, 20, 50]" showFirstLastButtons></mat-paginator>
+  </div>
+
+  <div class="loading-container" *ngIf="loading">
+    <mat-spinner diameter="50"></mat-spinner>
+    <p>Chargement des validations...</p>
+  </div>
+
+  <div class="empty-container" *ngIf="!loading && dataSource.data.length === 0">
+    <mat-icon>inbox</mat-icon>
+    <p>Aucune validation trouvée</p>
+  </div>
+</div>
+
