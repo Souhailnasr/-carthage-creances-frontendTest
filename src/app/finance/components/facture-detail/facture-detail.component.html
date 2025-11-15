@@ -1,0 +1,154 @@
+<div class="facture-container" *ngIf="detailFacture && finance && !loading">
+  <mat-toolbar class="facture-toolbar">
+    <span>Facture - Dossier #{{ dossierId }}</span>
+    <span class="spacer"></span>
+    <button mat-icon-button (click)="recalculerCouts()" matTooltip="Recalculer les coûts" [disabled]="loading">
+      <mat-icon>refresh</mat-icon>
+    </button>
+    <button mat-icon-button (click)="finaliserFacture()" 
+            [disabled]="finance.factureFinalisee || loading" 
+            matTooltip="Finaliser la facture">
+      <mat-icon>check_circle</mat-icon>
+    </button>
+    <button mat-icon-button (click)="imprimerFacture()" matTooltip="Imprimer">
+      <mat-icon>print</mat-icon>
+    </button>
+    <button mat-icon-button (click)="goBack()" matTooltip="Retour">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+  </mat-toolbar>
+  
+  <div class="facture-content">
+    <!-- Section 1: Coûts Création et Gestion -->
+    <mat-card class="facture-section">
+      <mat-card-title>1. Coûts de Création et Gestion</mat-card-title>
+      <mat-card-content>
+        <div class="facture-line">
+          <span>Frais création dossier</span>
+          <span class="amount">{{ detailFacture.fraisCreationDossier | number:'1.2-2' }} TND</span>
+        </div>
+        <div class="facture-line">
+          <span>Frais gestion ({{ finance.dureeGestionMois }} mois × {{ finance.fraisGestionDossier | number:'1.2-2' }} TND/mois)</span>
+          <span class="amount">{{ detailFacture.coutGestionTotal | number:'1.2-2' }} TND</span>
+        </div>
+        <div class="facture-line subtotal">
+          <span>Sous-total</span>
+          <span class="amount">{{ detailFacture.fraisCreationDossier + detailFacture.coutGestionTotal | number:'1.2-2' }} TND</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+    
+    <!-- Section 2: Coûts des Actions -->
+    <mat-card class="facture-section">
+      <mat-card-title>2. Coûts des Actions</mat-card-title>
+      <mat-card-content>
+        <h3>Actions Recouvrement Amiable</h3>
+        <table mat-table [dataSource]="actionsAmiable" class="actions-table" *ngIf="actionsAmiable.length > 0">
+          <ng-container matColumnDef="dateAction">
+            <th mat-header-cell *matHeaderCellDef>Date</th>
+            <td mat-cell *matCellDef="let action">{{ action.dateAction | date:'dd/MM/yyyy' }}</td>
+          </ng-container>
+          <ng-container matColumnDef="type">
+            <th mat-header-cell *matHeaderCellDef>Type</th>
+            <td mat-cell *matCellDef="let action">{{ action.type }}</td>
+          </ng-container>
+          <ng-container matColumnDef="nbOccurrences">
+            <th mat-header-cell *matHeaderCellDef>Occurrences</th>
+            <td mat-cell *matCellDef="let action">{{ action.nbOccurrences }}</td>
+          </ng-container>
+          <ng-container matColumnDef="coutUnitaire">
+            <th mat-header-cell *matHeaderCellDef>Coût Unitaire</th>
+            <td mat-cell *matCellDef="let action">{{ action.coutUnitaire | number:'1.2-2' }} TND</td>
+          </ng-container>
+          <ng-container matColumnDef="total">
+            <th mat-header-cell *matHeaderCellDef>Total</th>
+            <td mat-cell *matCellDef="let action">{{ action.totalCout | number:'1.2-2' }} TND</td>
+          </ng-container>
+          <tr mat-header-row *matHeaderRowDef="displayedColumnsAmiable"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumnsAmiable;"></tr>
+        </table>
+        <p *ngIf="actionsAmiable.length === 0" class="no-actions">Aucune action amiable</p>
+        <div class="facture-line subtotal">
+          <span>Total actions amiable</span>
+          <span class="amount">{{ detailFacture.coutActionsAmiable | number:'1.2-2' }} TND</span>
+        </div>
+        
+        <h3>Actions Recouvrement Juridique</h3>
+        <table mat-table [dataSource]="actionsJuridique" class="actions-table" *ngIf="actionsJuridique.length > 0">
+          <ng-container matColumnDef="dateAction">
+            <th mat-header-cell *matHeaderCellDef>Date</th>
+            <td mat-cell *matCellDef="let action">{{ action.dateAction | date:'dd/MM/yyyy' }}</td>
+          </ng-container>
+          <ng-container matColumnDef="type">
+            <th mat-header-cell *matHeaderCellDef>Type</th>
+            <td mat-cell *matCellDef="let action">{{ action.type }}</td>
+          </ng-container>
+          <ng-container matColumnDef="nbOccurrences">
+            <th mat-header-cell *matHeaderCellDef>Occurrences</th>
+            <td mat-cell *matCellDef="let action">{{ action.nbOccurrences }}</td>
+          </ng-container>
+          <ng-container matColumnDef="coutUnitaire">
+            <th mat-header-cell *matHeaderCellDef>Coût Unitaire</th>
+            <td mat-cell *matCellDef="let action">{{ action.coutUnitaire | number:'1.2-2' }} TND</td>
+          </ng-container>
+          <ng-container matColumnDef="total">
+            <th mat-header-cell *matHeaderCellDef>Total</th>
+            <td mat-cell *matCellDef="let action">{{ action.totalCout | number:'1.2-2' }} TND</td>
+          </ng-container>
+          <tr mat-header-row *matHeaderRowDef="displayedColumnsJuridique"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumnsJuridique;"></tr>
+        </table>
+        <p *ngIf="actionsJuridique.length === 0" class="no-actions">Aucune action juridique</p>
+        <div class="facture-line subtotal">
+          <span>Total actions juridique</span>
+          <span class="amount">{{ detailFacture.coutActionsJuridique | number:'1.2-2' }} TND</span>
+        </div>
+        
+        <div class="facture-line subtotal">
+          <span>Total actions</span>
+          <span class="amount">{{ detailFacture.coutActionsAmiable + detailFacture.coutActionsJuridique | number:'1.2-2' }} TND</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+    
+    <!-- Section 3: Frais Professionnels -->
+    <mat-card class="facture-section">
+      <mat-card-title>3. Frais Professionnels</mat-card-title>
+      <mat-card-content>
+        <div class="facture-line">
+          <span>Frais avocat</span>
+          <span class="amount">{{ detailFacture.fraisAvocat | number:'1.2-2' }} TND</span>
+        </div>
+        <div class="facture-line">
+          <span>Frais huissier</span>
+          <span class="amount">{{ detailFacture.fraisHuissier | number:'1.2-2' }} TND</span>
+        </div>
+        <div class="facture-line subtotal">
+          <span>Sous-total</span>
+          <span class="amount">{{ detailFacture.fraisAvocat + detailFacture.fraisHuissier | number:'1.2-2' }} TND</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+    
+    <!-- Section 4: Total Facture -->
+    <mat-card class="facture-section total-card">
+      <mat-card-title>Total Facture</mat-card-title>
+      <mat-card-content>
+        <div class="facture-line total">
+          <span>Grand Total</span>
+          <span class="amount">{{ detailFacture.totalFacture | number:'1.2-2' }} TND</span>
+        </div>
+        <div class="facture-status" *ngIf="finance.factureFinalisee">
+          <mat-icon>check_circle</mat-icon>
+          <span>Facture finalisée le {{ finance.dateFacturation | date:'dd/MM/yyyy' }}</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+</div>
+
+<div *ngIf="loading" class="loading">
+  <mat-spinner></mat-spinner>
+  <p>Chargement de la facture...</p>
+</div>
+

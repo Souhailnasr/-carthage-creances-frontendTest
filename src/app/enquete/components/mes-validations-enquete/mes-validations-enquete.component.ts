@@ -1038,12 +1038,24 @@ export class MesValidationsEnqueteComponent implements OnInit, OnDestroy {
           // Associer les dossiers chargés aux enquêtes
           results.forEach(({ enquete, dossierApi }) => {
             if (dossierApi && enquete) {
-              // Créer un objet Dossier minimal avec les données nécessaires
+              // Créer un objet Dossier complet avec toutes les données nécessaires
               enquete.dossier = {
                 id: dossierApi.id?.toString() || '',
                 numeroDossier: dossierApi.numeroDossier || '',
-                titre: dossierApi.titre || ''
+                titre: dossierApi.titre || '',
+                montantCreance: dossierApi.montantCreance,
+                creancier: dossierApi.creancier,
+                debiteur: dossierApi.debiteur,
+                urgence: dossierApi.urgence,
+                statut: dossierApi.statut,
+                dateCreation: dossierApi.dateCreation
               } as any;
+              console.log(`✅ Dossier ${dossierApi.id} chargé pour l'enquête ${enquete.id}:`, {
+                numeroDossier: dossierApi.numeroDossier,
+                titre: dossierApi.titre
+              });
+            } else if (enquete) {
+              console.warn(`⚠️ Dossier non trouvé pour l'enquête ${enquete.id} (dossierId: ${enquete.dossierId})`);
             }
           });
 
@@ -1103,8 +1115,23 @@ export class MesValidationsEnqueteComponent implements OnInit, OnDestroy {
           return of(null);
         }),
         map((dossierApi: DossierApi | null) => {
-          if (dossierApi) {
-            console.log(`✅ Dossier ${dossierId} chargé:`, { numero: dossierApi.numeroDossier, titre: dossierApi.titre });
+          if (dossierApi && enquete) {
+            // Créer un objet Dossier complet avec toutes les données
+            enquete.dossier = {
+              id: dossierApi.id?.toString() || '',
+              numeroDossier: dossierApi.numeroDossier || '',
+              titre: dossierApi.titre || '',
+              montantCreance: dossierApi.montantCreance,
+              creancier: dossierApi.creancier,
+              debiteur: dossierApi.debiteur,
+              urgence: dossierApi.urgence,
+              statut: dossierApi.statut,
+              dateCreation: dossierApi.dateCreation
+            } as any;
+            console.log(`✅ Dossier ${dossierId} chargé pour l'enquête ${enquete.id}:`, { 
+              numero: dossierApi.numeroDossier, 
+              titre: dossierApi.titre 
+            });
           }
           return { validation, dossierApi };
         })
@@ -1118,11 +1145,17 @@ export class MesValidationsEnqueteComponent implements OnInit, OnDestroy {
           // Associer les dossiers chargés aux enquêtes
           results.forEach(({ validation, dossierApi }) => {
             if (dossierApi && validation?.enquete) {
-              // Créer un objet Dossier minimal avec les données nécessaires
+              // Créer un objet Dossier complet avec toutes les données nécessaires
               validation.enquete.dossier = {
                 id: dossierApi.id?.toString() || '',
                 numeroDossier: dossierApi.numeroDossier || '',
-                titre: dossierApi.titre || ''
+                titre: dossierApi.titre || '',
+                montantCreance: dossierApi.montantCreance,
+                creancier: dossierApi.creancier,
+                debiteur: dossierApi.debiteur,
+                urgence: dossierApi.urgence,
+                statut: dossierApi.statut,
+                dateCreation: dossierApi.dateCreation
               } as any;
               console.log(`✅ Dossier associé à l'enquête ${validation.enquete.id}:`, {
                 numero: validation.enquete.dossier?.numeroDossier || 'N/A',

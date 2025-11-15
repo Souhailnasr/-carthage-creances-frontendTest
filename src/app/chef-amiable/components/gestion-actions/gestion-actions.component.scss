@@ -106,6 +106,7 @@
   .affectation-form {
     border-top: 1px solid #e9ecef;
     padding-top: 1.5rem;
+    margin-top: 1rem;
     
     h3 {
       color: #2c3e50;
@@ -115,12 +116,26 @@
     
     .form-group {
       margin-bottom: 1rem;
+      padding: 1rem;
+      background: #f8f9fa;
+      border-radius: 8px;
       
       label {
         display: block;
         margin-bottom: 0.5rem;
         color: #2c3e50;
         font-weight: 600;
+      }
+      
+      p {
+        margin: 0.5rem 0;
+        color: #495057;
+        font-size: 0.95rem;
+        
+        strong {
+          color: #2c3e50;
+          font-weight: 600;
+        }
       }
       
       .form-control {
@@ -142,8 +157,9 @@
     .action-buttons {
       display: flex;
       gap: 1rem;
+      flex-wrap: wrap;
       
-      .btn-warning, .btn-danger {
+      .btn-warning, .btn-danger, .btn-secondary {
         padding: 0.75rem 1.5rem;
         border: none;
         border-radius: 8px;
@@ -158,15 +174,25 @@
         i {
           font-size: 0.9rem;
         }
+        
+        &:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+          
+          &:hover {
+            transform: none;
+          }
+        }
       }
       
       .btn-warning {
         background: #ffc107;
         color: #212529;
         
-        &:hover {
+        &:hover:not(:disabled) {
           background: #e0a800;
           transform: translateY(-2px);
+          box-shadow: 0 4px 8px rgba(255, 193, 7, 0.3);
         }
       }
       
@@ -174,8 +200,19 @@
         background: #dc3545;
         color: white;
         
-        &:hover {
+        &:hover:not(:disabled) {
           background: #c82333;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+        }
+      }
+      
+      .btn-secondary {
+        background: #6c757d;
+        color: white;
+        
+        &:hover:not(:disabled) {
+          background: #5a6268;
           transform: translateY(-2px);
         }
       }
@@ -251,6 +288,123 @@
           }
         }
       }
+      
+      .dossier-actions-quick {
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid #e9ecef;
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        
+        .btn-small {
+          padding: 0.5rem 1rem;
+          border: none;
+          border-radius: 6px;
+          font-size: 0.85rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          flex: 1;
+          min-width: 120px;
+          justify-content: center;
+          
+          i {
+            font-size: 0.85rem;
+          }
+          
+          &.btn-warning {
+            background: #ffc107;
+            color: #212529;
+            
+            &:hover {
+              background: #e0a800;
+              transform: translateY(-2px);
+              box-shadow: 0 4px 8px rgba(255, 193, 7, 0.3);
+            }
+          }
+          
+          &.btn-danger {
+            background: #dc3545;
+            color: white;
+            
+            &:hover {
+              background: #c82333;
+              transform: translateY(-2px);
+              box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+            }
+          }
+        }
+      }
+    }
+  }
+  
+  .loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem;
+    
+    p {
+      margin-top: 1rem;
+      color: #7f8c8d;
+      font-size: 1rem;
+    }
+  }
+  
+  .no-dossiers {
+    text-align: center;
+    padding: 3rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    
+    p {
+      color: #7f8c8d;
+      font-size: 1.1rem;
+      margin: 0;
+    }
+  }
+  
+  .form-text {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.875rem;
+    color: #6c757d;
+  }
+  
+  .text-warning {
+    color: #ffc107;
+    font-weight: 600;
+  }
+  
+  .text-muted {
+    color: #6c757d;
+  }
+  
+  .btn-secondary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    
+    &:hover {
+      transform: none;
+    }
+  }
+  
+  .fa-spin {
+    animation: fa-spin 1s infinite linear;
+  }
+  
+  @keyframes fa-spin {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
     }
   }
 }

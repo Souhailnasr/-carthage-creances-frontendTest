@@ -101,7 +101,7 @@
       <div class="search-filters">
         <mat-form-field appearance="outline" class="search-field">
           <mat-label>Rechercher un dossier</mat-label>
-          <input matInput [(ngModel)]="searchTerm" (input)="onSearch()" 
+          <input matInput [(ngModel)]="searchTerm" (input)="onSearchChange(searchTerm)" 
                  placeholder="Numéro, titre, créancier, débiteur...">
           <mat-icon matSuffix>search</mat-icon>
         </mat-form-field>

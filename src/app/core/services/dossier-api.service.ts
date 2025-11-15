@@ -1,8 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, throwError, of } from 'rxjs';
 import { tap, map, catchError } from 'rxjs/operators';
-import { of } from 'rxjs';
 import { 
   DossierApi, 
   DossierRequest, 
@@ -11,7 +10,8 @@ import {
   ValidationRequest,
   RejetRequest,
   Urgence,
-  DossierStatus
+  DossierStatus,
+  TypeRecouvrement
 } from '../../shared/models/dossier-api.model';
 import { Page } from '../../shared/models/pagination.model';
 
@@ -213,15 +213,429 @@ export class DossierApiService {
 
 
   /**
-   * Clôture un dossier
+   * Affecte un dossier validé au recouvrement amiable
+   * PUT /api/dossiers/{dossierId}/affecter/recouvrement-amiable
+   * Note: L'endpoint doit être implémenté dans le backend
    */
-  cloturerDossier(id: number): Observable<any> {
-    return this.http.put(`${this.apiUrl}/${id}/cloturer`, {});
+  affecterAuRecouvrementAmiable(dossierId: number): Observable<DossierApi> {
+    const url = `${this.apiUrl}/${dossierId}/affecter/recouvrement-amiable`;
+    console.log('📤 Affectation au recouvrement amiable:', url);
+    
+    return this.http.put<DossierApi>(url, null).pipe(
+      catchError((error) => {
+        console.error('❌ Erreur lors de l\'affectation au recouvrement amiable:', error);
+        console.error('❌ URL appelée:', url);
+        console.error('❌ Status:', error.status);
+        console.error('❌ Message:', error.error?.message || error.message);
+        console.error('❌ Détails complets:', JSON.stringify(error.error, null, 2));
+        
+        let errorMessage = 'Erreur lors de l\'affectation au recouvrement amiable';
+        
+        // Erreur 400 - Bad Request (problème de données)
+        if (error.status === 400) {
+          const errorDetail = error.error?.message || error.error?.error || '';
+          if (errorDetail.includes('dossiers_id') || errorDetail.includes("doesn't have a default value")) {
+            errorMessage = 'Erreur technique: Problème de base de données. Le champ dossiers_id n\'a pas de valeur par défaut. Veuillez contacter l\'administrateur système.';
+          } else if (errorDetail.includes('dossier non validé') || errorDetail.includes('non validé')) {
+            errorMessage = 'Ce dossier n\'est pas encore validé. Veuillez d\'abord valider le dossier avant de l\'affecter.';
+          } else if (errorDetail.includes('chef') || errorDetail.includes('Chef')) {
+            errorMessage = 'Aucun chef du département recouvrement amiable trouvé. Veuillez contacter l\'administrateur.';
+          } else {
+            errorMessage = errorDetail || 'Erreur lors de l\'affectation. Veuillez vérifier que le dossier est validé et qu\'un chef amiable est disponible.';
+          }
+        }
+        // Si l'endpoint n'existe pas (404 ou 500 avec "No static resource")
+        else if (error.status === 404 || (error.status === 500 && error.error?.message?.includes('No static resource'))) {
+          errorMessage = 'L\'endpoint d\'affectation au recouvrement amiable n\'est pas encore disponible dans le backend. Veuillez contacter l\'administrateur.';
+        } 
+        // Erreur 500 - Server Error
+        else if (error.status === 500) {
+          const errorDetail = error.error?.message || error.error?.error || '';
+          if (errorDetail.includes('dossiers_id') || errorDetail.includes("doesn't have a default value")) {
+            errorMessage = 'Erreur technique: Problème de base de données. Le champ dossiers_id n\'a pas de valeur par défaut. Veuillez contacter l\'administrateur système.';
+          } else {
+            errorMessage = 'Erreur serveur lors de l\'affectation. Veuillez réessayer ou contacter l\'administrateur.';
+          }
+        }
+        // Autres erreurs
+        else if (error.error?.message) {
+          errorMessage = error.error.message;
+        } else if (error.error?.error) {
+          errorMessage = error.error.error;
+        }
+        
+        return throwError(() => new Error(errorMessage));
+      })
+    );
+  }
+
+  /**
+   * Affecte un dossier validé au recouvrement juridique
+   * PUT /api/dossiers/{dossierId}/affecter/recouvrement-juridique
+   * Note: L'endpoint doit être implémenté dans le backend
+   */
+  affecterAuRecouvrementJuridique(dossierId: number): Observable<DossierApi> {
+    const url = `${this.apiUrl}/${dossierId}/affecter/recouvrement-juridique`;
+    console.log('📤 Affectation au recouvrement juridique:', url);
+    
+    return this.http.put<DossierApi>(url, null).pipe(
+      catchError((error) => {
+        console.error('❌ Erreur lors de l\'affectation au recouvrement juridique:', error);
+        console.error('❌ URL appelée:', url);
+        console.error('❌ Status:', error.status);
+        console.error('❌ Message:', error.error?.message || error.message);
+        console.error('❌ Détails complets:', JSON.stringify(error.error, null, 2));
+        
+        let errorMessage = 'Erreur lors de l\'affectation au recouvrement juridique';
+        
+        // Erreur 400 - Bad Request (problème de données)
+        if (error.status === 400) {
+          const errorDetail = error.error?.message || error.error?.error || '';
+          if (errorDetail.includes('dossiers_id') || errorDetail.includes("doesn't have a default value")) {
+            errorMessage = 'Erreur technique: Problème de base de données. Le champ dossiers_id n\'a pas de valeur par défaut. Veuillez contacter l\'administrateur système.';
+          } else if (errorDetail.includes('dossier non validé') || errorDetail.includes('non validé')) {
+            errorMessage = 'Ce dossier n\'est pas encore validé. Veuillez d\'abord valider le dossier avant de l\'affecter.';
+          } else if (errorDetail.includes('chef') || errorDetail.includes('Chef')) {
+            errorMessage = 'Aucun chef du département recouvrement juridique trouvé. Veuillez contacter l\'administrateur.';
+          } else {
+            errorMessage = errorDetail || 'Erreur lors de l\'affectation. Veuillez vérifier que le dossier est validé et qu\'un chef juridique est disponible.';
+          }
+        }
+        // Si l'endpoint n'existe pas (404 ou 500 avec "No static resource")
+        else if (error.status === 404 || (error.status === 500 && error.error?.message?.includes('No static resource'))) {
+          errorMessage = 'L\'endpoint d\'affectation au recouvrement juridique n\'est pas encore disponible dans le backend. Veuillez contacter l\'administrateur.';
+        } 
+        // Erreur 500 - Server Error
+        else if (error.status === 500) {
+          const errorDetail = error.error?.message || error.error?.error || '';
+          if (errorDetail.includes('dossiers_id') || errorDetail.includes("doesn't have a default value")) {
+            errorMessage = 'Erreur technique: Problème de base de données. Le champ dossiers_id n\'a pas de valeur par défaut. Veuillez contacter l\'administrateur système.';
+          } else {
+            errorMessage = 'Erreur serveur lors de l\'affectation. Veuillez réessayer ou contacter l\'administrateur.';
+          }
+        }
+        // Autres erreurs
+        else if (error.error?.message) {
+          errorMessage = error.error.message;
+        } else if (error.error?.error) {
+          errorMessage = error.error.error;
+        }
+        
+        return throwError(() => new Error(errorMessage));
+      })
+    );
+  }
+
+  /**
+   * Clôture un dossier validé
+   * PUT /api/dossiers/{id}/cloturer
+   * Note: L'endpoint doit être implémenté dans le backend
+   */
+  cloturerDossier(id: number): Observable<DossierApi> {
+    const url = `${this.apiUrl}/${id}/cloturer`;
+    console.log('📤 Clôture du dossier:', url);
+    
+    return this.http.put<DossierApi>(url, null).pipe(
+      catchError((error) => {
+        console.error('❌ Erreur lors de la clôture du dossier:', error);
+        console.error('❌ URL appelée:', url);
+        console.error('❌ Status:', error.status);
+        console.error('❌ Message:', error.error?.message || error.message);
+        
+        let errorMessage = 'Erreur lors de la clôture du dossier';
+        
+        // Si l'endpoint n'existe pas (404 ou 500 avec "No static resource")
+        if (error.status === 404 || (error.status === 500 && error.error?.message?.includes('No static resource'))) {
+          errorMessage = 'L\'endpoint de clôture de dossier n\'est pas encore disponible dans le backend. Veuillez contacter l\'administrateur.';
+        } else if (error.error?.message) {
+          errorMessage = error.error.message;
+        } else if (error.error?.error) {
+          errorMessage = error.error.error;
+        }
+        
+        return throwError(() => new Error(errorMessage));
+      })
+    );
+  }
+
+  /**
+   * Récupère les dossiers validés disponibles pour l'affectation
+   * GET /api/dossiers/valides-disponibles
+   * Note: L'endpoint doit être placé AVANT les routes avec {id} dans le backend pour éviter les conflits
+   */
+  getDossiersValidesDisponibles(params?: {
+    page?: number;
+    size?: number;
+    sort?: string;
+    direction?: string;
+    search?: string;
+  }): Observable<Page<DossierApi>> {
+    let httpParams = new HttpParams();
+    
+    if (params?.page !== undefined) {
+      httpParams = httpParams.set('page', params.page.toString());
+    }
+    if (params?.size !== undefined) {
+      httpParams = httpParams.set('size', params.size.toString());
+    }
+    if (params?.sort) {
+      httpParams = httpParams.set('sort', params.sort);
+    }
+    if (params?.direction) {
+      httpParams = httpParams.set('direction', params.direction);
+    }
+    if (params?.search) {
+      httpParams = httpParams.set('search', params.search);
+    }
+    
+    // Utiliser l'URL complète pour éviter les conflits avec les routes {id}
+    const url = `${this.apiUrl}/valides-disponibles`;
+    console.log('📤 Requête vers:', url, 'avec params:', httpParams.toString());
+    
+    return this.http.get<Page<DossierApi>>(url, {
+      params: httpParams
+    }).pipe(
+      catchError((error) => {
+        console.error('❌ Erreur lors de la récupération des dossiers validés:', error);
+        console.error('❌ URL appelée:', url);
+        console.error('❌ Status:', error.status);
+        console.error('❌ Message:', error.error?.message || error.message);
+        
+        // Si l'endpoint n'existe pas (404 ou 500), fallback vers getAllDossiers avec filtre côté client
+        if (error.status === 404 || error.status === 500) {
+          console.warn('⚠️ Endpoint /valides-disponibles non disponible, utilisation de getAllDossiers avec filtre');
+          return this.getAllDossiers(params?.page || 0, params?.size || 10).pipe(
+            map(page => {
+              // Filtrer uniquement les dossiers validés
+              const dossiersValides = (page.content || []).filter((d: DossierApi) => 
+                d.valide === true && d.statut === 'VALIDE'
+              );
+              
+              // Appliquer la recherche côté client si nécessaire
+              let filtered = dossiersValides;
+              if (params?.search) {
+                const searchTerm = params.search.toLowerCase();
+                filtered = dossiersValides.filter((d: DossierApi) =>
+                  d.numeroDossier?.toLowerCase().includes(searchTerm) ||
+                  d.titre?.toLowerCase().includes(searchTerm) ||
+                  d.creancier?.nom?.toLowerCase().includes(searchTerm) ||
+                  d.debiteur?.nom?.toLowerCase().includes(searchTerm)
+                );
+              }
+              
+              // Appliquer le tri côté client si nécessaire
+              if (params?.sort) {
+                filtered.sort((a: DossierApi, b: DossierApi) => {
+                  const dir = params.direction === 'ASC' ? 1 : -1;
+                  if (params.sort === 'dateCreation') {
+                    const dateA = new Date(a.dateCreation).getTime();
+                    const dateB = new Date(b.dateCreation).getTime();
+                    return (dateA - dateB) * dir;
+                  }
+                  if (params.sort === 'montantCreance') {
+                    return ((a.montantCreance || 0) - (b.montantCreance || 0)) * dir;
+                  }
+                  return 0;
+                });
+              }
+              
+              // Pagination côté client
+              const start = (params?.page || 0) * (params?.size || 10);
+              const end = start + (params?.size || 10);
+              const pagedContent = filtered.slice(start, end);
+              
+              return {
+                content: pagedContent,
+                totalElements: filtered.length,
+                totalPages: Math.ceil(filtered.length / (params?.size || 10)),
+                size: params?.size || 10,
+                number: params?.page || 0,
+                first: (params?.page || 0) === 0,
+                last: (params?.page || 0) >= Math.ceil(filtered.length / (params?.size || 10)) - 1,
+                empty: pagedContent.length === 0
+              } as Page<DossierApi>;
+            }),
+            catchError(fallbackError => {
+              console.error('❌ Erreur également lors du fallback:', fallbackError);
+              return throwError(() => new Error('Erreur lors de la récupération des dossiers validés'));
+            })
+          );
+        }
+        
+        const errorMessage = error.error?.message || error.message || 'Erreur lors de la récupération des dossiers validés';
+        return throwError(() => new Error(errorMessage));
+      })
+    );
   }
 
   /**
    * Récupère tous les dossiers avec pagination
    */
+  /**
+   * Récupère les dossiers affectés au recouvrement amiable
+   * GET /api/dossiers/recouvrement-amiable
+   * Note: Si l'endpoint n'existe pas, utilise getAllDossiers avec filtre côté client
+   */
+  getDossiersRecouvrementAmiable(page: number = 0, size: number = 10, sort?: string): Observable<Page<DossierApi>> {
+    const url = `${this.apiUrl}/recouvrement-amiable`;
+    console.log('📤 Récupération des dossiers recouvrement amiable:', url);
+    
+    let params = new HttpParams()
+      .set('page', page.toString())
+      .set('size', size.toString());
+    
+    if (sort) {
+      params = params.set('sort', sort);
+    }
+    
+    return this.http.get<Page<DossierApi>>(url, { params }).pipe(
+      catchError((error) => {
+        // Si l'erreur est 404 ou 500 (endpoint n'existe pas), utiliser le fallback
+        if (error.status === 404 || error.status === 500 || error.status === 400) {
+          console.warn('⚠️ Endpoint /recouvrement-amiable non disponible, utilisation de getAllDossiers avec filtre côté client');
+          // Fallback: récupérer tous les dossiers avec une taille raisonnable et filtrer côté client
+          const fallbackSize = Math.min(size, 100); // Limiter à 100 pour éviter les erreurs 400
+          return this.getAllDossiers(0, fallbackSize, sort).pipe(
+            catchError((fallbackError) => {
+              console.error('❌ Erreur également lors du fallback getAllDossiers:', fallbackError);
+              // Si même le fallback échoue, retourner une page vide
+              return of({
+                content: [],
+                totalElements: 0,
+                totalPages: 0,
+                size: size,
+                number: page,
+                first: true,
+                last: true,
+                empty: true
+              } as Page<DossierApi>);
+            }),
+            map((allDossiersPage: Page<DossierApi>) => {
+              // Filtrer les dossiers affectés au recouvrement amiable
+              // Utiliser typeRecouvrement si disponible, sinon fallback sur heuristiques
+              const filtered = allDossiersPage.content.filter(d => {
+                if (d.typeRecouvrement) {
+                  return d.typeRecouvrement === TypeRecouvrement.AMIABLE;
+                }
+                // Fallback: heuristique basée sur dossierStatus et absence d'avocat/huissier
+                // Un dossier est considéré comme amiable si :
+                // - Il est validé (valide === true)
+                // - Il est en cours (statut === 'EN_COURS' ou dossierStatus === 'ENCOURSDETRAITEMENT')
+                // - Il n'est pas clôturé (!dateCloture)
+                // - Il n'a pas d'avocat ni d'huissier (pas encore passé au juridique)
+                return d.valide === true && 
+                       (d.statut === 'EN_COURS' || d.dossierStatus === 'ENCOURSDETRAITEMENT') &&
+                       !d.dateCloture &&
+                       !d.avocat &&
+                       !d.huissier;
+              });
+              
+              // Appliquer la pagination côté client si nécessaire
+              const startIndex = page * size;
+              const endIndex = startIndex + size;
+              const paginatedContent = filtered.slice(startIndex, endIndex);
+              
+              return {
+                content: paginatedContent,
+                totalElements: filtered.length,
+                totalPages: Math.ceil(filtered.length / size),
+                size: size,
+                number: page,
+                first: page === 0,
+                last: endIndex >= filtered.length,
+                empty: filtered.length === 0
+              } as Page<DossierApi>;
+            })
+          );
+        }
+        // Si c'est une autre erreur, la propager
+        return throwError(() => error);
+      })
+    );
+  }
+
+  /**
+   * Récupère les dossiers affectés au recouvrement juridique
+   * GET /api/dossiers/recouvrement-juridique
+   * Note: Si l'endpoint n'existe pas, utilise getAllDossiers avec filtre côté client
+   */
+  getDossiersRecouvrementJuridique(page: number = 0, size: number = 10, sort?: string): Observable<Page<DossierApi>> {
+    const url = `${this.apiUrl}/recouvrement-juridique`;
+    console.log('📤 Récupération des dossiers recouvrement juridique:', url);
+    
+    let params = new HttpParams()
+      .set('page', page.toString())
+      .set('size', size.toString());
+    
+    if (sort) {
+      params = params.set('sort', sort);
+    }
+    
+    return this.http.get<Page<DossierApi>>(url, { params }).pipe(
+      catchError((error) => {
+        // Si l'erreur est 404 ou 500 (endpoint n'existe pas), utiliser le fallback
+        if (error.status === 404 || error.status === 500 || error.status === 400) {
+          console.warn('⚠️ Endpoint /recouvrement-juridique non disponible, utilisation de getAllDossiers avec filtre côté client');
+          // Fallback: récupérer tous les dossiers avec une taille raisonnable et filtrer côté client
+          const fallbackSize = Math.min(size, 100); // Limiter à 100 pour éviter les erreurs 400
+          return this.getAllDossiers(0, fallbackSize, sort).pipe(
+            catchError((fallbackError) => {
+              console.error('❌ Erreur également lors du fallback getAllDossiers:', fallbackError);
+              // Si même le fallback échoue, retourner une page vide
+              return of({
+                content: [],
+                totalElements: 0,
+                totalPages: 0,
+                size: size,
+                number: page,
+                first: true,
+                last: true,
+                empty: true
+              } as Page<DossierApi>);
+            }),
+            map((allDossiersPage: Page<DossierApi>) => {
+              // Filtrer les dossiers affectés au recouvrement juridique
+              // Utiliser typeRecouvrement si disponible, sinon fallback sur heuristiques
+              const filtered = allDossiersPage.content.filter(d => {
+                if (d.typeRecouvrement) {
+                  return d.typeRecouvrement === TypeRecouvrement.JURIDIQUE;
+                }
+                // Fallback: heuristique basée sur présence d'avocat ou huissier
+                // Un dossier est considéré comme juridique si :
+                // - Il est validé (valide === true)
+                // - Il est en cours (statut === 'EN_COURS' ou dossierStatus === 'ENCOURSDETRAITEMENT')
+                // - Il n'est pas clôturé (!dateCloture)
+                // - Il a un avocat ou un huissier (passé au juridique)
+                return d.valide === true && 
+                       (d.statut === 'EN_COURS' || d.dossierStatus === 'ENCOURSDETRAITEMENT') &&
+                       !d.dateCloture &&
+                       (d.avocat || d.huissier);
+              });
+              
+              // Appliquer la pagination côté client si nécessaire
+              const startIndex = page * size;
+              const endIndex = startIndex + size;
+              const paginatedContent = filtered.slice(startIndex, endIndex);
+              
+              return {
+                content: paginatedContent,
+                totalElements: filtered.length,
+                totalPages: Math.ceil(filtered.length / size),
+                size: size,
+                number: page,
+                first: page === 0,
+                last: endIndex >= filtered.length,
+                empty: filtered.length === 0
+              } as Page<DossierApi>;
+            })
+          );
+        }
+        // Si c'est une autre erreur, la propager
+        return throwError(() => error);
+      })
+    );
+  }
+
   getAllDossiers(page: number = 0, size: number = 10, sort?: string): Observable<Page<DossierApi>> {
     const params: any = {
       page: page.toString(),

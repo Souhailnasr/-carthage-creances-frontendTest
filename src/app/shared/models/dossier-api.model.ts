@@ -29,6 +29,8 @@ export interface DossierApi {
   audiences?: AudienceApi[];
   actions?: ActionApi[];
   finance?: FinanceApi;
+  // Type de recouvrement
+  typeRecouvrement?: TypeRecouvrement;
 }
 
 export interface DossierRequest {
@@ -60,6 +62,8 @@ export interface DossierRequest {
   codeDebiteur?: string;
   codeCreanceCreancier?: string;
   codeCreanceDebiteur?: string;
+  // Type de recouvrement
+  typeRecouvrement?: TypeRecouvrement;
 }
 
 export interface CreancierApi {
@@ -156,6 +160,12 @@ export enum Urgence {
 export enum DossierStatus {
   ENCOURSDETRAITEMENT = 'ENCOURSDETRAITEMENT',
   CLOTURE = 'CLOTURE'
+}
+
+export enum TypeRecouvrement {
+  NON_AFFECTE = 'NON_AFFECTE',
+  AMIABLE = 'AMIABLE',
+  JURIDIQUE = 'JURIDIQUE'
 }
 
 export enum TypeDocumentJustificatif {

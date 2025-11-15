@@ -1,0 +1,169 @@
+.facture-container {
+  background: #f5f5f5;
+  min-height: 100vh;
+}
+
+.facture-toolbar {
+  background: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-bottom: 2rem;
+  
+  .spacer {
+    flex: 1 1 auto;
+  }
+}
+
+.facture-content {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.facture-section {
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  
+  mat-card-title {
+    color: #2c3e50;
+    font-size: 1.3rem;
+    font-weight: 600;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #e0e0e0;
+  }
+  
+  &.total-card {
+    background: linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(76, 175, 80, 0.05) 100%);
+    border: 2px solid #4caf50;
+    
+    mat-card-title {
+      color: #4caf50;
+      border-bottom-color: #4caf50;
+    }
+  }
+}
+
+.facture-line {
+  display: flex;
+  justify-content: space-between;
+  padding: 1rem;
+  border-bottom: 1px solid #e0e0e0;
+  
+  &:last-child {
+    border-bottom: none;
+  }
+  
+  &.subtotal {
+    font-weight: 600;
+    background: #f8f9fa;
+    margin-top: 0.5rem;
+  }
+  
+  &.total {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #4caf50;
+    background: #e8f5e9;
+    padding: 1.5rem;
+    border-radius: 4px;
+  }
+  
+  .amount {
+    font-weight: 600;
+    color: #2c3e50;
+  }
+}
+
+.facture-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #e8f5e9;
+  border-radius: 4px;
+  color: #4caf50;
+  font-weight: 600;
+  
+  mat-icon {
+    color: #4caf50;
+  }
+}
+
+.actions-table {
+  width: 100%;
+  margin: 1rem 0;
+  
+  th {
+    background: #f5f5f5;
+    font-weight: 600;
+    color: #333;
+  }
+  
+  td, th {
+    padding: 1rem;
+  }
+}
+
+.no-actions {
+  color: #999;
+  font-style: italic;
+  padding: 1rem;
+  text-align: center;
+}
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 5rem;
+  
+  p {
+    margin-top: 1rem;
+    color: #666;
+  }
+}
+
+h3 {
+  color: #2c3e50;
+  margin: 1.5rem 0 1rem 0;
+  font-size: 1.1rem;
+}
+
+@media print {
+  .facture-toolbar {
+    display: none;
+  }
+  
+  .facture-content {
+    padding: 0;
+  }
+  
+  .facture-section {
+    page-break-inside: avoid;
+  }
+}
+
+@media (max-width: 768px) {
+  .facture-content {
+    padding: 1rem;
+  }
+  
+  .facture-line {
+    flex-direction: column;
+    gap: 0.5rem;
+    
+    .amount {
+      text-align: right;
+    }
+  }
+  
+  .actions-table {
+    font-size: 0.85rem;
+    
+    td, th {
+      padding: 0.5rem;
+    }
+  }
+}
+

@@ -1,0 +1,38 @@
+.action-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 400px;
+  padding: 1rem 0;
+
+  .full-width {
+    width: 100%;
+  }
+
+  .info-hint {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem;
+    background: #e3f2fd;
+    border-radius: 4px;
+    color: #1976d2;
+    font-size: 0.9rem;
+
+    mat-icon {
+      color: #1976d2;
+    }
+  }
+}
+
+mat-dialog-actions {
+  padding: 1rem;
+  border-top: 1px solid #e0e0e0;
+}
+
+@media (max-width: 600px) {
+  .action-form {
+    min-width: 100%;
+  }
+}
+

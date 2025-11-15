@@ -7,8 +7,8 @@ import { ChefAmiableRoutingModule } from './chef-amiable-routing.module';
 
 // Components
 // import { ChefAmiableLayoutComponent } from './components/chef-amiable-layout/chef-amiable-layout.component';
-import { ChefAmiableDashboardComponent } from './components/chef-amiable-dashboard/chef-amiable-dashboard.component';
-import { GestionActionsComponent } from './components/gestion-actions/gestion-actions.component';
+// import { ChefAmiableDashboardComponent } from './components/chef-amiable-dashboard/chef-amiable-dashboard.component'; // Standalone component
+// import { GestionActionsComponent } from './components/gestion-actions/gestion-actions.component'; // Standalone component
 import { GestionUtilisateursComponent } from './components/gestion-utilisateurs/gestion-utilisateurs.component';
 // import { TachesComponent } from './components/taches/taches.component'; // Standalone component
 import { NotificationsComponent } from './components/notifications/notifications.component';
@@ -16,8 +16,8 @@ import { NotificationsComponent } from './components/notifications/notifications
 @NgModule({
   declarations: [
     // ChefAmiableLayoutComponent, // Standalone component
-            ChefAmiableDashboardComponent,
-    GestionActionsComponent,
+    // ChefAmiableDashboardComponent, // Standalone component
+    // GestionActionsComponent, // Standalone component
     GestionUtilisateursComponent,
     // TachesComponent, // Standalone component
     NotificationsComponent

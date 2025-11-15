@@ -27,6 +27,16 @@ export const routes: Routes = [
     canActivate: [AuthGuard]
   },
   {
+    path: 'dossiers/amiable',
+    loadComponent: () => import('./dossier/components/dossiers-amiable/dossiers-amiable.component').then(m => m.DossiersAmiableComponent),
+    canActivate: [AuthGuard]
+  },
+  {
+    path: 'dossiers/juridique',
+    loadComponent: () => import('./dossier/components/dossiers-juridique/dossiers-juridique.component').then(m => m.DossiersJuridiqueComponent),
+    canActivate: [AuthGuard]
+  },
+  {
     path: 'juridique',
     loadChildren: () => import('./juridique/juridique.module').then(m => m.JuridiqueModule),
     canActivate: [AuthGuard]
@@ -43,7 +53,12 @@ export const routes: Routes = [
   },
   {
     path: 'finance',
-    loadChildren: () => import('./finance/finance.module').then(m => m.FinanceModule),
+    loadComponent: () => import('./finance/components/chef-finance-dashboard/chef-finance-dashboard.component').then(m => m.ChefFinanceDashboardComponent),
+    canActivate: [AuthGuard]
+  },
+  {
+    path: 'finance/dossier/:id/facture',
+    loadComponent: () => import('./finance/components/facture-detail/facture-detail.component').then(m => m.FactureDetailComponent),
     canActivate: [AuthGuard]
   },
   {

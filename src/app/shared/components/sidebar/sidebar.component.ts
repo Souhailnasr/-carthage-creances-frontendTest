@@ -197,6 +197,12 @@ export class SidebarComponent implements OnInit, OnDestroy {
       roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE, Role.AGENT_RECOUVREMENT_JURIDIQUE],
       children: [
         {
+          label: 'Dossiers Affectés',
+          icon: 'fas fa-folder-open',
+          route: '/dossiers/juridique',
+          roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE, Role.AGENT_RECOUVREMENT_JURIDIQUE]
+        },
+        {
           label: 'Avocats',
           icon: 'fas fa-user-tie',
           route: '/juridique/avocats',
@@ -219,6 +225,32 @@ export class SidebarComponent implements OnInit, OnDestroy {
           icon: 'fas fa-user-plus',
           route: '/juridique/huissiers/ajouter',
           roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE]
+        }
+      ]
+    },
+    {
+      label: 'Recouvrement Amiable',
+      icon: 'fas fa-handshake',
+      route: '/amiable',
+      roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE, Role.AGENT_RECOUVREMENT_AMIABLE],
+      children: [
+        {
+          label: 'Dossiers Affectés',
+          icon: 'fas fa-folder-open',
+          route: '/dossiers/amiable',
+          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE, Role.AGENT_RECOUVREMENT_AMIABLE]
+        },
+        {
+          label: 'Actions Amiables',
+          icon: 'fas fa-phone',
+          route: '/amiable/actions',
+          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE, Role.AGENT_RECOUVREMENT_AMIABLE]
+        },
+        {
+          label: 'Relances',
+          icon: 'fas fa-envelope',
+          route: '/amiable/relances',
+          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE, Role.AGENT_RECOUVREMENT_AMIABLE]
         }
       ]
     },

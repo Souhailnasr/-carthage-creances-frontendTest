@@ -1,0 +1,137 @@
+<div class="dashboard-container">
+  <div class="header">
+    <h1>Dashboard Finance</h1>
+    <p>Gestion complète des coûts et factures</p>
+  </div>
+  
+  <!-- Statistiques Globales -->
+  <div class="stats-grid">
+    <mat-card class="stat-card">
+      <mat-card-title>Frais Création</mat-card-title>
+      <mat-card-content class="stat-value">
+        {{ statistiques.totalFraisCreation | number:'1.2-2' }} TND
+      </mat-card-content>
+    </mat-card>
+    
+    <mat-card class="stat-card">
+      <mat-card-title>Frais Gestion</mat-card-title>
+      <mat-card-content class="stat-value">
+        {{ statistiques.totalFraisGestion | number:'1.2-2' }} TND
+      </mat-card-content>
+    </mat-card>
+    
+    <mat-card class="stat-card">
+      <mat-card-title>Actions Amiable</mat-card-title>
+      <mat-card-content class="stat-value">
+        {{ statistiques.totalActionsAmiable | number:'1.2-2' }} TND
+      </mat-card-content>
+    </mat-card>
+    
+    <mat-card class="stat-card">
+      <mat-card-title>Actions Juridique</mat-card-title>
+      <mat-card-content class="stat-value">
+        {{ statistiques.totalActionsJuridique | number:'1.2-2' }} TND
+      </mat-card-content>
+    </mat-card>
+    
+    <mat-card class="stat-card">
+      <mat-card-title>Frais Avocat</mat-card-title>
+      <mat-card-content class="stat-value">
+        {{ statistiques.totalAvocat | number:'1.2-2' }} TND
+      </mat-card-content>
+    </mat-card>
+    
+    <mat-card class="stat-card">
+      <mat-card-title>Frais Huissier</mat-card-title>
+      <mat-card-content class="stat-value">
+        {{ statistiques.totalHuissier | number:'1.2-2' }} TND
+      </mat-card-content>
+    </mat-card>
+    
+    <mat-card class="stat-card total">
+      <mat-card-title>Grand Total</mat-card-title>
+      <mat-card-content class="stat-value">
+        {{ statistiques.grandTotal | number:'1.2-2' }} TND
+      </mat-card-content>
+    </mat-card>
+  </div>
+  
+  <!-- Liste des Dossiers avec Coûts -->
+  <mat-card class="dossiers-card">
+    <mat-card-header>
+      <mat-card-title>Dossiers avec Coûts</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <div *ngIf="loading" class="loading-container">
+        <mat-spinner diameter="50"></mat-spinner>
+        <p>Chargement des dossiers...</p>
+      </div>
+      
+      <div *ngIf="!loading && dossiersAvecCouts.length === 0" class="no-data">
+        <mat-icon>info</mat-icon>
+        <p>Aucun dossier avec coûts trouvé</p>
+      </div>
+      
+      <div *ngIf="!loading && dossiersAvecCouts.length > 0" class="dossiers-list">
+        <div class="dossier-item" *ngFor="let finance of dossiersAvecCouts">
+          <div class="dossier-info">
+            <h3>Dossier #{{ finance.dossier.id }}</h3>
+            <p class="description">{{ finance.description }}</p>
+            <div class="dossier-details">
+              <span><strong>Date:</strong> {{ finance.dateOperation | date:'dd/MM/yyyy' }}</span>
+              <span><strong>Total:</strong> {{ getTotalFacture(finance) | number:'1.2-2' }} TND</span>
+              <span [class.finalisee]="finance.factureFinalisee">
+                <strong>Statut:</strong> {{ finance.factureFinalisee ? 'Finalisée' : 'En attente' }}
+              </span>
+            </div>
+          </div>
+          <div class="dossier-actions">
+            <button mat-raised-button color="primary" (click)="voirDetail(finance.dossier.id)">
+              <mat-icon>visibility</mat-icon>
+              Voir Détail
+            </button>
+            <button 
+              mat-raised-button 
+              color="accent" 
+              (click)="finaliserFacture(finance.dossier.id)"
+              [disabled]="finance.factureFinalisee">
+              <mat-icon>check_circle</mat-icon>
+              Finaliser
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <mat-paginator
+        *ngIf="!loading && dossiersAvecCouts.length > 0"
+        [length]="totalElements"
+        [pageSize]="pageSize"
+        [pageIndex]="currentPage"
+        [pageSizeOptions]="[5, 10, 25, 50]"
+        (page)="onPageChange($event)">
+      </mat-paginator>
+    </mat-card-content>
+  </mat-card>
+  
+  <!-- Factures en Attente -->
+  <mat-card class="factures-card" *ngIf="facturesEnAttente.length > 0">
+    <mat-card-header>
+      <mat-card-title>Factures en Attente ({{ facturesEnAttente.length }})</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="factures-list">
+        <div class="facture-item" *ngFor="let facture of facturesEnAttente">
+          <div class="facture-info">
+            <h4>Dossier #{{ facture.dossier.id }}</h4>
+            <p>{{ facture.description }}</p>
+            <span class="amount">{{ getTotalFacture(facture) | number:'1.2-2' }} TND</span>
+          </div>
+          <button mat-raised-button color="primary" (click)="voirDetail(facture.dossier.id)">
+            Voir Détail
+          </button>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>
+

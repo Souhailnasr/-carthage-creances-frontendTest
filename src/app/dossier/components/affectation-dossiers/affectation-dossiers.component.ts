@@ -24,6 +24,7 @@ import { DossierApi } from '../../../shared/models/dossier-api.model';
 import { Page } from '../../../shared/models/pagination.model';
 import { User } from '../../../shared/models';
 import { Role } from '../../../shared/models/enums.model';
+import { ConfirmationDialogComponent, ConfirmationDialogData } from '../../../shared/components/dialogs/confirmation-dialog/confirmation-dialog.component';
 
 @Component({
   selector: 'app-affectation-dossiers',
@@ -70,6 +71,7 @@ export class AffectationDossiersComponent implements OnInit, OnDestroy {
   displayedColumns: string[] = ['numeroDossier', 'titre', 'montantCreance', 'creancier', 'debiteur', 'urgence', 'statut', 'dateCreation', 'actions'];
   
   private destroy$ = new Subject<void>();
+  private searchSubject = new Subject<string>();
 
   constructor(
     private dossierApiService: DossierApiService,
@@ -83,6 +85,15 @@ export class AffectationDossiersComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadCurrentUser();
+    // Debounce pour la recherche
+    this.searchSubject.pipe(
+      debounceTime(300),
+      distinctUntilChanged(),
+      takeUntil(this.destroy$)
+    ).subscribe(searchTerm => {
+      this.searchTerm = searchTerm;
+      this.onSearch();
+    });
   }
 
   ngOnDestroy(): void {
@@ -108,26 +119,21 @@ export class AffectationDossiersComponent implements OnInit, OnDestroy {
   loadDossiers(): void {
     this.loadingDossiers = true;
     
-    if (!this.currentUser || !this.currentUser.id) {
-      this.snackBar.open('Erreur: Utilisateur non connecté', 'Fermer', { duration: 3000 });
-      this.loadingDossiers = false;
-      return;
-    }
-
-    const userId = Number(this.currentUser.id);
-    const isAgent = this.currentUser.roleUtilisateur === Role.AGENT_DOSSIER;
-    
-    const loadObservable = isAgent 
-      ? this.dossierApiService.getDossiersCreesByAgent(userId, this.pageIndex, this.pageSize)
-      : this.dossierApiService.getAllDossiers(this.pageIndex, this.pageSize);
-
-    loadObservable
+    // Utiliser la nouvelle méthode getDossiersValidesDisponibles
+    this.dossierApiService.getDossiersValidesDisponibles({
+      page: this.pageIndex,
+      size: this.pageSize,
+      sort: this.sortKey,
+      direction: this.sortDir.toUpperCase(),
+      search: this.searchTerm || undefined
+    })
       .pipe(
         takeUntil(this.destroy$),
         finalize(() => this.loadingDossiers = false),
         catchError(error => {
           console.error('Erreur lors du chargement des dossiers:', error);
-          this.snackBar.open('Erreur lors du chargement des dossiers', 'Fermer', { duration: 3000 });
+          const errorMessage = error.message || 'Erreur lors du chargement des dossiers';
+          this.snackBar.open(errorMessage, 'Fermer', { duration: 5000 });
           return of({
             content: [],
             totalElements: 0,
@@ -142,62 +148,30 @@ export class AffectationDossiersComponent implements OnInit, OnDestroy {
       )
       .subscribe(page => {
         const content = page?.content || [];
-        // Filtrer uniquement les dossiers validés (valide = true et statut = VALIDE)
-        const dossiersValides = content.filter((dossier: DossierApi) => 
-          dossier.valide === true && dossier.statut === 'VALIDE'
-        );
-        
-        console.log('📋 Dossiers validés chargés pour affectation:', dossiersValides.length);
-        this.dossiers = dossiersValides;
-        this.totalElements = dossiersValides.length;
-        this.totalPages = Math.ceil(this.totalElements / this.pageSize);
+        console.log('📋 Dossiers validés disponibles chargés:', content.length);
+        this.dossiers = content;
+        this.totalElements = page.totalElements || 0;
+        this.totalPages = page.totalPages || 1;
         this.applyFilteringAndPaging();
       });
   }
 
   onSearch(): void {
+    // La recherche est gérée par le debounce dans ngOnInit
+    // Cette méthode est appelée depuis le subscribe du debounce
     this.pageIndex = 0;
-    this.applyFilteringAndPaging();
+    this.loadDossiers();
+  }
+
+  onSearchChange(searchTerm: string): void {
+    this.searchSubject.next(searchTerm);
   }
 
   applyFilteringAndPaging(): void {
-    let filtered = [...this.dossiers];
-    
-    if (this.searchTerm.trim()) {
-      const term = this.searchTerm.toLowerCase();
-      filtered = filtered.filter(dossier =>
-        dossier.numeroDossier?.toLowerCase().includes(term) ||
-        dossier.titre?.toLowerCase().includes(term) ||
-        dossier.creancier?.nom?.toLowerCase().includes(term) ||
-        dossier.debiteur?.nom?.toLowerCase().includes(term)
-      );
-    }
-    
-    // Trier
-    filtered.sort((a, b) => {
-      const dir = this.sortDir === 'asc' ? 1 : -1;
-      if (this.sortKey === 'dateCreation') {
-        const dateA = new Date(a.dateCreation).getTime();
-        const dateB = new Date(b.dateCreation).getTime();
-        return (dateA - dateB) * dir;
-      }
-      if (this.sortKey === 'montantCreance') {
-        return ((a.montantCreance || 0) - (b.montantCreance || 0)) * dir;
-      }
-      if (this.sortKey === 'statut') {
-        return ((a.statut || '') > (b.statut || '') ? 1 : -1) * dir;
-      }
-      return 0;
-    });
-    
-    this.filteredDossiers = filtered;
-    this.totalElements = filtered.length;
-    this.totalPages = Math.ceil(this.totalElements / this.pageSize);
-    
-    // Pagination
-    const start = this.pageIndex * this.pageSize;
-    const end = start + this.pageSize;
-    this.pagedDossiers = filtered.slice(start, end);
+    // Les données sont déjà filtrées et triées côté serveur
+    // On affiche simplement les résultats
+    this.filteredDossiers = [...this.dossiers];
+    this.pagedDossiers = [...this.dossiers];
   }
 
   selectDossierByNumber(): void {
@@ -231,21 +205,47 @@ export class AffectationDossiersComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (confirm(`Êtes-vous sûr de vouloir affecter le dossier ${this.selectedDossier.numeroDossier} au recouvrement amiable ?`)) {
-      this.loading = true;
-      // TODO: Appeler l'API pour affecter le dossier au recouvrement amiable
-      // this.dossierApiService.affecterAmiable(this.selectedDossier.id!)
-      //   .pipe(...)
-      //   .subscribe(...)
-      
-      setTimeout(() => {
-        this.loading = false;
-        this.toastService.success(`Dossier ${this.selectedDossier!.numeroDossier} affecté au recouvrement amiable avec succès.`);
-        this.selectedDossier = null;
-        this.dossierNumber = '';
-        this.loadDossiers();
-      }, 1000);
-    }
+    const dialogData: ConfirmationDialogData = {
+      title: 'Affecter au Recouvrement Amiable',
+      message: `Êtes-vous sûr de vouloir affecter le dossier ${this.selectedDossier.numeroDossier} au recouvrement amiable ?`,
+      confirmText: 'Affecter',
+      cancelText: 'Annuler'
+    };
+
+    const dialogRef = this.dialog.open(ConfirmationDialogComponent, {
+      data: dialogData,
+      width: '400px'
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result && this.selectedDossier) {
+        this.loading = true;
+        this.dossierApiService.affecterAuRecouvrementAmiable(this.selectedDossier.id!)
+          .pipe(
+            takeUntil(this.destroy$),
+            finalize(() => this.loading = false),
+            catchError(error => {
+              const errorMessage = error.message || 'Erreur lors de l\'affectation au recouvrement amiable';
+              this.snackBar.open(errorMessage, 'Fermer', {
+                duration: 5000,
+                panelClass: ['error-snackbar']
+              });
+              return of(null);
+            })
+          )
+          .subscribe(dossier => {
+            if (dossier) {
+              this.snackBar.open('Dossier affecté au recouvrement amiable avec succès', 'Fermer', {
+                duration: 3000,
+                panelClass: ['success-snackbar']
+              });
+              this.selectedDossier = null;
+              this.dossierNumber = '';
+              this.loadDossiers();
+            }
+          });
+      }
+    });
   }
 
   affecterJuridique(): void {
@@ -254,21 +254,47 @@ export class AffectationDossiersComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (confirm(`Êtes-vous sûr de vouloir affecter le dossier ${this.selectedDossier.numeroDossier} au recouvrement juridique ?`)) {
-      this.loading = true;
-      // TODO: Appeler l'API pour affecter le dossier au recouvrement juridique
-      // this.dossierApiService.affecterJuridique(this.selectedDossier.id!)
-      //   .pipe(...)
-      //   .subscribe(...)
-      
-      setTimeout(() => {
-        this.loading = false;
-        this.toastService.success(`Dossier ${this.selectedDossier!.numeroDossier} affecté au recouvrement juridique avec succès.`);
-        this.selectedDossier = null;
-        this.dossierNumber = '';
-        this.loadDossiers();
-      }, 1000);
-    }
+    const dialogData: ConfirmationDialogData = {
+      title: 'Affecter au Recouvrement Juridique',
+      message: `Êtes-vous sûr de vouloir affecter le dossier ${this.selectedDossier.numeroDossier} au recouvrement juridique ?`,
+      confirmText: 'Affecter',
+      cancelText: 'Annuler'
+    };
+
+    const dialogRef = this.dialog.open(ConfirmationDialogComponent, {
+      data: dialogData,
+      width: '400px'
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result && this.selectedDossier) {
+        this.loading = true;
+        this.dossierApiService.affecterAuRecouvrementJuridique(this.selectedDossier.id!)
+          .pipe(
+            takeUntil(this.destroy$),
+            finalize(() => this.loading = false),
+            catchError(error => {
+              const errorMessage = error.message || 'Erreur lors de l\'affectation au recouvrement juridique';
+              this.snackBar.open(errorMessage, 'Fermer', {
+                duration: 5000,
+                panelClass: ['error-snackbar']
+              });
+              return of(null);
+            })
+          )
+          .subscribe(dossier => {
+            if (dossier) {
+              this.snackBar.open('Dossier affecté au recouvrement juridique avec succès', 'Fermer', {
+                duration: 3000,
+                panelClass: ['success-snackbar']
+              });
+              this.selectedDossier = null;
+              this.dossierNumber = '';
+              this.loadDossiers();
+            }
+          });
+      }
+    });
   }
 
   cloturer(): void {
@@ -277,45 +303,72 @@ export class AffectationDossiersComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (confirm(`Êtes-vous sûr de vouloir clôturer le dossier ${this.selectedDossier.numeroDossier} ?`)) {
-      this.loading = true;
-      // TODO: Appeler l'API pour clôturer le dossier
-      // this.dossierApiService.cloturerDossier(this.selectedDossier.id!)
-      //   .pipe(...)
-      //   .subscribe(...)
-      
-      setTimeout(() => {
-        this.loading = false;
-        this.toastService.success(`Dossier ${this.selectedDossier!.numeroDossier} clôturé avec succès.`);
-        this.selectedDossier = null;
-        this.dossierNumber = '';
-        this.loadDossiers();
-      }, 1000);
-    }
+    const dialogData: ConfirmationDialogData = {
+      title: 'Clôturer le Dossier',
+      message: `Êtes-vous sûr de vouloir clôturer le dossier ${this.selectedDossier.numeroDossier} ? Cette action est irréversible.`,
+      confirmText: 'Clôturer',
+      cancelText: 'Annuler',
+      warning: true
+    };
+
+    const dialogRef = this.dialog.open(ConfirmationDialogComponent, {
+      data: dialogData,
+      width: '400px'
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result && this.selectedDossier) {
+        this.loading = true;
+        this.dossierApiService.cloturerDossier(this.selectedDossier.id!)
+          .pipe(
+            takeUntil(this.destroy$),
+            finalize(() => this.loading = false),
+            catchError(error => {
+              const errorMessage = error.message || 'Erreur lors de la clôture du dossier';
+              this.snackBar.open(errorMessage, 'Fermer', {
+                duration: 5000,
+                panelClass: ['error-snackbar']
+              });
+              return of(null);
+            })
+          )
+          .subscribe(dossier => {
+            if (dossier) {
+              this.snackBar.open('Dossier clôturé avec succès', 'Fermer', {
+                duration: 3000,
+                panelClass: ['success-snackbar']
+              });
+              this.selectedDossier = null;
+              this.dossierNumber = '';
+              this.loadDossiers();
+            }
+          });
+      }
+    });
   }
 
   nextPage(): void {
     if (this.pageIndex + 1 < this.totalPages) {
       this.pageIndex++;
-      this.applyFilteringAndPaging();
+      this.loadDossiers();
     }
   }
 
   prevPage(): void {
     if (this.pageIndex > 0) {
       this.pageIndex--;
-      this.applyFilteringAndPaging();
+      this.loadDossiers();
     }
   }
 
   onPageSizeChange(): void {
     this.pageIndex = 0;
-    this.applyFilteringAndPaging();
+    this.loadDossiers();
   }
 
   onSortChange(): void {
     this.pageIndex = 0;
-    this.applyFilteringAndPaging();
+    this.loadDossiers();
   }
 
   getUrgenceClass(urgence: string): string {

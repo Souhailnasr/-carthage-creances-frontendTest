@@ -1,16 +1,21 @@
 import { Injectable } from '@angular/core';
-import { Observable, of } from 'rxjs';
-import { tap, map } from 'rxjs/operators';
+import { Observable, of, forkJoin } from 'rxjs';
+import { tap, map, catchError } from 'rxjs/operators';
 import { StatistiqueAmiable, PerformanceAgent, Action, Dossier, Tache, ChefAmiableNotification, User } from '../../shared/models';
 import { TypeAction, ReponseDebiteur, StatutTache, Role } from '../../shared/models';
 import { UtilisateurService, UtilisateurRequest } from '../../core/services/utilisateur.service';
+import { DossierApiService } from '../../core/services/dossier-api.service';
+import { DossierApi } from '../../shared/models/dossier-api.model';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ChefAmiableService {
 
-  constructor(private utilisateurService: UtilisateurService) {}
+  constructor(
+    private utilisateurService: UtilisateurService,
+    private dossierApiService: DossierApiService
+  ) {}
 
   // Statistiques
   getStatistiques(): Observable<StatistiqueAmiable> {
@@ -65,49 +70,23 @@ export class ChefAmiableService {
     return of(performances);
   }
 
-  // Dossiers avec actions
-  getDossiersAvecActions(): Observable<any[]> {
-    const dossiers = [
-      {
-        numeroDossier: 'DOS-2024-001',
-        nomCreancier: 'Entreprise ABC',
-        nomDebiteur: 'Société XYZ',
-        actions: [
-          {
-            id: '1',
-            type: TypeAction.APPEL,
-            dateAction: new Date('2024-01-15'),
-            reponseDebiteur: ReponseDebiteur.POSITIVE,
-            nbOccurrences: 2,
-            coutUnitaire: 15
-          },
-          {
-            id: '2',
-            type: TypeAction.EMAIL,
-            dateAction: new Date('2024-01-16'),
-            reponseDebiteur: ReponseDebiteur.EN_ATTENTE,
-            nbOccurrences: 1,
-            coutUnitaire: 5
-          }
-        ]
-      },
-      {
-        numeroDossier: 'DOS-2024-002',
-        nomCreancier: 'Compagnie DEF',
-        nomDebiteur: 'Groupe GHI',
-        actions: [
-          {
-            id: '3',
-            type: TypeAction.VISITE,
-            dateAction: new Date('2024-01-17'),
-            reponseDebiteur: ReponseDebiteur.NEGATIVE,
-            nbOccurrences: 1,
-            coutUnitaire: 50
-          }
-        ]
-      }
-    ];
-    return of(dossiers);
+  // Dossiers avec actions - Utilise maintenant les vraies données
+  getDossiersAvecActions(): Observable<DossierApi[]> {
+    // Utiliser le service DossierApiService pour charger les vrais dossiers
+    return this.dossierApiService.getDossiersRecouvrementAmiable(0, 100).pipe(
+      map((page) => {
+        // Retourner les dossiers avec leurs actions (si disponibles)
+        return page.content.map((dossier: DossierApi) => ({
+          ...dossier,
+          actions: dossier.actions || []
+        }));
+      }),
+      catchError((error) => {
+        console.error('❌ Erreur lors du chargement des dossiers avec actions:', error);
+        // Retourner un tableau vide en cas d'erreur
+        return of([]);
+      })
+    );
   }
 
   // Agents amiable

@@ -6,7 +6,10 @@ import { AvocatService } from '../../services/avocat.service';
 import { HuissierService } from '../../services/huissier.service';
 import { AudienceService } from '../../services/audience.service';
 import { UtilisateurService } from '../../../core/services/utilisateur.service';
-import { Role } from '../../../shared/models';
+import { JwtAuthService } from '../../../core/services/jwt-auth.service';
+import { DossierApiService } from '../../../core/services/dossier-api.service';
+import { Role, User } from '../../../shared/models';
+import { DossierApi, Urgence } from '../../../shared/models/dossier-api.model';
 import { Audience, DecisionResult } from '../../models/audience.model';
 
 interface Activity {
@@ -24,15 +27,24 @@ interface Activity {
   styleUrls: ['./juridique-dashboard.component.scss']
 })
 export class JuridiqueDashboardComponent implements OnInit, OnDestroy {
+  currentUser: User | null = null;
   totalDossiers: number = 0;
   totalAvocats: number = 0;
   totalHuissiers: number = 0;
   totalAudiences: number = 0;
-  agentsJuridiques: any[] = [];
+  agentsJuridiques: User[] = [];
   decisionsPositives: number = 0;
   decisionsNegatives: number = 0;
   decisionsRapporter: number = 0;
   recentActivities: Activity[] = [];
+  
+  // Statistiques dynamiques
+  totalMontant = 0;
+  dossiersEnCours = 0;
+  dossiersAvecAvocat = 0;
+  dossiersAvecHuissier = 0;
+  dossiersUrgents = 0;
+  
   private destroy$ = new Subject<void>();
 
   constructor(
@@ -40,11 +52,41 @@ export class JuridiqueDashboardComponent implements OnInit, OnDestroy {
     private avocatService: AvocatService,
     private huissierService: HuissierService,
     private audienceService: AudienceService,
-    private utilisateurService: UtilisateurService
+    private utilisateurService: UtilisateurService,
+    private jwtAuthService: JwtAuthService,
+    private dossierApiService: DossierApiService
   ) {}
 
   ngOnInit(): void {
+    this.loadCurrentUser();
     this.loadDashboardData();
+    this.loadDossiersStats();
+  }
+
+  loadCurrentUser(): void {
+    this.jwtAuthService.getCurrentUser().pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(user => {
+      this.currentUser = user;
+    });
+  }
+
+  loadDossiersStats(): void {
+    this.dossierApiService.getDossiersRecouvrementJuridique(0, 1000).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (page) => {
+        this.totalDossiers = page.totalElements;
+        this.totalMontant = page.content.reduce((sum, d) => sum + (d.montantCreance || 0), 0);
+        this.dossiersEnCours = page.content.filter(d => d.statut === 'EN_COURS').length;
+        this.dossiersAvecAvocat = page.content.filter(d => d.avocat).length;
+        this.dossiersAvecHuissier = page.content.filter(d => d.huissier).length;
+        this.dossiersUrgents = page.content.filter(d => d.urgence === Urgence.TRES_URGENT).length;
+      },
+      error: (error) => {
+        console.error('❌ Erreur lors du chargement des statistiques de dossiers:', error);
+      }
+    });
   }
 
   ngOnDestroy(): void {
@@ -109,7 +151,16 @@ export class JuridiqueDashboardComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (agents) => {
-          this.agentsJuridiques = agents;
+          this.agentsJuridiques = agents
+            .filter(a => a.actif)
+            .map(a => ({
+              id: a.id?.toString() || '',
+              nom: a.nom,
+              prenom: a.prenom,
+              email: a.email,
+              roleUtilisateur: Role.AGENT_RECOUVREMENT_JURIDIQUE,
+              actif: a.actif
+            } as User));
         },
         error: (error) => {
           console.error('❌ Erreur lors du chargement des agents juridiques:', error);
@@ -156,7 +207,7 @@ export class JuridiqueDashboardComponent implements OnInit, OnDestroy {
     ];
   }
 
-  getAgentPerformance(agentId: number): number {
+  getAgentPerformance(agentId: number | string): number {
     // Mock performance data - in a real app, this would come from an API
     return Math.floor(Math.random() * 20) + 5;
   }
@@ -169,5 +220,23 @@ export class JuridiqueDashboardComponent implements OnInit, OnDestroy {
       'agent': 'fa-user-tie'
     };
     return icons[type] || 'fa-info-circle';
+  }
+
+  getRoleDisplayName(): string {
+    if (!this.currentUser) return '';
+    const roleNames: { [key: string]: string } = {
+      'CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE': 'Chef Département Recouvrement Juridique',
+      'AGENT_RECOUVREMENT_JURIDIQUE': 'Agent Recouvrement Juridique'
+    };
+    return roleNames[this.currentUser.roleUtilisateur || ''] || this.currentUser.roleUtilisateur || '';
+  }
+
+  formatAmount(amount: number): string {
+    if (!amount) return '0,00 TND';
+    return new Intl.NumberFormat('fr-TN', {
+      style: 'currency',
+      currency: 'TND',
+      minimumFractionDigits: 2
+    }).format(amount);
   }
 }

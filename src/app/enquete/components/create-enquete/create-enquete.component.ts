@@ -300,10 +300,24 @@ export class CreateEnqueteComponent implements OnInit, OnDestroy {
 
   selectDossier(dossier: DossierApi): void {
     this.selectedDossier = dossier;
+    
+    // Pré-remplir automatiquement les champs avec les données du dossier
     this.enqueteForm.patchValue({
       dossierId: dossier.id,
-      rapportCode: dossier.numeroDossier || ''
+      rapportCode: dossier.numeroDossier || '',
+      // Informations du débiteur (si disponible)
+      pdg: dossier.debiteur?.nom || '',
+      email: dossier.debiteur?.email || '',
+      // Montant et informations financières
+      chiffreAffaire: dossier.montantCreance || null,
+      // Observations initiales basées sur le dossier
+      observations: this.buildInitialObservations(dossier)
     });
+    
+    // Si le dossier a des informations supplémentaires, les pré-remplir
+    // Note: DebiteurApi n'a pas de propriétés type, secteurActivite, descriptionActivite
+    // Ces champs resteront vides et pourront être remplis manuellement par l'utilisateur
+    
     this.showForm = true;
     // Scroll vers le formulaire
     setTimeout(() => {
@@ -312,6 +326,34 @@ export class CreateEnqueteComponent implements OnInit, OnDestroy {
         formElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     }, 100);
+  }
+
+  /**
+   * Construit les observations initiales basées sur les informations du dossier
+   */
+  private buildInitialObservations(dossier: DossierApi): string {
+    const observations: string[] = [];
+    
+    if (dossier.numeroDossier) {
+      observations.push(`Dossier: ${dossier.numeroDossier}`);
+    }
+    if (dossier.titre) {
+      observations.push(`Titre: ${dossier.titre}`);
+    }
+    if (dossier.montantCreance) {
+      observations.push(`Montant créance: ${this.formatAmount(dossier.montantCreance)}`);
+    }
+    if (dossier.creancier?.nom) {
+      observations.push(`Créancier: ${dossier.creancier.nom}`);
+    }
+    if (dossier.debiteur?.nom) {
+      observations.push(`Débiteur: ${dossier.debiteur.nom}`);
+    }
+    if (dossier.urgence) {
+      observations.push(`Urgence: ${dossier.urgence}`);
+    }
+    
+    return observations.join('\n');
   }
 
   nextPage(): void {

@@ -8,13 +8,15 @@
   <div class="search-section">
     <div class="search-form">
       <div class="form-group">
-        <label for="numeroDossier">Numéro du dossier :</label>
+        <label for="numeroDossier">Rechercher un dossier :</label>
         <input 
           type="text" 
           id="numeroDossier"
-          [(ngModel)]="numeroDossierRecherche" 
-          placeholder="Entrez le numéro du dossier"
+          [(ngModel)]="searchTerm" 
+          (input)="onSearchChange(searchTerm)"
+          placeholder="Rechercher par numéro, créancier ou débiteur..."
           class="form-control">
+        <small class="form-text text-muted">La recherche se fait automatiquement après 300ms</small>
       </div>
       <div class="form-actions">
         <button class="btn-primary" (click)="rechercherDossier()">
@@ -23,27 +25,40 @@
         <button class="btn-secondary" (click)="showAffectationForm = !showAffectationForm">
           <i class="fas fa-cog"></i> Actions sur dossier
         </button>
+        <button class="btn-secondary" (click)="loadDossiers()" [disabled]="loading">
+          <i class="fas fa-sync-alt" [class.fa-spin]="loading"></i> Actualiser
+        </button>
       </div>
     </div>
 
     <!-- Formulaire d'affectation/clôture -->
     <div class="affectation-form" *ngIf="showAffectationForm">
       <h3>Actions sur le dossier</h3>
-      <div class="form-group">
-        <label for="dossierAction">Numéro du dossier :</label>
-        <input 
-          type="text" 
-          id="dossierAction"
-          [(ngModel)]="numeroDossierRecherche" 
-          placeholder="Entrez le numéro du dossier"
-          class="form-control">
+      <div class="form-group" *ngIf="dossierSelectionne">
+        <p><strong>Dossier sélectionné :</strong> {{ dossierSelectionne.numeroDossier }}</p>
+        <p><strong>Créancier :</strong> {{ dossierSelectionne.nomCreancier }}</p>
+        <p><strong>Débiteur :</strong> {{ dossierSelectionne.nomDebiteur }}</p>
+      </div>
+      <div class="form-group" *ngIf="!dossierSelectionne">
+        <p class="text-warning">Veuillez sélectionner un dossier dans la liste ci-dessous</p>
       </div>
       <div class="action-buttons">
-        <button class="btn-warning" (click)="affecterAuJuridique()">
+        <button 
+          class="btn-warning" 
+          (click)="affecterAuJuridique()"
+          [disabled]="!dossierSelectionne || loading">
           <i class="fas fa-gavel"></i> Affecter au Juridique
         </button>
-        <button class="btn-danger" (click)="cloturerDossier()">
+        <button 
+          class="btn-danger" 
+          (click)="cloturerDossier()"
+          [disabled]="!dossierSelectionne || loading">
           <i class="fas fa-lock"></i> Clôturer le Dossier
+        </button>
+        <button 
+          class="btn-secondary" 
+          (click)="showAffectationForm = false">
+          <i class="fas fa-times"></i> Fermer
         </button>
       </div>
     </div>
@@ -51,20 +66,36 @@
 
   <!-- Liste des dossiers -->
   <div class="dossiers-section">
-    <h2>Dossiers avec Actions</h2>
-    <div class="dossiers-grid">
+    <h2>Dossiers Affectés au Recouvrement Amiable</h2>
+    <div *ngIf="loading" class="loading-container">
+      <mat-spinner diameter="50"></mat-spinner>
+      <p>Chargement des dossiers...</p>
+    </div>
+    <div *ngIf="!loading && dossiers.length === 0" class="no-dossiers">
+      <p>Aucun dossier affecté au recouvrement amiable pour le moment.</p>
+    </div>
+    <div class="dossiers-grid" *ngIf="!loading && dossiers.length > 0">
       <div 
         class="dossier-card" 
         *ngFor="let dossier of dossiers"
+        [attr.data-dossier-id]="dossier.id"
         [class.selected]="dossierSelectionne?.numeroDossier === dossier.numeroDossier"
         (click)="selectionnerDossier(dossier)">
         <div class="dossier-header">
           <h3>{{ dossier.numeroDossier }}</h3>
-          <span class="actions-count">{{ dossier.actions.length }} action(s)</span>
+          <span class="actions-count">{{ dossier.actions?.length || 0 }} action(s)</span>
         </div>
         <div class="dossier-info">
           <p><strong>Créancier:</strong> {{ dossier.nomCreancier }}</p>
           <p><strong>Débiteur:</strong> {{ dossier.nomDebiteur }}</p>
+        </div>
+        <div class="dossier-actions-quick" *ngIf="dossierSelectionne?.numeroDossier === dossier.numeroDossier">
+          <button class="btn-small btn-warning" (click)="affecterAuJuridique(); $event.stopPropagation()">
+            <i class="fas fa-gavel"></i> Affecter au Juridique
+          </button>
+          <button class="btn-small btn-danger" (click)="cloturerDossier(); $event.stopPropagation()">
+            <i class="fas fa-lock"></i> Clôturer
+          </button>
         </div>
       </div>
     </div>
@@ -83,7 +114,10 @@
     <!-- Tableau des actions -->
     <div class="actions-table-container">
       <h3>Actions Effectuées</h3>
-      <div class="table-responsive">
+      <div *ngIf="!dossierSelectionne.actions || dossierSelectionne.actions.length === 0" class="no-actions">
+        <p>Aucune action enregistrée pour ce dossier.</p>
+      </div>
+      <div class="table-responsive" *ngIf="dossierSelectionne.actions && dossierSelectionne.actions.length > 0">
         <table class="actions-table">
           <thead>
             <tr>
@@ -121,7 +155,7 @@
       <div class="stats-grid">
         <div class="stat-item">
           <span class="stat-label">Total Actions:</span>
-          <span class="stat-value">{{ dossierSelectionne.actions.length }}</span>
+          <span class="stat-value">{{ dossierSelectionne.actions?.length || 0 }}</span>
         </div>
         <div class="stat-item">
           <span class="stat-label">Coût Total:</span>

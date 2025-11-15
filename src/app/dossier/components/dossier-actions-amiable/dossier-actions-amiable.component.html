@@ -1,0 +1,121 @@
+<div class="actions-container">
+  <!-- Statistiques -->
+  <div class="stats-cards">
+    <mat-card class="stat-card">
+      <mat-card-title>Total Actions</mat-card-title>
+      <mat-card-content class="stat-value">{{ statistiques.total }}</mat-card-content>
+    </mat-card>
+    
+    <mat-card class="stat-card positive">
+      <mat-card-title>Positives</mat-card-title>
+      <mat-card-content class="stat-value">{{ statistiques.positives }}</mat-card-content>
+    </mat-card>
+    
+    <mat-card class="stat-card negative">
+      <mat-card-title>Négatives</mat-card-title>
+      <mat-card-content class="stat-value">{{ statistiques.negatives }}</mat-card-content>
+    </mat-card>
+    
+    <mat-card class="stat-card">
+      <mat-card-title>Sans Réponse</mat-card-title>
+      <mat-card-content class="stat-value">{{ statistiques.sansReponse }}</mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Filtres -->
+  <div class="filters-section">
+    <mat-form-field appearance="outline">
+      <mat-label>Filtrer par type</mat-label>
+      <mat-select [(value)]="selectedTypeFilter" (selectionChange)="filterByType($event.value)">
+        <mat-option value="">Tous</mat-option>
+        <mat-option value="APPEL">Appel</mat-option>
+        <mat-option value="EMAIL">Email</mat-option>
+        <mat-option value="VISITE">Visite</mat-option>
+        <mat-option value="LETTRE">Lettre</mat-option>
+        <mat-option value="AUTRE">Autre</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Filtrer par réponse</mat-label>
+      <mat-select [(value)]="selectedReponseFilter" (selectionChange)="filterByReponse($event.value)">
+        <mat-option value="">Toutes</mat-option>
+        <mat-option value="POSITIVE">Positive</mat-option>
+        <mat-option value="NEGATIVE">Négative</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <button mat-raised-button color="primary" (click)="addAction()">
+      <mat-icon>add</mat-icon>
+      Ajouter Action
+    </button>
+  </div>
+
+  <!-- Tableau (SANS colonnes de coût) -->
+  <div class="table-container" *ngIf="!loading; else loadingSpinner">
+    <table mat-table [dataSource]="filteredActions" class="actions-table">
+      <ng-container matColumnDef="dateAction">
+        <th mat-header-cell *matHeaderCellDef>Date</th>
+        <td mat-cell *matCellDef="let action">{{ action.dateAction | date:'dd/MM/yyyy' }}</td>
+      </ng-container>
+      
+      <ng-container matColumnDef="type">
+        <th mat-header-cell *matHeaderCellDef>Type</th>
+        <td mat-cell *matCellDef="let action">
+          <mat-chip>{{ action.type }}</mat-chip>
+        </td>
+      </ng-container>
+      
+      <ng-container matColumnDef="nbOccurrences">
+        <th mat-header-cell *matHeaderCellDef>Nombre</th>
+        <td mat-cell *matCellDef="let action">
+          {{ action.nbOccurrences }} {{ getTypeLabel(action.type) }}
+        </td>
+      </ng-container>
+      
+      <ng-container matColumnDef="reponseDebiteur">
+        <th mat-header-cell *matHeaderCellDef>Réponse</th>
+        <td mat-cell *matCellDef="let action">
+          <mat-chip 
+            [class.positive]="action.reponseDebiteur === 'POSITIVE'"
+            [class.negative]="action.reponseDebiteur === 'NEGATIVE'"
+            [class.neutral]="!action.reponseDebiteur">
+            {{ action.reponseDebiteur || 'Aucune' }}
+          </mat-chip>
+        </td>
+      </ng-container>
+      
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef>Actions</th>
+        <td mat-cell *matCellDef="let action">
+          <button mat-icon-button (click)="editAction(action)" matTooltip="Modifier">
+            <mat-icon>edit</mat-icon>
+          </button>
+          <button mat-icon-button (click)="deleteAction(action.id!)" matTooltip="Supprimer" color="warn">
+            <mat-icon>delete</mat-icon>
+          </button>
+        </td>
+      </ng-container>
+      
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+      
+      <tr class="mat-row" *matNoDataRow>
+        <td class="mat-cell" [attr.colspan]="displayedColumns.length">
+          <div class="no-data">
+            <mat-icon>info</mat-icon>
+            <p>Aucune action enregistrée</p>
+          </div>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <ng-template #loadingSpinner>
+    <div class="loading-container">
+      <mat-spinner diameter="50"></mat-spinner>
+      <p>Chargement des actions...</p>
+    </div>
+  </ng-template>
+</div>
+

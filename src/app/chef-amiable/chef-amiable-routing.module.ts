@@ -3,7 +3,7 @@ import { RouterModule, Routes } from '@angular/router';
 
 import { ChefAmiableLayoutComponent } from './components/chef-amiable-layout/chef-amiable-layout.component';
 import { ChefAmiableDashboardComponent } from './components/chef-amiable-dashboard/chef-amiable-dashboard.component';
-import { GestionActionsComponent } from './components/gestion-actions/gestion-actions.component';
+// import { GestionActionsComponent } from './components/gestion-actions/gestion-actions.component'; // Standalone component
 import { GestionUtilisateursComponent } from './components/gestion-utilisateurs/gestion-utilisateurs.component';
 import { TachesComponent } from './components/taches/taches.component';
 import { NotificationsComponent } from './components/notifications/notifications.component';
@@ -28,7 +28,7 @@ const routes: Routes = [
       },
       {
         path: 'gestion-actions',
-        component: GestionActionsComponent
+        loadComponent: () => import('./components/gestion-actions/gestion-actions.component').then(m => m.GestionActionsComponent)
       },
       {
         path: 'gestion-utilisateurs',

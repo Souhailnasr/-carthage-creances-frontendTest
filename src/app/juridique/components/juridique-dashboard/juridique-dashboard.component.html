@@ -1,7 +1,33 @@
 <div class="juridique-dashboard">
   <div class="dashboard-header">
-    <h1>Tableau de Bord Juridique</h1>
-    <p class="subtitle">Vue d'ensemble des activités juridiques</p>
+    <div class="header-content">
+      <h1>
+        <i class="fas fa-gavel"></i>
+        Tableau de Bord Juridique
+      </h1>
+      <p class="welcome-message" *ngIf="currentUser">
+        Bienvenue, <strong>{{ currentUser.prenom }} {{ currentUser.nom }}</strong>
+        <span class="role-badge">{{ getRoleDisplayName() }}</span>
+      </p>
+      <p class="subtitle" *ngIf="!currentUser">Vue d'ensemble des activités juridiques</p>
+    </div>
+  </div>
+
+  <!-- Section Agents -->
+  <div class="agents-section" *ngIf="agentsJuridiques.length > 0">
+    <h2><i class="fas fa-users"></i> Mes Agents ({{ agentsJuridiques.length }})</h2>
+    <div class="agents-grid">
+      <div class="agent-card" *ngFor="let agent of agentsJuridiques">
+        <div class="agent-avatar">
+          {{ agent.prenom.charAt(0) }}{{ agent.nom.charAt(0) }}
+        </div>
+        <div class="agent-info">
+          <h4>{{ agent.prenom }} {{ agent.nom }}</h4>
+          <p class="agent-email">{{ agent.email }}</p>
+          <span class="agent-role-badge">Agent Juridique</span>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Statistics Cards -->
@@ -13,6 +39,26 @@
       <div class="stat-content">
         <h3>{{ totalDossiers }}</h3>
         <p>Dossiers Juridiques</p>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon">
+        <i class="fas fa-money-bill-wave"></i>
+      </div>
+      <div class="stat-content">
+        <h3>{{ formatAmount(totalMontant) }}</h3>
+        <p>Montant Total</p>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon">
+        <i class="fas fa-clock"></i>
+      </div>
+      <div class="stat-content">
+        <h3>{{ dossiersEnCours }}</h3>
+        <p>En Cours</p>
       </div>
     </div>
 
@@ -43,6 +89,36 @@
       <div class="stat-content">
         <h3>{{ totalAudiences }}</h3>
         <p>Audiences</p>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon">
+        <i class="fas fa-user-tie"></i>
+      </div>
+      <div class="stat-content">
+        <h3>{{ dossiersAvecAvocat }}</h3>
+        <p>Avec Avocat</p>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon">
+        <i class="fas fa-balance-scale"></i>
+      </div>
+      <div class="stat-content">
+        <h3>{{ dossiersAvecHuissier }}</h3>
+        <p>Avec Huissier</p>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon">
+        <i class="fas fa-exclamation-triangle"></i>
+      </div>
+      <div class="stat-content">
+        <h3>{{ dossiersUrgents }}</h3>
+        <p>Urgents</p>
       </div>
     </div>
   </div>

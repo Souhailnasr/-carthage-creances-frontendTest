@@ -1,0 +1,448 @@
+.dossiers-juridique-container {
+  padding: 24px;
+  max-width: 1800px;
+  margin: 0 auto;
+  background-color: #f5f5f5;
+  min-height: 100vh;
+
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 24px;
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    padding: 24px;
+    border-radius: 12px;
+    color: white;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+
+    .header-content {
+      h1 {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin: 0 0 8px 0;
+        font-size: 28px;
+        font-weight: 600;
+        color: white;
+
+        mat-icon {
+          font-size: 32px;
+          width: 32px;
+          height: 32px;
+        }
+      }
+
+      .subtitle {
+        margin: 0;
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 14px;
+      }
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+
+      button {
+        mat-icon {
+          margin-right: 4px;
+        }
+
+        &.active {
+          background-color: rgba(255, 255, 255, 0.2);
+        }
+      }
+    }
+  }
+
+  .statistics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-bottom: 24px;
+
+    .stat-card {
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      transition: transform 0.2s, box-shadow 0.2s;
+
+      &:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      }
+
+      mat-card-content {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 20px !important;
+
+        .stat-icon {
+          width: 60px;
+          height: 60px;
+          border-radius: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+
+          mat-icon {
+            font-size: 32px;
+            width: 32px;
+            height: 32px;
+            color: white;
+          }
+        }
+
+        .stat-info {
+          flex: 1;
+
+          h3 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+            color: #333;
+          }
+
+          p {
+            margin: 4px 0 0 0;
+            font-size: 14px;
+            color: #666;
+          }
+        }
+      }
+
+      &.stat-total .stat-icon {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      }
+
+      &.stat-amount .stat-icon {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      }
+
+      &.stat-en-cours .stat-icon {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+      }
+
+      &.stat-avocat .stat-icon {
+        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+      }
+
+      &.stat-huissier .stat-icon {
+        background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+      }
+
+      &.stat-urgent .stat-icon {
+        background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+      }
+    }
+  }
+
+  .filters-panel {
+    margin-bottom: 24px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+    .filters-content {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      align-items: center;
+      padding: 16px;
+
+      .filter-field {
+        flex: 1;
+        min-width: 200px;
+      }
+
+      .clear-filters-btn {
+        margin-top: 8px;
+      }
+    }
+  }
+
+  .loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 64px;
+    gap: 16px;
+
+    p {
+      margin: 0;
+      color: #666;
+      font-size: 16px;
+    }
+  }
+
+  .table-card {
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+
+    mat-card-header {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      color: white;
+      padding: 16px 24px;
+
+      mat-card-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0;
+        font-size: 18px;
+        font-weight: 600;
+
+        mat-icon {
+          font-size: 24px;
+          width: 24px;
+          height: 24px;
+        }
+      }
+    }
+
+    .table-container {
+      overflow-x: auto;
+      padding: 16px;
+
+      .dossiers-table {
+        width: 100%;
+
+        .table-header {
+          background-color: #f8f9fa;
+
+          th {
+            font-weight: 600;
+            color: #333;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 16px;
+
+            .header-icon {
+              font-size: 18px;
+              width: 18px;
+              height: 18px;
+              vertical-align: middle;
+              margin-right: 4px;
+              color: #f5576c;
+            }
+          }
+        }
+
+        .table-row {
+          cursor: pointer;
+          transition: background-color 0.2s;
+
+          &:hover {
+            background-color: #f8f9fa;
+          }
+
+          td {
+            padding: 16px;
+            border-bottom: 1px solid #e0e0e0;
+
+            .numero-dossier {
+              color: #f5576c;
+              font-weight: 600;
+            }
+
+            .titre-cell {
+              max-width: 200px;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              white-space: nowrap;
+            }
+
+            .montant {
+              font-weight: 600;
+              color: #1976d2;
+              font-size: 15px;
+            }
+
+            .person-info {
+              display: flex;
+              flex-direction: column;
+              gap: 4px;
+
+              .person-name {
+                font-weight: 500;
+              }
+
+              .type-badge {
+                font-size: 11px;
+                color: #666;
+                background-color: #f0f0f0;
+                padding: 2px 8px;
+                border-radius: 4px;
+                display: inline-block;
+                width: fit-content;
+              }
+            }
+
+            .assigned-person {
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              color: #4caf50;
+              font-weight: 500;
+
+              .person-icon {
+                font-size: 18px;
+                width: 18px;
+                height: 18px;
+              }
+            }
+
+            .no-assigned {
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              color: #999;
+              font-style: italic;
+              font-size: 12px;
+
+              mat-icon {
+                font-size: 18px;
+                width: 18px;
+                height: 18px;
+              }
+            }
+
+            .date-cell {
+              display: flex;
+              align-items: center;
+              gap: 8px;
+
+              .date-icon {
+                font-size: 16px;
+                width: 16px;
+                height: 16px;
+                color: #999;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    .no-data {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 64px;
+      gap: 16px;
+      color: #999;
+
+      mat-icon {
+        font-size: 80px;
+        width: 80px;
+        height: 80px;
+        opacity: 0.3;
+      }
+
+      p {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 500;
+
+        &.no-data-subtitle {
+          font-size: 14px;
+          color: #999;
+          font-weight: normal;
+        }
+      }
+    }
+
+    .custom-paginator {
+      border-top: 1px solid #e0e0e0;
+    }
+  }
+
+  mat-chip {
+    font-size: 12px;
+    font-weight: 500;
+    padding: 6px 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+
+    .chip-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+    }
+
+    &.statut-valide {
+      background-color: #4caf50;
+      color: white;
+    }
+
+    &.statut-attente {
+      background-color: #ff9800;
+      color: white;
+    }
+
+    &.statut-rejete {
+      background-color: #f44336;
+      color: white;
+    }
+
+    &.statut-en-cours {
+      background-color: #2196f3;
+      color: white;
+    }
+
+    &.statut-cloture {
+      background-color: #9e9e9e;
+      color: white;
+    }
+
+    &.urgence-eleve {
+      background-color: #f44336;
+      color: white;
+    }
+
+    &.urgence-moyenne {
+      background-color: #ff9800;
+      color: white;
+    }
+
+    &.urgence-faible {
+      background-color: #4caf50;
+      color: white;
+    }
+  }
+}
+
+// Responsive
+@media (max-width: 768px) {
+  .dossiers-juridique-container {
+    padding: 16px;
+
+    .page-header {
+      flex-direction: column;
+      gap: 16px;
+
+      .header-actions {
+        width: 100%;
+
+        button {
+          flex: 1;
+        }
+      }
+    }
+
+    .statistics-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .table-container {
+      overflow-x: scroll;
+    }
+  }
+}

@@ -46,7 +46,11 @@ export class ChefAmiableLayoutComponent implements OnInit {
 
   getInitials(): string {
     if (this.currentUser) {
-      return `${this.currentUser.prenom.charAt(0)}${this.currentUser.nom.charAt(0)}`.toUpperCase();
+      const prenom = this.currentUser.prenom || '';
+      const nom = this.currentUser.nom || '';
+      const prenomInitial = prenom.length > 0 ? prenom.charAt(0) : '';
+      const nomInitial = nom.length > 0 ? nom.charAt(0) : '';
+      return `${prenomInitial}${nomInitial}`.toUpperCase() || 'U';
     }
     return 'U';
   }

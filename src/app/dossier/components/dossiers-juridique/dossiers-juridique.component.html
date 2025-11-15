@@ -1,0 +1,342 @@
+<div class="dossiers-juridique-container">
+  <!-- Header -->
+  <div class="page-header">
+    <div class="header-content">
+      <h1>
+        <mat-icon>gavel</mat-icon>
+        Dossiers Affectés au Recouvrement Juridique
+      </h1>
+      <p class="subtitle">Gérer les dossiers affectés au département de recouvrement juridique</p>
+    </div>
+    <div class="header-actions">
+      <button mat-raised-button color="accent" (click)="showFilters = !showFilters" [class.active]="showFilters">
+        <mat-icon>filter_list</mat-icon>
+        Filtres
+      </button>
+      <button mat-raised-button color="primary" (click)="exportToCSV()" [disabled]="filteredDossiers.length === 0">
+        <mat-icon>download</mat-icon>
+        Exporter CSV
+      </button>
+      <button mat-raised-button color="primary" (click)="refreshData()" [disabled]="loading">
+        <mat-icon>refresh</mat-icon>
+        Actualiser
+      </button>
+    </div>
+  </div>
+
+  <!-- Statistics Cards -->
+  <div class="statistics-grid" *ngIf="!loading">
+    <mat-card class="stat-card stat-total">
+      <mat-card-content>
+        <div class="stat-icon">
+          <mat-icon>folder</mat-icon>
+        </div>
+        <div class="stat-info">
+          <h3>{{ totalDossiers }}</h3>
+          <p>Total Dossiers</p>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card stat-amount">
+      <mat-card-content>
+        <div class="stat-icon">
+          <mat-icon>attach_money</mat-icon>
+        </div>
+        <div class="stat-info">
+          <h3>{{ formatAmount(totalMontant) }}</h3>
+          <p>Montant Total</p>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card stat-en-cours">
+      <mat-card-content>
+        <div class="stat-icon">
+          <mat-icon>hourglass_empty</mat-icon>
+        </div>
+        <div class="stat-info">
+          <h3>{{ dossiersEnCours }}</h3>
+          <p>En Cours</p>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card stat-avocat">
+      <mat-card-content>
+        <div class="stat-icon">
+          <mat-icon>person</mat-icon>
+        </div>
+        <div class="stat-info">
+          <h3>{{ dossiersAvecAvocat }}</h3>
+          <p>Avec Avocat</p>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card stat-huissier">
+      <mat-card-content>
+        <div class="stat-icon">
+          <mat-icon>person_outline</mat-icon>
+        </div>
+        <div class="stat-info">
+          <h3>{{ dossiersAvecHuissier }}</h3>
+          <p>Avec Huissier</p>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card stat-urgent">
+      <mat-card-content>
+        <div class="stat-icon">
+          <mat-icon>warning</mat-icon>
+        </div>
+        <div class="stat-info">
+          <h3>{{ dossiersUrgents }}</h3>
+          <p>Urgents</p>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Filters Panel -->
+  <mat-expansion-panel *ngIf="showFilters" class="filters-panel">
+    <mat-expansion-panel-header>
+      <mat-panel-title>
+        <mat-icon>tune</mat-icon>
+        Filtres Avancés
+      </mat-panel-title>
+    </mat-expansion-panel-header>
+    <div class="filters-content">
+      <mat-form-field appearance="outline" class="filter-field">
+        <mat-label>Rechercher</mat-label>
+        <input matInput [(ngModel)]="searchTerm" (input)="onSearchChange()" 
+               placeholder="Numéro, titre, créancier, débiteur, avocat, huissier...">
+        <mat-icon matSuffix>search</mat-icon>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="filter-field">
+        <mat-label>Statut</mat-label>
+        <mat-select [(ngModel)]="filterStatut" (selectionChange)="onFilterChange()">
+          <mat-option *ngFor="let option of statutOptions" [value]="option.value">
+            {{ option.label }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="filter-field">
+        <mat-label>Urgence</mat-label>
+        <mat-select [(ngModel)]="filterUrgence" (selectionChange)="onFilterChange()">
+          <mat-option *ngFor="let option of urgenceOptions" [value]="option.value">
+            {{ option.label }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <button mat-stroked-button (click)="clearFilters()" class="clear-filters-btn">
+        <mat-icon>clear</mat-icon>
+        Réinitialiser
+      </button>
+    </div>
+  </mat-expansion-panel>
+
+  <!-- Loading Spinner -->
+  <div *ngIf="loading" class="loading-container">
+    <mat-spinner diameter="50"></mat-spinner>
+    <p>Chargement des dossiers...</p>
+  </div>
+
+  <!-- Dossiers Table -->
+  <mat-card *ngIf="!loading" class="table-card">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>list</mat-icon>
+        Liste des Dossiers ({{ filteredDossiers.length }})
+      </mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="table-container">
+        <table mat-table [dataSource]="filteredDossiers" matSort (matSortChange)="onSortChange($event)" class="dossiers-table">
+          
+          <!-- Numéro Dossier Column -->
+          <ng-container matColumnDef="numeroDossier">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header="numeroDossier">
+              <mat-icon class="header-icon">tag</mat-icon>
+              NUMÉRO
+            </th>
+            <td mat-cell *matCellDef="let dossier">
+              <strong class="numero-dossier">{{ dossier.numeroDossier }}</strong>
+            </td>
+          </ng-container>
+
+          <!-- Titre Column -->
+          <ng-container matColumnDef="titre">
+            <th mat-header-cell *matHeaderCellDef>
+              <mat-icon class="header-icon">description</mat-icon>
+              TITRE
+            </th>
+            <td mat-cell *matCellDef="let dossier" class="titre-cell">{{ dossier.titre }}</td>
+          </ng-container>
+
+          <!-- Montant Column -->
+          <ng-container matColumnDef="montantCreance">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header="montantCreance">
+              <mat-icon class="header-icon">attach_money</mat-icon>
+              MONTANT
+            </th>
+            <td mat-cell *matCellDef="let dossier">
+              <span class="montant">{{ formatAmount(dossier.montantCreance) }}</span>
+            </td>
+          </ng-container>
+
+          <!-- Créancier Column -->
+          <ng-container matColumnDef="creancier">
+            <th mat-header-cell *matHeaderCellDef>
+              <mat-icon class="header-icon">person</mat-icon>
+              CRÉANCIER
+            </th>
+            <td mat-cell *matCellDef="let dossier">
+              <div class="person-info">
+                <span class="person-name">{{ dossier.creancier?.nom || 'N/A' }}</span>
+                <span *ngIf="dossier.creancier?.type" class="type-badge">{{ dossier.creancier.type }}</span>
+              </div>
+            </td>
+          </ng-container>
+
+          <!-- Débiteur Column -->
+          <ng-container matColumnDef="debiteur">
+            <th mat-header-cell *matHeaderCellDef>
+              <mat-icon class="header-icon">person_outline</mat-icon>
+              DÉBITEUR
+            </th>
+            <td mat-cell *matCellDef="let dossier">
+              <div class="person-info">
+                <span class="person-name">{{ dossier.debiteur?.nom || 'N/A' }}</span>
+                <span *ngIf="dossier.debiteur?.type" class="type-badge">{{ dossier.debiteur.type }}</span>
+              </div>
+            </td>
+          </ng-container>
+
+          <!-- Avocat Column -->
+          <ng-container matColumnDef="avocat">
+            <th mat-header-cell *matHeaderCellDef>
+              <mat-icon class="header-icon">person</mat-icon>
+              AVOCAT
+            </th>
+            <td mat-cell *matCellDef="let dossier">
+              <span *ngIf="dossier.avocat; else noAvocat" class="assigned-person">
+                <mat-icon class="person-icon">person</mat-icon>
+                {{ dossier.avocat.nom }}
+              </span>
+              <ng-template #noAvocat>
+                <span class="no-assigned">
+                  <mat-icon>person_off</mat-icon>
+                  Non assigné
+                </span>
+              </ng-template>
+            </td>
+          </ng-container>
+
+          <!-- Huissier Column -->
+          <ng-container matColumnDef="huissier">
+            <th mat-header-cell *matHeaderCellDef>
+              <mat-icon class="header-icon">person_outline</mat-icon>
+              HUISSIER
+            </th>
+            <td mat-cell *matCellDef="let dossier">
+              <span *ngIf="dossier.huissier; else noHuissier" class="assigned-person">
+                <mat-icon class="person-icon">person</mat-icon>
+                {{ dossier.huissier.nom }}
+              </span>
+              <ng-template #noHuissier>
+                <span class="no-assigned">
+                  <mat-icon>person_off</mat-icon>
+                  Non assigné
+                </span>
+              </ng-template>
+            </td>
+          </ng-container>
+
+          <!-- Urgence Column -->
+          <ng-container matColumnDef="urgence">
+            <th mat-header-cell *matHeaderCellDef>
+              <mat-icon class="header-icon">priority_high</mat-icon>
+              URGENCE
+            </th>
+            <td mat-cell *matCellDef="let dossier">
+              <mat-chip [class]="getUrgenceClass(dossier.urgence)" class="urgence-chip">
+                <mat-icon class="chip-icon">{{ getUrgenceIcon(dossier.urgence) }}</mat-icon>
+                {{ dossier.urgence }}
+              </mat-chip>
+            </td>
+          </ng-container>
+
+          <!-- Statut Column -->
+          <ng-container matColumnDef="statut">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header="statut">
+              <mat-icon class="header-icon">info</mat-icon>
+              STATUT
+            </th>
+            <td mat-cell *matCellDef="let dossier">
+              <mat-chip [class]="getStatutClass(dossier.statut)" class="statut-chip">
+                {{ dossier.statut || 'N/A' }}
+              </mat-chip>
+            </td>
+          </ng-container>
+
+          <!-- Date Création Column -->
+          <ng-container matColumnDef="dateCreation">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header="dateCreation">
+              <mat-icon class="header-icon">calendar_today</mat-icon>
+              DATE CRÉATION
+            </th>
+            <td mat-cell *matCellDef="let dossier">
+              <div class="date-cell">
+                <mat-icon class="date-icon">event</mat-icon>
+                {{ formatDate(dossier.dateCreation) }}
+              </div>
+            </td>
+          </ng-container>
+
+          <!-- Actions Column -->
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef>
+              <mat-icon class="header-icon">settings</mat-icon>
+              ACTIONS
+            </th>
+            <td mat-cell *matCellDef="let dossier" (click)="$event.stopPropagation()">
+              <button mat-icon-button color="primary" (click)="viewDossier(dossier)" matTooltip="Voir les détails">
+                <mat-icon>visibility</mat-icon>
+              </button>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns" class="table-header"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;" 
+              (click)="viewDossier(row)" class="table-row"></tr>
+        </table>
+
+        <!-- No Data Message -->
+        <div *ngIf="filteredDossiers.length === 0 && !loading" class="no-data">
+          <mat-icon>folder_open</mat-icon>
+          <p>Aucun dossier trouvé</p>
+          <p class="no-data-subtitle" *ngIf="searchTerm || filterStatut !== 'all' || filterUrgence !== 'all'">
+            Essayez de modifier vos filtres de recherche
+          </p>
+        </div>
+
+        <!-- Pagination -->
+        <mat-paginator
+          *ngIf="filteredDossiers.length > 0"
+          [length]="totalElements"
+          [pageSize]="pageSize"
+          [pageIndex]="pageIndex"
+          [pageSizeOptions]="[5, 10, 25, 50, 100]"
+          (page)="onPageChange($event)"
+          showFirstLastButtons
+          class="custom-paginator">
+        </mat-paginator>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

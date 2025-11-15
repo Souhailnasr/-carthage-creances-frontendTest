@@ -17,7 +17,7 @@
         <span class="initials">{{ getInitials() }}</span>
       </div>
       <div class="user-info" *ngIf="sidebarOpen">
-        <h3>{{ currentUser.getFullName() }}</h3>
+        <h3>{{ (currentUser.prenom || '') + ' ' + (currentUser.nom || '') }}</h3>
         <p>{{ getRoleDisplayName() }}</p>
       </div>
     </div>
