@@ -33,7 +33,7 @@ import { JwtAuthService } from '../../../core/services/jwt-auth.service';
   styleUrls: ['./action-dialog-amiable.component.scss']
 })
 export class ActionDialogAmiableComponent implements OnInit {
-  actionForm: FormGroup;
+  actionForm!: FormGroup;
   isEditMode: boolean = false;
   
   typeActions = Object.values(TypeAction);
@@ -58,6 +58,7 @@ export class ActionDialogAmiableComponent implements OnInit {
       type: ['', Validators.required],
       dateAction: [new Date(), Validators.required],
       nbOccurrences: [1, [Validators.required, Validators.min(1)]],
+      coutUnitaire: [0, [Validators.required, Validators.min(0)]],
       reponseDebiteur: [null]
     });
     
@@ -74,10 +75,30 @@ export class ActionDialogAmiableComponent implements OnInit {
 
   save(): void {
     if (this.actionForm.valid) {
+      // Formater la date correctement
+      const dateValue = this.actionForm.value.dateAction;
+      let dateFormatted: string;
+      
+      if (dateValue instanceof Date) {
+        dateFormatted = dateValue.toISOString().split('T')[0];
+      } else if (typeof dateValue === 'string') {
+        // Si c'est déjà une string, vérifier le format
+        dateFormatted = dateValue.includes('T') ? dateValue.split('T')[0] : dateValue;
+      } else {
+        dateFormatted = new Date(dateValue).toISOString().split('T')[0];
+      }
+      
       const actionData: Partial<ActionRecouvrement> = {
-        ...this.actionForm.value,
-        dateAction: this.actionForm.value.dateAction.toISOString().split('T')[0]
+        type: this.actionForm.value.type,
+        dateAction: dateFormatted,
+        nbOccurrences: this.actionForm.value.nbOccurrences,
+        coutUnitaire: this.actionForm.value.coutUnitaire || 0,
+        // Ne pas envoyer reponseDebiteur si c'est null, ou l'envoyer selon les besoins du backend
+        ...(this.actionForm.value.reponseDebiteur !== null && { reponseDebiteur: this.actionForm.value.reponseDebiteur })
       };
+
+      console.log('💾 Données du formulaire:', this.actionForm.value);
+      console.log('📤 Données à envoyer:', actionData);
 
       const operation = this.isEditMode
         ? this.actionService.updateAction(this.data.action!.id!, actionData)
@@ -94,17 +115,62 @@ export class ActionDialogAmiableComponent implements OnInit {
         },
         error: (err) => {
           console.error('❌ Erreur lors de l\'enregistrement:', err);
-          const errorMessage = err.error?.message || err.message || 'Erreur lors de l\'enregistrement';
+          console.error('❌ Détails complets de l\'erreur:', {
+            status: err.status,
+            statusText: err.statusText,
+            error: err.error,
+            message: err.message
+          });
+          
+          // Message d'erreur plus détaillé
+          let errorMessage = 'Erreur lors de l\'enregistrement';
+          if (err.error?.message) {
+            errorMessage = err.error.message;
+          } else if (err.error?.error) {
+            errorMessage = err.error.error;
+          } else if (err.message) {
+            errorMessage = err.message;
+          }
+          
           this.snackBar.open(errorMessage, 'Fermer', { duration: 5000 });
         }
       });
     } else {
+      console.error('❌ Formulaire invalide:', this.actionForm.errors);
+      console.error('❌ État des champs:', {
+        type: this.actionForm.get('type')?.errors,
+        dateAction: this.actionForm.get('dateAction')?.errors,
+        nbOccurrences: this.actionForm.get('nbOccurrences')?.errors,
+        coutUnitaire: this.actionForm.get('coutUnitaire')?.errors
+      });
       this.snackBar.open('Veuillez remplir tous les champs requis', 'Fermer', { duration: 3000 });
     }
   }
 
   close(): void {
     this.dialogRef.close(false);
+  }
+
+  getTypeLabel(type: TypeAction): string {
+    const labels: { [key: string]: string } = {
+      'APPEL': 'Appel téléphonique',
+      'EMAIL': 'Email',
+      'VISITE': 'Visite sur place',
+      'LETTRE': 'Lettre recommandée',
+      'AUTRE': 'Autre action'
+    };
+    return labels[type] || type;
+  }
+
+  getTypeIcon(type: TypeAction): string {
+    const icons: { [key: string]: string } = {
+      'APPEL': 'phone',
+      'EMAIL': 'email',
+      'VISITE': 'home',
+      'LETTRE': 'mail',
+      'AUTRE': 'more_horiz'
+    };
+    return icons[type] || 'help';
   }
 }
 

@@ -1,16 +1,28 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatTabsModule } from '@angular/material/tabs';
+import { MatCardModule } from '@angular/material/card';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatChipsModule } from '@angular/material/chips';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatBadgeModule } from '@angular/material/badge';
 import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { ChefAmiableService } from '../../services/chef-amiable.service';
 import { DossierApiService } from '../../../core/services/dossier-api.service';
+import { ActionRecouvrementService } from '../../../core/services/action-recouvrement.service';
 import { DossierApi } from '../../../shared/models/dossier-api.model';
 import { TypeAction, ReponseDebiteur } from '../../../shared/models';
 import { ConfirmationDialogComponent, ConfirmationDialogData } from '../../../shared/components/dialogs/confirmation-dialog/confirmation-dialog.component';
+import { DossierActionsAmiableComponent } from '../../../dossier/components/dossier-actions-amiable/dossier-actions-amiable.component';
+import { DossierRecommandationsComponent } from '../dossier-recommandations/dossier-recommandations.component';
+import { JwtAuthService } from '../../../core/services/jwt-auth.service';
 
 interface DossierAvecActions {
   id?: number;
@@ -23,17 +35,41 @@ interface DossierAvecActions {
 @Component({
   selector: 'app-gestion-actions',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatSnackBarModule, MatProgressSpinnerModule, MatDialogModule],
+  imports: [
+    CommonModule, 
+    FormsModule, 
+    MatSnackBarModule, 
+    MatProgressSpinnerModule, 
+    MatDialogModule,
+    MatTabsModule,
+    MatCardModule,
+    MatButtonModule,
+    MatIconModule,
+    MatChipsModule,
+    MatTooltipModule,
+    MatBadgeModule,
+    DossierActionsAmiableComponent,
+    DossierRecommandationsComponent
+  ],
   templateUrl: './gestion-actions.component.html',
   styleUrls: ['./gestion-actions.component.scss']
 })
 export class GestionActionsComponent implements OnInit, OnDestroy {
   dossiers: DossierAvecActions[] = [];
   dossierSelectionne: DossierAvecActions | null = null;
+  dossierApiSelectionne: DossierApi | null = null;
   numeroDossierRecherche: string = '';
   searchTerm: string = '';
   showAffectationForm: boolean = false;
   loading: boolean = false;
+  selectedTab = 0; // 0 = Liste, 1 = Actions, 2 = Détails, 3 = Recommandations
+  
+  tabs = [
+    { label: 'Liste des Dossiers', icon: 'list', disabled: false },
+    { label: 'Actions', icon: 'history', disabled: true },
+    { label: 'Détails', icon: 'info', disabled: true },
+    { label: 'Recommandations', icon: 'lightbulb', disabled: true }
+  ];
   
   private searchSubject = new Subject<string>();
   private destroy$ = new Subject<void>();
@@ -57,8 +93,11 @@ export class GestionActionsComponent implements OnInit, OnDestroy {
   constructor(
     private chefAmiableService: ChefAmiableService,
     private dossierApiService: DossierApiService,
+    private actionService: ActionRecouvrementService,
     private snackBar: MatSnackBar,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private router: Router,
+    private jwtAuthService: JwtAuthService
   ) {
     // Configuration du debounce pour la recherche
     this.searchSubject.pipe(
@@ -72,6 +111,13 @@ export class GestionActionsComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    // Vérifier l'authentification
+    if (!this.jwtAuthService.isUserLoggedIn()) {
+      this.snackBar.open('Vous devez être connecté pour accéder à cette page', 'Fermer', { duration: 3000 });
+      this.router.navigate(['/login']);
+      return;
+    }
+    
     this.loadDossiers();
   }
 
@@ -145,6 +191,41 @@ export class GestionActionsComponent implements OnInit, OnDestroy {
 
   selectionnerDossier(dossier: DossierAvecActions): void {
     this.dossierSelectionne = dossier;
+    
+    // Charger les détails complets du dossier depuis l'API
+    if (dossier.id) {
+      this.dossierApiService.getDossierById(dossier.id).pipe(
+        takeUntil(this.destroy$)
+      ).subscribe({
+        next: (dossierApi) => {
+          this.dossierApiSelectionne = dossierApi;
+          // Activer les onglets Actions, Détails et Recommandations
+          this.tabs[1].disabled = false;
+          this.tabs[2].disabled = false;
+          this.tabs[3].disabled = false;
+          // Aller directement à l'onglet Actions
+          this.selectedTab = 1;
+        },
+        error: (error) => {
+          console.error('❌ Erreur lors du chargement des détails du dossier:', error);
+          // Activer quand même les onglets avec les données disponibles
+          this.tabs[1].disabled = false;
+          this.tabs[2].disabled = false;
+          this.tabs[3].disabled = false;
+          this.selectedTab = 1;
+        }
+      });
+    }
+  }
+  
+  onTabChange(index: number): void {
+    this.selectedTab = index;
+  }
+  
+  getActionsCount(dossierId: number | undefined): number {
+    if (!dossierId) return 0;
+    const dossier = this.dossiers.find(d => d.id === dossierId);
+    return dossier?.actions?.length || 0;
   }
 
   rechercherDossier(): void {

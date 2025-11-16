@@ -5,7 +5,8 @@
       <mat-label>Type d'action</mat-label>
       <mat-select formControlName="type">
         <mat-option *ngFor="let type of typeActions" [value]="type">
-          {{ type }}
+          <mat-icon>{{ getTypeIcon(type) }}</mat-icon>
+          {{ getTypeLabel(type) }}
         </mat-option>
       </mat-select>
       <mat-error *ngIf="actionForm.get('type')?.hasError('required')">
@@ -36,6 +37,18 @@
     </mat-form-field>
     
     <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Coût unitaire (TND)</mat-label>
+      <input matInput type="number" formControlName="coutUnitaire" min="0" step="0.01">
+      <mat-hint>Coût unitaire de l'action en dinars tunisiens</mat-hint>
+      <mat-error *ngIf="actionForm.get('coutUnitaire')?.hasError('required')">
+        Le coût unitaire est requis
+      </mat-error>
+      <mat-error *ngIf="actionForm.get('coutUnitaire')?.hasError('min')">
+        Le coût unitaire doit être supérieur ou égal à 0
+      </mat-error>
+    </mat-form-field>
+    
+    <mat-form-field appearance="outline" class="full-width">
       <mat-label>Réponse du débiteur</mat-label>
       <mat-select formControlName="reponseDebiteur">
         <mat-option [value]="null">Aucune réponse</mat-option>
@@ -43,11 +56,6 @@
         <mat-option [value]="reponses[2]">Négative</mat-option>
       </mat-select>
     </mat-form-field>
-    
-    <div class="info-hint">
-      <mat-icon>info</mat-icon>
-      <span>Le coût sera calculé automatiquement par le système et géré dans le module Finance.</span>
-    </div>
   </form>
 </mat-dialog-content>
 <mat-dialog-actions align="end">

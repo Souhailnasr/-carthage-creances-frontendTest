@@ -256,3 +256,5 @@ Ou dans le contrôleur avant le save:
 dossierUtilisateur.setDossiersId(dossierId); // Si dossiers_id existe
 ```
 
+
+

@@ -45,7 +45,8 @@ export class DossierActionsAmiableComponent implements OnInit, OnDestroy {
     positives: 0,
     negatives: 0,
     sansReponse: 0,
-    parType: {}
+    parType: {},
+    dernieresActions: []
   };
   
   displayedColumns: string[] = ['dateAction', 'type', 'nbOccurrences', 'reponseDebiteur', 'actions'];

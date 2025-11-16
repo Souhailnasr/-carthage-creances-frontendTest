@@ -1,181 +1,216 @@
 <div class="gestion-actions-container">
+  <!-- En-tête -->
   <div class="header">
-    <h1>Gestion des Actions - Recouvrement Amiable</h1>
+    <h1>
+      <mat-icon>work</mat-icon>
+      Gestion des Actions - Recouvrement Amiable
+    </h1>
     <p>Gérez les dossiers et actions du département de recouvrement amiable</p>
   </div>
 
-  <!-- Zone de recherche et affectation -->
-  <div class="search-section">
-    <div class="search-form">
-      <div class="form-group">
-        <label for="numeroDossier">Rechercher un dossier :</label>
-        <input 
-          type="text" 
-          id="numeroDossier"
-          [(ngModel)]="searchTerm" 
-          (input)="onSearchChange(searchTerm)"
-          placeholder="Rechercher par numéro, créancier ou débiteur..."
-          class="form-control">
-        <small class="form-text text-muted">La recherche se fait automatiquement après 300ms</small>
-      </div>
-      <div class="form-actions">
-        <button class="btn-primary" (click)="rechercherDossier()">
-          <i class="fas fa-search"></i> Rechercher
-        </button>
-        <button class="btn-secondary" (click)="showAffectationForm = !showAffectationForm">
-          <i class="fas fa-cog"></i> Actions sur dossier
-        </button>
-        <button class="btn-secondary" (click)="loadDossiers()" [disabled]="loading">
-          <i class="fas fa-sync-alt" [class.fa-spin]="loading"></i> Actualiser
-        </button>
-      </div>
-    </div>
+  <!-- Onglets -->
+  <mat-tab-group [(selectedIndex)]="selectedTab" (selectedIndexChange)="onTabChange($event)" class="main-tabs">
+    <!-- Onglet 1: Liste des Dossiers -->
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon>{{ tabs[0].icon }}</mat-icon>
+        {{ tabs[0].label }}
+      </ng-template>
+      
+      <div class="tab-content">
+        <!-- Zone de recherche -->
+        <mat-card class="search-card">
+          <mat-card-content>
+            <div class="search-section">
+              <div class="search-form">
+                <div class="form-group">
+                  <label for="numeroDossier">Rechercher un dossier :</label>
+                  <input 
+                    type="text" 
+                    id="numeroDossier"
+                    [(ngModel)]="searchTerm" 
+                    (input)="onSearchChange(searchTerm)"
+                    placeholder="Rechercher par numéro, créancier ou débiteur..."
+                    class="form-control">
+                  <small class="form-text text-muted">La recherche se fait automatiquement après 300ms</small>
+                </div>
+                <div class="form-actions">
+                  <button mat-raised-button color="primary" (click)="rechercherDossier()">
+                    <mat-icon>search</mat-icon>
+                    Rechercher
+                  </button>
+                  <button mat-icon-button (click)="loadDossiers()" [disabled]="loading" matTooltip="Actualiser">
+                    <mat-icon [class.spinning]="loading">refresh</mat-icon>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
 
-    <!-- Formulaire d'affectation/clôture -->
-    <div class="affectation-form" *ngIf="showAffectationForm">
-      <h3>Actions sur le dossier</h3>
-      <div class="form-group" *ngIf="dossierSelectionne">
-        <p><strong>Dossier sélectionné :</strong> {{ dossierSelectionne.numeroDossier }}</p>
-        <p><strong>Créancier :</strong> {{ dossierSelectionne.nomCreancier }}</p>
-        <p><strong>Débiteur :</strong> {{ dossierSelectionne.nomDebiteur }}</p>
+        <!-- Liste des dossiers -->
+        <div class="dossiers-section">
+          <h2>Dossiers Affectés au Recouvrement Amiable</h2>
+          
+          <div *ngIf="loading" class="loading-container">
+            <mat-spinner diameter="50"></mat-spinner>
+            <p>Chargement des dossiers...</p>
+          </div>
+          
+          <div *ngIf="!loading && dossiers.length === 0" class="no-dossiers">
+            <mat-icon>folder_open</mat-icon>
+            <p>Aucun dossier affecté au recouvrement amiable pour le moment.</p>
+          </div>
+          
+          <div class="dossiers-grid" *ngIf="!loading && dossiers.length > 0">
+            <mat-card 
+              class="dossier-card" 
+              *ngFor="let dossier of dossiers"
+              [attr.data-dossier-id]="dossier.id"
+              [class.selected]="dossierSelectionne?.numeroDossier === dossier.numeroDossier"
+              (click)="selectionnerDossier(dossier)">
+              <mat-card-header>
+                <mat-card-title>
+                  <mat-icon>folder</mat-icon>
+                  {{ dossier.numeroDossier }}
+                </mat-card-title>
+                <mat-card-subtitle>
+                  <mat-chip *ngIf="getActionsCount(dossier.id) > 0" color="primary">
+                    <mat-icon>history</mat-icon>
+                    {{ getActionsCount(dossier.id) }} action(s)
+                  </mat-chip>
+                </mat-card-subtitle>
+              </mat-card-header>
+              <mat-card-content>
+                <div class="dossier-info">
+                  <p><strong>Créancier:</strong> {{ dossier.nomCreancier }}</p>
+                  <p><strong>Débiteur:</strong> {{ dossier.nomDebiteur }}</p>
+                </div>
+              </mat-card-content>
+              <mat-card-actions *ngIf="dossierSelectionne?.numeroDossier === dossier.numeroDossier" class="dossier-actions-quick">
+                <button mat-raised-button color="accent" (click)="affecterAuJuridique(); $event.stopPropagation()">
+                  <mat-icon>gavel</mat-icon>
+                  Affecter au Juridique
+                </button>
+                <button mat-raised-button color="warn" (click)="cloturerDossier(); $event.stopPropagation()">
+                  <mat-icon>lock</mat-icon>
+                  Clôturer
+                </button>
+              </mat-card-actions>
+            </mat-card>
+          </div>
+        </div>
       </div>
-      <div class="form-group" *ngIf="!dossierSelectionne">
-        <p class="text-warning">Veuillez sélectionner un dossier dans la liste ci-dessous</p>
-      </div>
-      <div class="action-buttons">
-        <button 
-          class="btn-warning" 
-          (click)="affecterAuJuridique()"
-          [disabled]="!dossierSelectionne || loading">
-          <i class="fas fa-gavel"></i> Affecter au Juridique
-        </button>
-        <button 
-          class="btn-danger" 
-          (click)="cloturerDossier()"
-          [disabled]="!dossierSelectionne || loading">
-          <i class="fas fa-lock"></i> Clôturer le Dossier
-        </button>
-        <button 
-          class="btn-secondary" 
-          (click)="showAffectationForm = false">
-          <i class="fas fa-times"></i> Fermer
-        </button>
-      </div>
-    </div>
-  </div>
+    </mat-tab>
 
-  <!-- Liste des dossiers -->
-  <div class="dossiers-section">
-    <h2>Dossiers Affectés au Recouvrement Amiable</h2>
-    <div *ngIf="loading" class="loading-container">
-      <mat-spinner diameter="50"></mat-spinner>
-      <p>Chargement des dossiers...</p>
-    </div>
-    <div *ngIf="!loading && dossiers.length === 0" class="no-dossiers">
-      <p>Aucun dossier affecté au recouvrement amiable pour le moment.</p>
-    </div>
-    <div class="dossiers-grid" *ngIf="!loading && dossiers.length > 0">
-      <div 
-        class="dossier-card" 
-        *ngFor="let dossier of dossiers"
-        [attr.data-dossier-id]="dossier.id"
-        [class.selected]="dossierSelectionne?.numeroDossier === dossier.numeroDossier"
-        (click)="selectionnerDossier(dossier)">
-        <div class="dossier-header">
-          <h3>{{ dossier.numeroDossier }}</h3>
-          <span class="actions-count">{{ dossier.actions?.length || 0 }} action(s)</span>
-        </div>
-        <div class="dossier-info">
-          <p><strong>Créancier:</strong> {{ dossier.nomCreancier }}</p>
-          <p><strong>Débiteur:</strong> {{ dossier.nomDebiteur }}</p>
-        </div>
-        <div class="dossier-actions-quick" *ngIf="dossierSelectionne?.numeroDossier === dossier.numeroDossier">
-          <button class="btn-small btn-warning" (click)="affecterAuJuridique(); $event.stopPropagation()">
-            <i class="fas fa-gavel"></i> Affecter au Juridique
-          </button>
-          <button class="btn-small btn-danger" (click)="cloturerDossier(); $event.stopPropagation()">
-            <i class="fas fa-lock"></i> Clôturer
-          </button>
-        </div>
+    <!-- Onglet 2: Actions -->
+    <mat-tab [disabled]="tabs[1].disabled">
+      <ng-template mat-tab-label>
+        <mat-icon [matBadge]="dossierSelectionne && getActionsCount(dossierSelectionne.id) > 0 ? getActionsCount(dossierSelectionne.id) : null" 
+                  matBadgeOverlap="false">{{ tabs[1].icon }}</mat-icon>
+        {{ tabs[1].label }}
+      </ng-template>
+      
+      <div class="tab-content" *ngIf="dossierSelectionne && dossierSelectionne.id">
+        <app-dossier-actions-amiable [dossierId]="dossierSelectionne.id"></app-dossier-actions-amiable>
       </div>
-    </div>
-  </div>
+      
+      <div class="no-selection" *ngIf="!dossierSelectionne">
+        <mat-icon>info</mat-icon>
+        <p>Sélectionnez un dossier dans l'onglet "Liste des Dossiers" pour voir ses actions</p>
+      </div>
+    </mat-tab>
 
-  <!-- Détails du dossier sélectionné -->
-  <div class="dossier-details" *ngIf="dossierSelectionne">
-    <div class="details-header">
-      <h2>Détails du dossier : {{ dossierSelectionne.numeroDossier }}</h2>
-      <div class="dossier-summary">
-        <p><strong>Créancier:</strong> {{ dossierSelectionne.nomCreancier }}</p>
-        <p><strong>Débiteur:</strong> {{ dossierSelectionne.nomDebiteur }}</p>
+    <!-- Onglet 3: Détails -->
+    <mat-tab [disabled]="tabs[2].disabled">
+      <ng-template mat-tab-label>
+        <mat-icon>{{ tabs[2].icon }}</mat-icon>
+        {{ tabs[2].label }}
+      </ng-template>
+      
+      <div class="tab-content" *ngIf="dossierSelectionne">
+        <mat-card class="details-card">
+          <mat-card-header>
+            <mat-card-title>
+              <mat-icon>folder</mat-icon>
+              Dossier: {{ dossierSelectionne.numeroDossier }}
+            </mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="dossier-details-grid">
+              <div class="detail-item">
+                <mat-icon>person</mat-icon>
+                <div>
+                  <strong>Créancier:</strong>
+                  <p>{{ dossierSelectionne.nomCreancier }}</p>
+                </div>
+              </div>
+              <div class="detail-item">
+                <mat-icon>person_outline</mat-icon>
+                <div>
+                  <strong>Débiteur:</strong>
+                  <p>{{ dossierSelectionne.nomDebiteur }}</p>
+                </div>
+              </div>
+            </div>
+            
+            <div class="dossier-actions-section" *ngIf="dossierApiSelectionne">
+              <h3>
+                <mat-icon>info</mat-icon>
+                Informations Complémentaires
+              </h3>
+              <div class="info-grid">
+                <div class="info-item" *ngIf="dossierApiSelectionne.montantCreance">
+                  <strong>Montant:</strong>
+                  <span>{{ dossierApiSelectionne.montantCreance | number:'1.2-2' }} TND</span>
+                </div>
+                <div class="info-item" *ngIf="dossierApiSelectionne.dateCreation">
+                  <strong>Date de création:</strong>
+                  <span>{{ dossierApiSelectionne.dateCreation | date:'dd/MM/yyyy' }}</span>
+                </div>
+                <div class="info-item" *ngIf="dossierApiSelectionne.urgence">
+                  <strong>Urgence:</strong>
+                  <mat-chip [class]="'chip-' + dossierApiSelectionne.urgence.toLowerCase()">
+                    {{ dossierApiSelectionne.urgence }}
+                  </mat-chip>
+                </div>
+              </div>
+            </div>
+          </mat-card-content>
+          <mat-card-actions>
+            <button mat-raised-button color="accent" (click)="affecterAuJuridique()" [disabled]="loading">
+              <mat-icon>gavel</mat-icon>
+              Affecter au Juridique
+            </button>
+            <button mat-raised-button color="warn" (click)="cloturerDossier()" [disabled]="loading">
+              <mat-icon>lock</mat-icon>
+              Clôturer le Dossier
+            </button>
+          </mat-card-actions>
+        </mat-card>
       </div>
-    </div>
+      
+      <div class="no-selection" *ngIf="!dossierSelectionne">
+        <mat-icon>info</mat-icon>
+        <p>Sélectionnez un dossier pour voir ses détails</p>
+      </div>
+    </mat-tab>
 
-    <!-- Tableau des actions -->
-    <div class="actions-table-container">
-      <h3>Actions Effectuées</h3>
-      <div *ngIf="!dossierSelectionne.actions || dossierSelectionne.actions.length === 0" class="no-actions">
-        <p>Aucune action enregistrée pour ce dossier.</p>
+    <!-- Onglet 4: Recommandations -->
+    <mat-tab [disabled]="tabs[3].disabled">
+      <ng-template mat-tab-label>
+        <mat-icon>{{ tabs[3].icon }}</mat-icon>
+        {{ tabs[3].label }}
+      </ng-template>
+      
+      <div class="tab-content" *ngIf="dossierSelectionne && dossierSelectionne.id">
+        <app-dossier-recommandations [dossierId]="dossierSelectionne.id"></app-dossier-recommandations>
       </div>
-      <div class="table-responsive" *ngIf="dossierSelectionne.actions && dossierSelectionne.actions.length > 0">
-        <table class="actions-table">
-          <thead>
-            <tr>
-              <th>Type d'Action</th>
-              <th>Date d'Action</th>
-              <th>Réponse Débiteur</th>
-              <th>Nb Occurrences</th>
-              <th>Coût Unitaire</th>
-              <th>Coût Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let action of dossierSelectionne.actions">
-              <td>
-                <span class="action-type">{{ getTypeActionLabel(action.type) }}</span>
-              </td>
-              <td>{{ getFormattedDate(action.dateAction) }}</td>
-              <td>
-                <span class="reponse-badge" [ngClass]="getReponseClass(action.reponseDebiteur)">
-                  {{ getReponseDebiteurLabel(action.reponseDebiteur) }}
-                </span>
-              </td>
-              <td>{{ action.nbOccurrences }}</td>
-              <td>{{ getFormattedCost(action.coutUnitaire) }}</td>
-              <td>{{ getFormattedCost(action.nbOccurrences * action.coutUnitaire) }}</td>
-            </tr>
-          </tbody>
-        </table>
+      
+      <div class="no-selection" *ngIf="!dossierSelectionne">
+        <mat-icon>info</mat-icon>
+        <p>Sélectionnez un dossier pour voir les recommandations</p>
       </div>
-    </div>
-
-    <!-- Statistiques du dossier -->
-    <div class="dossier-stats">
-      <h3>Statistiques du Dossier</h3>
-      <div class="stats-grid">
-        <div class="stat-item">
-          <span class="stat-label">Total Actions:</span>
-          <span class="stat-value">{{ dossierSelectionne.actions?.length || 0 }}</span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-label">Coût Total:</span>
-          <span class="stat-value">
-            {{ getFormattedCost(getTotalCost()) }}
-          </span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-label">Réponses Positives:</span>
-          <span class="stat-value">
-            {{ getPositiveResponses() }}
-          </span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-label">Réponses Négatives:</span>
-          <span class="stat-value">
-            {{ getNegativeResponses() }}
-          </span>
-        </div>
-      </div>
-    </div>
-  </div>
+    </mat-tab>
+  </mat-tab-group>
 </div>

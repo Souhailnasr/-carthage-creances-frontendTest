@@ -1,0 +1,111 @@
+<div class="recommandations-container" *ngIf="statistiques && !loading">
+  <h2>
+    <mat-icon>analytics</mat-icon>
+    Analyse et Recommandations
+  </h2>
+
+  <!-- Analyse de Collaboration -->
+  <mat-card class="analysis-card">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>analytics</mat-icon>
+        Analyse de Collaboration
+      </mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="collaboration-stats">
+        <div class="stat-item">
+          <span class="label">Taux de réponse positive:</span>
+          <span class="value positive">{{ pourcentagePositif | number:'1.0-0' }}%</span>
+        </div>
+        <div class="stat-item">
+          <span class="label">Total actions:</span>
+          <span class="value">{{ statistiques.total }}</span>
+        </div>
+        <div class="stat-item">
+          <span class="label">Réponses positives:</span>
+          <span class="value positive">{{ statistiques.positives }}</span>
+        </div>
+        <div class="stat-item">
+          <span class="label">Réponses négatives:</span>
+          <span class="value negative">{{ statistiques.negatives }}</span>
+        </div>
+      </div>
+      
+      <div class="collaboration-status">
+        <mat-chip [class]="pourcentagePositif >= 50 ? 'chip-positive' : 'chip-negative'">
+          <mat-icon>{{ pourcentagePositif >= 50 ? 'check_circle' : 'cancel' }}</mat-icon>
+          {{ pourcentagePositif >= 50 ? 'Débiteur Collaboratif' : 'Débiteur Non Collaboratif' }}
+        </mat-chip>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Recommandation Finance -->
+  <mat-card class="recommendation-card finance" *ngIf="recommandationFinance">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>attach_money</mat-icon>
+        Recommandation : Passer au Finance
+      </mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <p>Le débiteur semble prêt à payer. Plusieurs réponses positives récentes indiquent une collaboration.</p>
+      <ul>
+        <li *ngFor="let action of statistiques.dernieresActions | slice:0:3">
+          {{ action.type }} - {{ action.dateAction | date:'dd/MM/yyyy' }} - Réponse: {{ action.reponseDebiteur || 'Aucune' }}
+        </li>
+      </ul>
+      <button mat-raised-button color="primary" (click)="passerAuFinance()" [disabled]="loading">
+        <mat-icon>arrow_forward</mat-icon>
+        Passer au Finance
+      </button>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Recommandation Juridique -->
+  <mat-card class="recommendation-card juridique" *ngIf="recommandationJuridique">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>gavel</mat-icon>
+        Recommandation : Passer au Recouvrement Juridique
+      </mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <p>Le débiteur ne répond pas favorablement aux actions de recouvrement amiable.</p>
+      <ul>
+        <li *ngIf="statistiques.negatives >= 3">
+          {{ statistiques.negatives }} réponses négatives enregistrées
+        </li>
+        <li *ngIf="statistiques.total >= 5 && statistiques.sansReponse >= 3">
+          Aucune réponse après {{ statistiques.total }} actions
+        </li>
+      </ul>
+      <button mat-raised-button color="accent" (click)="passerAuJuridique()" [disabled]="loading">
+        <mat-icon>arrow_forward</mat-icon>
+        Passer au Recouvrement Juridique
+      </button>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Aucune recommandation -->
+  <mat-card class="recommendation-card neutral" *ngIf="!recommandationFinance && !recommandationJuridique">
+    <mat-card-content>
+      <mat-icon>info</mat-icon>
+      <p>Continuez les actions de recouvrement amiable. Pas assez de données pour une recommandation.</p>
+    </mat-card-content>
+  </mat-card>
+</div>
+
+<div *ngIf="loading" class="loading-container">
+  <mat-spinner diameter="50"></mat-spinner>
+  <p>Chargement des recommandations...</p>
+</div>
+
+<div *ngIf="!statistiques && !loading" class="no-data">
+  <mat-icon>info</mat-icon>
+  <p>Aucune statistique disponible pour ce dossier</p>
+</div>
+
+
+
