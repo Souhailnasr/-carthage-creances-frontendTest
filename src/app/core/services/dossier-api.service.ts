@@ -573,6 +573,8 @@ export class DossierApiService {
     
     return this.http.get<Page<DossierApi>>(url, { params }).pipe(
       catchError((error) => {
+        console.error('❌ Erreur lors de la récupération des dossiers juridiques:', error);
+        
         // Si l'erreur est 404 ou 500 (endpoint n'existe pas), utiliser le fallback
         if (error.status === 404 || error.status === 500 || error.status === 400) {
           console.warn('⚠️ Endpoint /recouvrement-juridique non disponible, utilisation de getAllDossiers avec filtre côté client');
@@ -1114,9 +1116,192 @@ export class DossierApiService {
     };
     return this.searchAdvanced(params);
   }
+
+  // ==================== AFFECTATION AVOCAT/HUISSIER ====================
+
+  /**
+   * Assigne un avocat à un dossier
+   * PUT /api/dossiers/{dossierId}/assign/avocat?avocatId={avocatId}
+   */
+  assignerAvocat(dossierId: number, avocatId: number): Observable<DossierApi> {
+    const params = new HttpParams().set('avocatId', avocatId.toString());
+    const url = `${this.apiUrl}/${dossierId}/assign/avocat`;
+    
+    console.log('📤 Assignation avocat:', url, 'avocatId:', avocatId);
+    
+    return this.http.put<DossierApi>(url, null, { params }).pipe(
+      tap(() => console.log('✅ Avocat assigné avec succès')),
+      catchError((error) => {
+        console.error('❌ Erreur lors de l\'assignation de l\'avocat:', error);
+        let errorMessage = 'Erreur lors de l\'assignation de l\'avocat';
+        
+        if (error.error?.message) {
+          errorMessage = error.error.message;
+        } else if (error.error?.error) {
+          errorMessage = error.error.error;
+        } else if (error.status === 404) {
+          errorMessage = 'Dossier ou avocat non trouvé';
+        } else if (error.status === 400) {
+          errorMessage = error.error?.message || 'Données invalides';
+        }
+        
+        return throwError(() => new Error(errorMessage));
+      })
+    );
+  }
+
+  /**
+   * Assigne un huissier à un dossier
+   * PUT /api/dossiers/{dossierId}/assign/huissier?huissierId={huissierId}
+   */
+  assignerHuissier(dossierId: number, huissierId: number): Observable<DossierApi> {
+    const params = new HttpParams().set('huissierId', huissierId.toString());
+    const url = `${this.apiUrl}/${dossierId}/assign/huissier`;
+    
+    console.log('📤 Assignation huissier:', url, 'huissierId:', huissierId);
+    
+    return this.http.put<DossierApi>(url, null, { params }).pipe(
+      tap(() => console.log('✅ Huissier assigné avec succès')),
+      catchError((error) => {
+        console.error('❌ Erreur lors de l\'assignation de l\'huissier:', error);
+        let errorMessage = 'Erreur lors de l\'assignation de l\'huissier';
+        
+        if (error.error?.message) {
+          errorMessage = error.error.message;
+        } else if (error.error?.error) {
+          errorMessage = error.error.error;
+        } else if (error.status === 404) {
+          errorMessage = 'Dossier ou huissier non trouvé';
+        } else if (error.status === 400) {
+          errorMessage = error.error?.message || 'Données invalides';
+        }
+        
+        return throwError(() => new Error(errorMessage));
+      })
+    );
+  }
+
+  /**
+   * Affecte un dossier à un avocat et/ou un huissier de manière flexible
+   * PUT /api/dossiers/{dossierId}/assign/avocat-huissier
+   * Body: { "avocatId": number | null, "huissierId": number | null }
+   * Permet d'affecter soit un avocat, soit un huissier, soit les deux
+   * Si un ID est null, l'affectation correspondante sera retirée
+   */
+  affecterAvocatEtHuissier(
+    dossierId: number, 
+    affectation: AffectationDossierDTO
+  ): Observable<DossierApi> {
+    const url = `${this.apiUrl}/${dossierId}/assign/avocat-huissier`;
+    
+    console.log('📤 Affectation avocat/huissier:', url, 'affectation:', affectation);
+    
+    return this.http.put<DossierApi>(url, affectation).pipe(
+      tap(() => console.log('✅ Affectation avocat/huissier réussie')),
+      catchError((error) => {
+        console.error('❌ Erreur lors de l\'affectation avocat/huissier:', error);
+        let errorMessage = 'Erreur lors de l\'affectation avocat/huissier';
+        
+        if (error.error?.message) {
+          errorMessage = error.error.message;
+        } else if (error.error?.error) {
+          errorMessage = error.error.error;
+        } else if (error.status === 404) {
+          errorMessage = 'Dossier, avocat ou huissier non trouvé';
+        } else if (error.status === 400) {
+          errorMessage = error.error?.message || 'Données invalides';
+        } else if (error.status === 500) {
+          errorMessage = error.error?.message || 'Erreur serveur lors de l\'affectation';
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+        
+        return throwError(() => new Error(errorMessage));
+      })
+    );
+  }
+
+  /**
+   * Récupère tous les dossiers affectés à un avocat
+   * GET /api/dossiers/avocat/{avocatId}
+   */
+  getDossiersByAvocat(avocatId: number, page: number = 0, size: number = 100): Observable<Page<DossierApi>> {
+    const url = `${this.apiUrl}/avocat/${avocatId}`;
+    const params = new HttpParams()
+      .set('page', page.toString())
+      .set('size', size.toString());
+    
+    console.log('📤 Récupération des dossiers de l\'avocat:', avocatId);
+    
+    return this.http.get<Page<DossierApi>>(url, { params }).pipe(
+      catchError((error) => {
+        console.error('❌ Erreur lors de la récupération des dossiers de l\'avocat:', error);
+        // Si l'endpoint n'existe pas, utiliser une recherche avec filtre
+        if (error.status === 404) {
+          console.warn('⚠️ Endpoint /avocat/{id} non disponible, utilisation de getAllDossiers avec filtre');
+          return this.getAllDossiers(page, size).pipe(
+            map((page) => {
+              const filtered = page.content.filter(d => d.avocat?.id === avocatId);
+              return {
+                ...page,
+                content: filtered,
+                totalElements: filtered.length,
+                totalPages: Math.ceil(filtered.length / size)
+              };
+            })
+          );
+        }
+        return throwError(() => new Error('Erreur lors de la récupération des dossiers de l\'avocat'));
+      })
+    );
+  }
+
+  /**
+   * Récupère tous les dossiers affectés à un huissier
+   * GET /api/dossiers/huissier/{huissierId}
+   */
+  getDossiersByHuissier(huissierId: number, page: number = 0, size: number = 100): Observable<Page<DossierApi>> {
+    const url = `${this.apiUrl}/huissier/${huissierId}`;
+    const params = new HttpParams()
+      .set('page', page.toString())
+      .set('size', size.toString());
+    
+    console.log('📤 Récupération des dossiers de l\'huissier:', huissierId);
+    
+    return this.http.get<Page<DossierApi>>(url, { params }).pipe(
+      catchError((error) => {
+        console.error('❌ Erreur lors de la récupération des dossiers de l\'huissier:', error);
+        // Si l'endpoint n'existe pas, utiliser une recherche avec filtre
+        if (error.status === 404) {
+          console.warn('⚠️ Endpoint /huissier/{id} non disponible, utilisation de getAllDossiers avec filtre');
+          return this.getAllDossiers(page, size).pipe(
+            map((page) => {
+              const filtered = page.content.filter(d => d.huissier?.id === huissierId);
+              return {
+                ...page,
+                content: filtered,
+                totalElements: filtered.length,
+                totalPages: Math.ceil(filtered.length / size)
+              };
+            })
+          );
+        }
+        return throwError(() => new Error('Erreur lors de la récupération des dossiers de l\'huissier'));
+      })
+    );
+  }
 }
 
 // Types exportés pour les appels avancés
+
+/**
+ * Interface pour l'affectation d'avocat et/ou huissier à un dossier
+ */
+export interface AffectationDossierDTO {
+  avocatId?: number | null;
+  huissierId?: number | null;
+}
+
 export interface AdvancedSearchParams {
   numero?: string;
   titre?: string;

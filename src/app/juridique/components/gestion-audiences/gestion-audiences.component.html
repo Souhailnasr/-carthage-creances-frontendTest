@@ -1,22 +1,120 @@
 <div class="gestion-audiences-container">
   <div class="header">
-    <h1>Gestion des Audiences</h1>
-    <p class="subtitle">Gérer les audiences et les décisions juridiques</p>
+    <div class="header-content">
+      <div>
+        <h1>Gestion des Audiences</h1>
+        <p class="subtitle">Gérer les audiences et les décisions juridiques</p>
+      </div>
+    </div>
   </div>
 
-  <!-- Search Bar -->
-  <div class="search-section">
+  <!-- Statistics Cards -->
+  <div class="stats-section">
+    <div class="stat-card">
+      <div class="stat-icon stat-primary">
+        <i class="fas fa-folder"></i>
+      </div>
+      <div class="stat-content">
+        <div class="stat-value">{{ stats.totalDossiers }}</div>
+        <div class="stat-label">Dossiers</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon stat-info">
+        <i class="fas fa-calendar-check"></i>
+      </div>
+      <div class="stat-content">
+        <div class="stat-value">{{ stats.totalAudiences }}</div>
+        <div class="stat-label">Audiences Total</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon stat-warning">
+        <i class="fas fa-clock"></i>
+      </div>
+      <div class="stat-content">
+        <div class="stat-value">{{ stats.upcomingAudiences }}</div>
+        <div class="stat-label">À Venir</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon stat-success">
+        <i class="fas fa-check-circle"></i>
+      </div>
+      <div class="stat-content">
+        <div class="stat-value">{{ stats.pastAudiences }}</div>
+        <div class="stat-label">Passées</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon stat-danger">
+        <i class="fas fa-redo"></i>
+      </div>
+      <div class="stat-content">
+        <div class="stat-value">{{ stats.reportedAudiences }}</div>
+        <div class="stat-label">Reportées</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search and Filters Section -->
+  <div class="filters-section">
     <div class="search-bar">
       <div class="search-input-group">
         <i class="fas fa-search"></i>
         <input 
           type="text" 
           [(ngModel)]="searchTerm" 
-          (input)="onSearch()" 
+          (input)="applyFilters()" 
           placeholder="Rechercher par numéro de dossier, créancier ou débiteur..."
           class="search-input"
         >
+        <button class="clear-search" *ngIf="searchTerm" (click)="searchTerm = ''; applyFilters()">
+          <i class="fas fa-times"></i>
+        </button>
       </div>
+    </div>
+    
+    <div class="filter-buttons">
+      <button 
+        class="filter-btn" 
+        [class.active]="filterType === 'all'"
+        (click)="filterType = 'all'; applyFilters()">
+        <i class="fas fa-list"></i> Toutes
+      </button>
+      <button 
+        class="filter-btn" 
+        [class.active]="filterType === 'upcoming'"
+        (click)="filterType = 'upcoming'; applyFilters()">
+        <i class="fas fa-clock"></i> À Venir
+      </button>
+      <button 
+        class="filter-btn" 
+        [class.active]="filterType === 'past'"
+        (click)="filterType = 'past'; applyFilters()">
+        <i class="fas fa-history"></i> Passées
+      </button>
+      <button 
+        class="filter-btn" 
+        [class.active]="filterType === 'reported'"
+        (click)="filterType = 'reported'; applyFilters()">
+        <i class="fas fa-redo"></i> Reportées
+      </button>
+    </div>
+    
+    <div class="advanced-filters">
+      <select [(ngModel)]="filterTribunal" (change)="applyFilters()" class="filter-select">
+        <option value="">Tous les tribunaux</option>
+        <option *ngFor="let type of getTribunalTypes()" [value]="type">
+          {{ getTribunalTypeDisplay(type) }}
+        </option>
+      </select>
+      <select [(ngModel)]="filterResult" (change)="applyFilters()" class="filter-select">
+        <option value="">Tous les résultats</option>
+        <option *ngFor="let result of getDecisionResults()" [value]="result">
+          {{ getDecisionResultDisplay(result) }}
+        </option>
+      </select>
     </div>
   </div>
 
@@ -28,14 +126,30 @@
     </div>
     
     <div class="dossiers-list" *ngIf="!isLoading && filteredDossiers.length > 0; else noDossiers">
-      <div class="dossier-item" *ngFor="let dossier of filteredDossiers">
+      <div class="dossier-item" *ngFor="let dossier of filteredDossiers; trackBy: trackByDossierId">
         <div class="dossier-header">
           <div class="dossier-info">
-            <h3 class="dossier-number">{{ dossier.numeroDossier }}</h3>
+            <h3 class="dossier-number">{{ dossier.numeroDossier || 'N/A' }}</h3>
             <div class="dossier-details">
-              <span><strong>Créancier:</strong> {{ dossier.creancier.nom }}</span>
-              <span><strong>Débiteur:</strong> {{ dossier.debiteur.nom }}</span>
+              <span><strong>Créancier:</strong> {{ getCreancierName(dossier) }}</span>
+              <span><strong>Débiteur:</strong> {{ getDebiteurName(dossier) }}</span>
               <span *ngIf="dossier.montantCreance"><strong>Montant:</strong> {{ dossier.montantCreance | currency:'TND':'symbol':'1.2-2' }}</span>
+              
+              <!-- Affichage des affectations avocat/huissier -->
+              <div class="assignments-info" *ngIf="hasAvocatOrHuissier(dossier)">
+                <div class="assignment-item" *ngIf="dossier.avocat">
+                  <i class="fas fa-gavel"></i>
+                  <span><strong>Avocat:</strong> {{ getAvocatName(dossier) }}</span>
+                </div>
+                <div class="assignment-item" *ngIf="dossier.huissier">
+                  <i class="fas fa-file-signature"></i>
+                  <span><strong>Huissier:</strong> {{ getHuissierName(dossier) }}</span>
+                </div>
+              </div>
+              <div class="no-assignment" *ngIf="!hasAvocatOrHuissier(dossier)">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span class="warning-text">Aucun avocat ni huissier affecté</span>
+              </div>
             </div>
           </div>
           <button class="btn btn-primary" (click)="showAudienceModal(dossier)">
@@ -44,39 +158,67 @@
         </div>
 
         <!-- Audiences for this dossier -->
-        <div class="audiences-section" *ngIf="getAudiencesForDossier(+dossier.id).length > 0">
-          <h4>Audiences</h4>
+        <div class="audiences-section" *ngIf="getFilteredAudiences(+dossier.id).length > 0">
+          <div class="audiences-header">
+            <h4>
+              <i class="fas fa-gavel"></i>
+              Audiences ({{ getFilteredAudiences(+dossier.id).length }})
+            </h4>
+          </div>
           <div class="audiences-list">
-            <div class="audience-card" *ngFor="let audience of getAudiencesForDossier(+dossier.id)">
-              <div class="audience-header">
-                <div class="audience-date">
-                  <i class="fas fa-calendar"></i>
-                  <span>{{ audience.dateAudience | date:'dd/MM/yyyy' }}</span>
+            <div class="audience-card" 
+                 *ngFor="let audience of getFilteredAudiences(+dossier.id); trackBy: trackByAudienceId"
+                 [class.upcoming]="isUpcomingAudience(audience)"
+                 [class.past]="isPastAudience(audience)"
+                 [class.reported]="!!audience.dateProchaine">
+              <div class="audience-card-header">
+                <div class="audience-main-info">
+                  <div class="audience-date-badge" [class.upcoming-badge]="isUpcomingAudience(audience)" [class.past-badge]="isPastAudience(audience)">
+                    <i class="fas fa-calendar"></i>
+                    <span class="date-text">{{ audience.dateAudience | date:'dd/MM/yyyy' }}</span>
+                    <span class="time-badge" *ngIf="isUpcomingAudience(audience)">
+                      <i class="fas fa-clock"></i> À venir
+                    </span>
+                  </div>
+                  <div class="audience-tribunal-badge">
+                    <i class="fas fa-gavel"></i>
+                    <span>{{ getTribunalTypeDisplay(audience.tribunalType) }}</span>
+                  </div>
+                  <div class="audience-decision-badge" *ngIf="audience.decisionResult" [ngClass]="getDecisionBadgeClass(audience.decisionResult)">
+                    <i class="fas fa-balance-scale"></i>
+                    <span>{{ getDecisionResultDisplay(audience.decisionResult) }}</span>
+                  </div>
                 </div>
-                <div class="audience-tribunal">
-                  <i class="fas fa-gavel"></i>
-                  <span>{{ getTribunalTypeDisplay(audience.tribunalType) }}</span>
+                <div class="audience-actions">
+                  <button class="action-btn view-btn" (click)="viewAudienceDetails(audience)" title="Voir les détails">
+                    <i class="fas fa-eye"></i>
+                  </button>
+                  <button class="action-btn edit-btn" (click)="showAudienceModal(dossier, audience)" title="Modifier">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  <button class="action-btn delete-btn" (click)="deleteAudience(audience)" title="Supprimer">
+                    <i class="fas fa-trash"></i>
+                  </button>
                 </div>
               </div>
               
               <div class="audience-details">
                 <div class="detail-row">
                   <i class="fas fa-map-marker-alt"></i>
-                  <span>{{ audience.lieuTribunal }}</span>
+                  <span><strong>Lieu:</strong> {{ audience.lieuTribunal }}</span>
                 </div>
                 <div class="detail-row" *ngIf="audience.dateProchaine">
                   <i class="fas fa-calendar-check"></i>
-                  <span>Prochaine audience: {{ audience.dateProchaine | date:'dd/MM/yyyy' }}</span>
+                  <span><strong>Prochaine audience:</strong> {{ audience.dateProchaine | date:'dd/MM/yyyy' }}</span>
                 </div>
-                <div class="detail-row">
+                
+                <!-- Avocat ou huissier assigné (nom et prénom seulement) -->
+                <div class="detail-row" *ngIf="hasAssignee(audience)">
                   <i class="fas fa-user-tie"></i>
-                  <span>{{ getAssigneeType(audience) }}: {{ getAssigneeName(audience) }}</span>
+                  <span><strong>{{ getAssigneeType(audience) }}:</strong> {{ getAssigneeName(audience) }}</span>
                 </div>
-                <div class="detail-row" *ngIf="audience.decisionResult">
-                  <i class="fas fa-balance-scale"></i>
-                  <span>Décision: {{ getDecisionResultDisplay(audience.decisionResult) }}</span>
-                </div>
-                <div class="detail-row" *ngIf="audience.commentaireDecision">
+                
+                <div class="detail-row comment-row" *ngIf="audience.commentaireDecision">
                   <i class="fas fa-comment"></i>
                   <span>{{ audience.commentaireDecision }}</span>
                 </div>
@@ -86,7 +228,22 @@
         </div>
 
         <div class="no-audiences" *ngIf="getAudiencesForDossier(+dossier.id).length === 0">
-          <p>Aucune audience enregistrée pour ce dossier.</p>
+          <div class="empty-state">
+            <i class="fas fa-calendar-times"></i>
+            <p>Aucune audience enregistrée pour ce dossier.</p>
+            <button class="btn btn-outline-primary" (click)="showAudienceModal(dossier)">
+              <i class="fas fa-plus"></i> Ajouter la première audience
+            </button>
+          </div>
+        </div>
+        <div class="no-audiences-filtered" *ngIf="getFilteredAudiences(+dossier.id).length === 0 && getAudiencesForDossier(+dossier.id).length > 0">
+          <div class="empty-state">
+            <i class="fas fa-filter"></i>
+            <p>Aucune audience ne correspond aux filtres sélectionnés.</p>
+            <button class="btn btn-outline-secondary" (click)="filterType = 'all'; filterTribunal = ''; filterResult = ''; applyFilters()">
+              <i class="fas fa-times"></i> Réinitialiser les filtres
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -104,17 +261,121 @@
   <div class="modal-overlay" *ngIf="showAudienceForm" (click)="cancelAudienceForm()">
     <div class="modal-content" (click)="$event.stopPropagation()">
       <div class="modal-header">
-        <h2>Ajouter une Audience</h2>
+        <h2>
+          <i class="fas" 
+             [class.fa-plus]="!isEditMode && !isViewMode" 
+             [class.fa-edit]="isEditMode" 
+             [class.fa-eye]="isViewMode"></i>
+          {{ isViewMode ? 'Détails de l\'Audience' : (isEditMode ? 'Modifier l\'Audience' : 'Ajouter une Audience') }}
+        </h2>
         <button class="close-btn" (click)="cancelAudienceForm()">
           <i class="fas fa-times"></i>
         </button>
       </div>
 
       <div class="modal-body">
-        <div class="dossier-info-modal">
-          <h3>{{ selectedDossier?.numeroDossier }}</h3>
-          <p><strong>Créancier:</strong> {{ selectedDossier?.creancier?.nom }}</p>
-          <p><strong>Débiteur:</strong> {{ selectedDossier?.debiteur?.nom }}</p>
+        <div class="dossier-info-modal" *ngIf="selectedDossier">
+          <h3>{{ selectedDossier.numeroDossier || 'N/A' }}</h3>
+          
+          <div class="dossier-info-grid">
+            <div class="info-section">
+              <h4><i class="fas fa-info-circle"></i> Informations générales</h4>
+              <p *ngIf="selectedDossier.titre"><strong>Titre:</strong> {{ selectedDossier.titre }}</p>
+              <p *ngIf="selectedDossier.description"><strong>Description:</strong> {{ selectedDossier.description }}</p>
+              <p *ngIf="selectedDossier.montantCreance">
+                <strong>Montant:</strong> {{ selectedDossier.montantCreance | currency:'TND':'symbol':'1.2-2' }}
+              </p>
+              <p *ngIf="selectedDossier.dateCreation">
+                <strong>Date de création:</strong> {{ selectedDossier.dateCreation | date:'dd/MM/yyyy' }}
+              </p>
+              <p *ngIf="selectedDossier.dateCloture">
+                <strong>Date de clôture:</strong> {{ selectedDossier.dateCloture | date:'dd/MM/yyyy' }}
+              </p>
+              <p *ngIf="selectedDossier.urgence">
+                <strong>Urgence:</strong> 
+                <span class="urgency-badge" [class.urgent]="selectedDossier.urgence === 'TRES_URGENT'">
+                  {{ selectedDossier.urgence }}
+                </span>
+              </p>
+              <p *ngIf="selectedDossier.dossierStatus">
+                <strong>Statut:</strong> 
+                <span class="status-badge" [class.status-active]="selectedDossier.dossierStatus === 'ENCOURSDETRAITEMENT'">
+                  {{ selectedDossier.dossierStatus }}
+                </span>
+              </p>
+            </div>
+            
+            <div class="info-section">
+              <h4><i class="fas fa-users"></i> Parties</h4>
+              <p><strong>Créancier:</strong> {{ getCreancierName(selectedDossier) }}</p>
+              <p *ngIf="selectedDossier.creancier?.email">
+                <strong>Email créancier:</strong> {{ selectedDossier.creancier.email }}
+              </p>
+              <p *ngIf="selectedDossier.creancier?.telephone">
+                <strong>Téléphone créancier:</strong> {{ selectedDossier.creancier.telephone }}
+              </p>
+              <p><strong>Débiteur:</strong> {{ getDebiteurName(selectedDossier) }}</p>
+              <p *ngIf="selectedDossier.debiteur?.email">
+                <strong>Email débiteur:</strong> {{ selectedDossier.debiteur.email }}
+              </p>
+              <p *ngIf="selectedDossier.debiteur?.telephone">
+                <strong>Téléphone débiteur:</strong> {{ selectedDossier.debiteur.telephone }}
+              </p>
+            </div>
+            
+            <div class="info-section">
+              <h4><i class="fas fa-user-tie"></i> Agents responsables</h4>
+              <p *ngIf="selectedDossier.agentCreateur">
+                <strong>Agent créateur:</strong> 
+                {{ selectedDossier.agentCreateur.prenom }} {{ selectedDossier.agentCreateur.nom }}
+              </p>
+              <p *ngIf="selectedDossier.agentResponsable">
+                <strong>Agent responsable:</strong> 
+                {{ selectedDossier.agentResponsable.prenom }} {{ selectedDossier.agentResponsable.nom }}
+              </p>
+            </div>
+            
+            <!-- Affichage des affectations actuelles -->
+            <div class="info-section">
+              <h4><i class="fas fa-gavel"></i> Affectations juridiques</h4>
+              <div class="current-assignments" *ngIf="hasAvocatOrHuissier(selectedDossier)">
+                <div class="assignment-badge" *ngIf="selectedDossier.avocat">
+                  <i class="fas fa-gavel"></i>
+                  <div>
+                    <strong>Avocat:</strong> {{ getAvocatName(selectedDossier) }}
+                    <span *ngIf="selectedDossier.avocat.specialite" class="specialty">
+                      ({{ selectedDossier.avocat.specialite }})
+                    </span>
+                  </div>
+                <p *ngIf="selectedDossier?.avocat?.email" class="contact-info">
+                  <i class="fas fa-envelope"></i> {{ selectedDossier?.avocat?.email }}
+                </p>
+                <p *ngIf="selectedDossier?.avocat?.telephone" class="contact-info">
+                  <i class="fas fa-phone"></i> {{ selectedDossier?.avocat?.telephone }}
+                </p>
+                </div>
+                <div class="assignment-badge" *ngIf="selectedDossier.huissier">
+                  <i class="fas fa-file-signature"></i>
+                  <div>
+                    <strong>Huissier:</strong> {{ getHuissierName(selectedDossier) }}
+                  </div>
+                <p *ngIf="selectedDossier?.huissier?.email" class="contact-info">
+                  <i class="fas fa-envelope"></i> {{ selectedDossier?.huissier?.email }}
+                </p>
+                <p *ngIf="selectedDossier?.huissier?.telephone" class="contact-info">
+                  <i class="fas fa-phone"></i> {{ selectedDossier?.huissier?.telephone }}
+                </p>
+                <p *ngIf="selectedDossier?.huissier?.adresse" class="contact-info">
+                  <i class="fas fa-map-marker-alt"></i> {{ selectedDossier?.huissier?.adresse }}
+                </p>
+                </div>
+              </div>
+              <div class="no-assignment-warning" *ngIf="!hasAvocatOrHuissier(selectedDossier)">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span>Aucun avocat ni huissier n'est actuellement affecté à ce dossier.</span>
+              </div>
+            </div>
+          </div>
         </div>
 
         <form [formGroup]="audienceForm" (ngSubmit)="onSubmitAudience()" class="audience-form">
@@ -126,7 +387,12 @@
                 id="dateAudience" 
                 formControlName="dateAudience" 
                 class="form-control"
+                [readonly]="isViewMode"
+                [class.readonly]="isViewMode"
               >
+              <div class="error-message" *ngIf="audienceForm.get('dateAudience')?.hasError('required') && audienceForm.get('dateAudience')?.touched">
+                La date de l'audience est requise
+              </div>
             </div>
             <div class="form-group">
               <label for="dateProchaine">Date prochaine audience</label>
@@ -135,6 +401,8 @@
                 id="dateProchaine" 
                 formControlName="dateProchaine" 
                 class="form-control"
+                [readonly]="isViewMode"
+                [class.readonly]="isViewMode"
               >
             </div>
           </div>
@@ -142,12 +410,21 @@
           <div class="form-row">
             <div class="form-group">
               <label for="tribunalType">Type de tribunal *</label>
-              <select id="tribunalType" formControlName="tribunalType" class="form-control">
+              <select 
+                id="tribunalType" 
+                formControlName="tribunalType" 
+                class="form-control"
+                [disabled]="isViewMode"
+                [class.readonly]="isViewMode"
+              >
                 <option value="">Sélectionner...</option>
                 <option *ngFor="let type of getTribunalTypes()" [value]="type">
                   {{ getTribunalTypeDisplay(type) }}
                 </option>
               </select>
+              <div class="error-message" *ngIf="audienceForm.get('tribunalType')?.hasError('required') && audienceForm.get('tribunalType')?.touched">
+                Le type de tribunal est requis
+              </div>
             </div>
             <div class="form-group">
               <label for="lieuTribunal">Lieu du tribunal *</label>
@@ -157,14 +434,25 @@
                 formControlName="lieuTribunal" 
                 class="form-control"
                 placeholder="Ex: Tribunal de Tunis"
+                [readonly]="isViewMode"
+                [class.readonly]="isViewMode"
               >
+              <div class="error-message" *ngIf="audienceForm.get('lieuTribunal')?.hasError('required') && audienceForm.get('lieuTribunal')?.touched">
+                Le lieu du tribunal est requis
+              </div>
             </div>
           </div>
 
           <div class="form-row">
             <div class="form-group">
               <label for="avocatId">Avocat assigné</label>
-              <select id="avocatId" formControlName="avocatId" class="form-control">
+              <select 
+                id="avocatId" 
+                formControlName="avocatId" 
+                class="form-control"
+                [disabled]="isViewMode"
+                [class.readonly]="isViewMode"
+              >
                 <option value="">Sélectionner un avocat...</option>
                 <option *ngFor="let avocat of avocats" [value]="avocat.id">
                   {{ avocat.prenom }} {{ avocat.nom }}
@@ -173,7 +461,13 @@
             </div>
             <div class="form-group">
               <label for="huissierId">Huissier assigné</label>
-              <select id="huissierId" formControlName="huissierId" class="form-control">
+              <select 
+                id="huissierId" 
+                formControlName="huissierId" 
+                class="form-control"
+                [disabled]="isViewMode"
+                [class.readonly]="isViewMode"
+              >
                 <option value="">Sélectionner un huissier...</option>
                 <option *ngFor="let huissier of huissiers" [value]="huissier.id">
                   {{ huissier.prenom }} {{ huissier.nom }}
@@ -184,7 +478,13 @@
 
           <div class="form-group">
             <label for="decisionResult">Résultat de la décision</label>
-            <select id="decisionResult" formControlName="decisionResult" class="form-control">
+            <select 
+              id="decisionResult" 
+              formControlName="decisionResult" 
+              class="form-control"
+              [disabled]="isViewMode"
+              [class.readonly]="isViewMode"
+            >
               <option value="">Sélectionner...</option>
               <option *ngFor="let result of getDecisionResults()" [value]="result">
                 {{ getDecisionResultDisplay(result) }}
@@ -200,13 +500,21 @@
               class="form-control"
               rows="3"
               placeholder="Détails sur la décision prise..."
+              [readonly]="isViewMode"
+              [class.readonly]="isViewMode"
             ></textarea>
           </div>
 
           <div class="form-actions">
-            <button type="button" class="btn btn-secondary" (click)="cancelAudienceForm()">Annuler</button>
-            <button type="submit" class="btn btn-primary" [disabled]="audienceForm.invalid">
-              <i class="fas fa-check"></i> Ajouter Audience
+            <button type="button" class="btn btn-secondary" (click)="cancelAudienceForm()">
+              <i class="fas fa-times"></i> {{ isViewMode ? 'Fermer' : 'Annuler' }}
+            </button>
+            <button *ngIf="!isViewMode" type="submit" class="btn btn-primary" [disabled]="audienceForm.invalid">
+              <i class="fas" [class.fa-check]="!isEditMode" [class.fa-save]="isEditMode"></i>
+              {{ isEditMode ? 'Enregistrer' : 'Ajouter Audience' }}
+            </button>
+            <button *ngIf="isViewMode" type="button" class="btn btn-primary" (click)="isViewMode = false; isEditMode = true; audienceForm.enable()">
+              <i class="fas fa-edit"></i> Modifier
             </button>
           </div>
         </form>

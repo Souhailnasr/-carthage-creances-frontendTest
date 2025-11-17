@@ -7,7 +7,7 @@ import { User, Role } from '../../../shared/models';
 import { FormInputComponent } from '../../../shared/components/form-input/form-input.component';
 import { ToastService } from '../../../core/services/toast.service';
 import { UtilisateurService, Utilisateur, UtilisateurRequest, AuthenticationResponse } from '../../../core/services/utilisateur.service';
-import { AuthService } from '../../../core/services/auth.service';
+import { JwtAuthService } from '../../../core/services/jwt-auth.service';
 
 @Component({
   selector: 'app-juridique-user-management',
@@ -48,14 +48,26 @@ export class JuridiqueUserManagementComponent implements OnInit, OnDestroy {
     private fb: FormBuilder,
     private toastService: ToastService,
     private utilisateurService: UtilisateurService,
-    private authService: AuthService
+    private jwtAuthService: JwtAuthService
   ) { }
 
   ngOnInit(): void {
-    this.currentUser = this.authService.getCurrentUser();
+    this.loadCurrentUser();
     this.initializeForm();
     this.loadUsers();
     console.log('🔧 JuridiqueUserManagementComponent initialisé avec filtres avancés');
+  }
+
+  loadCurrentUser(): void {
+    this.jwtAuthService.getCurrentUser().subscribe({
+      next: (user) => {
+        this.currentUser = user;
+        console.log('👤 Utilisateur connecté chargé:', this.currentUser);
+      },
+      error: (error) => {
+        console.error('❌ Erreur lors du chargement de l\'utilisateur:', error);
+      }
+    });
   }
 
   ngOnDestroy(): void {
@@ -102,16 +114,23 @@ export class JuridiqueUserManagementComponent implements OnInit, OnDestroy {
           let filteredUsers = utilisateurs;
           
           // Si l'utilisateur connecté est un Chef Juridique, ne montrer que les Agents Juridiques
-          if (this.currentUser && (this.currentUser.role === 'CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE' || this.currentUser.role === 'CHEF_JURIDIQUE')) {
-            filteredUsers = utilisateurs.filter(user => 
-              (user.roleUtilisateur || user.role) === 'AGENT_RECOUVREMENT_JURIDIQUE' || 
-              (user.roleUtilisateur || user.role) === 'AGENT_JURIDIQUE'
-            );
+          const userRole = this.currentUser?.roleUtilisateur || this.currentUser?.role || '';
+          if (this.currentUser && (
+            userRole === 'CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE' || 
+            userRole === 'CHEF_JURIDIQUE'
+          )) {
+            filteredUsers = utilisateurs.filter(user => {
+              const userRoleToCheck = user.roleUtilisateur || user.role || '';
+              return userRoleToCheck === 'AGENT_RECOUVREMENT_JURIDIQUE' || 
+                     userRoleToCheck === 'AGENT_JURIDIQUE';
+            });
             console.log('🔒 Filtre Chef Juridique appliqué - Agents Juridiques filtrés:', filteredUsers.length);
             console.log('👤 Utilisateur connecté:', this.currentUser);
+            console.log('🔍 Rôle de l\'utilisateur connecté:', userRole);
           } else {
             console.log('👑 Utilisateur avec accès complet - Tous les utilisateurs affichés');
             console.log('👤 Utilisateur connecté:', this.currentUser);
+            console.log('🔍 Rôle de l\'utilisateur connecté:', userRole);
           }
           
           this.utilisateurs = filteredUsers;
@@ -351,7 +370,11 @@ export class JuridiqueUserManagementComponent implements OnInit, OnDestroy {
 
   getAvailableRoles(): string[] {
     // Si l'utilisateur connecté est un Chef Juridique, ne peut créer que des Agents Juridiques
-    if (this.currentUser && (this.currentUser.role === 'CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE' || this.currentUser.role === 'CHEF_JURIDIQUE')) {
+    const userRole = this.currentUser?.roleUtilisateur || this.currentUser?.role || '';
+    if (this.currentUser && (
+      userRole === 'CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE' || 
+      userRole === 'CHEF_JURIDIQUE'
+    )) {
       return ['AGENT_RECOUVREMENT_JURIDIQUE'];
     }
     

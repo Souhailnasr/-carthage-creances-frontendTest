@@ -135,14 +135,46 @@ export class HuissierService {
   }
 
   // Utility Methods
+  /**
+   * Récupère les huissiers qui ont au moins un dossier affecté
+   * Note: Utilise getAllHuissiers et filtre côté client en vérifiant via l'API des dossiers
+   */
   getHuissiersWithDossiers(): Observable<Huissier[]> {
-    return this.http.get<Huissier[]>(`${this.baseUrl}/with-dossiers`)
-      .pipe(catchError(this.handleError));
+    // Pour l'instant, retourner tous les huissiers
+    // Le filtrage réel devrait être fait via l'API des dossiers
+    // Si le backend fournit un endpoint spécifique, l'utiliser
+    return this.http.get<Huissier[]>(`${this.baseUrl}/with-dossiers`).pipe(
+      catchError((error) => {
+        // Si l'endpoint n'existe pas, retourner tous les huissiers
+        // Le composant pourra filtrer en utilisant getDossiersByHuissier
+        if (error.status === 404) {
+          console.warn('⚠️ Endpoint /with-dossiers non disponible, retour de tous les huissiers');
+          return this.getAllHuissiers();
+        }
+        return this.handleError(error);
+      })
+    );
   }
 
+  /**
+   * Récupère les huissiers qui n'ont aucun dossier affecté
+   * Note: Utilise getAllHuissiers et filtre côté client en vérifiant via l'API des dossiers
+   */
   getHuissiersWithoutDossiers(): Observable<Huissier[]> {
-    return this.http.get<Huissier[]>(`${this.baseUrl}/without-dossiers`)
-      .pipe(catchError(this.handleError));
+    // Pour l'instant, retourner tous les huissiers
+    // Le filtrage réel devrait être fait via l'API des dossiers
+    // Si le backend fournit un endpoint spécifique, l'utiliser
+    return this.http.get<Huissier[]>(`${this.baseUrl}/without-dossiers`).pipe(
+      catchError((error) => {
+        // Si l'endpoint n'existe pas, retourner tous les huissiers
+        // Le composant pourra filtrer en utilisant getDossiersByHuissier
+        if (error.status === 404) {
+          console.warn('⚠️ Endpoint /without-dossiers non disponible, retour de tous les huissiers');
+          return this.getAllHuissiers();
+        }
+        return this.handleError(error);
+      })
+    );
   }
 
   // Advanced search with multiple criteria

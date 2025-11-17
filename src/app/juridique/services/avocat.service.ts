@@ -2,13 +2,14 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable, BehaviorSubject, throwError } from 'rxjs';
 import { tap, catchError, map } from 'rxjs/operators';
+import { environment } from '../../../environments/environment';
 import { Avocat, AvocatRequest } from '../models/avocat.model';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AvocatService {
-  private baseUrl = 'http://localhost:8089/carthage-creance/api';
+  private baseUrl = `${environment.apiUrl}/api`;
   private avocatsSubject = new BehaviorSubject<Avocat[]>([]);
   public avocats$ = this.avocatsSubject.asObservable();
 
@@ -55,12 +56,25 @@ export class AvocatService {
    * GET /api/avocats → obtenir tous les avocats
    */
   getAllAvocats(): Observable<Avocat[]> {
+    console.log('📤 Chargement des avocats depuis:', `${this.baseUrl}/avocats`);
     return this.http.get<Avocat[]>(`${this.baseUrl}/avocats`)
       .pipe(
         tap(data => {
-          this.avocatsSubject.next(data);
+          console.log('✅ Avocats reçus du backend:', Array.isArray(data) ? data.length : 'Format inattendu', data);
+          if (Array.isArray(data)) {
+            this.avocatsSubject.next(data);
+          } else {
+            console.warn('⚠️ Les avocats ne sont pas un tableau:', data);
+            this.avocatsSubject.next([]);
+          }
         }),
-        catchError(this.handleError)
+        catchError((error) => {
+          console.error('❌ Erreur lors du chargement des avocats:', error);
+          console.error('❌ URL:', `${this.baseUrl}/avocats`);
+          console.error('❌ Status:', error.status);
+          console.error('❌ Error:', error.error);
+          return this.handleError(error);
+        })
       );
   }
 

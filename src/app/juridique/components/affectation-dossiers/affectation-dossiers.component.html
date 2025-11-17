@@ -30,20 +30,20 @@
     <div class="dossiers-grid" *ngIf="!isLoading && filteredDossiers.length > 0; else noDossiers">
       <div class="dossier-card" *ngFor="let dossier of filteredDossiers">
         <div class="dossier-header">
-          <h3 class="dossier-number">{{ dossier.numeroDossier }}</h3>
-          <span class="dossier-status" [class]="'status-' + dossier.dossierStatus.toLowerCase()">
-            {{ dossier.dossierStatus }}
+          <h3 class="dossier-number">{{ dossier.numeroDossier || 'N/A' }}</h3>
+          <span class="dossier-status" [class]="'status-' + (dossier.statut || dossier.dossierStatus || '').toLowerCase()">
+            {{ dossier.statut || dossier.dossierStatus || 'N/A' }}
           </span>
         </div>
         
         <div class="dossier-info">
           <div class="info-row">
             <i class="fas fa-user"></i>
-            <span><strong>Créancier:</strong> {{ dossier.creancier.nom }}</span>
+            <span><strong>Créancier:</strong> {{ getCreancierName(dossier) }}</span>
           </div>
           <div class="info-row">
             <i class="fas fa-user"></i>
-            <span><strong>Débiteur:</strong> {{ dossier.debiteur.nom }}</span>
+            <span><strong>Débiteur:</strong> {{ getDebiteurName(dossier) }}</span>
           </div>
           <div class="info-row" *ngIf="dossier.montantCreance">
             <i class="fas fa-money-bill-wave"></i>
@@ -52,6 +52,18 @@
           <div class="info-row" *ngIf="dossier.dateCreation">
             <i class="fas fa-calendar"></i>
             <span><strong>Date création:</strong> {{ dossier.dateCreation | date:'dd/MM/yyyy' }}</span>
+          </div>
+          
+          <!-- Affichage des affectations actuelles -->
+          <div class="assignments-section">
+            <div class="info-row assignment-row" [class.assigned]="dossier.avocat" [class.not-assigned]="!dossier.avocat">
+              <i class="fas fa-gavel"></i>
+              <span><strong>Avocat:</strong> {{ getAvocatName(dossier) }}</span>
+            </div>
+            <div class="info-row assignment-row" [class.assigned]="dossier.huissier" [class.not-assigned]="!dossier.huissier">
+              <i class="fas fa-file-signature"></i>
+              <span><strong>Huissier:</strong> {{ getHuissierName(dossier) }}</span>
+            </div>
           </div>
         </div>
 
@@ -85,36 +97,75 @@
       <div class="modal-body">
         <div class="dossier-info-modal">
           <h3>{{ selectedDossier?.numeroDossier }}</h3>
-          <p><strong>Créancier:</strong> {{ selectedDossier?.creancier?.nom }}</p>
-          <p><strong>Débiteur:</strong> {{ selectedDossier?.debiteur?.nom }}</p>
+          <p><strong>Créancier:</strong> {{ selectedDossier ? getCreancierName(selectedDossier) : 'N/A' }}</p>
+          <p><strong>Débiteur:</strong> {{ selectedDossier ? getDebiteurName(selectedDossier) : 'N/A' }}</p>
+        </div>
+
+        <!-- Affichage des affectations actuelles -->
+        <div class="current-assignments" *ngIf="selectedDossier">
+          <div class="assignment-card" *ngIf="selectedDossier.avocat">
+            <h4><i class="fas fa-gavel"></i> Avocat actuel</h4>
+            <p><strong>{{ selectedDossier.avocat.prenom }} {{ selectedDossier.avocat.nom }}</strong></p>
+            <p *ngIf="selectedDossier.avocat.email">{{ selectedDossier.avocat.email }}</p>
+            <p *ngIf="selectedDossier.avocat.telephone">{{ selectedDossier.avocat.telephone }}</p>
+            <p *ngIf="selectedDossier.avocat.specialite">{{ selectedDossier.avocat.specialite }}</p>
+          </div>
+
+          <div class="assignment-card" *ngIf="selectedDossier.huissier">
+            <h4><i class="fas fa-file-signature"></i> Huissier actuel</h4>
+            <p><strong>{{ selectedDossier.huissier.prenom }} {{ selectedDossier.huissier.nom }}</strong></p>
+            <p *ngIf="selectedDossier.huissier.email">{{ selectedDossier.huissier.email }}</p>
+            <p *ngIf="selectedDossier.huissier.telephone">{{ selectedDossier.huissier.telephone }}</p>
+            <p *ngIf="selectedDossier.huissier.adresse">{{ selectedDossier.huissier.adresse }}</p>
+          </div>
+
+          <div class="no-assignment-info" *ngIf="!selectedDossier.avocat && !selectedDossier.huissier">
+            <p><i class="fas fa-info-circle"></i> Aucun avocat ni huissier n'est actuellement affecté à ce dossier.</p>
+          </div>
         </div>
 
         <form [formGroup]="assignmentForm" (ngSubmit)="onSubmitAssignment()" class="assignment-form">
           <div class="form-group">
-            <label for="assigneeType">Type d'affectation</label>
-            <select id="assigneeType" formControlName="assigneeType" class="form-control" (change)="onAssigneeTypeChange()">
-              <option value="avocat">Avocat</option>
-              <option value="huissier">Huissier</option>
+            <label for="avocatId">
+              <i class="fas fa-gavel"></i> Avocat
+            </label>
+            <select id="avocatId" formControlName="avocatId" class="form-control" [disabled]="avocats.length === 0">
+              <option [value]="null">Aucun (retirer l'affectation)</option>
+              <option *ngFor="let avocat of avocats" [value]="avocat.id">
+                {{ getAvocatDisplayName(avocat) }} - {{ avocat.email }}
+              </option>
             </select>
+            <small class="form-hint" *ngIf="avocats.length > 0">Sélectionnez un avocat ou "Aucun" pour retirer l'affectation</small>
+            <small class="form-error" *ngIf="avocats.length === 0">
+              <i class="fas fa-exclamation-triangle"></i> Aucun avocat disponible. Vérifiez la connexion au serveur.
+            </small>
           </div>
 
           <div class="form-group">
-            <label for="assigneeId">Sélectionner</label>
-            <select id="assigneeId" formControlName="assigneeId" class="form-control">
-              <option value="">Choisir...</option>
-              <option *ngFor="let option of getAssigneeOptions()" [value]="option.id">
-                {{ option.name }} ({{ option.email }})
+            <label for="huissierId">
+              <i class="fas fa-file-signature"></i> Huissier
+            </label>
+            <select id="huissierId" formControlName="huissierId" class="form-control" [disabled]="huissiers.length === 0">
+              <option [value]="null">Aucun (retirer l'affectation)</option>
+              <option *ngFor="let huissier of huissiers" [value]="huissier.id">
+                {{ getHuissierDisplayName(huissier) }} - {{ huissier.email }}
               </option>
             </select>
-            <div class="form-error" *ngIf="assignmentForm.get('assigneeId')?.invalid && assignmentForm.get('assigneeId')?.touched">
-              <small>Veuillez sélectionner un {{ assignmentForm.get('assigneeType')?.value }}</small>
-            </div>
+            <small class="form-hint" *ngIf="huissiers.length > 0">Sélectionnez un huissier ou "Aucun" pour retirer l'affectation</small>
+            <small class="form-error" *ngIf="huissiers.length === 0">
+              <i class="fas fa-exclamation-triangle"></i> Aucun huissier disponible. Vérifiez la connexion au serveur.
+            </small>
           </div>
 
           <div class="form-actions">
-            <button type="button" class="btn btn-secondary" (click)="cancelAssignment()">Annuler</button>
-            <button type="submit" class="btn btn-primary" [disabled]="assignmentForm.invalid">
-              <i class="fas fa-check"></i> Affecter
+            <button type="button" class="btn btn-secondary" (click)="cancelAssignment()" [disabled]="isLoadingAssignment">
+              Annuler
+            </button>
+            <button type="submit" class="btn btn-primary" [disabled]="isLoadingAssignment">
+              <i class="fas fa-spinner fa-spin" *ngIf="isLoadingAssignment"></i>
+              <i class="fas fa-check" *ngIf="!isLoadingAssignment"></i>
+              <span *ngIf="!isLoadingAssignment">Enregistrer</span>
+              <span *ngIf="isLoadingAssignment">Enregistrement...</span>
             </button>
           </div>
         </form>

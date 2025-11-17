@@ -164,6 +164,34 @@
               color: #495057;
             }
           }
+
+          .assignments-section {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #e9ecef;
+
+            .assignment-row {
+              &.assigned {
+                i {
+                  color: #28a745;
+                }
+                span {
+                  color: #28a745;
+                  font-weight: 500;
+                }
+              }
+
+              &.not-assigned {
+                i {
+                  color: #dc3545;
+                }
+                span {
+                  color: #6c757d;
+                  font-style: italic;
+                }
+              }
+            }
+          }
         }
 
         .dossier-actions {
@@ -301,6 +329,65 @@
           }
         }
 
+        .current-assignments {
+          margin-bottom: 1.5rem;
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 1rem;
+
+          .assignment-card {
+            background-color: #e8f5e9;
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 4px solid #28a745;
+
+            h4 {
+              margin: 0 0 0.5rem 0;
+              color: #2c3e50;
+              font-size: 1rem;
+              font-weight: 600;
+              display: flex;
+              align-items: center;
+              gap: 0.5rem;
+
+              i {
+                color: #28a745;
+              }
+            }
+
+            p {
+              margin: 0.25rem 0;
+              color: #495057;
+              font-size: 0.9rem;
+
+              strong {
+                color: #2c3e50;
+              }
+            }
+          }
+
+          .no-assignment-info {
+            background-color: #fff3cd;
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 4px solid #ffc107;
+            grid-column: 1 / -1;
+
+            p {
+              margin: 0;
+              color: #856404;
+              font-size: 0.9rem;
+              display: flex;
+              align-items: center;
+              gap: 0.5rem;
+
+              i {
+                color: #ffc107;
+              }
+            }
+          }
+        }
+
         .assignment-form {
           .form-group {
             margin-bottom: 1.5rem;
@@ -327,6 +414,24 @@
 
               &.is-invalid {
                 border-color: #dc3545;
+              }
+            }
+
+            .form-hint {
+              display: block;
+              margin-top: 0.25rem;
+              color: #6c757d;
+              font-size: 0.85rem;
+              font-style: italic;
+            }
+
+            label {
+              display: flex;
+              align-items: center;
+              gap: 0.5rem;
+
+              i {
+                color: #6f42c1;
               }
             }
 

@@ -1,14 +1,15 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, BehaviorSubject, throwError } from 'rxjs';
-import { tap, catchError } from 'rxjs/operators';
+import { tap, catchError, map } from 'rxjs/operators';
+import { environment } from '../../../environments/environment';
 import { Audience, AudienceRequest } from '../models/audience.model';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AudienceService {
-  private baseUrl = 'http://localhost:8089/carthage-creance/api';
+  private baseUrl = `${environment.apiUrl}/api`;
   private audiencesSubject = new BehaviorSubject<Audience[]>([]);
   public audiences$ = this.audiencesSubject.asObservable();
 
@@ -18,10 +19,92 @@ export class AudienceService {
    * Obtenir toutes les audiences depuis l'API backend
    */
   getAllAudiences(): Observable<Audience[]> {
-    return this.http.get<Audience[]>(`${this.baseUrl}/audiences`)
+    console.log('📤 AudienceService.getAllAudiences - Appel API:', `${this.baseUrl}/audiences`);
+    return this.http.get<any[]>(`${this.baseUrl}/audiences`)
       .pipe(
-        tap(data => {
-          this.audiencesSubject.next(data);
+        tap(rawAudiences => {
+          console.log('📥 AudienceService - Audiences brutes reçues du backend:', rawAudiences);
+          console.log('📥 AudienceService - Nombre d\'audiences:', rawAudiences?.length || 0);
+          
+          // Log détaillé de la première audience pour voir tous les champs
+          if (rawAudiences && rawAudiences.length > 0) {
+            console.log('📥 AudienceService - PREMIÈRE AUDIENCE BRUTE (tous les champs):', rawAudiences[0]);
+            console.log('📥 AudienceService - Clés de la première audience:', Object.keys(rawAudiences[0]));
+            console.log('📥 AudienceService - JSON stringifié:', JSON.stringify(rawAudiences[0], null, 2));
+          }
+        }),
+        map(audiences => {
+          if (!Array.isArray(audiences)) {
+            console.error('❌ AudienceService - Les audiences ne sont pas un tableau:', audiences);
+            return [];
+          }
+          
+          // Normaliser les audiences pour avoir dossierId même si le backend retourne dossier.id
+          const normalized = audiences.map((a, index) => {
+            const audience: any = { ...a };
+            
+            console.log(`🔧 AudienceService - Audience ${index + 1} brute:`, {
+              id: audience.id,
+              dossierId: audience.dossierId,
+              dossier_id: audience.dossier_id, // Vérifier avec underscore
+              dossierIdType: typeof audience.dossierId,
+              dossier: audience.dossier,
+              hasDossier: !!audience.dossier,
+              dossierIdFromDossier: audience.dossier?.id,
+              allKeys: Object.keys(audience) // Voir tous les champs disponibles
+            });
+            
+            // PRIORITÉ 1: Vérifier dossier_id (avec underscore) - format base de données
+            if (audience.dossier_id !== null && audience.dossier_id !== undefined) {
+              audience.dossierId = typeof audience.dossier_id === 'string' 
+                ? parseInt(audience.dossier_id, 10) 
+                : audience.dossier_id;
+              console.log(`🔧 AudienceService - Audience ${audience.id}: dossierId extrait de dossier_id = ${audience.dossierId}`);
+            }
+            // PRIORITÉ 2: Si l'audience a déjà dossierId (camelCase)
+            else if (audience.dossierId !== null && audience.dossierId !== undefined) {
+              // Normaliser dossierId en number si c'est une string
+              if (typeof audience.dossierId === 'string') {
+                audience.dossierId = parseInt(audience.dossierId, 10);
+                if (!isNaN(audience.dossierId)) {
+                  console.log(`🔧 AudienceService - Audience ${audience.id}: dossierId converti de string en number = ${audience.dossierId}`);
+                }
+              }
+            }
+            // PRIORITÉ 3: Si l'audience a un objet dossier mais pas dossierId, extraire l'ID
+            else if (audience.dossier && audience.dossier.id !== null && audience.dossier.id !== undefined) {
+              audience.dossierId = typeof audience.dossier.id === 'string' 
+                ? parseInt(audience.dossier.id, 10) 
+                : audience.dossier.id;
+              console.log(`🔧 AudienceService - Audience ${audience.id}: dossierId extrait de dossier.id = ${audience.dossierId}`);
+            }
+            else {
+              console.error(`❌ AudienceService - Audience ${audience.id} n'a AUCUN champ dossierId/dossier_id/dossier!`, {
+                allKeys: Object.keys(audience),
+                audience: audience
+              });
+            }
+            
+            // Si l'audience a resultat mais pas decisionResult, mapper
+            if (!audience.decisionResult && audience.resultat) {
+              audience.decisionResult = audience.resultat;
+            }
+            
+            console.log(`✅ AudienceService - Audience ${audience.id} normalisée:`, {
+              id: audience.id,
+              dossierId: audience.dossierId,
+              dossierIdType: typeof audience.dossierId
+            });
+            
+            return audience as Audience;
+          });
+          
+          console.log('✅ AudienceService - Audiences normalisées:', normalized.length);
+          return normalized;
+        }),
+        tap(normalizedAudiences => {
+          console.log('📤 AudienceService - Envoi des audiences normalisées au composant:', normalizedAudiences);
+          this.audiencesSubject.next(normalizedAudiences);
         }),
         catchError(this.handleError)
       );
@@ -50,20 +133,47 @@ export class AudienceService {
   /**
    * Créer une nouvelle audience via l'API backend
    */
-  createAudience(audience: AudienceRequest): Observable<Audience> {
+  createAudience(audience: AudienceRequest | any): Observable<Audience> {
     const headers = new HttpHeaders({
       'Content-Type': 'application/json',
       'Accept': 'application/json'
     });
 
-    console.log('🔵 AudienceService.createAudience appelé');
-    console.log('🔵 URL:', `${this.baseUrl}/audiences`);
-    console.log('🔵 Données envoyées:', audience);
+    // Convertir AudienceRequest en format backend si nécessaire
+    // Le backend attend: dossier (objet), avocat (objet), huissier (objet), resultat (pas decisionResult)
+    // Propriétés connues backend: "resultat", "dateAudience", "dateProchaine", "tribunalType", 
+    // "commentaireDecision", "lieuTribunal", "huissier", "id", "avocat", "dossier"
+    let payload: any;
+    
+    if (audience.dossierId) {
+      // Si c'est un AudienceRequest avec dossierId, convertir en format backend
+      payload = {
+        dateAudience: audience.dateAudience,
+        dateProchaine: audience.dateProchaine || null,
+        tribunalType: audience.tribunalType,
+        lieuTribunal: audience.lieuTribunal,
+        commentaireDecision: audience.commentaireDecision || null,
+        resultat: audience.decisionResult || audience.resultat || null, // Backend attend "resultat"
+        dossier: { id: audience.dossierId },
+        avocat: audience.avocatId ? { id: audience.avocatId } : null,
+        huissier: audience.huissierId ? { id: audience.huissierId } : null
+      };
+    } else {
+      // Si c'est déjà au format backend (avec dossier, avocat, huissier comme objets)
+      payload = { ...audience };
+    }
+    
+    // Nettoyer les valeurs undefined
+    Object.keys(payload).forEach(key => {
+      if (payload[key] === undefined) {
+        delete payload[key];
+      }
+    });
 
-    return this.http.post<Audience>(`${this.baseUrl}/audiences`, audience, { headers })
+
+    return this.http.post<Audience>(`${this.baseUrl}/audiences`, payload, { headers })
       .pipe(
         tap(newAudience => {
-          console.log('✅ Audience créée avec succès:', newAudience);
           // Mettre à jour la liste locale après création
           const currentAudiences = this.audiencesSubject.value;
           this.audiencesSubject.next([...currentAudiences, newAudience]);
@@ -75,12 +185,45 @@ export class AudienceService {
   /**
    * Mettre à jour une audience via l'API backend
    */
-  updateAudience(id: number, audience: AudienceRequest): Observable<Audience> {
+  updateAudience(id: number, audience: AudienceRequest | any): Observable<Audience> {
     const headers = new HttpHeaders({
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
     });
 
-    return this.http.put<Audience>(`${this.baseUrl}/audiences/${id}`, audience, { headers })
+    // Convertir AudienceRequest en format backend si nécessaire
+    // Le backend attend: dossier (objet), avocat (objet), huissier (objet), resultat (pas decisionResult)
+    // Propriétés connues backend: "resultat", "dateAudience", "dateProchaine", "tribunalType", 
+    // "commentaireDecision", "lieuTribunal", "huissier", "id", "avocat", "dossier"
+    let payload: any;
+    
+    if (audience.dossierId) {
+      // Si c'est un AudienceRequest avec dossierId, convertir en format backend
+      payload = {
+        dateAudience: audience.dateAudience,
+        dateProchaine: audience.dateProchaine || null,
+        tribunalType: audience.tribunalType,
+        lieuTribunal: audience.lieuTribunal,
+        commentaireDecision: audience.commentaireDecision || null,
+        resultat: audience.decisionResult || audience.resultat || null, // Backend attend "resultat"
+        dossier: { id: audience.dossierId },
+        avocat: audience.avocatId ? { id: audience.avocatId } : null,
+        huissier: audience.huissierId ? { id: audience.huissierId } : null
+      };
+    } else {
+      // Si c'est déjà au format backend (avec dossier, avocat, huissier comme objets)
+      payload = { ...audience };
+    }
+    
+    // Nettoyer les valeurs undefined
+    Object.keys(payload).forEach(key => {
+      if (payload[key] === undefined) {
+        delete payload[key];
+      }
+    });
+
+
+    return this.http.put<Audience>(`${this.baseUrl}/audiences/${id}`, payload, { headers })
       .pipe(
         tap(updatedAudience => {
           // Mettre à jour la liste locale après modification
@@ -100,13 +243,9 @@ export class AudienceService {
    */
   deleteAudience(id: number): Observable<void> {
     const deleteUrl = `${this.baseUrl}/audiences/${id}`;
-    console.log('🗑️ Suppression audience - URL:', deleteUrl);
-    console.log('🗑️ ID audience à supprimer:', id);
-    
     return this.http.delete<void>(deleteUrl)
       .pipe(
         tap(() => {
-          console.log('✅ Audience supprimée avec succès, ID:', id);
           // Mettre à jour la liste locale après suppression
           const currentAudiences = this.audiencesSubject.value;
           const filteredAudiences = currentAudiences.filter(a => a.id !== id);

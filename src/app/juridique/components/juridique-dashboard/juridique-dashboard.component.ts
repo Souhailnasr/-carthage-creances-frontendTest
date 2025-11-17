@@ -45,6 +45,9 @@ export class JuridiqueDashboardComponent implements OnInit, OnDestroy {
   dossiersAvecHuissier = 0;
   dossiersUrgents = 0;
   
+  // Cache pour les performances des agents (pour éviter ExpressionChangedAfterItHasBeenCheckedError)
+  private agentPerformanceCache: Map<string | number, number> = new Map();
+  
   private destroy$ = new Subject<void>();
 
   constructor(
@@ -60,6 +63,8 @@ export class JuridiqueDashboardComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.loadCurrentUser();
     this.loadDashboardData();
+    // loadDossiersStats() est appelé séparément car il utilise une API différente
+    // et met à jour totalDossiers avec les données de recouvrement juridique
     this.loadDossiersStats();
   }
 
@@ -76,15 +81,38 @@ export class JuridiqueDashboardComponent implements OnInit, OnDestroy {
       takeUntil(this.destroy$)
     ).subscribe({
       next: (page) => {
-        this.totalDossiers = page.totalElements;
-        this.totalMontant = page.content.reduce((sum, d) => sum + (d.montantCreance || 0), 0);
-        this.dossiersEnCours = page.content.filter(d => d.statut === 'EN_COURS').length;
-        this.dossiersAvecAvocat = page.content.filter(d => d.avocat).length;
-        this.dossiersAvecHuissier = page.content.filter(d => d.huissier).length;
-        this.dossiersUrgents = page.content.filter(d => d.urgence === Urgence.TRES_URGENT).length;
+        // Vérifier que page et page.content existent et sont valides
+        if (page && Array.isArray(page.content)) {
+          this.totalDossiers = page.totalElements || page.content.length;
+          this.totalMontant = page.content.reduce((sum, d) => sum + (d.montantCreance || 0), 0);
+          this.dossiersEnCours = page.content.filter(d => d.statut === 'EN_COURS').length;
+          this.dossiersAvecAvocat = page.content.filter(d => d.avocat).length;
+          this.dossiersAvecHuissier = page.content.filter(d => d.huissier).length;
+          this.dossiersUrgents = page.content.filter(d => d.urgence === Urgence.TRES_URGENT).length;
+        } else {
+          console.warn('⚠️ Format de réponse inattendu pour getDossiersRecouvrementJuridique:', page);
+          // Utiliser setTimeout pour éviter ExpressionChangedAfterItHasBeenCheckedError
+          setTimeout(() => {
+            this.totalDossiers = 0;
+            this.totalMontant = 0;
+            this.dossiersEnCours = 0;
+            this.dossiersAvecAvocat = 0;
+            this.dossiersAvecHuissier = 0;
+            this.dossiersUrgents = 0;
+          }, 0);
+        }
       },
       error: (error) => {
         console.error('❌ Erreur lors du chargement des statistiques de dossiers:', error);
+        // Utiliser setTimeout pour éviter ExpressionChangedAfterItHasBeenCheckedError
+        setTimeout(() => {
+          this.totalDossiers = 0;
+          this.totalMontant = 0;
+          this.dossiersEnCours = 0;
+          this.dossiersAvecAvocat = 0;
+          this.dossiersAvecHuissier = 0;
+          this.dossiersUrgents = 0;
+        }, 0);
       }
     });
   }
@@ -99,13 +127,20 @@ export class JuridiqueDashboardComponent implements OnInit, OnDestroy {
     this.dossierService.loadAll()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (dossiers: any[]) => {
-          this.totalDossiers = dossiers.filter((dossier: any) => 
-            dossier.dossierStatus === 'ENCOURSDETRAITEMENT'
-          ).length;
+        next: (dossiers: any) => {
+          // Vérifier que dossiers est un tableau avant d'utiliser filter
+          if (Array.isArray(dossiers)) {
+            this.totalDossiers = dossiers.filter((dossier: any) => 
+              dossier.dossierStatus === 'ENCOURSDETRAITEMENT'
+            ).length;
+          } else {
+            console.warn('⚠️ dossiers n\'est pas un tableau:', dossiers);
+            this.totalDossiers = 0;
+          }
         },
         error: (error: any) => {
           console.error('❌ Erreur lors du chargement des dossiers:', error);
+          this.totalDossiers = 0;
         }
       });
 
@@ -153,14 +188,21 @@ export class JuridiqueDashboardComponent implements OnInit, OnDestroy {
         next: (agents) => {
           this.agentsJuridiques = agents
             .filter(a => a.actif)
-            .map(a => ({
-              id: a.id?.toString() || '',
-              nom: a.nom,
-              prenom: a.prenom,
-              email: a.email,
-              roleUtilisateur: Role.AGENT_RECOUVREMENT_JURIDIQUE,
-              actif: a.actif
-            } as User));
+            .map(a => {
+              const agentId = a.id?.toString() || '';
+              // Calculer et mettre en cache la performance une seule fois
+              if (!this.agentPerformanceCache.has(agentId)) {
+                this.agentPerformanceCache.set(agentId, Math.floor(Math.random() * 20) + 5);
+              }
+              return {
+                id: agentId,
+                nom: a.nom,
+                prenom: a.prenom,
+                email: a.email,
+                roleUtilisateur: Role.AGENT_RECOUVREMENT_JURIDIQUE,
+                actif: a.actif
+              } as User;
+            });
         },
         error: (error) => {
           console.error('❌ Erreur lors du chargement des agents juridiques:', error);
@@ -208,8 +250,14 @@ export class JuridiqueDashboardComponent implements OnInit, OnDestroy {
   }
 
   getAgentPerformance(agentId: number | string): number {
-    // Mock performance data - in a real app, this would come from an API
-    return Math.floor(Math.random() * 20) + 5;
+    // Utiliser le cache pour éviter ExpressionChangedAfterItHasBeenCheckedError
+    if (this.agentPerformanceCache.has(agentId)) {
+      return this.agentPerformanceCache.get(agentId)!;
+    }
+    // Si pas dans le cache, générer une valeur et la mettre en cache
+    const performance = Math.floor(Math.random() * 20) + 5;
+    this.agentPerformanceCache.set(agentId, performance);
+    return performance;
   }
 
   getActivityIcon(type: string): string {

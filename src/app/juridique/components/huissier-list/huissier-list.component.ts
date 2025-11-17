@@ -21,9 +21,12 @@ import { SelectionModel } from '@angular/cdk/collections';
 import { debounceTime, distinctUntilChanged, takeUntil, Subject } from 'rxjs';
 
 import { HuissierService } from '../../services/huissier.service';
+import { DossierApiService } from '../../../core/services/dossier-api.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { Huissier } from '../../models/huissier.model';
 import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
+import { forkJoin, of } from 'rxjs';
+import { map } from 'rxjs/operators';
 
 @Component({
   selector: 'app-huissier-list',
@@ -80,6 +83,7 @@ export class HuissierListComponent implements OnInit, OnDestroy, AfterViewInit {
 
   constructor(
     private huissierService: HuissierService,
+    private dossierApiService: DossierApiService,
     private toastService: ToastService,
     private fb: FormBuilder,
     private router: Router,
@@ -184,34 +188,64 @@ export class HuissierListComponent implements OnInit, OnDestroy, AfterViewInit {
       );
     }
 
-    // Apply dossier filters (these would need backend implementation)
-    if (formValue.withDossiers) {
-      // This would require backend support
-      this.huissierService.getHuissiersWithDossiers()
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: (huissiers) => {
-            this.dataSource.data = huissiers;
-            this.totalCount = huissiers.length;
-          },
-          error: (error) => {
-            console.error('❌ Erreur lors du chargement des huissiers avec dossiers:', error);
-          }
-        });
-      return;
-    }
+    // Apply dossier filters using DossierApiService
+    if (formValue.withDossiers || formValue.withoutDossiers) {
+      this.isLoading = true;
+      
+      // Charger tous les huissiers et tous les dossiers pour filtrer
+      forkJoin({
+        huissiers: this.huissierService.getAllHuissiers(),
+        dossiers: this.dossierApiService.getAllDossiers(0, 1000)
+      })
+        .pipe(
+          takeUntil(this.destroy$),
+          map(({ huissiers, dossiers }) => {
+            // Créer un Set des IDs des huissiers qui ont des dossiers
+            const huissiersWithDossiersIds = new Set<number>();
+            dossiers.content.forEach(dossier => {
+              if (dossier.huissier?.id) {
+                huissiersWithDossiersIds.add(dossier.huissier.id);
+              }
+            });
 
-    if (formValue.withoutDossiers) {
-      // This would require backend support
-      this.huissierService.getHuissiersWithoutDossiers()
-        .pipe(takeUntil(this.destroy$))
+            // Filtrer selon le critère
+            if (formValue.withDossiers) {
+              return huissiers.filter(h => h.id && huissiersWithDossiersIds.has(h.id));
+            } else if (formValue.withoutDossiers) {
+              return huissiers.filter(h => !h.id || !huissiersWithDossiersIds.has(h.id));
+            }
+            return huissiers;
+          })
+        )
         .subscribe({
-          next: (huissiers) => {
-            this.dataSource.data = huissiers;
-            this.totalCount = huissiers.length;
+          next: (filteredHuissiers) => {
+            // Appliquer les autres filtres (searchTerm, specialty)
+            let finalFiltered = filteredHuissiers;
+            
+            if (formValue.searchTerm) {
+              const searchTerm = formValue.searchTerm.toLowerCase();
+              finalFiltered = finalFiltered.filter(huissier =>
+                huissier.nom.toLowerCase().includes(searchTerm) ||
+                huissier.prenom.toLowerCase().includes(searchTerm) ||
+                huissier.email.toLowerCase().includes(searchTerm) ||
+                (huissier.specialite && huissier.specialite.toLowerCase().includes(searchTerm))
+              );
+            }
+
+            if (formValue.specialty) {
+              finalFiltered = finalFiltered.filter(huissier =>
+                huissier.specialite === formValue.specialty
+              );
+            }
+
+            this.dataSource.data = finalFiltered;
+            this.totalCount = finalFiltered.length;
+            this.isLoading = false;
           },
           error: (error) => {
-            console.error('❌ Erreur lors du chargement des huissiers sans dossiers:', error);
+            console.error('❌ Erreur lors du filtrage des huissiers:', error);
+            this.toastService.error('Erreur lors du filtrage des huissiers');
+            this.isLoading = false;
           }
         });
       return;

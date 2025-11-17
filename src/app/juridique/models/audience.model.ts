@@ -7,7 +7,7 @@ export enum TribunalType {
 export enum DecisionResult {
   POSITIVE = 'POSITIVE',
   NEGATIVE = 'NEGATIVE',
-  RAPPORTER = 'RAPPORTER'
+  RAPPORTER = 'Rapporter' // Backend attend "Rapporter" avec majuscule, pas "RAPPORTER"
 }
 
 export interface Audience {
