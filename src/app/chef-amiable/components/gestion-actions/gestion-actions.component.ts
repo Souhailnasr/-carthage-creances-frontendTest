@@ -12,8 +12,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatBadgeModule } from '@angular/material/badge';
-import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { Subject, debounceTime, distinctUntilChanged, forkJoin, of, Observable } from 'rxjs';
+import { takeUntil, map, catchError } from 'rxjs/operators';
 import { ChefAmiableService } from '../../services/chef-amiable.service';
 import { DossierApiService } from '../../../core/services/dossier-api.service';
 import { ActionRecouvrementService } from '../../../core/services/action-recouvrement.service';
@@ -30,6 +30,9 @@ interface DossierAvecActions {
   nomCreancier: string;
   nomDebiteur: string;
   actions?: any[];
+  typeRecouvrement?: string;
+  statut?: string;
+  affecteAuJuridique?: boolean;
 }
 
 @Component({
@@ -132,20 +135,59 @@ export class GestionActionsComponent implements OnInit, OnDestroy {
 
   loadDossiers(): void {
     this.loading = true;
-    // Utiliser une taille raisonnable pour éviter les erreurs backend
-    this.dossierApiService.getDossiersRecouvrementAmiable(0, 50).subscribe({
-      next: (page) => {
-        // Convertir DossierApi en DossierAvecActions
-        this.dossiers = page.content.map((dossier: DossierApi) => {
+    // Charger les dossiers affectés au recouvrement amiable
+    // Utiliser une taille de page raisonnable pour éviter les erreurs 400
+    // Commencer par charger la première page avec une taille raisonnable
+    this.loadDossiersPage(0, 50);
+  }
+
+  private loadDossiersPage(page: number, size: number): void {
+    // Charger tous les dossiers et filtrer pour garder uniquement ceux affectés au recouvrement amiable
+    // Un dossier est considéré comme "amiable" si :
+    // 1. typeRecouvrement === AMIABLE (actuellement en amiable)
+    // 2. OU il a été validé et est en cours ET n'a pas d'avocat/huissier (était en amiable)
+    // 3. OU il a des actions (car les actions sont créées uniquement en amiable)
+    this.dossierApiService.getAllDossiers(page, size).pipe(
+      takeUntil(this.destroy$),
+      map((pageResponse) => {
+        // Filtrer pour garder uniquement les dossiers affectés au recouvrement amiable
+        const filtered = pageResponse.content.filter((dossier: DossierApi) => {
+          // Cas 1: Actuellement en recouvrement amiable
+          if (dossier.typeRecouvrement === 'AMIABLE') {
+            return true;
+          }
+          // Cas 2: A été en amiable (validé, en cours, sans avocat/huissier au moment de la création)
+          // On garde les dossiers validés qui sont en cours, même s'ils ont été affectés au juridique après
+          // car ils ont un historique d'actions en amiable
+          if (dossier.valide === true && 
+              (dossier.statut === 'EN_COURS' || dossier.dossierStatus === 'ENCOURSDETRAITEMENT') &&
+              !dossier.dateCloture) {
+            // Si le dossier a un avocat ou huissier, c'est qu'il a été affecté au juridique
+            // Mais on le garde quand même pour voir l'historique des actions amiable
+            // On vérifiera plus tard s'il a des actions pour confirmer qu'il était en amiable
+            return true;
+          }
+          return false;
+        });
+        
+        return {
+          ...pageResponse,
+          content: filtered,
+          totalElements: filtered.length,
+          totalPages: Math.ceil(filtered.length / size)
+        };
+      })
+    ).subscribe({
+      next: (pageResponse) => {
+        // Convertir DossierApi en DossierAvecActions et charger les actions pour chaque dossier
+        const dossiersObservables = pageResponse.content.map((dossier: DossierApi) => {
           // Gérer les noms de créancier (personne physique ou morale)
           let nomCreancier = 'N/A';
           if (dossier.creancier) {
             const typeCreancier = (dossier.creancier as any).typeCreancier;
             if (typeCreancier === 'PERSONNE_MORALE') {
-              // Pour une personne morale, le champ 'nom' contient la raison sociale
               nomCreancier = dossier.creancier.nom || 'N/A';
             } else if (dossier.creancier.prenom && dossier.creancier.nom) {
-              // Pour une personne physique, combiner prénom et nom
               nomCreancier = `${dossier.creancier.prenom} ${dossier.creancier.nom}`;
             } else if (dossier.creancier.nom) {
               nomCreancier = dossier.creancier.nom;
@@ -157,34 +199,133 @@ export class GestionActionsComponent implements OnInit, OnDestroy {
           if (dossier.debiteur) {
             const typeDebiteur = (dossier.debiteur as any).typeDebiteur;
             if (typeDebiteur === 'PERSONNE_MORALE') {
-              // Pour une personne morale, le champ 'nom' contient la raison sociale
               nomDebiteur = dossier.debiteur.nom || 'N/A';
             } else if (dossier.debiteur.prenom && dossier.debiteur.nom) {
-              // Pour une personne physique, combiner prénom et nom
               nomDebiteur = `${dossier.debiteur.prenom} ${dossier.debiteur.nom}`;
             } else if (dossier.debiteur.nom) {
               nomDebiteur = dossier.debiteur.nom;
             }
           }
           
-          return {
+          // Charger les actions pour ce dossier
+          const dossierBase = {
             id: dossier.id,
             numeroDossier: dossier.numeroDossier || `DOS-${dossier.id}`,
             nomCreancier: nomCreancier,
             nomDebiteur: nomDebiteur,
-            actions: dossier.actions || [] // Si les actions sont disponibles dans DossierApi
+            typeRecouvrement: dossier.typeRecouvrement,
+            statut: dossier.statut || dossier.dossierStatus,
+            affecteAuJuridique: dossier.typeRecouvrement === 'JURIDIQUE' || !!dossier.avocat || !!dossier.huissier
           };
+          
+          if (dossier.id) {
+            return this.actionService.getActionsByDossier(dossier.id).pipe(
+              map(actions => ({
+                ...dossierBase,
+                actions: actions || []
+              })),
+              catchError(error => {
+                console.warn(`⚠️ Erreur lors du chargement des actions pour dossier ${dossier.id}:`, error);
+                return of({
+                  ...dossierBase,
+                  actions: []
+                });
+              })
+            );
+          } else {
+            return of({
+              ...dossierBase,
+              actions: []
+            });
+          }
         });
-        this.loading = false;
-        console.log('✅ Dossiers affectés au recouvrement amiable chargés:', this.dossiers.length);
+        
+        // Charger toutes les actions en parallèle avec forkJoin
+        // Limiter à 50 requêtes en parallèle pour éviter de surcharger le backend
+        if (dossiersObservables.length > 0) {
+          // Traiter par lots de 50 pour éviter de surcharger le backend
+          const batchSize = 50;
+          const batches: Observable<DossierAvecActions>[][] = [];
+          
+          for (let i = 0; i < dossiersObservables.length; i += batchSize) {
+            batches.push(dossiersObservables.slice(i, i + batchSize));
+          }
+          
+          // Charger les lots séquentiellement
+          const loadBatch = (batchIndex: number): void => {
+            if (batchIndex >= batches.length) {
+              // Tous les lots de cette page sont chargés, vérifier s'il y a d'autres pages
+              if (pageResponse.totalPages > page + 1) {
+                // Charger la page suivante
+                this.loadDossiersPage(page + 1, size);
+              } else {
+                // Toutes les pages sont chargées
+                this.loading = false;
+                console.log('✅ Tous les dossiers avec actions chargés:', this.dossiers.length);
+                console.log('📊 Dossiers affectés au juridique:', this.dossiers.filter(d => d.affecteAuJuridique).length);
+              }
+              return;
+            }
+            
+            forkJoin(batches[batchIndex]).pipe(
+              takeUntil(this.destroy$)
+            ).subscribe({
+              next: (dossiersAvecActions) => {
+                // Filtrer pour garder uniquement les dossiers qui ont des actions OU qui sont actuellement en amiable
+                // Cela permet d'exclure les dossiers qui n'ont jamais été en amiable
+                const dossiersFiltres = (dossiersAvecActions as DossierAvecActions[]).filter(dossier => {
+                  // Garder si le dossier est actuellement en amiable
+                  if (dossier.typeRecouvrement === 'AMIABLE') {
+                    return true;
+                  }
+                  // Garder si le dossier a des actions (preuve qu'il a été en amiable)
+                  if (dossier.actions && dossier.actions.length > 0) {
+                    return true;
+                  }
+                  // Exclure les autres dossiers
+                  return false;
+                });
+                
+                this.dossiers = [...this.dossiers, ...dossiersFiltres];
+                // Charger le lot suivant
+                loadBatch(batchIndex + 1);
+              },
+              error: (error) => {
+                console.error(`❌ Erreur lors du chargement du lot ${batchIndex + 1}:`, error);
+                // Continuer avec le lot suivant même en cas d'erreur
+                loadBatch(batchIndex + 1);
+              }
+            });
+          };
+          
+          // Commencer le chargement du premier lot
+          loadBatch(0);
+        } else {
+          // Si pas de dossiers dans cette page, vérifier s'il y a d'autres pages
+          // Note: On utilise totalPages de la réponse originale pour continuer le chargement
+          // même si le filtre a réduit le nombre de dossiers
+          const originalTotalPages = Math.ceil(pageResponse.totalElements / size);
+          if (originalTotalPages > page + 1) {
+            // Charger la page suivante
+            this.loadDossiersPage(page + 1, size);
+          } else {
+            this.loading = false;
+          }
+        }
       },
       error: (error) => {
         console.error('❌ Erreur lors du chargement des dossiers:', error);
-        this.snackBar.open('Erreur lors du chargement des dossiers', 'Fermer', {
-          duration: 5000,
-          panelClass: ['error-snackbar']
-        });
-        this.loading = false;
+        // Si c'est une erreur 400 avec size trop grand, réessayer avec une taille plus petite
+        if (error.status === 400 && size > 10) {
+          console.log(`⚠️ Taille ${size} trop grande, réessai avec taille 10`);
+          this.loadDossiersPage(page, 10);
+        } else {
+          this.snackBar.open('Erreur lors du chargement des dossiers', 'Fermer', {
+            duration: 5000,
+            panelClass: ['error-snackbar']
+          });
+          this.loading = false;
+        }
       }
     });
   }
