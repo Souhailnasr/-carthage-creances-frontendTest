@@ -1,0 +1,182 @@
+<div class="agent-juridique-audiences">
+  <div class="header">
+    <h1>
+      <i class="fas fa-gavel"></i>
+      Gestion des Audiences
+    </h1>
+    <p class="subtitle">Ajouter, modifier et gérer les audiences pour vos dossiers</p>
+  </div>
+
+  <mat-card class="filters-card">
+    <mat-card-content>
+      <div class="filters">
+        <button mat-button [class.active]="filterType === 'all'" (click)="filterType = 'all'; loadAudiences()">
+          Toutes les Audiences
+        </button>
+        <button mat-button [class.active]="filterType === 'my'" (click)="filterType = 'my'; loadAudiences()">
+          Mes Audiences
+        </button>
+        <button mat-button [class.active]="filterType === 'dossier'" (click)="filterType = 'dossier'; loadAudiences()" *ngIf="selectedDossierId">
+          Dossier #{{ selectedDossierId }}
+        </button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card>
+    <mat-card-header>
+      <mat-card-title>
+        <i class="fas fa-list"></i> Liste des Audiences
+      </mat-card-title>
+      <div class="card-actions">
+        <button mat-raised-button color="primary" (click)="showCreateForm()">
+          <i class="fas fa-plus"></i> Ajouter une Audience
+        </button>
+      </div>
+    </mat-card-header>
+
+    <mat-card-content>
+      <div class="loading-container" *ngIf="loading">
+        <mat-spinner diameter="50"></mat-spinner>
+        <p>Chargement des audiences...</p>
+      </div>
+
+      <div *ngIf="!loading">
+        <table mat-table [dataSource]="audiences" class="audiences-table">
+          <ng-container matColumnDef="dateAudience">
+            <th mat-header-cell *matHeaderCellDef>Date</th>
+            <td mat-cell *matCellDef="let audience">{{ audience.dateAudience | date:'dd/MM/yyyy' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="typeAudience">
+            <th mat-header-cell *matHeaderCellDef>Type</th>
+            <td mat-cell *matCellDef="let audience">{{ audience.typeAudience }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="tribunal">
+            <th mat-header-cell *matHeaderCellDef>Tribunal</th>
+            <td mat-cell *matCellDef="let audience">{{ audience.tribunal || 'N/A' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="dossierId">
+            <th mat-header-cell *matHeaderCellDef>Dossier</th>
+            <td mat-cell *matCellDef="let audience">#{{ audience.dossierId }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="statut">
+            <th mat-header-cell *matHeaderCellDef>Statut</th>
+            <td mat-cell *matCellDef="let audience">
+              <mat-chip [class]="getStatutColor(audience.statut)">
+                {{ getStatutLabel(audience.statut) }}
+              </mat-chip>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef>Actions</th>
+            <td mat-cell *matCellDef="let audience">
+              <button mat-icon-button color="primary" (click)="showEditForm(audience)">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button mat-icon-button color="warn" (click)="deleteAudience(audience)">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+        </table>
+
+        <div *ngIf="audiences.length === 0" class="no-data">
+          <i class="fas fa-gavel"></i>
+          <p>Aucune audience enregistrée</p>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Formulaire d'ajout/modification -->
+  <mat-card *ngIf="showForm" class="form-card">
+    <mat-card-header>
+      <mat-card-title>
+        {{ editingAudience ? 'Modifier l\'Audience' : 'Nouvelle Audience' }}
+      </mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <form [formGroup]="audienceForm" (ngSubmit)="onSubmit()">
+        <div class="form-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>ID Dossier</mat-label>
+            <input matInput type="number" formControlName="dossierId" required>
+            <mat-error *ngIf="audienceForm.get('dossierId')?.hasError('required')">
+              Le dossier est requis
+            </mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Date de l'Audience</mat-label>
+            <input matInput [matDatepicker]="picker" formControlName="dateAudience" required>
+            <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+            <mat-datepicker #picker></mat-datepicker>
+            <mat-error *ngIf="audienceForm.get('dateAudience')?.hasError('required')">
+              La date est requise
+            </mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Type d'Audience</mat-label>
+            <input matInput formControlName="typeAudience" required>
+            <mat-error *ngIf="audienceForm.get('typeAudience')?.hasError('required')">
+              Le type est requis
+            </mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Tribunal</mat-label>
+            <input matInput formControlName="tribunal">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>ID Avocat (optionnel)</mat-label>
+            <input matInput type="number" formControlName="avocatId">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>ID Huissier (optionnel)</mat-label>
+            <input matInput type="number" formControlName="huissierId">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Statut</mat-label>
+            <mat-select formControlName="statut" required>
+              <mat-option *ngFor="let statut of statuts" [value]="statut">
+                {{ getStatutLabel(statut) }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Résultat</mat-label>
+            <textarea matInput formControlName="resultat" rows="3"></textarea>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Commentaire</mat-label>
+            <textarea matInput formControlName="commentaire" rows="3"></textarea>
+          </mat-form-field>
+        </div>
+
+        <div class="form-actions">
+          <button mat-raised-button color="primary" type="submit" [disabled]="audienceForm.invalid">
+            <i class="fas fa-save"></i> {{ editingAudience ? 'Modifier' : 'Créer' }}
+          </button>
+          <button mat-button type="button" (click)="cancelForm()">
+            <i class="fas fa-times"></i> Annuler
+          </button>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+</div>
+

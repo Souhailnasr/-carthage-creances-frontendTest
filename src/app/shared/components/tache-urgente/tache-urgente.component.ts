@@ -22,13 +22,13 @@ export class TacheUrgenteComponent implements OnInit, OnDestroy {
   showCreateTache = false;
   canAssignToAgent = false;
   availableAgents: any[] = [];
-  newTache: Partial<TacheUrgente> = {
+  newTache: Partial<TacheUrgente> & { agentId?: number; dateEcheanceDate?: string } = {
     titre: '',
     description: '',
     type: 'ENQUETE',
     priorite: 'MOYENNE',
     statut: 'EN_COURS',
-    dateEcheance: new Date()
+    dateEcheanceDate: undefined
   };
   private subscription: Subscription = new Subscription();
 
@@ -50,20 +50,26 @@ export class TacheUrgenteComponent implements OnInit, OnDestroy {
   }
 
   loadTaches(): void {
-    if (this.currentUser?.role === 'AGENT_DOSSIER') {
-      this.tacheUrgenteService.getTachesByAgent(parseInt(this.currentUser.id)).subscribe(
-        taches => {
+    if (this.currentUser?.role === 'AGENT_DOSSIER' && this.currentUser?.id) {
+      this.tacheUrgenteService.getTachesAgent(parseInt(this.currentUser.id)).subscribe({
+        next: (taches: TacheUrgente[]) => {
           this.taches = taches;
           this.applyFilters();
+        },
+        error: (error: any) => {
+          console.error('Erreur lors du chargement des tâches:', error);
         }
-      );
+      });
     } else {
-      this.tacheUrgenteService.getAllTachesUrgentes().subscribe(
-        taches => {
+      this.tacheUrgenteService.getAllTaches().subscribe({
+        next: (taches: TacheUrgente[]) => {
           this.taches = taches;
           this.applyFilters();
+        },
+        error: (error: any) => {
+          console.error('Erreur lors du chargement des tâches:', error);
         }
-      );
+      });
     }
   }
 
@@ -81,7 +87,8 @@ export class TacheUrgenteComponent implements OnInit, OnDestroy {
       filtered = filtered.filter(tache =>
         tache.titre.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
         tache.description.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-        tache.agentNom.toLowerCase().includes(this.searchTerm.toLowerCase())
+        (tache.agentNom && tache.agentNom.toLowerCase().includes(this.searchTerm.toLowerCase())) ||
+        (tache.agentAssigné && `${tache.agentAssigné.prenom} ${tache.agentAssigné.nom}`.toLowerCase().includes(this.searchTerm.toLowerCase()))
       );
     }
 
@@ -111,21 +118,24 @@ export class TacheUrgenteComponent implements OnInit, OnDestroy {
   }
 
   marquerTerminee(tache: TacheUrgente): void {
-    this.tacheUrgenteService.marquerTerminee(tache.id).subscribe(
-      () => {
+    this.tacheUrgenteService.marquerTerminee(tache.id).subscribe({
+      next: (updatedTache: TacheUrgente) => {
         tache.statut = 'TERMINEE';
-        tache.dateCloture = new Date();
+        tache.dateCompletion = updatedTache.dateCompletion || new Date().toISOString();
         this.applyFilters();
+      },
+      error: (error: any) => {
+        console.error('Erreur lors du marquage comme terminée:', error);
       }
-    );
+    });
   }
 
   getPrioriteClass(priorite: string): string {
     switch (priorite) {
-      case 'TRES_URGENTE': return 'priorite-tres-urgente';
-      case 'ELEVEE': return 'priorite-elevee';
+      case 'URGENTE': return 'priorite-tres-urgente';
+      case 'HAUTE': return 'priorite-elevee';
       case 'MOYENNE': return 'priorite-moyenne';
-      case 'FAIBLE': return 'priorite-faible';
+      case 'BASSE': return 'priorite-faible';
       default: return 'priorite-faible';
     }
   }
@@ -168,31 +178,58 @@ export class TacheUrgenteComponent implements OnInit, OnDestroy {
   }
 
   createTache(): void {
-    if (this.newTache.titre && this.newTache.description) {
+    if (this.newTache.titre && this.newTache.description && this.newTache.dateEcheanceDate) {
       const selectedAgent = this.availableAgents.find(a => a.id === this.newTache.agentId);
-      const tache: TacheUrgente = {
-        id: Date.now(),
+      // Convertir la date du format YYYY-MM-DD (input date) en ISO string
+      const dateEcheanceStr = new Date(this.newTache.dateEcheanceDate + 'T00:00:00').toISOString();
+      
+      const tacheRequest = {
         titre: this.newTache.titre!,
         description: this.newTache.description!,
         type: this.newTache.type!,
         priorite: this.newTache.priorite!,
-        statut: 'EN_COURS',
-        dateCreation: new Date(),
-        dateEcheance: new Date(this.newTache.dateEcheance!),
-        agentId: this.newTache.agentId || this.currentUser.id,
-        agentNom: selectedAgent ? `${selectedAgent.prenom} ${selectedAgent.nom}` : this.currentUser.getFullName()
+        dateEcheance: dateEcheanceStr,
+        agentAssigné: this.newTache.agentId ? { id: this.newTache.agentId } : undefined,
+        chefCreateur: this.currentUser?.id ? { id: parseInt(this.currentUser.id) } : undefined
       };
 
-      this.taches.unshift(tache);
-      this.applyFilters();
-      this.showCreateTache = false;
-      this.resetNewTache();
+      this.tacheUrgenteService.createTache(tacheRequest).subscribe({
+        next: (tache: TacheUrgente) => {
+          this.taches.unshift(tache);
+          this.applyFilters();
+          this.showCreateTache = false;
+          this.resetNewTache();
+        },
+        error: (error: any) => {
+          console.error('Erreur lors de la création de la tâche:', error);
+        }
+      });
     }
   }
 
   cancelCreateTache(): void {
     this.showCreateTache = false;
     this.resetNewTache();
+  }
+
+  getAgentName(tache: TacheUrgente): string {
+    if (tache.agentNom) {
+      return tache.agentNom;
+    }
+    if (tache.agentAssigné) {
+      return `${tache.agentAssigné.prenom} ${tache.agentAssigné.nom}`;
+    }
+    return 'N/A';
+  }
+
+  getDossierTitle(tache: TacheUrgente): string {
+    if (tache.dossierTitre) {
+      return tache.dossierTitre;
+    }
+    if (tache.dossier) {
+      return `Dossier #${tache.dossier.numeroDossier}`;
+    }
+    return '';
   }
 
   private resetNewTache(): void {
@@ -202,7 +239,8 @@ export class TacheUrgenteComponent implements OnInit, OnDestroy {
       type: 'ENQUETE',
       priorite: 'MOYENNE',
       statut: 'EN_COURS',
-      dateEcheance: new Date()
+      dateEcheanceDate: undefined,
+      agentId: undefined
     };
   }
 }

@@ -21,7 +21,7 @@ export class NotificationComponent implements OnInit, OnDestroy {
     titre: '',
     message: '',
     type: TypeNotification.RAPPEL,
-    statut: StatutNotification.NON_LUE
+    statut: 'NON_LUE'
   };
   private subscription: Subscription = new Subscription();
 
@@ -43,13 +43,16 @@ export class NotificationComponent implements OnInit, OnDestroy {
   loadNotifications(): void {
     // Mock user ID pour les tests
     const mockUserId = 1;
-    this.notificationService.getNotificationsByUser(mockUserId).subscribe(
-      notifications => {
+    this.notificationService.getNotifications(mockUserId).subscribe({
+      next: (notifications: Notification[]) => {
         this.notifications = notifications;
-        this.notificationsNonLues = notifications.filter(n => n.statut === StatutNotification.NON_LUE);
+        this.notificationsNonLues = notifications.filter(n => n.statut === 'NON_LUE');
         this.countNonLues = this.notificationsNonLues.length;
+      },
+      error: (error: any) => {
+        console.error('Erreur lors du chargement des notifications:', error);
       }
-    );
+    });
   }
 
   startPolling(): void {
@@ -62,42 +65,8 @@ export class NotificationComponent implements OnInit, OnDestroy {
   }
 
   loadMockNotifications(): void {
-    // Données mockées pour les tests
-    this.notifications = [
-      {
-        id: 1,
-        destinataireId: 1,
-        type: TypeNotification.DOSSIER_CREE,
-        titre: 'Nouveau dossier créé',
-        message: 'Un nouveau dossier a été créé et nécessite votre attention.',
-        statut: StatutNotification.NON_LUE,
-        dateCreation: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-        lienAction: '/dossiers/123'
-      },
-      {
-        id: 2,
-        destinataireId: 1,
-        type: TypeNotification.TACHE_URGENTE,
-        titre: 'Tâche urgente',
-        message: 'Une tâche urgente vous a été assignée.',
-        statut: StatutNotification.NON_LUE,
-        dateCreation: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-        lienAction: '/taches/456'
-      },
-      {
-        id: 3,
-        destinataireId: 1,
-        type: TypeNotification.RAPPEL,
-        titre: 'Rappel',
-        message: 'N\'oubliez pas de traiter le dossier en attente.',
-        statut: StatutNotification.LUE,
-        dateCreation: new Date(Date.now() - 1000 * 60 * 60 * 4).toISOString(),
-        dateLecture: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString()
-      }
-    ];
-
-    this.notificationsNonLues = this.notifications.filter(n => n.statut === StatutNotification.NON_LUE);
-    this.countNonLues = this.notificationsNonLues.length;
+    // Plus de données mockées - utiliser les vraies données de l'API
+    // Cette méthode peut être supprimée si les vraies données sont disponibles
   }
 
   toggleDropdown(): void {
@@ -130,49 +99,56 @@ export class NotificationComponent implements OnInit, OnDestroy {
   }
 
   deleteNotification(notification: Notification): void {
-    this.notificationService.deleteNotification(notification.id).subscribe(
-      () => {
+    this.notificationService.deleteNotification(notification.id).subscribe({
+      next: () => {
         this.notifications = this.notifications.filter(n => n.id !== notification.id);
         this.updateNotificationsList();
+      },
+      error: (error: any) => {
+        console.error('Erreur lors de la suppression de la notification:', error);
       }
-    );
+    });
   }
 
   private updateNotificationsList(): void {
-    this.notificationsNonLues = this.notifications.filter(n => n.statut === StatutNotification.NON_LUE);
+    this.notificationsNonLues = this.notifications.filter(n => n.statut === 'NON_LUE');
     this.countNonLues = this.notificationsNonLues.length;
   }
 
-  getNotificationIcon(type: TypeNotification): string {
-    const icons: { [key in TypeNotification]: string } = {
+  getNotificationIcon(type: string): string {
+    const icons: { [key: string]: string } = {
       [TypeNotification.DOSSIER_CREE]: 'fas fa-file-plus',
       [TypeNotification.DOSSIER_VALIDE]: 'fas fa-check-circle',
       [TypeNotification.DOSSIER_REJETE]: 'fas fa-times-circle',
-      [TypeNotification.DOSSIER_EN_ATTENTE]: 'fas fa-clock',
-      [TypeNotification.ENQUETE_CREE]: 'fas fa-search-plus',
-      [TypeNotification.ENQUETE_VALIDE]: 'fas fa-check-circle',
-      [TypeNotification.ENQUETE_REJETE]: 'fas fa-times-circle',
-      [TypeNotification.ENQUETE_EN_ATTENTE]: 'fas fa-clock',
+      [TypeNotification.AUDIENCE_CREE]: 'fas fa-gavel',
+      [TypeNotification.AUDIENCE_PROCHAINE]: 'fas fa-calendar-alt',
+      [TypeNotification.ACTION_AMIABLE_CREE]: 'fas fa-handshake',
+      [TypeNotification.TACHE_AFFECTEE]: 'fas fa-tasks',
+      [TypeNotification.TACHE_COMPLETEE]: 'fas fa-check',
+      [TypeNotification.TRAITEMENT_DOSSIER]: 'fas fa-cog',
       [TypeNotification.TACHE_URGENTE]: 'fas fa-exclamation-triangle',
       [TypeNotification.RAPPEL]: 'fas fa-bell',
-      [TypeNotification.INFO]: 'fas fa-info-circle'
+      [TypeNotification.INFO]: 'fas fa-info-circle',
+      [TypeNotification.NOTIFICATION_MANUELLE]: 'fas fa-envelope'
     };
     return icons[type] || 'fas fa-bell';
   }
 
-  getNotificationClass(type: TypeNotification): string {
-    const classes: { [key in TypeNotification]: string } = {
+  getNotificationClass(type: string): string {
+    const classes: { [key: string]: string } = {
       [TypeNotification.DOSSIER_CREE]: 'notification-info',
       [TypeNotification.DOSSIER_VALIDE]: 'notification-success',
       [TypeNotification.DOSSIER_REJETE]: 'notification-danger',
-      [TypeNotification.DOSSIER_EN_ATTENTE]: 'notification-warning',
-      [TypeNotification.ENQUETE_CREE]: 'notification-info',
-      [TypeNotification.ENQUETE_VALIDE]: 'notification-success',
-      [TypeNotification.ENQUETE_REJETE]: 'notification-danger',
-      [TypeNotification.ENQUETE_EN_ATTENTE]: 'notification-warning',
+      [TypeNotification.AUDIENCE_CREE]: 'notification-info',
+      [TypeNotification.AUDIENCE_PROCHAINE]: 'notification-warning',
+      [TypeNotification.ACTION_AMIABLE_CREE]: 'notification-info',
+      [TypeNotification.TACHE_AFFECTEE]: 'notification-warning',
+      [TypeNotification.TACHE_COMPLETEE]: 'notification-success',
+      [TypeNotification.TRAITEMENT_DOSSIER]: 'notification-info',
       [TypeNotification.TACHE_URGENTE]: 'notification-danger',
       [TypeNotification.RAPPEL]: 'notification-warning',
-      [TypeNotification.INFO]: 'notification-info'
+      [TypeNotification.INFO]: 'notification-info',
+      [TypeNotification.NOTIFICATION_MANUELLE]: 'notification-info'
     };
     return classes[type] || 'notification-info';
   }
@@ -196,24 +172,26 @@ export class NotificationComponent implements OnInit, OnDestroy {
     if (this.newNotification.titre && this.newNotification.message) {
       const notificationRequest = {
         destinataireId: 1, // Mock destinataire
-        type: this.newNotification.type as TypeNotification,
-        titre: this.newNotification.titre,
-        message: this.newNotification.message,
-        lienAction: this.newNotification.lienAction
+        type: this.newNotification.type || TypeNotification.NOTIFICATION_MANUELLE,
+        titre: this.newNotification.titre || '',
+        message: this.newNotification.message || ''
       };
 
-      this.notificationService.createNotification(notificationRequest).subscribe(
-        () => {
+      this.notificationService.createNotification(notificationRequest).subscribe({
+        next: () => {
           this.showCreateNotification = false;
           this.newNotification = {
             titre: '',
             message: '',
             type: TypeNotification.RAPPEL,
-            statut: StatutNotification.NON_LUE
+            statut: 'NON_LUE'
           };
           this.loadNotifications();
+        },
+        error: (error: any) => {
+          console.error('Erreur lors de la création de la notification:', error);
         }
-      );
+      });
     }
   }
 
@@ -223,7 +201,7 @@ export class NotificationComponent implements OnInit, OnDestroy {
       titre: '',
       message: '',
       type: TypeNotification.RAPPEL,
-      statut: StatutNotification.NON_LUE
+      statut: 'NON_LUE'
     };
   }
 }

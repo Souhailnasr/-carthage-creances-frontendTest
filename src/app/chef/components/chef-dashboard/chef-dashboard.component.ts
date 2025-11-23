@@ -1,8 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
-import { MockDataService } from '../../../shared/mock/mock-data.service';
 import { JwtAuthService } from '../../../core/services/jwt-auth.service';
+import { StatistiqueService } from '../../../core/services/statistique.service';
+import { PerformanceService } from '../../../core/services/performance.service';
 
 @Component({
   selector: 'app-chef-dashboard',
@@ -592,8 +593,9 @@ export class ChefDashboardComponent implements OnInit {
   recentActivity: any[] = [];
 
   constructor(
-    private mockDataService: MockDataService,
-    private jwtAuthService: JwtAuthService
+    private jwtAuthService: JwtAuthService,
+    private statistiqueService: StatistiqueService,
+    private performanceService: PerformanceService
   ) {}
 
   ngOnInit(): void {
@@ -606,10 +608,119 @@ export class ChefDashboardComponent implements OnInit {
   }
 
   private loadDashboardData(): void {
-    this.dashboardData = this.mockDataService.getChefDashboardData();
-    this.departmentStats = this.dashboardData.departmentStats;
-    this.agentPerformance = this.dashboardData.agentPerformance;
-    this.recentActivity = this.dashboardData.recentActivity;
+    if (!this.currentUser?.id) {
+      return;
+    }
+
+    const chefId = parseInt(this.currentUser.id);
+    const userRole = this.currentUser.roleUtilisateur || this.currentUser.role;
+
+    // Vérifier si c'est un Super Admin
+    if (userRole === 'SUPER_ADMIN') {
+      // Super Admin voit toutes les statistiques et performances
+      this.loadSuperAdminData();
+    } else {
+      // Les chefs voient uniquement leurs agents et leur département
+      this.loadChefData(chefId);
+    }
+  }
+
+  private loadChefData(chefId: number): void {
+    // Charger les statistiques du chef et de ses agents
+    this.statistiqueService.getStatistiquesChef(chefId).subscribe({
+      next: (stats: any) => {
+        this.departmentStats = {
+          totalAgents: stats.nombreAgents || 0,
+          totalDossiers: stats.totalDossiersAgents || 0,
+          dossiersValides: stats.statistiquesAgents?.reduce((sum: number, agent: any) => sum + (agent.dossiersValides || 0), 0) || 0,
+          dossiersEnAttente: stats.totalDossiersAgents - (stats.statistiquesAgents?.reduce((sum: number, agent: any) => sum + (agent.dossiersValides || 0), 0) || 0),
+          montantRecupere: 0, // À calculer depuis les dossiers
+          tauxRecuperation: stats.moyenneScoreAgents || 0,
+          progressionObjectif: 0,
+          objectifMensuel: 0
+        };
+      },
+      error: (error: any) => {
+        console.error('Erreur lors du chargement des statistiques du chef:', error);
+        this.departmentStats = null;
+      }
+    });
+
+    // Charger les performances des agents du chef
+    this.performanceService.getPerformancesChef(chefId).subscribe({
+      next: (performances: any[]) => {
+        this.agentPerformance = performances.map(perf => ({
+          id: perf.agent?.id || perf.id,
+          nom: perf.agent?.nom || '',
+          prenom: perf.agent?.prenom || '',
+          role: 'AGENT',
+          dossiersCrees: perf.dossiersTraites || 0,
+          dossiersValides: perf.dossiersValides || 0,
+          dossiersEnAttente: 0,
+          montantRecupere: 0,
+          tauxReussite: perf.tauxReussite || 0,
+          actionsEffectuees: perf.enquetesCompletees || 0,
+          moyenneTraitement: 0,
+          performance: this.getPerformanceLevel(perf.score || perf.tauxReussite || 0)
+        }));
+      },
+      error: (error: any) => {
+        console.error('Erreur lors du chargement des performances:', error);
+        this.agentPerformance = [];
+      }
+    });
+  }
+
+  private loadSuperAdminData(): void {
+    // Super Admin voit toutes les statistiques globales
+    this.statistiqueService.getStatistiquesGlobales().subscribe({
+      next: (stats: any) => {
+        this.departmentStats = {
+          totalAgents: 0, // À calculer depuis les utilisateurs
+          totalDossiers: stats.totalDossiers || 0,
+          dossiersValides: stats.dossiersValides || 0,
+          dossiersEnAttente: stats.dossiersEnCours || 0,
+          montantRecupere: stats.montantRecouvre || 0,
+          tauxRecuperation: stats.tauxReussiteGlobal || 0,
+          progressionObjectif: 0,
+          objectifMensuel: 0
+        };
+      },
+      error: (error: any) => {
+        console.error('Erreur lors du chargement des statistiques globales:', error);
+      }
+    });
+
+    // Super Admin voit toutes les performances
+    this.performanceService.getToutesPerformances().subscribe({
+      next: (performances: any[]) => {
+        this.agentPerformance = performances.map(perf => ({
+          id: perf.agent?.id || perf.id,
+          nom: perf.agent?.nom || '',
+          prenom: perf.agent?.prenom || '',
+          role: 'AGENT',
+          dossiersCrees: perf.dossiersTraites || 0,
+          dossiersValides: perf.dossiersValides || 0,
+          dossiersEnAttente: 0,
+          montantRecupere: 0,
+          tauxReussite: perf.tauxReussite || 0,
+          actionsEffectuees: perf.enquetesCompletees || 0,
+          moyenneTraitement: 0,
+          performance: this.getPerformanceLevel(perf.score || perf.tauxReussite || 0)
+        }));
+      },
+      error: (error: any) => {
+        console.error('Erreur lors du chargement de toutes les performances:', error);
+        this.agentPerformance = [];
+      }
+    });
+  }
+
+  private getPerformanceLevel(score: number): 'excellent' | 'bon' | 'moyen' | 'faible' {
+    if (score >= 80) return 'excellent';
+    if (score >= 60) return 'bon';
+    if (score >= 40) return 'moyen';
+    return 'faible';
   }
 
   getRoleDisplay(role: string): string {

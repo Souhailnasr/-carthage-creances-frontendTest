@@ -1,0 +1,178 @@
+<div class="dossier-finance-container">
+  <div *ngIf="loading" class="loading-container">
+    <mat-spinner diameter="50"></mat-spinner>
+    <p>Chargement des données financières...</p>
+  </div>
+
+  <div *ngIf="!loading && data">
+    <!-- Carte Synthèse -->
+    <mat-card class="summary-card">
+      <mat-card-header>
+        <mat-card-title>Synthèse Financière</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="summary-grid">
+          <div class="summary-item">
+            <span class="label">Montant Dû:</span>
+            <span class="value">{{ data.montantDu | number:'1.2-2' }} TND</span>
+          </div>
+          <div class="summary-item">
+            <span class="label">Ratio Frais/Montant Dû:</span>
+            <span class="value" [class]="'ratio-' + getRatioColor(data.ratioFraisMontantDu)">
+              {{ (data.ratioFraisMontantDu * 100) | number:'1.1-1' }}%
+            </span>
+          </div>
+        </div>
+        <div class="ratio-gauge">
+          <div class="gauge-bar">
+            <div 
+              class="gauge-fill" 
+              [class]="'gauge-' + getRatioColor(data.ratioFraisMontantDu)"
+              [style.width.%]="Math.min(data.ratioFraisMontantDu * 100, 100)">
+            </div>
+          </div>
+        </div>
+        <div class="summary-actions">
+          <button mat-raised-button color="primary" (click)="genererFacture()">
+            <mat-icon>description</mat-icon>
+            Générer Facture
+          </button>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Total par Phase -->
+    <mat-card class="phases-card">
+      <mat-card-header>
+        <mat-card-title>Total par Phase</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="phases-grid">
+          <div *ngFor="let phase of data.synthese" class="phase-item">
+            <div class="phase-header">
+              <span class="phase-name">{{ phase.phase }}</span>
+              <mat-chip [color]="phase.color">{{ phase.total | number:'1.2-2' }} TND</mat-chip>
+            </div>
+            <div class="phase-ratio">Ratio: {{ (phase.ratioVsDu * 100) | number:'1.1-1' }}%</div>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Tableau des Frais -->
+    <mat-card class="frais-card">
+      <mat-card-header>
+        <mat-card-title>Détail des Frais</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <table mat-table [dataSource]="data.frais" class="frais-table">
+          <ng-container matColumnDef="phase">
+            <th mat-header-cell *matHeaderCellDef>Phase</th>
+            <td mat-cell *matCellDef="let row">{{ row.phase }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="categorie">
+            <th mat-header-cell *matHeaderCellDef>Catégorie</th>
+            <td mat-cell *matCellDef="let row">{{ row.categorie }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="quantite">
+            <th mat-header-cell *matHeaderCellDef>Quantité</th>
+            <td mat-cell *matCellDef="let row">{{ row.quantite }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="tarifUnitaire">
+            <th mat-header-cell *matHeaderCellDef>Tarif Unitaire</th>
+            <td mat-cell *matCellDef="let row">{{ row.tarifUnitaire | number:'1.2-2' }} TND</td>
+          </ng-container>
+
+          <ng-container matColumnDef="montant">
+            <th mat-header-cell *matHeaderCellDef>Montant</th>
+            <td mat-cell *matCellDef="let row">{{ row.montant | number:'1.2-2' }} TND</td>
+          </ng-container>
+
+          <ng-container matColumnDef="statut">
+            <th mat-header-cell *matHeaderCellDef>Statut</th>
+            <td mat-cell *matCellDef="let row">
+              <mat-chip [color]="getStatutColor(row.statut)">{{ row.statut }}</mat-chip>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="justificatif">
+            <th mat-header-cell *matHeaderCellDef>Justificatif</th>
+            <td mat-cell *matCellDef="let row">
+              <button 
+                *ngIf="row.justificatifUrl"
+                mat-icon-button 
+                [matTooltip]="'Télécharger justificatif'"
+                (click)="downloadJustificatif(row.justificatifUrl!)">
+                <mat-icon>download</mat-icon>
+              </button>
+              <span *ngIf="!row.justificatifUrl">-</span>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef>Actions</th>
+            <td mat-cell *matCellDef="let row">
+              <div class="action-buttons" *ngIf="row.statut === 'EN_ATTENTE'">
+                <button 
+                  mat-icon-button 
+                  color="primary"
+                  [matTooltip]="'Valider'"
+                  (click)="validerFrais(row.id)">
+                  <mat-icon>check</mat-icon>
+                </button>
+                <button 
+                  mat-icon-button 
+                  color="warn"
+                  [matTooltip]="'Rejeter'"
+                  (click)="rejeterFrais(row.id)">
+                  <mat-icon>close</mat-icon>
+                </button>
+              </div>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+        </table>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Historique des Factures -->
+    <mat-card class="history-card" *ngIf="data.factures.length > 0">
+      <mat-card-header>
+        <mat-card-title>Historique des Factures</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="timeline">
+          <div *ngFor="let facture of data.factures" class="timeline-item">
+            <div class="timeline-marker"></div>
+            <div class="timeline-content">
+              <div class="timeline-header">
+                <span class="timeline-date">{{ facture.creeLe | date:'dd/MM/yyyy' }}</span>
+                <mat-chip>{{ facture.statut }}</mat-chip>
+              </div>
+              <div class="timeline-body">
+                <p><strong>Période:</strong> {{ facture.periode }}</p>
+                <p><strong>Montant:</strong> {{ facture.montant | number:'1.2-2' }} TND</p>
+                <button 
+                  *ngIf="facture.urlPdf"
+                  mat-button 
+                  color="primary"
+                  (click)="downloadFacturePDF(facture.factureId)">
+                  <mat-icon>download</mat-icon>
+                  Télécharger PDF
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+</div>
+
+
+

@@ -6,6 +6,8 @@ import { ChefAmiableService } from '../../services/chef-amiable.service';
 import { JwtAuthService } from '../../../core/services/jwt-auth.service';
 import { DossierApiService } from '../../../core/services/dossier-api.service';
 import { UtilisateurService } from '../../../core/services/utilisateur.service';
+import { StatistiqueService } from '../../../core/services/statistique.service';
+import { PerformanceService } from '../../../core/services/performance.service';
 import { StatistiqueAmiable, PerformanceAgent, ChefAmiableNotification } from '../../../shared/models';
 import { User, Role } from '../../../shared/models';
 import { DossierApi, Urgence } from '../../../shared/models/dossier-api.model';
@@ -37,7 +39,9 @@ export class ChefAmiableDashboardComponent implements OnInit, OnDestroy {
     private chefAmiableService: ChefAmiableService,
     private jwtAuthService: JwtAuthService,
     private dossierApiService: DossierApiService,
-    private utilisateurService: UtilisateurService
+    private utilisateurService: UtilisateurService,
+    private statistiqueService: StatistiqueService,
+    private performanceService: PerformanceService
   ) { }
 
   ngOnInit(): void {
@@ -168,20 +172,63 @@ export class ChefAmiableDashboardComponent implements OnInit, OnDestroy {
   }
 
   loadPerformances(): void {
-    // Pour l'instant, utiliser les données mockées
-    // TODO: Implémenter le calcul réel des performances depuis les dossiers
-    this.chefAmiableService.getPerformancesAgents().pipe(
-      takeUntil(this.destroy$)
-    ).subscribe({
-      next: (performances) => {
-        this.performances = performances;
-      },
-      error: (error) => {
-        console.error('❌ Erreur lors du chargement des performances:', error);
-        // Garder un tableau vide en cas d'erreur
-        this.performances = [];
-      }
-    });
+    if (!this.currentUser?.id) {
+      return;
+    }
+
+    const userRole = this.currentUser.roleUtilisateur;
+    const chefId = parseInt(this.currentUser.id);
+
+    // Vérifier si c'est un Super Admin
+    if (userRole === 'SUPER_ADMIN') {
+      // Super Admin voit toutes les performances
+      this.performanceService.getToutesPerformances().pipe(
+        takeUntil(this.destroy$)
+      ).subscribe({
+        next: (performances) => {
+          this.performances = performances.map(perf => {
+            const perfAgent = new PerformanceAgent();
+            perfAgent.agentId = String(perf.agent?.id || perf.id || '');
+            perfAgent.nomAgent = `${perf.agent?.prenom || ''} ${perf.agent?.nom || ''}`;
+            perfAgent.dossiersAssignes = perf.dossiersTraites || 0;
+            perfAgent.dossiersClotures = perf.dossiersValides || 0;
+            perfAgent.tauxReussite = perf.tauxReussite || 0;
+            perfAgent.montantRecupere = 0; // À calculer depuis les dossiers
+            perfAgent.actionsEffectuees = perf.enquetesCompletees || 0;
+            perfAgent.moyenneTempsTraitement = 0; // À calculer
+            return perfAgent;
+          });
+        },
+        error: (error) => {
+          console.error('❌ Erreur lors du chargement de toutes les performances:', error);
+          this.performances = [];
+        }
+      });
+    } else {
+      // Les chefs voient uniquement les performances de leurs agents
+      this.performanceService.getPerformancesChef(chefId).pipe(
+        takeUntil(this.destroy$)
+      ).subscribe({
+        next: (performances) => {
+          this.performances = performances.map(perf => {
+            const perfAgent = new PerformanceAgent();
+            perfAgent.agentId = String(perf.agent?.id || perf.id || '');
+            perfAgent.nomAgent = `${perf.agent?.prenom || ''} ${perf.agent?.nom || ''}`;
+            perfAgent.dossiersAssignes = perf.dossiersTraites || 0;
+            perfAgent.dossiersClotures = perf.dossiersValides || 0;
+            perfAgent.tauxReussite = perf.tauxReussite || 0;
+            perfAgent.montantRecupere = 0; // À calculer depuis les dossiers
+            perfAgent.actionsEffectuees = perf.enquetesCompletees || 0;
+            perfAgent.moyenneTempsTraitement = 0; // À calculer
+            return perfAgent;
+          });
+        },
+        error: (error) => {
+          console.error('❌ Erreur lors du chargement des performances:', error);
+          this.performances = [];
+        }
+      });
+    }
   }
 
   loadNotifications(): void {

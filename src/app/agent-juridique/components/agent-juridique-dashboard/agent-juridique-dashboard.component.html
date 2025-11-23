@@ -1,0 +1,147 @@
+<div class="agent-juridique-dashboard">
+  <div class="dashboard-header">
+    <h1>
+      <i class="fas fa-tachometer-alt"></i>
+      Tableau de Bord - Agent Recouvrement Juridique
+    </h1>
+    <p class="subtitle">Vue d'ensemble de vos activités et performances</p>
+  </div>
+
+  <div class="loading-container" *ngIf="loading">
+    <mat-spinner diameter="50"></mat-spinner>
+    <p>Chargement des statistiques...</p>
+  </div>
+
+  <div class="dashboard-content" *ngIf="!loading && stats">
+    <!-- Métriques Principales -->
+    <div class="stats-grid">
+      <mat-card class="stat-card">
+        <mat-card-content>
+          <div class="stat-icon total-dossiers">
+            <i class="fas fa-folder-open"></i>
+          </div>
+          <div class="stat-info">
+            <h3>{{ stats.totalDossiers }}</h3>
+            <p>Dossiers Affectés</p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="stat-card">
+        <mat-card-content>
+          <div class="stat-icon en-cours">
+            <i class="fas fa-clock"></i>
+          </div>
+          <div class="stat-info">
+            <h3>{{ stats.dossiersEnCours }}</h3>
+            <p>Dossiers en Cours</p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="stat-card">
+        <mat-card-content>
+          <div class="stat-icon clotures">
+            <i class="fas fa-check-circle"></i>
+          </div>
+          <div class="stat-info">
+            <h3>{{ stats.dossiersClotures }}</h3>
+            <p>Dossiers Clôturés</p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="stat-card">
+        <mat-card-content>
+          <div class="stat-icon audiences">
+            <i class="fas fa-gavel"></i>
+          </div>
+          <div class="stat-info">
+            <h3>{{ stats.totalAudiences }}</h3>
+            <p>Audiences Totales</p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="stat-card">
+        <mat-card-content>
+          <div class="stat-icon planifiees">
+            <i class="fas fa-calendar-alt"></i>
+          </div>
+          <div class="stat-info">
+            <h3>{{ stats.audiencesPlanifiees }}</h3>
+            <p>Audiences Planifiées</p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="stat-card">
+        <mat-card-content>
+          <div class="stat-icon terminees">
+            <i class="fas fa-check-double"></i>
+          </div>
+          <div class="stat-info">
+            <h3>{{ stats.audiencesTerminees }}</h3>
+            <p>Audiences Terminées</p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="stat-card">
+        <mat-card-content>
+          <div class="stat-icon montant">
+            <i class="fas fa-money-bill-wave"></i>
+          </div>
+          <div class="stat-info">
+            <h3>{{ stats.montantRecupere | number:'1.0-0' }} TND</h3>
+            <p>Montant Récupéré</p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="stat-card">
+        <mat-card-content>
+          <div class="stat-icon en-cours-montant">
+            <i class="fas fa-hourglass-half"></i>
+          </div>
+          <div class="stat-info">
+            <h3>{{ stats.montantEnCours | number:'1.0-0' }} TND</h3>
+            <p>Montant en Cours</p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+
+    <!-- Actions Rapides -->
+    <div class="quick-actions">
+      <mat-card>
+        <mat-card-header>
+          <mat-card-title>
+            <i class="fas fa-bolt"></i> Actions Rapides
+          </mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="actions-grid">
+            <button mat-raised-button color="primary" routerLink="/agent-juridique/dossiers">
+              <i class="fas fa-folder-open"></i>
+              Mes Dossiers
+            </button>
+            <button mat-raised-button color="accent" routerLink="/agent-juridique/audiences">
+              <i class="fas fa-gavel"></i>
+              Gérer les Audiences
+            </button>
+            <button mat-raised-button routerLink="/agent-juridique/consultation">
+              <i class="fas fa-search"></i>
+              Consultation Avocats/Huissiers
+            </button>
+            <button mat-raised-button routerLink="/notifications">
+              <i class="fas fa-bell"></i>
+              Notifications
+            </button>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
+</div>
+

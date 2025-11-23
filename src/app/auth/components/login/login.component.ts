@@ -117,19 +117,19 @@ export class LoginComponent implements OnInit, OnDestroy {
         return '/juridique';
         
       case 'AGENT_RECOUVREMENT_JURIDIQUE':
-        return '/juridique/dashboard';
+        return '/agent-juridique/dashboard';
         
       case 'CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE':
         return '/chef-amiable';
         
       case 'AGENT_RECOUVREMENT_AMIABLE':
-        return '/chef-amiable/dashboard';
+        return '/agent-amiable/dashboard';
         
       case 'CHEF_DEPARTEMENT_FINANCE':
-        return '/dashboard';
+        return '/finance/dashboard';
         
       case 'AGENT_FINANCE':
-        return '/dashboard';
+        return '/finance/dashboard';
         
       default:
         console.warn('⚠️ Rôle non reconnu:', roleAuthority, '- Redirection vers dashboard par défaut');
@@ -220,9 +220,37 @@ export class LoginComponent implements OnInit, OnDestroy {
       error: (error) => {
         this.loading = false;
         this.invalidLogin = true;
-        this.error = error.message || 'Erreur de connexion';
-        this.toastService.error('Email ou mot de passe incorrect.');
-        console.error('❌ Erreur de connexion:', error);
+        
+        // Gestion spécifique des erreurs
+        let errorMessage = 'Email ou mot de passe incorrect.';
+        
+        if (error.status === 500) {
+          // Erreur serveur - peut être Bad credentials ou autre
+          const errorBody = error.error;
+          if (errorBody?.message?.includes('Bad credentials') || 
+              errorBody?.message?.includes('bad credentials') ||
+              errorBody?.error?.includes('Bad credentials')) {
+            errorMessage = 'Mot de passe incorrect. Veuillez vérifier vos identifiants.';
+          } else {
+            errorMessage = 'Erreur serveur. Veuillez contacter l\'administrateur.';
+            console.error('❌ Erreur 500 détaillée:', errorBody);
+          }
+        } else if (error.status === 401) {
+          errorMessage = 'Email ou mot de passe incorrect.';
+        } else if (error.status === 403) {
+          errorMessage = 'Accès refusé. Votre compte peut être désactivé.';
+        } else if (error.status === 0) {
+          errorMessage = 'Impossible de contacter le serveur. Vérifiez votre connexion.';
+        }
+        
+        this.error = errorMessage;
+        this.toastService.error(errorMessage);
+        console.error('❌ Erreur de connexion:', {
+          status: error.status,
+          statusText: error.statusText,
+          message: error.message,
+          error: error.error
+        });
       }
     });
   }
@@ -487,6 +515,14 @@ export class LoginComponent implements OnInit, OnDestroy {
         this.router.navigate(['/chef-amiable/dashboard']);
         this.toastService.success('Connexion réussie - Agent Amiable');
         break;
+      case 'CHEF_DEPARTEMENT_FINANCE':
+        this.router.navigate(['/finance/dashboard']);
+        this.toastService.success('Connexion réussie - Chef Département Finance');
+        break;
+      case 'AGENT_FINANCE':
+        this.router.navigate(['/finance/dashboard']);
+        this.toastService.success('Connexion réussie - Agent Finance');
+        break;
       default:
         console.warn('⚠️ Rôle non reconnu:', role, 'normalisé:', normalizedRole);
         this.router.navigate(['/dashboard']);
@@ -538,8 +574,34 @@ export class LoginComponent implements OnInit, OnDestroy {
         },
         error: (error) => {
           this.loading = false;
-          this.toastService.error('Email ou mot de passe incorrect.');
-          console.error('❌ Erreur de connexion:', error);
+          
+          // Gestion spécifique des erreurs
+          let errorMessage = 'Email ou mot de passe incorrect.';
+          
+          if (error.status === 500) {
+            const errorBody = error.error;
+            if (errorBody?.message?.includes('Bad credentials') || 
+                errorBody?.message?.includes('bad credentials') ||
+                errorBody?.error?.includes('Bad credentials')) {
+              errorMessage = 'Mot de passe incorrect. Veuillez vérifier vos identifiants.';
+            } else {
+              errorMessage = 'Erreur serveur. Veuillez contacter l\'administrateur.';
+            }
+          } else if (error.status === 401) {
+            errorMessage = 'Email ou mot de passe incorrect.';
+          } else if (error.status === 403) {
+            errorMessage = 'Accès refusé. Votre compte peut être désactivé.';
+          } else if (error.status === 0) {
+            errorMessage = 'Impossible de contacter le serveur. Vérifiez votre connexion.';
+          }
+          
+          this.toastService.error(errorMessage);
+          console.error('❌ Erreur de connexion:', {
+            status: error.status,
+            statusText: error.statusText,
+            message: error.message,
+            error: error.error
+          });
         }
       });
   }
@@ -617,6 +679,12 @@ export class LoginComponent implements OnInit, OnDestroy {
       case 'AGENT_RECOUVREMENT_AMIABLE':
       case 'RoleUtilisateur_AGENT_RECOUVREMENT_AMIABLE':
         return '/chef-amiable/dashboard';
+      case 'CHEF_DEPARTEMENT_FINANCE':
+      case 'RoleUtilisateur_CHEF_DEPARTEMENT_FINANCE':
+        return '/finance/dashboard';
+      case 'AGENT_FINANCE':
+      case 'RoleUtilisateur_AGENT_FINANCE':
+        return '/finance/dashboard';
       default:
         return '/dashboard';
     }

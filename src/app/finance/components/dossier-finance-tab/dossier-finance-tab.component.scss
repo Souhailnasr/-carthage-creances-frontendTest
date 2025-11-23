@@ -1,0 +1,186 @@
+.dossier-finance-container {
+  padding: 24px;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px;
+  
+  p {
+    margin-top: 16px;
+    color: rgba(0, 0, 0, 0.6);
+  }
+}
+
+.summary-card,
+.phases-card,
+.frais-card,
+.history-card {
+  margin-bottom: 24px;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  
+  .label {
+    font-size: 14px;
+    color: rgba(0, 0, 0, 0.6);
+  }
+  
+  .value {
+    font-size: 24px;
+    font-weight: 600;
+    
+    &.ratio-success {
+      color: #4caf50;
+    }
+    
+    &.ratio-warning {
+      color: #ff9800;
+    }
+    
+    &.ratio-danger {
+      color: #f44336;
+    }
+  }
+}
+
+.ratio-gauge {
+  margin: 24px 0;
+  
+  .gauge-bar {
+    width: 100%;
+    height: 24px;
+    background-color: #e0e0e0;
+    border-radius: 12px;
+    overflow: hidden;
+    
+    .gauge-fill {
+      height: 100%;
+      transition: width 0.3s ease;
+      
+      &.gauge-success {
+        background-color: #4caf50;
+      }
+      
+      &.gauge-warning {
+        background-color: #ff9800;
+      }
+      
+      &.gauge-danger {
+        background-color: #f44336;
+      }
+    }
+  }
+}
+
+.summary-actions {
+  margin-top: 24px;
+}
+
+.phases-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+}
+
+.phase-item {
+  padding: 16px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  
+  .phase-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    
+    .phase-name {
+      font-weight: 500;
+    }
+  }
+  
+  .phase-ratio {
+    font-size: 12px;
+    color: rgba(0, 0, 0, 0.6);
+  }
+}
+
+.frais-table {
+  width: 100%;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.timeline {
+  position: relative;
+  padding-left: 32px;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background-color: #e0e0e0;
+  }
+}
+
+.timeline-item {
+  position: relative;
+  margin-bottom: 24px;
+  
+  .timeline-marker {
+    position: absolute;
+    left: -24px;
+    top: 4px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background-color: #2196f3;
+    border: 3px solid white;
+    box-shadow: 0 0 0 2px #e0e0e0;
+  }
+  
+  .timeline-content {
+    background: #f5f5f5;
+    padding: 16px;
+    border-radius: 8px;
+    
+    .timeline-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      
+      .timeline-date {
+        font-weight: 500;
+      }
+    }
+    
+    .timeline-body {
+      p {
+        margin: 4px 0;
+      }
+    }
+  }
+}
+
+
+

@@ -1,0 +1,29 @@
+### Test Authentification Chef Financier
+### Utiliser avec l'extension REST Client de VS Code ou Postman
+
+### Test 1: Authentification Chef Financier
+POST http://localhost:8089/carthage-creance/auth/authenticate
+Content-Type: application/json
+
+{
+  "email": "ayechi.fahmi@gmail.com",
+  "password": "Souhail01"
+}
+
+### Test 2: Vérifier l'utilisateur (après authentification réussie)
+GET http://localhost:8089/carthage-creance/api/users/email/ayechi.fahmi@gmail.com
+Authorization: Bearer {{token}}
+
+### Test 3: Test avec un autre utilisateur (Super Admin)
+POST http://localhost:8089/carthage-creance/auth/authenticate
+Content-Type: application/json
+
+{
+  "email": "ali.mejri@example.com",
+  "password": "password123"
+}
+
+### Test 4: Vérifier les rôles disponibles
+GET http://localhost:8089/carthage-creance/api/roles
+Authorization: Bearer {{token}}
+

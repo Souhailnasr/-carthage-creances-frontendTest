@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
 import { AuthService } from '../../../core/services/auth.service';
+import { StatistiqueService } from '../../../core/services/statistique.service';
+import { PerformanceService } from '../../../core/services/performance.service';
 import { User } from '../../../shared/models';
 
 interface GlobalStats {
@@ -63,7 +65,11 @@ export class SuperadminDashboardComponent implements OnInit, OnDestroy {
   // Données pour les graphiques
   chartData: any = {};
 
-  constructor(private authService: AuthService) {}
+  constructor(
+    private authService: AuthService,
+    private statistiqueService: StatistiqueService,
+    private performanceService: PerformanceService
+  ) {}
 
   ngOnInit(): void {
     this.currentUser = this.authService.getCurrentUser();
@@ -78,20 +84,57 @@ export class SuperadminDashboardComponent implements OnInit, OnDestroy {
   }
 
   loadGlobalStatistics(): void {
-    // Simulation des données globales
-    this.globalStats = {
-      totalUsers: 45,
-      totalDossiers: 1250,
-      totalCreanciers: 89,
-      totalDebiteurs: 342,
-      activeAgents: 28,
-      totalNotifications: 156,
-      performanceGlobale: 87,
-      dossiersEnCours: 456,
-      dossiersClotures: 794,
-      recouvrementAmiable: 623,
-      recouvrementJuridique: 627
-    };
+    // Super Admin charge toutes les statistiques globales
+    this.statistiqueService.getStatistiquesGlobales().pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (stats) => {
+        this.globalStats = {
+          totalUsers: 0, // À charger depuis UtilisateurService
+          totalDossiers: stats.totalDossiers || 0,
+          totalCreanciers: 0, // À charger depuis CreancierService
+          totalDebiteurs: 0, // À charger depuis DebiteurService
+          activeAgents: 0, // À calculer depuis les utilisateurs actifs
+          totalNotifications: 0, // À charger depuis NotificationService
+          performanceGlobale: stats.tauxReussiteGlobal || 0,
+          dossiersEnCours: stats.dossiersEnCours || 0,
+          dossiersClotures: stats.dossiersClotures || 0,
+          recouvrementAmiable: stats.totalActionsAmiables || 0,
+          recouvrementJuridique: stats.totalAudiences || 0
+        };
+      },
+      error: (error) => {
+        console.error('Erreur lors du chargement des statistiques globales:', error);
+        // Garder les valeurs par défaut en cas d'erreur
+        this.globalStats = {
+          totalUsers: 0,
+          totalDossiers: 0,
+          totalCreanciers: 0,
+          totalDebiteurs: 0,
+          activeAgents: 0,
+          totalNotifications: 0,
+          performanceGlobale: 0,
+          dossiersEnCours: 0,
+          dossiersClotures: 0,
+          recouvrementAmiable: 0,
+          recouvrementJuridique: 0
+        };
+      }
+    });
+
+    // Charger les statistiques de tous les chefs
+    this.statistiqueService.getStatistiquesChefs().pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (chefsStats) => {
+        // Mettre à jour les statistiques globales avec les données des chefs
+        const totalAgents = chefsStats.reduce((sum, chef) => sum + (chef.nombreAgents || 0), 0);
+        this.globalStats.activeAgents = totalAgents;
+      },
+      error: (error) => {
+        console.error('Erreur lors du chargement des statistiques des chefs:', error);
+      }
+    });
   }
 
   loadModuleStatistics(): void {

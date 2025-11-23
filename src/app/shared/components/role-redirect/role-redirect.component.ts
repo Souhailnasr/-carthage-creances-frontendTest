@@ -91,13 +91,19 @@ export class RoleRedirectComponent implements OnInit {
         return '/dossier/dashboard';
       case 'AGENT_RECOUVREMENT_AMIABLE':
         console.log('🔍 getRedirectUrlByRole - Cas AGENT_RECOUVREMENT_AMIABLE');
-        return '/amiable/dashboard';
+        return '/agent-amiable/dashboard';
       case 'AGENT_RECOUVREMENT_JURIDIQUE':
         console.log('🔍 getRedirectUrlByRole - Cas AGENT_RECOUVREMENT_JURIDIQUE');
-        return '/juridique/dashboard';
+        return '/agent-juridique/dashboard';
       case 'AGENT_DOSSIER':
         console.log('🔍 getRedirectUrlByRole - Cas AGENT_DOSSIER');
         return '/dossier/dashboard';
+      case 'CHEF_DEPARTEMENT_FINANCE':
+        console.log('🔍 getRedirectUrlByRole - Cas CHEF_DEPARTEMENT_FINANCE');
+        return '/finance/dashboard';
+      case 'AGENT_FINANCE':
+        console.log('🔍 getRedirectUrlByRole - Cas AGENT_FINANCE');
+        return '/finance/dashboard';
       default:
         console.log('🔍 getRedirectUrlByRole - Cas DEFAULT pour rôle:', role, 'normalisé:', normalizedRole);
         return '/dashboard';

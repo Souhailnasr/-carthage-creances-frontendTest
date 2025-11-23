@@ -1,0 +1,145 @@
+.insights-container {
+  padding: 24px;
+}
+
+.header {
+  margin-bottom: 32px;
+  
+  h1 {
+    margin: 0 0 8px 0;
+    font-size: 28px;
+    font-weight: 500;
+  }
+  
+  p {
+    margin: 0;
+    color: rgba(0, 0, 0, 0.6);
+  }
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px;
+  
+  p {
+    margin-top: 16px;
+    color: rgba(0, 0, 0, 0.6);
+  }
+}
+
+.no-insights {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px;
+  color: rgba(0, 0, 0, 0.5);
+  
+  mat-icon {
+    font-size: 64px;
+    width: 64px;
+    height: 64px;
+    margin-bottom: 16px;
+    color: #4caf50;
+  }
+}
+
+.insights-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  gap: 24px;
+}
+
+.insight-card {
+  transition: transform 0.2s, box-shadow 0.2s;
+  
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+  
+  &.category-OPTIMISATION_COUTS {
+    border-left: 4px solid #2196f3;
+  }
+  
+  &.category-RISQUES_DOSSIER {
+    border-left: 4px solid #f44336;
+  }
+  
+  &.category-PERFORMANCE_AGENT {
+    border-left: 4px solid #ff9800;
+  }
+}
+
+.card-header-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+  
+  mat-icon {
+    font-size: 32px;
+    width: 32px;
+    height: 32px;
+    
+    &.icon-primary {
+      color: #2196f3;
+    }
+    
+    &.icon-warn {
+      color: #f44336;
+    }
+    
+    &.icon-accent {
+      color: #ff9800;
+    }
+  }
+}
+
+.insight-details {
+  margin-top: 16px;
+}
+
+.action-suggestion {
+  margin-bottom: 16px;
+  
+  strong {
+    display: block;
+    margin-bottom: 8px;
+    color: rgba(0, 0, 0, 0.7);
+  }
+  
+  p {
+    margin: 0;
+    padding: 12px;
+    background: #f5f5f5;
+    border-radius: 4px;
+    font-style: italic;
+  }
+}
+
+.insight-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 14px;
+  color: rgba(0, 0, 0, 0.6);
+  
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+  
+  &.highlight {
+    color: #4caf50;
+    font-weight: 600;
+  }
+}
+
+
+

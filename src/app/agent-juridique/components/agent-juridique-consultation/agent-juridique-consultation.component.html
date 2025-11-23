@@ -1,0 +1,141 @@
+<div class="agent-juridique-consultation">
+  <div class="header">
+    <h1>
+      <i class="fas fa-search"></i>
+      Consultation Avocats et Huissiers
+    </h1>
+    <p class="subtitle">Consultation en lecture seule des avocats et huissiers disponibles</p>
+  </div>
+
+  <mat-tab-group>
+    <!-- Onglet Avocats -->
+    <mat-tab label="Avocats">
+      <div class="tab-content">
+        <mat-card class="search-card">
+          <mat-card-content>
+            <mat-form-field appearance="outline" class="search-field">
+              <mat-label>Rechercher un avocat</mat-label>
+              <input matInput [(ngModel)]="searchAvocat" (input)="filterAvocats()" placeholder="Nom, prénom, email, spécialité, numéro d'ordre...">
+              <mat-icon matPrefix>search</mat-icon>
+            </mat-form-field>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card>
+          <mat-card-content>
+            <div class="loading-container" *ngIf="loading">
+              <mat-spinner diameter="50"></mat-spinner>
+              <p>Chargement des avocats...</p>
+            </div>
+
+            <div *ngIf="!loading">
+              <table mat-table [dataSource]="filteredAvocats" class="consultation-table">
+                <ng-container matColumnDef="nom">
+                  <th mat-header-cell *matHeaderCellDef>Nom</th>
+                  <td mat-cell *matCellDef="let avocat">{{ avocat.nom }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="prenom">
+                  <th mat-header-cell *matHeaderCellDef>Prénom</th>
+                  <td mat-cell *matCellDef="let avocat">{{ avocat.prenom }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="email">
+                  <th mat-header-cell *matHeaderCellDef>Email</th>
+                  <td mat-cell *matCellDef="let avocat">{{ avocat.email }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="telephone">
+                  <th mat-header-cell *matHeaderCellDef>Téléphone</th>
+                  <td mat-cell *matCellDef="let avocat">{{ avocat.telephone || 'N/A' }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="specialite">
+                  <th mat-header-cell *matHeaderCellDef>Spécialité</th>
+                  <td mat-cell *matCellDef="let avocat">
+                    <mat-chip>{{ avocat.specialite || 'N/A' }}</mat-chip>
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="numeroOrdre">
+                  <th mat-header-cell *matHeaderCellDef>Numéro d'Ordre</th>
+                  <td mat-cell *matCellDef="let avocat">{{ avocat.numeroOrdre || 'N/A' }}</td>
+                </ng-container>
+
+                <tr mat-header-row *matHeaderRowDef="displayedColumnsAvocats"></tr>
+                <tr mat-row *matRowDef="let row; columns: displayedColumnsAvocats;"></tr>
+              </table>
+
+              <div *ngIf="filteredAvocats.length === 0" class="no-data">
+                <i class="fas fa-user-tie"></i>
+                <p>Aucun avocat trouvé</p>
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </mat-tab>
+
+    <!-- Onglet Huissiers -->
+    <mat-tab label="Huissiers">
+      <div class="tab-content">
+        <mat-card class="search-card">
+          <mat-card-content>
+            <mat-form-field appearance="outline" class="search-field">
+              <mat-label>Rechercher un huissier</mat-label>
+              <input matInput [(ngModel)]="searchHuissier" (input)="filterHuissiers()" placeholder="Nom, prénom, email, adresse...">
+              <mat-icon matPrefix>search</mat-icon>
+            </mat-form-field>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card>
+          <mat-card-content>
+            <div class="loading-container" *ngIf="loading">
+              <mat-spinner diameter="50"></mat-spinner>
+              <p>Chargement des huissiers...</p>
+            </div>
+
+            <div *ngIf="!loading">
+              <table mat-table [dataSource]="filteredHuissiers" class="consultation-table">
+                <ng-container matColumnDef="nom">
+                  <th mat-header-cell *matHeaderCellDef>Nom</th>
+                  <td mat-cell *matCellDef="let huissier">{{ huissier.nom }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="prenom">
+                  <th mat-header-cell *matHeaderCellDef>Prénom</th>
+                  <td mat-cell *matCellDef="let huissier">{{ huissier.prenom }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="email">
+                  <th mat-header-cell *matHeaderCellDef>Email</th>
+                  <td mat-cell *matCellDef="let huissier">{{ huissier.email }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="telephone">
+                  <th mat-header-cell *matHeaderCellDef>Téléphone</th>
+                  <td mat-cell *matCellDef="let huissier">{{ huissier.telephone || 'N/A' }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="adresse">
+                  <th mat-header-cell *matHeaderCellDef>Adresse</th>
+                  <td mat-cell *matCellDef="let huissier">{{ huissier.adresse || 'N/A' }}</td>
+                </ng-container>
+
+                <tr mat-header-row *matHeaderRowDef="displayedColumnsHuissiers"></tr>
+                <tr mat-row *matRowDef="let row; columns: displayedColumnsHuissiers;"></tr>
+              </table>
+
+              <div *ngIf="filteredHuissiers.length === 0" class="no-data">
+                <i class="fas fa-balance-scale"></i>
+                <p>Aucun huissier trouvé</p>
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </mat-tab>
+  </mat-tab-group>
+</div>
+

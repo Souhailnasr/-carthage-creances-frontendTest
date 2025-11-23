@@ -1,0 +1,191 @@
+<div class="tarif-container">
+  <div class="header">
+    <h1>Gestion des Tarifs</h1>
+    <p>Catalogue et gestion des tarifs unitaires</p>
+  </div>
+
+  <div class="actions-bar">
+    <button mat-raised-button color="primary" (click)="openForm()">
+      <mat-icon>add</mat-icon>
+      Nouveau Tarif
+    </button>
+    <button mat-raised-button (click)="simulationResult = null">
+      <mat-icon>calculate</mat-icon>
+      Simuler Coût
+    </button>
+  </div>
+
+  <!-- Formulaire Simulation -->
+  <mat-card *ngIf="simulationResult === null && !showForm" class="simulation-card">
+    <mat-card-header>
+      <mat-card-title>Simuler Coût</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <form [formGroup]="simulationForm" class="simulation-form">
+        <mat-form-field appearance="outline">
+          <mat-label>Phase</mat-label>
+          <input matInput formControlName="phase" required>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Catégorie</mat-label>
+          <input matInput formControlName="categorie" required>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Nombre d'occurrences</mat-label>
+          <input matInput type="number" formControlName="occurrences" required>
+        </mat-form-field>
+
+        <button mat-raised-button color="primary" (click)="simulerCout()" [disabled]="simulationForm.invalid">
+          Calculer
+        </button>
+      </form>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Résultat Simulation -->
+  <mat-card *ngIf="simulationResult" class="result-card">
+    <mat-card-header>
+      <mat-card-title>Résultat de la Simulation</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="result-value">
+        <span class="label">Coût Total Estimé:</span>
+        <span class="value">{{ simulationResult.coutTotal | number:'1.2-2' }} TND</span>
+      </div>
+      <button mat-button (click)="simulationResult = null">Nouvelle Simulation</button>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Formulaire CRUD -->
+  <mat-card *ngIf="showForm" class="form-card">
+    <mat-card-header>
+      <mat-card-title>{{ editingTarif ? 'Modifier Tarif' : 'Nouveau Tarif' }}</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <form [formGroup]="tarifForm" class="tarif-form">
+        <div class="form-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Phase</mat-label>
+            <input matInput formControlName="phase" required>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Catégorie</mat-label>
+            <input matInput formControlName="categorie" required>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Tarif</mat-label>
+            <input matInput type="number" formControlName="tarif" required>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Devise</mat-label>
+            <mat-select formControlName="devise" required>
+              <mat-option value="TND">TND</mat-option>
+              <mat-option value="EUR">EUR</mat-option>
+              <mat-option value="USD">USD</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Date Début</mat-label>
+            <input matInput [matDatepicker]="picker1" formControlName="dateDebut" required>
+            <mat-datepicker-toggle matSuffix [for]="picker1"></mat-datepicker-toggle>
+            <mat-datepicker #picker1></mat-datepicker>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Date Fin (optionnel)</mat-label>
+            <input matInput [matDatepicker]="picker2" formControlName="dateFin">
+            <mat-datepicker-toggle matSuffix [for]="picker2"></mat-datepicker-toggle>
+            <mat-datepicker #picker2></mat-datepicker>
+          </mat-form-field>
+        </div>
+        <div class="form-actions">
+          <button mat-raised-button color="primary" (click)="saveTarif()" [disabled]="tarifForm.invalid">
+            Enregistrer
+          </button>
+          <button mat-button (click)="closeForm()">Annuler</button>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Tableau des Tarifs -->
+  <mat-card class="tarifs-card">
+    <mat-card-header>
+      <mat-card-title>Catalogue des Tarifs</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <div *ngIf="loading" class="loading-container">
+        <mat-spinner diameter="50"></mat-spinner>
+        <p>Chargement...</p>
+      </div>
+
+      <div *ngIf="!loading && tarifs.length === 0" class="no-data">
+        <mat-icon>info</mat-icon>
+        <p>Aucun tarif trouvé</p>
+      </div>
+
+      <table *ngIf="!loading && tarifs.length > 0" mat-table [dataSource]="tarifs" class="tarifs-table">
+        <ng-container matColumnDef="phase">
+          <th mat-header-cell *matHeaderCellDef>Phase</th>
+          <td mat-cell *matCellDef="let row">{{ row.phase }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="categorie">
+          <th mat-header-cell *matHeaderCellDef>Catégorie</th>
+          <td mat-cell *matCellDef="let row">{{ row.categorie }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="tarif">
+          <th mat-header-cell *matHeaderCellDef>Tarif</th>
+          <td mat-cell *matCellDef="let row">{{ row.tarifUnitaire | number:'1.2-2' }} {{ row.devise }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="devise">
+          <th mat-header-cell *matHeaderCellDef>Devise</th>
+          <td mat-cell *matCellDef="let row">{{ row.devise }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="dateEffet">
+          <th mat-header-cell *matHeaderCellDef>Date Effet</th>
+          <td mat-cell *matCellDef="let row">{{ row.dateDebut | date:'dd/MM/yyyy' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="dateFin">
+          <th mat-header-cell *matHeaderCellDef>Date Fin</th>
+          <td mat-cell *matCellDef="let row">{{ row.dateFin | date:'dd/MM/yyyy' || '-' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="actif">
+          <th mat-header-cell *matHeaderCellDef>Actif</th>
+          <td mat-cell *matCellDef="let row">
+            <mat-chip [color]="row.actif ? 'primary' : 'warn'">
+              {{ row.actif ? 'Oui' : 'Non' }}
+            </mat-chip>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef>Actions</th>
+          <td mat-cell *matCellDef="let row">
+            <button mat-icon-button color="primary" [matTooltip]="'Modifier'" (click)="openForm(row)">
+              <mat-icon>edit</mat-icon>
+            </button>
+            <button mat-icon-button color="warn" [matTooltip]="'Supprimer'" (click)="deleteTarif(row.id)">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+      </table>
+    </mat-card-content>
+  </mat-card>
+</div>
+

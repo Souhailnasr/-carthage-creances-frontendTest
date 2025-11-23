@@ -1,0 +1,146 @@
+<div class="agent-amiable-dashboard">
+  <div class="dashboard-header">
+    <h1>
+      <i class="fas fa-tachometer-alt"></i>
+      Tableau de Bord - Agent Recouvrement Amiable
+    </h1>
+    <p class="subtitle">Vue d'ensemble de vos activités et performances</p>
+  </div>
+
+  <div class="loading-container" *ngIf="loading">
+    <mat-spinner diameter="50"></mat-spinner>
+    <p>Chargement des statistiques...</p>
+  </div>
+
+  <div class="dashboard-content" *ngIf="!loading && stats">
+    <!-- Métriques Principales -->
+    <div class="stats-grid">
+      <mat-card class="stat-card">
+        <mat-card-content>
+          <div class="stat-icon total-dossiers">
+            <i class="fas fa-folder-open"></i>
+          </div>
+          <div class="stat-info">
+            <h3>{{ stats.totalDossiers }}</h3>
+            <p>Dossiers Affectés</p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="stat-card">
+        <mat-card-content>
+          <div class="stat-icon en-cours">
+            <i class="fas fa-clock"></i>
+          </div>
+          <div class="stat-info">
+            <h3>{{ stats.dossiersEnCours }}</h3>
+            <p>Dossiers en Cours</p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="stat-card">
+        <mat-card-content>
+          <div class="stat-icon clotures">
+            <i class="fas fa-check-circle"></i>
+          </div>
+          <div class="stat-info">
+            <h3>{{ stats.dossiersClotures }}</h3>
+            <p>Dossiers Clôturés</p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="stat-card">
+        <mat-card-content>
+          <div class="stat-icon actions">
+            <i class="fas fa-tasks"></i>
+          </div>
+          <div class="stat-info">
+            <h3>{{ stats.totalActions }}</h3>
+            <p>Actions Effectuées</p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="stat-card">
+        <mat-card-content>
+          <div class="stat-icon reussites">
+            <i class="fas fa-thumbs-up"></i>
+          </div>
+          <div class="stat-info">
+            <h3>{{ stats.actionsReussies }}</h3>
+            <p>Actions Réussies</p>
+            <mat-chip class="taux-chip">
+              {{ getTauxReussite() | number:'1.1-1' }}%
+            </mat-chip>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="stat-card">
+        <mat-card-content>
+          <div class="stat-icon montant">
+            <i class="fas fa-money-bill-wave"></i>
+          </div>
+          <div class="stat-info">
+            <h3>{{ stats.montantRecupere | number:'1.0-0' }} TND</h3>
+            <p>Montant Récupéré</p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="stat-card">
+        <mat-card-content>
+          <div class="stat-icon en-cours-montant">
+            <i class="fas fa-hourglass-half"></i>
+          </div>
+          <div class="stat-info">
+            <h3>{{ stats.montantEnCours | number:'1.0-0' }} TND</h3>
+            <p>Montant en Cours</p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="stat-card">
+        <mat-card-content>
+          <div class="stat-icon taux">
+            <i class="fas fa-chart-line"></i>
+          </div>
+          <div class="stat-info">
+            <h3>{{ stats.tauxReussite | number:'1.1-1' }}%</h3>
+            <p>Taux de Réussite Global</p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+
+    <!-- Actions Rapides -->
+    <div class="quick-actions">
+      <mat-card>
+        <mat-card-header>
+          <mat-card-title>
+            <i class="fas fa-bolt"></i> Actions Rapides
+          </mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="actions-grid">
+            <button mat-raised-button color="primary" routerLink="/agent-amiable/dossiers">
+              <i class="fas fa-folder-open"></i>
+              Mes Dossiers
+            </button>
+            <button mat-raised-button color="accent" routerLink="/agent-amiable/actions">
+              <i class="fas fa-tasks"></i>
+              Gérer les Actions
+            </button>
+            <button mat-raised-button routerLink="/notifications">
+              <i class="fas fa-bell"></i>
+              Notifications
+            </button>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
+</div>
+

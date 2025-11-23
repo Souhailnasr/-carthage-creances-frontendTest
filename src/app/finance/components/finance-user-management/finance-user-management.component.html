@@ -1,0 +1,215 @@
+<div class="user-management-container">
+  <div class="header">
+    <h1>Gestion des Agents Financiers</h1>
+    <button class="btn btn-primary" (click)="showCreateUserForm()">
+      <i class="fas fa-user-plus"></i> Ajouter un Agent Financier
+    </button>
+  </div>
+
+  <!-- Formulaire de création/édition -->
+  <div class="form-container" *ngIf="showCreateForm">
+    <div class="form-header">
+      <h2>{{ isEditMode ? 'Modifier l\'Agent Financier' : 'Nouvel Agent Financier' }}</h2>
+      <button class="btn btn-secondary" (click)="cancelForm()">
+        <i class="fas fa-times"></i> Annuler
+      </button>
+    </div>
+
+    <form [formGroup]="userForm" (ngSubmit)="onSubmit()" class="user-form">
+      <div class="form-grid">
+        <app-form-input label="Nom" [control]="nomControl" id="nom"></app-form-input>
+        <app-form-input label="Prénom" [control]="prenomControl" id="prenom"></app-form-input>
+        <app-form-input label="Email" [control]="emailControl" type="email" id="email"></app-form-input>
+        
+        <!-- Mot de passe avec visibilité -->
+        <div class="form-group password-group">
+          <label for="motDePasse">Mot de passe</label>
+          <div class="password-input-container">
+            <input 
+              [type]="getPasswordFieldType()" 
+              id="motDePasse" 
+              formControlName="motDePasse" 
+              class="form-control"
+              placeholder="Saisissez le mot de passe"
+            >
+            <button 
+              type="button" 
+              class="password-toggle-btn" 
+              (click)="togglePasswordVisibility()"
+              [attr.aria-label]="showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'"
+            >
+              <i class="fas" [ngClass]="showPassword ? 'fa-eye-slash' : 'fa-eye'"></i>
+            </button>
+          </div>
+          <div class="form-error" *ngIf="motDePasseControl.invalid && motDePasseControl.touched">
+            <small *ngIf="motDePasseControl.errors?.['required']">Le mot de passe est requis</small>
+            <small *ngIf="motDePasseControl.errors?.['minlength']">Le mot de passe doit contenir au moins 6 caractères</small>
+          </div>
+        </div>
+
+        <!-- Confirmation du mot de passe -->
+        <div class="form-group password-group">
+          <label for="confirmPassword">Confirmer le mot de passe</label>
+          <div class="password-input-container">
+            <input 
+              [type]="getConfirmPasswordFieldType()" 
+              id="confirmPassword" 
+              formControlName="confirmPassword" 
+              class="form-control"
+              placeholder="Confirmez le mot de passe"
+            >
+            <button 
+              type="button" 
+              class="password-toggle-btn" 
+              (click)="toggleConfirmPasswordVisibility()"
+              [attr.aria-label]="showConfirmPassword ? 'Masquer la confirmation' : 'Afficher la confirmation'"
+            >
+              <i class="fas" [ngClass]="showConfirmPassword ? 'fa-eye-slash' : 'fa-eye'"></i>
+            </button>
+          </div>
+          <div class="form-error" *ngIf="confirmPasswordControl.invalid && confirmPasswordControl.touched">
+            <small *ngIf="confirmPasswordControl.errors?.['required']">La confirmation du mot de passe est requise</small>
+            <small *ngIf="confirmPasswordControl.errors?.['passwordMismatch']">Les mots de passe ne correspondent pas</small>
+          </div>
+          <div class="form-error" *ngIf="userForm.errors?.['passwordMismatch'] && userForm.touched">
+            <small>Les mots de passe ne correspondent pas</small>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="role">Rôle Utilisateur</label>
+          <select id="role" formControlName="role" class="form-control" [disabled]="true">
+            <option [value]="'AGENT_FINANCE'">Agent Finance</option>
+          </select>
+          <small class="form-text">Le chef financier ne peut créer que des agents financiers.</small>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary" [disabled]="userForm.invalid">
+          <i class="fas fa-save"></i> {{ isEditMode ? 'Modifier' : 'Créer' }} l'Agent Financier
+        </button>
+        <button type="button" class="btn btn-secondary" (click)="cancelForm()">
+          <i class="fas fa-times"></i> Annuler
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Barre de recherche et filtres -->
+  <div class="search-container">
+    <div class="search-header">
+      <h3><i class="fas fa-filter"></i> Recherche et Filtres</h3>
+      <button class="btn btn-outline-secondary btn-sm" (click)="clearAllFilters()">
+        <i class="fas fa-times"></i> Effacer tout
+      </button>
+    </div>
+
+    <div class="search-filters-grid">
+      <div class="search-row">
+        <div class="search-type-selector">
+          <label for="searchType"><i class="fas fa-list"></i> Type de recherche:</label>
+          <select id="searchType" [(ngModel)]="searchType" (change)="onSearchTypeChange()" class="form-control">
+            <option value="all">🔍 Tout</option>
+            <option value="name">👤 Nom/Prénom</option>
+            <option value="email">📧 Email</option>
+            <option value="role">🎭 Rôle</option>
+          </select>
+        </div>
+
+        <div class="search-input-wrapper">
+          <i class="fas fa-search search-icon"></i>
+          <input 
+            type="text" 
+            [(ngModel)]="searchTerm" 
+            (input)="onSearch()"
+            [placeholder]="getSearchPlaceholder()"
+            class="search-input">
+        </div>
+      </div>
+
+      <div class="filters-row">
+        <div class="filter-group">
+          <label for="activityFilter"><i class="fas fa-toggle-on"></i> Activité:</label>
+          <select id="activityFilter" [(ngModel)]="selectedActivity" (change)="onActivityFilterChange()" class="form-control">
+            <option value="">Tous les statuts</option>
+            <option value="active">✅ Actif</option>
+            <option value="inactive">❌ Inactif</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="active-filters" *ngIf="hasActiveFilters()">
+        <span class="filter-label">Filtres actifs:</span>
+        <div class="filter-tags">
+          <span *ngIf="searchTerm" class="filter-tag">
+            <i class="fas fa-search"></i> "{{ searchTerm }}"
+            <button class="remove-filter" (click)="searchTerm = ''; onSearch()">×</button>
+          </span>
+          <span *ngIf="selectedActivity" class="filter-tag">
+            <i class="fas fa-toggle-on"></i> {{ selectedActivity === 'active' ? 'Actif' : 'Inactif' }}
+            <button class="remove-filter" (click)="selectedActivity = ''; onActivityFilterChange()">×</button>
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tableau des utilisateurs -->
+  <div class="table-container">
+    <div class="loading-spinner" *ngIf="isLoading">
+      <i class="fas fa-spinner fa-spin"></i>
+      <p>Chargement des agents financiers...</p>
+    </div>
+    
+    <table class="users-table" *ngIf="!isLoading">
+      <thead>
+        <tr>
+          <th>Avatar</th>
+          <th>Nom</th>
+          <th>Prénom</th>
+          <th>Email</th>
+          <th>Rôle</th>
+          <th>Statut</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let utilisateur of filteredUtilisateurs">
+          <td>
+            <div class="user-avatar">
+              <span class="avatar-text">{{ getUserInitials(utilisateur) }}</span>
+            </div>
+          </td>
+          <td>{{ utilisateur.nom }}</td>
+          <td>{{ utilisateur.prenom }}</td>
+          <td>{{ utilisateur.email }}</td>
+          <td>
+            <span class="role-badge role-agent-finance">
+              {{ getRoleDisplayName(utilisateur.roleUtilisateur || utilisateur.role || '') }}
+            </span>
+          </td>
+          <td>
+            <span class="status-badge" [ngClass]="utilisateur.actif ? 'active' : 'inactive'">
+              {{ utilisateur.actif ? 'Actif' : 'Inactif' }}
+            </span>
+          </td>
+          <td class="actions">
+            <button class="btn btn-sm btn-warning" (click)="showEditUserForm(utilisateur)" title="Modifier">
+              <i class="fas fa-edit"></i>
+            </button>
+            <button class="btn btn-sm btn-danger" (click)="deleteUser(utilisateur)" title="Supprimer">
+              <i class="fas fa-trash"></i>
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div *ngIf="!isLoading && filteredUtilisateurs.length === 0" class="no-data">
+      <i class="fas fa-users"></i>
+      <p>Aucun agent financier trouvé</p>
+    </div>
+  </div>
+</div>
+

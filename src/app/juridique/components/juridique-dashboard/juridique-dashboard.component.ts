@@ -8,6 +8,8 @@ import { AudienceService } from '../../services/audience.service';
 import { UtilisateurService } from '../../../core/services/utilisateur.service';
 import { JwtAuthService } from '../../../core/services/jwt-auth.service';
 import { DossierApiService } from '../../../core/services/dossier-api.service';
+import { StatistiqueService } from '../../../core/services/statistique.service';
+import { PerformanceService } from '../../../core/services/performance.service';
 import { Role, User } from '../../../shared/models';
 import { DossierApi, Urgence } from '../../../shared/models/dossier-api.model';
 import { Audience, DecisionResult } from '../../models/audience.model';
@@ -57,7 +59,9 @@ export class JuridiqueDashboardComponent implements OnInit, OnDestroy {
     private audienceService: AudienceService,
     private utilisateurService: UtilisateurService,
     private jwtAuthService: JwtAuthService,
-    private dossierApiService: DossierApiService
+    private dossierApiService: DossierApiService,
+    private statistiqueService: StatistiqueService,
+    private performanceService: PerformanceService
   ) {}
 
   ngOnInit(): void {
@@ -123,6 +127,42 @@ export class JuridiqueDashboardComponent implements OnInit, OnDestroy {
   }
 
   loadDashboardData(): void {
+    if (!this.currentUser?.id) {
+      return;
+    }
+
+    const userRole = this.currentUser.roleUtilisateur;
+    const chefId = parseInt(this.currentUser.id);
+
+    // Charger les statistiques selon le rôle
+    if (userRole === 'SUPER_ADMIN') {
+      // Super Admin voit toutes les statistiques
+      this.statistiqueService.getStatistiquesGlobales().pipe(
+        takeUntil(this.destroy$)
+      ).subscribe({
+        next: (stats) => {
+          this.totalAudiences = stats.totalAudiences || 0;
+          // Les autres statistiques sont chargées par loadDossiersStats()
+        },
+        error: (error) => {
+          console.error('Erreur lors du chargement des statistiques globales:', error);
+        }
+      });
+    } else if (userRole?.startsWith('CHEF_')) {
+      // Les chefs voient uniquement leurs statistiques
+      this.statistiqueService.getStatistiquesChef(chefId).pipe(
+        takeUntil(this.destroy$)
+      ).subscribe({
+        next: (stats) => {
+          // Les statistiques du chef incluent les données de ses agents
+          this.totalAudiences = stats.totalTachesAgents || 0; // Approximation
+        },
+        error: (error) => {
+          console.error('Erreur lors du chargement des statistiques du chef:', error);
+        }
+      });
+    }
+
     // Load dossiers
     this.dossierService.loadAll()
       .pipe(takeUntil(this.destroy$))

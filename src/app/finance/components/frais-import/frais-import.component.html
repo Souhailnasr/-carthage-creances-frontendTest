@@ -1,0 +1,232 @@
+<div class="import-container">
+  <div class="header">
+    <h1>Import CSV des Frais Externes</h1>
+    <p>Importer des frais depuis un fichier CSV</p>
+  </div>
+
+  <mat-stepper [linear]="true" #stepper>
+    <!-- Étape 1: Upload -->
+    <mat-step>
+      <ng-template matStepLabel>Upload Fichier</ng-template>
+      <mat-card class="upload-card">
+    <mat-card-header>
+      <mat-card-title>Étape 1: Sélectionner le fichier CSV</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="upload-area">
+        <input 
+          type="file" 
+          accept=".csv" 
+          (change)="onFileSelected($event); parseCsv()"
+          style="display: none"
+          #fileInput>
+        <button mat-raised-button color="primary" (click)="fileInput.click()">
+          <mat-icon>upload</mat-icon>
+          Choisir un fichier CSV
+        </button>
+        <p *ngIf="selectedFile" class="file-name">{{ selectedFile.name }}</p>
+      </div>
+      <div class="step-actions">
+        <button mat-raised-button color="primary" (click)="stepper.next()" [disabled]="!selectedFile">
+          Suivant
+        </button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+    </mat-step>
+
+    <!-- Étape 2: Mapping -->
+    <mat-step>
+      <ng-template matStepLabel>Mapping Colonnes</ng-template>
+      <mat-card class="mapping-card">
+    <mat-card-header>
+      <mat-card-title>Étape 2: Mapping des colonnes</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="mapping-grid">
+        <mat-form-field appearance="outline">
+          <mat-label>Dossier ID</mat-label>
+          <mat-select [(ngModel)]="mapping.dossierId">
+            <mat-option *ngFor="let header of csvHeaders" [value]="header">{{ header }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Phase</mat-label>
+          <mat-select [(ngModel)]="mapping.phase">
+            <mat-option *ngFor="let header of csvHeaders" [value]="header">{{ header }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Catégorie</mat-label>
+          <mat-select [(ngModel)]="mapping.categorie">
+            <mat-option *ngFor="let header of csvHeaders" [value]="header">{{ header }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Quantité</mat-label>
+          <mat-select [(ngModel)]="mapping.quantite">
+            <mat-option *ngFor="let header of csvHeaders" [value]="header">{{ header }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Tarif Unitaire</mat-label>
+          <mat-select [(ngModel)]="mapping.tarifUnitaire">
+            <mat-option *ngFor="let header of csvHeaders" [value]="header">{{ header }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Fournisseur</mat-label>
+          <mat-select [(ngModel)]="mapping.fournisseur">
+            <mat-option *ngFor="let header of csvHeaders" [value]="header">{{ header }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Date</mat-label>
+          <mat-select [(ngModel)]="mapping.date">
+            <mat-option *ngFor="let header of csvHeaders" [value]="header">{{ header }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+      <div class="mapping-actions">
+        <button mat-raised-button color="primary" (click)="validateMapping(); stepper.next()">
+          Valider et Aperçu
+        </button>
+        <button mat-button (click)="stepper.previous()">Précédent</button>
+        <button mat-button (click)="reset()">Annuler</button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+    </mat-step>
+
+    <!-- Étape 3: Aperçu -->
+    <mat-step>
+      <ng-template matStepLabel>Aperçu et Validation</ng-template>
+      <mat-card class="preview-card">
+    <mat-card-header>
+      <mat-card-title>Étape 3: Aperçu et Validation</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <div *ngIf="loading" class="loading-container">
+        <mat-spinner diameter="50"></mat-spinner>
+        <p>Validation en cours...</p>
+      </div>
+
+      <table *ngIf="!loading" mat-table [dataSource]="previewRows" class="preview-table">
+        <ng-container matColumnDef="dossierId">
+          <th mat-header-cell *matHeaderCellDef>Dossier ID</th>
+          <td mat-cell *matCellDef="let row">{{ row.dossierId }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="phase">
+          <th mat-header-cell *matHeaderCellDef>Phase</th>
+          <td mat-cell *matCellDef="let row">{{ row.phase }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="categorie">
+          <th mat-header-cell *matHeaderCellDef>Catégorie</th>
+          <td mat-cell *matCellDef="let row">{{ row.categorie }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="quantite">
+          <th mat-header-cell *matHeaderCellDef>Quantité</th>
+          <td mat-cell *matCellDef="let row">{{ row.quantite }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="tarifUnitaire">
+          <th mat-header-cell *matHeaderCellDef>Tarif Unitaire</th>
+          <td mat-cell *matCellDef="let row">{{ row.tarifUnitaire | number:'1.2-2' }} TND</td>
+        </ng-container>
+
+        <ng-container matColumnDef="fournisseur">
+          <th mat-header-cell *matHeaderCellDef>Fournisseur</th>
+          <td mat-cell *matCellDef="let row">{{ row.fournisseur }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="date">
+          <th mat-header-cell *matHeaderCellDef>Date</th>
+          <td mat-cell *matCellDef="let row">{{ row.date }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="valid">
+          <th mat-header-cell *matHeaderCellDef>Valide</th>
+          <td mat-cell *matCellDef="let row">
+            <mat-chip [color]="row.valid ? 'primary' : 'warn'">
+              {{ row.valid ? 'Oui' : 'Non' }}
+            </mat-chip>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="erreurs">
+          <th mat-header-cell *matHeaderCellDef>Erreurs</th>
+          <td mat-cell *matCellDef="let row">
+            <span *ngIf="row.erreurs && row.erreurs.length > 0" class="errors">
+              {{ row.erreurs.join(', ') }}
+            </span>
+            <span *ngIf="!row.erreurs || row.erreurs.length === 0">-</span>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+      </table>
+
+      <div class="preview-actions">
+        <button mat-raised-button color="primary" (click)="importFrais(); stepper.next()" [disabled]="loading">
+          <mat-icon>cloud_upload</mat-icon>
+          Importer
+        </button>
+        <button mat-button (click)="stepper.previous()">Retour</button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+    </mat-step>
+
+    <!-- Étape 4: Résultat -->
+    <mat-step>
+      <ng-template matStepLabel>Résultat</ng-template>
+      <mat-card *ngIf="importReport" class="result-card">
+    <mat-card-header>
+      <mat-card-title>Rapport d'Intégration</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="report-stats">
+        <div class="stat-item">
+          <span class="label">Total lignes:</span>
+          <span class="value">{{ importReport.totalRows }}</span>
+        </div>
+        <div class="stat-item success">
+          <span class="label">Succès:</span>
+          <span class="value">{{ importReport.successCount }}</span>
+        </div>
+        <div class="stat-item error">
+          <span class="label">Erreurs:</span>
+          <span class="value">{{ importReport.errorCount }}</span>
+        </div>
+      </div>
+
+      <div *ngIf="importReport.errors.length > 0" class="errors-list">
+        <h3>Erreurs détaillées:</h3>
+        <div *ngFor="let error of importReport.errors" class="error-item">
+          <strong>Ligne {{ error.row }}:</strong> {{ error.message }}
+        </div>
+      </div>
+
+      <div class="result-actions">
+        <button mat-raised-button color="primary" (click)="reset(); stepper.reset()">
+          Nouvel Import
+        </button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+    </mat-step>
+  </mat-stepper>
+</div>
+
+
+

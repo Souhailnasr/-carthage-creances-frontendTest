@@ -157,11 +157,14 @@ export class ChefDossierComponent implements OnInit, OnDestroy {
   }
 
   loadTachesUrgentes(): void {
-    this.tacheUrgenteService.getAllTachesUrgentes().subscribe(
-      taches => {
+    this.tacheUrgenteService.getAllTaches().subscribe({
+      next: (taches: any[]) => {
         this.tachesUrgentes = taches.slice(0, 5); // Afficher les 5 plus récentes
+      },
+      error: (error: any) => {
+        console.error('Erreur lors du chargement des tâches:', error);
       }
-    );
+    });
   }
 
   loadNotifications(): void {

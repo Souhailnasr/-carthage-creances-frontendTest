@@ -52,13 +52,18 @@ export const routes: Routes = [
     canActivate: [AuthGuard]
   },
   {
-    path: 'finance',
-    loadComponent: () => import('./finance/components/chef-finance-dashboard/chef-finance-dashboard.component').then(m => m.ChefFinanceDashboardComponent),
+    path: 'agent-amiable',
+    loadChildren: () => import('./agent-amiable/agent-amiable.module').then(m => m.AgentAmiableModule),
     canActivate: [AuthGuard]
   },
   {
-    path: 'finance/dossier/:id/facture',
-    loadComponent: () => import('./finance/components/facture-detail/facture-detail.component').then(m => m.FactureDetailComponent),
+    path: 'agent-juridique',
+    loadChildren: () => import('./agent-juridique/agent-juridique.module').then(m => m.AgentJuridiqueModule),
+    canActivate: [AuthGuard]
+  },
+  {
+    path: 'finance',
+    loadChildren: () => import('./finance/finance.module').then(m => m.FinanceModule),
     canActivate: [AuthGuard]
   },
   {

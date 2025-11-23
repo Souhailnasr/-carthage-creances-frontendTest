@@ -1,0 +1,152 @@
+<div class="validation-container">
+  <div class="header">
+    <h1>Validation des Frais</h1>
+    <p>Gérer les frais en attente de validation</p>
+  </div>
+
+  <!-- Indicateurs -->
+  <div class="stats-cards">
+    <mat-card class="stat-card">
+      <mat-card-title>Frais à Valider</mat-card-title>
+      <mat-card-content class="stat-value">
+        {{ stats.totalFrais }}
+      </mat-card-content>
+    </mat-card>
+    <mat-card class="stat-card">
+      <mat-card-title>Montant Total en Attente</mat-card-title>
+      <mat-card-content class="stat-value">
+        {{ stats.montantTotal | number:'1.2-2' }} TND
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Filtres -->
+  <mat-card class="filters-card">
+    <mat-card-header>
+      <mat-card-title>Filtres</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="filters-grid">
+        <mat-form-field appearance="outline">
+          <mat-label>Phase</mat-label>
+          <mat-select [(ngModel)]="filters.phase">
+            <mat-option value="">Toutes</mat-option>
+            <mat-option value="CREATION">Création</mat-option>
+            <mat-option value="AMIABLE">Amiable</mat-option>
+            <mat-option value="JURIDIQUE">Juridique</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Agent ID</mat-label>
+          <input matInput type="number" [(ngModel)]="filters.agentId" placeholder="ID Agent">
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Montant Min</mat-label>
+          <input matInput type="number" [(ngModel)]="filters.montantMin" placeholder="Min">
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Montant Max</mat-label>
+          <input matInput type="number" [(ngModel)]="filters.montantMax" placeholder="Max">
+        </mat-form-field>
+      </div>
+      <div class="filter-actions">
+        <button mat-raised-button color="primary" (click)="applyFilters()">
+          <mat-icon>search</mat-icon>
+          Appliquer
+        </button>
+        <button mat-button (click)="clearFilters()">
+          <mat-icon>clear</mat-icon>
+          Réinitialiser
+        </button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Tableau des Frais -->
+  <mat-card class="frais-card">
+    <mat-card-header>
+      <mat-card-title>Frais en Attente de Validation</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <div *ngIf="loading" class="loading-container">
+        <mat-spinner diameter="50"></mat-spinner>
+        <p>Chargement...</p>
+      </div>
+
+      <div *ngIf="!loading && frais.length === 0" class="no-data">
+        <mat-icon>check_circle</mat-icon>
+        <p>Aucun frais en attente</p>
+      </div>
+
+      <table *ngIf="!loading && frais.length > 0" mat-table [dataSource]="frais" class="frais-table">
+        <ng-container matColumnDef="dossierId">
+          <th mat-header-cell *matHeaderCellDef>Dossier</th>
+          <td mat-cell *matCellDef="let row">#{{ row.dossierId }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="phase">
+          <th mat-header-cell *matHeaderCellDef>Phase</th>
+          <td mat-cell *matCellDef="let row">{{ row.phase }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="categorie">
+          <th mat-header-cell *matHeaderCellDef>Catégorie</th>
+          <td mat-cell *matCellDef="let row">{{ row.categorie }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="montant">
+          <th mat-header-cell *matHeaderCellDef>Montant</th>
+          <td mat-cell *matCellDef="let row">{{ row.montant | number:'1.2-2' }} TND</td>
+        </ng-container>
+
+        <ng-container matColumnDef="demandeur">
+          <th mat-header-cell *matHeaderCellDef>Demandeur</th>
+          <td mat-cell *matCellDef="let row">{{ row.demandeur }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="creeLe">
+          <th mat-header-cell *matHeaderCellDef>Créé le</th>
+          <td mat-cell *matCellDef="let row">{{ row.creeLe | date:'dd/MM/yyyy' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef>Actions</th>
+          <td mat-cell *matCellDef="let row">
+            <div class="action-buttons">
+              <button 
+                mat-icon-button 
+                color="primary"
+                [matTooltip]="'Voir détail'"
+                (click)="voirDetail(row)">
+                <mat-icon>visibility</mat-icon>
+              </button>
+              <button 
+                mat-icon-button 
+                color="primary"
+                [matTooltip]="'Valider'"
+                (click)="validerFrais(row.id)">
+                <mat-icon>check</mat-icon>
+              </button>
+              <button 
+                mat-icon-button 
+                color="warn"
+                [matTooltip]="'Rejeter'"
+                (click)="rejeterFrais(row.id)">
+                <mat-icon>close</mat-icon>
+              </button>
+            </div>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+      </table>
+    </mat-card-content>
+  </mat-card>
+</div>
+
+
+

@@ -97,12 +97,17 @@ export class TachesComponent implements OnInit, OnDestroy {
 
   loadTaches(): void {
     // Pour le Chef Dossier, charger toutes les tâches
-    this.tacheUrgenteService.getTachesByAgent(parseInt(this.currentUser.id)).subscribe(
-      taches => {
-        this.taches = taches;
-        this.applyFilters();
-      }
-    );
+    if (this.currentUser?.id) {
+      this.tacheUrgenteService.getTachesChef(parseInt(this.currentUser.id)).subscribe({
+        next: (taches: any[]) => {
+          this.taches = taches;
+          this.applyFilters();
+        },
+        error: (error: any) => {
+          console.error('Erreur lors du chargement des tâches:', error);
+        }
+      });
+    }
   }
 
   loadAvailableAgents(): void {

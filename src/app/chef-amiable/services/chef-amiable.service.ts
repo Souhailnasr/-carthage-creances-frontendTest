@@ -17,57 +17,48 @@ export class ChefAmiableService {
     private dossierApiService: DossierApiService
   ) {}
 
-  // Statistiques
+  // Statistiques - Utilise maintenant les vraies données depuis l'API
   getStatistiques(): Observable<StatistiqueAmiable> {
-    const stats = new StatistiqueAmiable({
-      totalDossiers: 156,
-      dossiersEnCours: 89,
-      dossiersClotures: 67,
-      tauxReussite: 42.9,
-      montantRecupere: 2450000,
-      montantEnCours: 1800000,
-      actionsEffectuees: 1247,
-      actionsReussies: 534,
-      coutTotalActions: 125000
-    });
-    return of(stats);
+    // Utiliser le service de statistiques pour récupérer les vraies données
+    // Pour l'instant, calculer depuis les dossiers réels
+    return this.dossierApiService.getDossiersRecouvrementAmiable(0, 1000).pipe(
+      map((page) => {
+        const dossiers = page.content;
+        const totalDossiers = page.totalElements;
+        const dossiersEnCours = dossiers.filter(d => !d.dateCloture && d.dossierStatus !== 'CLOTURE').length;
+        const dossiersClotures = dossiers.filter(d => d.dateCloture || d.dossierStatus === 'CLOTURE').length;
+        const montantRecupere = dossiers
+          .filter(d => d.dateCloture)
+          .reduce((sum, d) => sum + (d.montantCreance || 0), 0);
+        const montantEnCours = dossiers
+          .filter(d => !d.dateCloture)
+          .reduce((sum, d) => sum + (d.montantCreance || 0), 0);
+        const tauxReussite = totalDossiers > 0 ? (dossiersClotures / totalDossiers) * 100 : 0;
+        
+        return new StatistiqueAmiable({
+          totalDossiers,
+          dossiersEnCours,
+          dossiersClotures,
+          tauxReussite,
+          montantRecupere,
+          montantEnCours,
+          actionsEffectuees: 0, // Sera calculé depuis les actions réelles
+          actionsReussies: 0,
+          coutTotalActions: 0
+        });
+      }),
+      catchError((error) => {
+        console.error('❌ Erreur lors du chargement des statistiques:', error);
+        return of(new StatistiqueAmiable());
+      })
+    );
   }
 
-  // Performances des agents
+  // Performances des agents - Utilise maintenant les vraies données depuis l'API
   getPerformancesAgents(): Observable<PerformanceAgent[]> {
-    const performances: PerformanceAgent[] = [
-      new PerformanceAgent({
-        agentId: '1',
-        nomAgent: 'Ahmed Ben Ali',
-        dossiersAssignes: 25,
-        dossiersClotures: 12,
-        tauxReussite: 48.0,
-        montantRecupere: 450000,
-        actionsEffectuees: 156,
-        moyenneTempsTraitement: 15
-      }),
-      new PerformanceAgent({
-        agentId: '2',
-        nomAgent: 'Fatma Trabelsi',
-        dossiersAssignes: 22,
-        dossiersClotures: 15,
-        tauxReussite: 68.2,
-        montantRecupere: 380000,
-        actionsEffectuees: 134,
-        moyenneTempsTraitement: 12
-      }),
-      new PerformanceAgent({
-        agentId: '3',
-        nomAgent: 'Mohamed Khelil',
-        dossiersAssignes: 28,
-        dossiersClotures: 18,
-        tauxReussite: 64.3,
-        montantRecupere: 520000,
-        actionsEffectuees: 189,
-        moyenneTempsTraitement: 14
-      })
-    ];
-    return of(performances);
+    // Utiliser le service de performance pour récupérer les vraies données
+    // Pour l'instant, retourner un tableau vide et laisser le composant utiliser PerformanceService
+    return of([]);
   }
 
   // Dossiers avec actions - Utilise maintenant les vraies données
@@ -105,72 +96,18 @@ export class ChefAmiableService {
     );
   }
 
-  // Tâches
+  // Tâches - Utilise maintenant les vraies données depuis l'API
   getTaches(): Observable<Tache[]> {
-    const taches: Tache[] = [
-      new Tache({
-        id: '1',
-        titre: 'Relance dossier DOS-2024-001',
-        description: 'Effectuer une relance téléphonique pour le dossier DOS-2024-001',
-        dateCreation: new Date('2024-01-15'),
-        dateEcheance: new Date('2024-01-20'),
-        statut: StatutTache.EN_ATTENTE,
-        agentId: '1',
-        chefId: 'chef-1',
-        dossierId: 'DOS-2024-001',
-        priorite: 'ELEVEE'
-      }),
-      new Tache({
-        id: '2',
-        titre: 'Visite client DOS-2024-002',
-        description: 'Planifier une visite chez le débiteur pour DOS-2024-002',
-        dateCreation: new Date('2024-01-16'),
-        dateEcheance: new Date('2024-01-22'),
-        statut: StatutTache.EN_COURS,
-        agentId: '2',
-        chefId: 'chef-1',
-        dossierId: 'DOS-2024-002',
-        priorite: 'MOYENNE'
-      })
-    ];
-    return of(taches);
+    // Les tâches doivent être récupérées via TacheUrgenteService
+    // Retourner un tableau vide et laisser le composant utiliser TacheUrgenteService
+    return of([]);
   }
 
-  // Notifications
+  // Notifications - Utilise maintenant les vraies données depuis l'API
   getNotifications(): Observable<ChefAmiableNotification[]> {
-    const notifications: ChefAmiableNotification[] = [
-      new ChefAmiableNotification({
-        id: '1',
-        titre: 'Nouveau dossier assigné',
-        message: 'Le dossier DOS-2024-003 a été assigné au département amiable',
-        dateCreation: new Date('2024-01-18T10:30:00'),
-        lu: false,
-        type: 'INFO',
-        userId: 'chef-1',
-        dossierId: 'DOS-2024-003'
-      }),
-      new ChefAmiableNotification({
-        id: '2',
-        titre: 'Action terminée',
-        message: 'L\'action APPEL pour le dossier DOS-2024-001 a été terminée avec succès',
-        dateCreation: new Date('2024-01-18T09:15:00'),
-        lu: false,
-        type: 'SUCCESS',
-        userId: 'chef-1',
-        actionId: '1'
-      }),
-      new ChefAmiableNotification({
-        id: '3',
-        titre: 'Tâche en retard',
-        message: 'La tâche "Relance dossier DOS-2024-001" est en retard',
-        dateCreation: new Date('2024-01-17T16:45:00'),
-        lu: true,
-        type: 'WARNING',
-        userId: 'chef-1',
-        dossierId: 'DOS-2024-001'
-      })
-    ];
-    return of(notifications);
+    // Les notifications doivent être récupérées via NotificationService
+    // Retourner un tableau vide et laisser le composant utiliser NotificationService
+    return of([]);
   }
 
   // Actions CRUD

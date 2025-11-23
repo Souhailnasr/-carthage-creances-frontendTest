@@ -23,7 +23,7 @@ export class TachesComponent implements OnInit, OnDestroy {
   currentUser: any;
   showCreateTache = false;
   availableAgents: any[] = [];
-  newTache: Partial<TacheUrgente> = {
+  newTache: Partial<TacheUrgente> & { agentId?: number; dateEcheance?: Date } = {
     titre: '',
     description: '',
     type: 'ENQUETE',
@@ -52,12 +52,17 @@ export class TachesComponent implements OnInit, OnDestroy {
 
   loadTaches(): void {
     // Charger toutes les tâches pour l'utilisateur actuel
-    this.tacheUrgenteService.getTachesByAgent(parseInt(this.currentUser.id)).subscribe(
-      taches => {
-        this.taches = taches;
-        this.applyFilters();
-      }
-    );
+    if (this.currentUser?.id) {
+      this.tacheUrgenteService.getTachesAgent(parseInt(this.currentUser.id)).subscribe({
+        next: (taches: TacheUrgente[]) => {
+          this.taches = taches;
+          this.applyFilters();
+        },
+        error: (error: any) => {
+          console.error('Erreur lors du chargement des tâches:', error);
+        }
+      });
+    }
   }
 
   loadAvailableAgents(): void {
@@ -82,7 +87,8 @@ export class TachesComponent implements OnInit, OnDestroy {
       filtered = filtered.filter(tache =>
         tache.titre.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
         tache.description.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-        tache.agentNom.toLowerCase().includes(this.searchTerm.toLowerCase())
+        (tache.agentNom && tache.agentNom.toLowerCase().includes(this.searchTerm.toLowerCase())) ||
+        (tache.agentAssigné && `${tache.agentAssigné.prenom} ${tache.agentAssigné.nom}`.toLowerCase().includes(this.searchTerm.toLowerCase()))
       );
     }
 

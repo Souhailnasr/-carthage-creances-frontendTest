@@ -1,0 +1,168 @@
+<div class="agent-amiable-actions">
+  <div class="header">
+    <h1>
+      <i class="fas fa-tasks"></i>
+      Gestion des Actions
+    </h1>
+    <p class="subtitle">Ajouter, modifier et supprimer des actions pour vos dossiers</p>
+  </div>
+
+  <mat-card *ngIf="!selectedDossierId" class="info-card">
+    <mat-card-content>
+      <p>
+        <i class="fas fa-info-circle"></i>
+        Sélectionnez un dossier depuis "Mes Dossiers" pour gérer ses actions.
+      </p>
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card *ngIf="selectedDossierId">
+    <mat-card-header>
+      <mat-card-title>
+        <i class="fas fa-list"></i> Actions du Dossier #{{ selectedDossierId }}
+      </mat-card-title>
+      <div class="card-actions">
+        <button mat-raised-button color="primary" (click)="showCreateForm()">
+          <i class="fas fa-plus"></i> Ajouter une Action
+        </button>
+      </div>
+    </mat-card-header>
+
+    <mat-card-content>
+      <div class="loading-container" *ngIf="loading">
+        <mat-spinner diameter="50"></mat-spinner>
+        <p>Chargement des actions...</p>
+      </div>
+
+      <div *ngIf="!loading">
+        <table mat-table [dataSource]="actions" class="actions-table">
+          <ng-container matColumnDef="type">
+            <th mat-header-cell *matHeaderCellDef>Type</th>
+            <td mat-cell *matCellDef="let action">
+              <mat-chip>{{ getTypeLabel(action.type) }}</mat-chip>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="dateAction">
+            <th mat-header-cell *matHeaderCellDef>Date</th>
+            <td mat-cell *matCellDef="let action">{{ action.dateAction | date:'dd/MM/yyyy' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="nbOccurrences">
+            <th mat-header-cell *matHeaderCellDef>Occurrences</th>
+            <td mat-cell *matCellDef="let action">{{ action.nbOccurrences }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="reponseDebiteur">
+            <th mat-header-cell *matHeaderCellDef>Réponse</th>
+            <td mat-cell *matCellDef="let action">
+              <mat-chip [class]="action.reponseDebiteur === 'POSITIVE' ? 'positive' : action.reponseDebiteur === 'NEGATIVE' ? 'negative' : ''">
+                {{ getReponseLabel(action.reponseDebiteur) }}
+              </mat-chip>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="dossier">
+            <th mat-header-cell *matHeaderCellDef>Dossier</th>
+            <td mat-cell *matCellDef="let action">#{{ action.dossier.id }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef>Actions</th>
+            <td mat-cell *matCellDef="let action">
+              <button mat-icon-button color="primary" (click)="showEditForm(action)">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button mat-icon-button color="warn" (click)="deleteAction(action)">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+        </table>
+
+        <div *ngIf="actions.length === 0" class="no-data">
+          <i class="fas fa-tasks"></i>
+          <p>Aucune action enregistrée</p>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Formulaire d'ajout/modification -->
+  <mat-card *ngIf="showForm" class="form-card">
+    <mat-card-header>
+      <mat-card-title>
+        {{ editingAction ? 'Modifier l\'Action' : 'Nouvelle Action' }}
+      </mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <form [formGroup]="actionForm" (ngSubmit)="onSubmit()">
+        <div class="form-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Type d'Action</mat-label>
+            <mat-select formControlName="type" required>
+              <mat-option *ngFor="let type of typeActions" [value]="type">
+                {{ getTypeLabel(type) }}
+              </mat-option>
+            </mat-select>
+            <mat-error *ngIf="actionForm.get('type')?.hasError('required')">
+              Le type est requis
+            </mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Date de l'Action</mat-label>
+            <input matInput [matDatepicker]="picker" formControlName="dateAction" required>
+            <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+            <mat-datepicker #picker></mat-datepicker>
+            <mat-error *ngIf="actionForm.get('dateAction')?.hasError('required')">
+              La date est requise
+            </mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Nombre d'Occurrences</mat-label>
+            <input matInput type="number" formControlName="nbOccurrences" min="1" required>
+            <mat-error *ngIf="actionForm.get('nbOccurrences')?.hasError('required')">
+              Le nombre d'occurrences est requis
+            </mat-error>
+            <mat-error *ngIf="actionForm.get('nbOccurrences')?.hasError('min')">
+              Le nombre doit être au moins 1
+            </mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Réponse du Débiteur</mat-label>
+            <mat-select formControlName="reponseDebiteur">
+              <mat-option [value]="null">En attente</mat-option>
+              <mat-option *ngFor="let reponse of reponses" [value]="reponse">
+                {{ getReponseLabel(reponse) }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Coût Unitaire (TND)</mat-label>
+            <input matInput type="number" formControlName="coutUnitaire" min="0" step="0.01">
+            <mat-error *ngIf="actionForm.get('coutUnitaire')?.hasError('min')">
+              Le coût doit être positif
+            </mat-error>
+          </mat-form-field>
+        </div>
+
+        <div class="form-actions">
+          <button mat-raised-button color="primary" type="submit" [disabled]="actionForm.invalid">
+            <i class="fas fa-save"></i> {{ editingAction ? 'Modifier' : 'Créer' }}
+          </button>
+          <button mat-button type="button" (click)="cancelForm()">
+            <i class="fas fa-times"></i> Annuler
+          </button>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+</div>
+

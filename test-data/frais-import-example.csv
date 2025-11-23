@@ -1,0 +1,11 @@
+dossier_id,phase,categorie,quantite,tarif_unitaire,fournisseur,date_action
+1,AMIABLE,APPEL,2,5.00,Fournisseur Telecom A,2024-01-15
+1,AMIABLE,EMAIL,1,2.50,Service Email B,2024-01-16
+2,JURIDIQUE,HUISSIER,1,200.00,Cabinet Huissier C,2024-01-20
+2,JURIDIQUE,AVOCAT,3,150.00,Cabinet Avocat D,2024-01-22
+3,ENQUETE,ENQUETEUR,1,100.00,Agence Enquête E,2024-01-25
+3,CREATION,CREATION_DOSSIER,1,50.00,Service Interne,2024-01-10
+4,AMIABLE,LETTRE,1,10.00,Service Courrier F,2024-01-18
+4,JURIDIQUE,HUISSIER,2,200.00,Cabinet Huissier C,2024-01-28
+5,AMIABLE,VISITE,1,25.00,Agent Terrain G,2024-01-30
+

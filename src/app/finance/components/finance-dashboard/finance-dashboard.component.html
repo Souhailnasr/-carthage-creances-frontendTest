@@ -1,0 +1,266 @@
+<div class="dashboard-container">
+  <div class="header">
+    <div class="header-content">
+      <div>
+        <h1>Dashboard Chef Financier</h1>
+        <p>Vue d'ensemble des finances et performances</p>
+      </div>
+      <button mat-raised-button color="primary" (click)="loadDashboard()" [disabled]="loading">
+        <mat-icon>refresh</mat-icon>
+        Actualiser
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="loading-container">
+    <mat-spinner diameter="50"></mat-spinner>
+    <p>Chargement des données...</p>
+  </div>
+
+  <div *ngIf="!loading && stats">
+    <!-- Metrics Cards -->
+    <div class="metrics-grid">
+      <mat-card class="metric-card">
+        <mat-card-title>Total Frais Engagés</mat-card-title>
+        <mat-card-content class="metric-value">
+          {{ stats.totalFraisEngages | number:'1.2-2' }} TND
+        </mat-card-content>
+        <mat-card-subtitle>
+          <mat-icon>trending_up</mat-icon>
+          Tous frais confondus
+        </mat-card-subtitle>
+      </mat-card>
+
+      <mat-card class="metric-card success">
+        <mat-card-title>Montant Recouvré</mat-card-title>
+        <mat-card-content class="metric-value">
+          {{ stats.montantRecouvre | number:'1.2-2' }} TND
+        </mat-card-content>
+        <mat-card-subtitle>
+          <mat-icon>account_balance_wallet</mat-icon>
+          Montants récupérés
+        </mat-card-subtitle>
+      </mat-card>
+
+      <mat-card class="metric-card">
+        <mat-card-title>Frais Récupérés</mat-card-title>
+        <mat-card-content class="metric-value">
+          {{ stats.fraisRecuperes | number:'1.2-2' }} TND
+        </mat-card-content>
+        <mat-card-subtitle>
+          <mat-icon>attach_money</mat-icon>
+          Frais facturés
+        </mat-card-subtitle>
+      </mat-card>
+
+      <mat-card class="metric-card highlight">
+        <mat-card-title>Net Généré</mat-card-title>
+        <mat-card-content class="metric-value">
+          {{ stats.netGenere | number:'1.2-2' }} TND
+        </mat-card-content>
+        <mat-card-subtitle>
+          <mat-icon>show_chart</mat-icon>
+          Recouvré - Frais
+        </mat-card-subtitle>
+      </mat-card>
+    </div>
+
+    <!-- Graphiques Section -->
+    <div class="charts-grid">
+      <!-- Camembert Répartition Frais -->
+      <mat-card class="chart-card">
+        <mat-card-header>
+          <mat-card-title>Répartition des Frais par Catégorie</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="chart-container" *ngIf="pieChartData">
+            <app-chart type="pie" [data]="pieChartData" [options]="pieChartOptions"></app-chart>
+          </div>
+          <div *ngIf="!pieChartData" class="chart-placeholder">
+            <mat-icon>pie_chart</mat-icon>
+            <p>Aucune donnée disponible</p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Courbe Mensuelle -->
+      <mat-card class="chart-card">
+        <mat-card-header>
+          <mat-card-title>Évolution Mensuelle: Frais vs Recouvré</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="chart-container" *ngIf="lineChartData">
+            <app-chart type="line" [data]="lineChartData" [options]="lineChartOptions"></app-chart>
+          </div>
+          <div *ngIf="!lineChartData" class="chart-placeholder">
+            <mat-icon>show_chart</mat-icon>
+            <p>Aucune donnée disponible</p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+
+    <!-- Tableau ROI par Agent -->
+    <mat-card class="roi-card">
+      <mat-card-header>
+        <mat-card-title>ROI par Agent</mat-card-title>
+        <mat-card-subtitle>Classement par performance</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <div *ngIf="agentRoi.length === 0" class="no-data">
+          <mat-icon>info</mat-icon>
+          <p>Aucune donnée ROI disponible</p>
+        </div>
+        <table *ngIf="agentRoi.length > 0" mat-table [dataSource]="agentRoi" class="roi-table">
+          <ng-container matColumnDef="agentNom">
+            <th mat-header-cell *matHeaderCellDef>Agent</th>
+            <td mat-cell *matCellDef="let row">
+              <div class="agent-cell">
+                <mat-icon>person</mat-icon>
+                <span>{{ row.agentNom }}</span>
+              </div>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="montantRecouvre">
+            <th mat-header-cell *matHeaderCellDef>Montant Recouvré</th>
+            <td mat-cell *matCellDef="let row" class="success-text">
+              {{ row.montantRecouvre | number:'1.2-2' }} TND
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="fraisEngages">
+            <th mat-header-cell *matHeaderCellDef>Frais Engagés</th>
+            <td mat-cell *matCellDef="let row">
+              {{ row.fraisEngages | number:'1.2-2' }} TND
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="roi">
+            <th mat-header-cell *matHeaderCellDef>ROI</th>
+            <td mat-cell *matCellDef="let row">
+              <mat-chip [color]="getRoiColor(row.roiPourcentage)">
+                {{ row.roiPourcentage | number:'1.2-2' }}%
+              </mat-chip>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="performance">
+            <th mat-header-cell *matHeaderCellDef>Performance</th>
+            <td mat-cell *matCellDef="let row">
+              <mat-progress-bar 
+                mode="determinate" 
+                [value]="getRoiPerformance(row.roiPourcentage)"
+                [color]="getRoiColor(row.roiPourcentage)">
+              </mat-progress-bar>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumnsRoi"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumnsRoi"></tr>
+        </table>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Section Alertes Financières -->
+    <mat-card class="alerts-card">
+      <mat-card-header>
+        <div class="alerts-header">
+          <div>
+            <mat-card-title>Alertes Financières</mat-card-title>
+            <mat-card-subtitle>{{ filteredAlerts.length }} alerte(s)</mat-card-subtitle>
+          </div>
+          <div class="alert-filters">
+            <mat-form-field appearance="outline">
+              <mat-label>Type</mat-label>
+              <mat-select [(value)]="selectedAlertFilter">
+                <mat-option value="ALL">Toutes</mat-option>
+                <mat-option value="FRAIS_ELEVES">Frais Élevés</mat-option>
+                <mat-option value="DOSSIER_INACTIF">Dossier Inactif</mat-option>
+                <mat-option value="BUDGET_DEPASSE">Budget Dépassé</mat-option>
+                <mat-option value="ACTION_RISQUE">Action à Risque</mat-option>
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Niveau</mat-label>
+              <mat-select [(value)]="selectedNiveauFilter">
+                <mat-option value="ALL">Tous</mat-option>
+                <mat-option value="INFO">Info</mat-option>
+                <mat-option value="WARNING">Avertissement</mat-option>
+                <mat-option value="DANGER">Danger</mat-option>
+              </mat-select>
+            </mat-form-field>
+            <button mat-icon-button [matTooltip]="'Actualiser'" (click)="refreshAlerts()">
+              <mat-icon>refresh</mat-icon>
+            </button>
+          </div>
+        </div>
+      </mat-card-header>
+      <mat-card-content>
+        <div *ngIf="filteredAlerts.length === 0" class="no-alerts">
+          <mat-icon>check_circle</mat-icon>
+          <p>Aucune alerte</p>
+        </div>
+        <div *ngIf="filteredAlerts.length > 0">
+          <table mat-table [dataSource]="paginatedAlerts" class="alerts-table">
+            <ng-container matColumnDef="type">
+              <th mat-header-cell *matHeaderCellDef>Type</th>
+              <td mat-cell *matCellDef="let alert">
+                <mat-chip [color]="getAlertColor(alert.niveau)">
+                  {{ getAlertTypeLabel(alert.type) }}
+                </mat-chip>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="message">
+              <th mat-header-cell *matHeaderCellDef>Message</th>
+              <td mat-cell *matCellDef="let alert">{{ alert.message }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="dossierId">
+              <th mat-header-cell *matHeaderCellDef>Dossier</th>
+              <td mat-cell *matCellDef="let alert">#{{ alert.dossierId }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="niveau">
+              <th mat-header-cell *matHeaderCellDef>Niveau</th>
+              <td mat-cell *matCellDef="let alert">
+                <mat-chip [color]="getAlertColor(alert.niveau)">{{ alert.niveau }}</mat-chip>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="date">
+              <th mat-header-cell *matHeaderCellDef>Date</th>
+              <td mat-cell *matCellDef="let alert">
+                {{ alert.dateDeclenchement | date:'dd/MM/yyyy' }}
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="actions">
+              <th mat-header-cell *matHeaderCellDef>Actions</th>
+              <td mat-cell *matCellDef="let alert">
+                <button 
+                  mat-icon-button 
+                  color="primary"
+                  [matTooltip]="'Voir dossier'"
+                  (click)="voirDossier(alert.dossierId)">
+                  <mat-icon>visibility</mat-icon>
+                </button>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumnsAlerts"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumnsAlerts"></tr>
+          </table>
+          <mat-paginator
+            [length]="filteredAlerts.length"
+            [pageSize]="alertsPageSize"
+            [pageIndex]="alertsPageIndex"
+            [pageSizeOptions]="[5, 10, 25, 50]"
+            (page)="onAlertsPageChange($event)">
+          </mat-paginator>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+</div>

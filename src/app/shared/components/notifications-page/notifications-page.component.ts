@@ -37,17 +37,17 @@ export class NotificationsPageComponent implements OnInit, OnDestroy {
     this.isLoading = true;
     // Mock user ID pour les tests
     const mockUserId = 1;
-    this.notificationService.getNotificationsByUser(mockUserId).subscribe(
-      notifications => {
+    this.notificationService.getNotifications(mockUserId).subscribe({
+      next: (notifications: Notification[]) => {
         this.notifications = notifications;
         this.applyFilters();
         this.isLoading = false;
       },
-      error => {
+      error: (error: any) => {
         console.error('Erreur lors du chargement des notifications', error);
         this.isLoading = false;
       }
-    );
+    });
   }
 
   startPolling(): void {
@@ -62,8 +62,8 @@ export class NotificationsPageComponent implements OnInit, OnDestroy {
   applyFilters(): void {
     this.filteredNotifications = this.notifications.filter(notification => {
       const matchesStatus = this.selectedFilter === 'all' ||
-        (this.selectedFilter === 'unread' && notification.statut === StatutNotification.NON_LUE) ||
-        (this.selectedFilter === 'read' && notification.statut === StatutNotification.LUE);
+        (this.selectedFilter === 'unread' && notification.statut === 'NON_LUE') ||
+        (this.selectedFilter === 'read' && notification.statut === 'LUE');
 
       const matchesType = this.selectedType === 'all' || notification.type === this.selectedType;
 
@@ -80,69 +80,82 @@ export class NotificationsPageComponent implements OnInit, OnDestroy {
   }
 
   markAsRead(notification: Notification): void {
-    if (notification.statut === StatutNotification.NON_LUE) {
-      this.notificationService.marquerLue(notification.id).subscribe(
-        () => {
-          notification.statut = StatutNotification.LUE;
+    if (notification.statut === 'NON_LUE') {
+      this.notificationService.marquerLue(notification.id).subscribe({
+        next: () => {
+          notification.statut = 'LUE';
           notification.dateLecture = new Date().toISOString();
           this.applyFilters();
+        },
+        error: (error: any) => {
+          console.error('Erreur lors du marquage comme lue:', error);
         }
-      );
+      });
     }
   }
 
   markAllAsRead(): void {
-    const unreadNotifications = this.notifications.filter(n => n.statut === StatutNotification.NON_LUE);
-    unreadNotifications.forEach(notification => {
-      this.notificationService.marquerLue(notification.id).subscribe(
-        () => {
-          notification.statut = StatutNotification.LUE;
+    const mockUserId = 1;
+    this.notificationService.marquerToutesLues(mockUserId).subscribe({
+      next: () => {
+        this.notifications.forEach(notification => {
+          notification.statut = 'LUE';
           notification.dateLecture = new Date().toISOString();
-        }
-      );
+        });
+        this.applyFilters();
+      },
+      error: (error: any) => {
+        console.error('Erreur lors du marquage de toutes les notifications:', error);
+      }
     });
-    this.applyFilters();
   }
 
   deleteNotification(notification: Notification): void {
-    this.notificationService.deleteNotification(notification.id).subscribe(
-      () => {
+    this.notificationService.deleteNotification(notification.id).subscribe({
+      next: () => {
         this.notifications = this.notifications.filter(n => n.id !== notification.id);
         this.applyFilters();
+      },
+      error: (error: any) => {
+        console.error('Erreur lors de la suppression:', error);
       }
-    );
+    });
   }
 
-  getNotificationIcon(type: TypeNotification): string {
-    const icons: { [key in TypeNotification]: string } = {
+  getNotificationIcon(type: string): string {
+    const icons: { [key: string]: string } = {
       [TypeNotification.DOSSIER_CREE]: 'fas fa-file-plus',
       [TypeNotification.DOSSIER_VALIDE]: 'fas fa-check-circle',
       [TypeNotification.DOSSIER_REJETE]: 'fas fa-times-circle',
-      [TypeNotification.DOSSIER_EN_ATTENTE]: 'fas fa-clock',
-      [TypeNotification.ENQUETE_CREE]: 'fas fa-search-plus',
-      [TypeNotification.ENQUETE_VALIDE]: 'fas fa-check-circle',
-      [TypeNotification.ENQUETE_REJETE]: 'fas fa-times-circle',
-      [TypeNotification.ENQUETE_EN_ATTENTE]: 'fas fa-clock',
+      [TypeNotification.AUDIENCE_CREE]: 'fas fa-gavel',
+      [TypeNotification.AUDIENCE_PROCHAINE]: 'fas fa-calendar-alt',
+      [TypeNotification.ACTION_AMIABLE_CREE]: 'fas fa-handshake',
+      [TypeNotification.TACHE_AFFECTEE]: 'fas fa-tasks',
+      [TypeNotification.TACHE_COMPLETEE]: 'fas fa-check',
+      [TypeNotification.TRAITEMENT_DOSSIER]: 'fas fa-cog',
       [TypeNotification.TACHE_URGENTE]: 'fas fa-exclamation-triangle',
       [TypeNotification.RAPPEL]: 'fas fa-bell',
-      [TypeNotification.INFO]: 'fas fa-info-circle'
+      [TypeNotification.INFO]: 'fas fa-info-circle',
+      [TypeNotification.NOTIFICATION_MANUELLE]: 'fas fa-envelope'
     };
     return icons[type] || 'fas fa-bell';
   }
 
-  getNotificationClass(type: TypeNotification): string {
-    const classes: { [key in TypeNotification]: string } = {
+  getNotificationClass(type: string): string {
+    const classes: { [key: string]: string } = {
       [TypeNotification.DOSSIER_CREE]: 'notification-info',
       [TypeNotification.DOSSIER_VALIDE]: 'notification-success',
       [TypeNotification.DOSSIER_REJETE]: 'notification-danger',
-      [TypeNotification.DOSSIER_EN_ATTENTE]: 'notification-warning',
-      [TypeNotification.ENQUETE_CREE]: 'notification-info',
-      [TypeNotification.ENQUETE_VALIDE]: 'notification-success',
-      [TypeNotification.ENQUETE_REJETE]: 'notification-danger',
-      [TypeNotification.ENQUETE_EN_ATTENTE]: 'notification-warning',
+      [TypeNotification.AUDIENCE_CREE]: 'notification-info',
+      [TypeNotification.AUDIENCE_PROCHAINE]: 'notification-warning',
+      [TypeNotification.ACTION_AMIABLE_CREE]: 'notification-info',
+      [TypeNotification.TACHE_AFFECTEE]: 'notification-warning',
+      [TypeNotification.TACHE_COMPLETEE]: 'notification-success',
+      [TypeNotification.TRAITEMENT_DOSSIER]: 'notification-info',
       [TypeNotification.TACHE_URGENTE]: 'notification-danger',
       [TypeNotification.RAPPEL]: 'notification-warning',
-      [TypeNotification.INFO]: 'notification-info'
+      [TypeNotification.INFO]: 'notification-info',
+      [TypeNotification.NOTIFICATION_MANUELLE]: 'notification-info'
     };
     return classes[type] || 'notification-info';
   }
@@ -163,7 +176,7 @@ export class NotificationsPageComponent implements OnInit, OnDestroy {
   }
 
   getUnreadCount(): number {
-    return this.notifications.filter(n => n.statut === StatutNotification.NON_LUE).length;
+    return this.notifications.filter(n => n.statut === 'NON_LUE').length;
   }
 
   getTypeOptions(): Array<{value: string, label: string}> {
@@ -172,14 +185,16 @@ export class NotificationsPageComponent implements OnInit, OnDestroy {
       { value: TypeNotification.DOSSIER_CREE, label: 'Dossier créé' },
       { value: TypeNotification.DOSSIER_VALIDE, label: 'Dossier validé' },
       { value: TypeNotification.DOSSIER_REJETE, label: 'Dossier rejeté' },
-      { value: TypeNotification.DOSSIER_EN_ATTENTE, label: 'Dossier en attente' },
-      { value: TypeNotification.ENQUETE_CREE, label: 'Enquête créée' },
-      { value: TypeNotification.ENQUETE_VALIDE, label: 'Enquête validée' },
-      { value: TypeNotification.ENQUETE_REJETE, label: 'Enquête rejetée' },
-      { value: TypeNotification.ENQUETE_EN_ATTENTE, label: 'Enquête en attente' },
+      { value: TypeNotification.AUDIENCE_CREE, label: 'Audience créée' },
+      { value: TypeNotification.AUDIENCE_PROCHAINE, label: 'Audience prochaine' },
+      { value: TypeNotification.ACTION_AMIABLE_CREE, label: 'Action amiable créée' },
+      { value: TypeNotification.TACHE_AFFECTEE, label: 'Tâche affectée' },
+      { value: TypeNotification.TACHE_COMPLETEE, label: 'Tâche complétée' },
+      { value: TypeNotification.TRAITEMENT_DOSSIER, label: 'Traitement dossier' },
       { value: TypeNotification.TACHE_URGENTE, label: 'Tâche urgente' },
       { value: TypeNotification.RAPPEL, label: 'Rappel' },
-      { value: TypeNotification.INFO, label: 'Information' }
+      { value: TypeNotification.INFO, label: 'Information' },
+      { value: TypeNotification.NOTIFICATION_MANUELLE, label: 'Notification manuelle' }
     ];
   }
 }

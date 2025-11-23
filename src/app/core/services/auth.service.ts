@@ -187,7 +187,28 @@ export class AuthService {
         }),
         catchError(error => {
           console.error('❌ Erreur de connexion API:', error);
-          this.toastService.error('Erreur de connexion. Vérifiez vos identifiants.');
+          
+          // Gestion spécifique des erreurs
+          let errorMessage = 'Erreur de connexion. Vérifiez vos identifiants.';
+          
+          if (error.status === 500) {
+            const errorBody = error.error;
+            if (errorBody?.message?.includes('Bad credentials') || 
+                errorBody?.message?.includes('bad credentials') ||
+                errorBody?.error?.includes('Bad credentials')) {
+              errorMessage = 'Mot de passe incorrect. Veuillez vérifier vos identifiants.';
+            } else {
+              errorMessage = 'Erreur serveur lors de l\'authentification. Veuillez contacter l\'administrateur.';
+            }
+          } else if (error.status === 401) {
+            errorMessage = 'Email ou mot de passe incorrect.';
+          } else if (error.status === 403) {
+            errorMessage = 'Accès refusé. Votre compte peut être désactivé.';
+          } else if (error.status === 0) {
+            errorMessage = 'Impossible de contacter le serveur. Vérifiez votre connexion.';
+          }
+          
+          this.toastService.error(errorMessage);
           return throwError(() => error);
         })
       );

@@ -51,12 +51,98 @@ export class SidebarComponent implements OnInit, OnDestroy {
       route: '/dossier/dashboard',
       roles: [Role.AGENT_DOSSIER]
     },
-    // Other roles use the generic dashboard
     {
       label: 'Tableau de bord',
       icon: 'fas fa-tachometer-alt',
       route: '/dashboard',
-      roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE, Role.AGENT_RECOUVREMENT_JURIDIQUE, Role.CHEF_DEPARTEMENT_FINANCE, Role.AGENT_FINANCE]
+      roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE, Role.AGENT_RECOUVREMENT_JURIDIQUE]
+    },
+    // Chef Finance dashboard - au niveau principal
+    {
+      label: 'Tableau de bord',
+      icon: 'fas fa-tachometer-alt',
+      route: '/finance/dashboard',
+      roles: [Role.CHEF_DEPARTEMENT_FINANCE, Role.AGENT_FINANCE]
+    },
+    // Gestion Finance - juste après Tableau de bord
+    {
+      label: 'Gestion Finance',
+      icon: 'fas fa-chart-line',
+      route: '/finance',
+      roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_FINANCE, Role.AGENT_FINANCE],
+      children: [
+        {
+          label: 'Validation Frais',
+          icon: 'fas fa-check-circle',
+          route: '/finance/validation-frais',
+          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_FINANCE]
+        },
+        {
+          label: 'Catalogue Tarifs',
+          icon: 'fas fa-tags',
+          route: '/finance/tarifs',
+          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_FINANCE]
+        },
+        {
+          label: 'Import Frais',
+          icon: 'fas fa-file-upload',
+          route: '/finance/import-frais',
+          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_FINANCE, Role.AGENT_FINANCE]
+        },
+        {
+          label: 'Rapports',
+          icon: 'fas fa-file-alt',
+          route: '/finance/rapports',
+          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_FINANCE, Role.AGENT_FINANCE]
+        },
+        {
+          label: 'Reporting',
+          icon: 'fas fa-chart-bar',
+          route: '/finance/reporting',
+          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_FINANCE, Role.AGENT_FINANCE]
+        },
+        {
+          label: 'Insights',
+          icon: 'fas fa-lightbulb',
+          route: '/finance/insights',
+          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_FINANCE, Role.AGENT_FINANCE]
+        }
+      ]
+    },
+    // Gestion Utilisateurs pour Chef Finance - après Gestion Finance
+    {
+      label: 'Gestion Utilisateurs',
+      icon: 'fas fa-users-cog',
+      route: '/finance/utilisateurs',
+      roles: [Role.CHEF_DEPARTEMENT_FINANCE, Role.SUPER_ADMIN]
+    },
+    // Tâches pour Chef Finance - après Gestion Utilisateurs
+    {
+      label: 'Tâches',
+      icon: 'fas fa-tasks',
+      route: '/finance/taches',
+      roles: [Role.CHEF_DEPARTEMENT_FINANCE, Role.AGENT_FINANCE]
+    },
+    // Notifications pour Chef Finance - après Tâches
+    {
+      label: 'Notifications',
+      icon: 'fas fa-bell',
+      route: '/notifications',
+      roles: [Role.CHEF_DEPARTEMENT_FINANCE, Role.AGENT_FINANCE],
+      children: [
+        {
+          label: 'Mes Notifications',
+          icon: 'fas fa-bell',
+          route: '/notifications',
+          roles: [Role.CHEF_DEPARTEMENT_FINANCE, Role.AGENT_FINANCE]
+        },
+        {
+          label: 'Envoyer Notification',
+          icon: 'fas fa-paper-plane',
+          route: '/send-notification',
+          roles: [Role.CHEF_DEPARTEMENT_FINANCE]
+        }
+      ]
     },
     {
       label: 'Créanciers',
@@ -194,25 +280,25 @@ export class SidebarComponent implements OnInit, OnDestroy {
       label: 'Gestion Juridique',
       icon: 'fas fa-gavel',
       route: '/juridique',
-      roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE, Role.AGENT_RECOUVREMENT_JURIDIQUE],
+      roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE],
       children: [
         {
           label: 'Dossiers Affectés',
           icon: 'fas fa-folder-open',
           route: '/dossiers/juridique',
-          roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE, Role.AGENT_RECOUVREMENT_JURIDIQUE]
+          roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE]
         },
         {
           label: 'Avocats',
           icon: 'fas fa-user-tie',
           route: '/juridique/avocats',
-          roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE, Role.AGENT_RECOUVREMENT_JURIDIQUE]
+          roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE]
         },
         {
           label: 'Huissiers',
           icon: 'fas fa-balance-scale',
           route: '/juridique/huissiers',
-          roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE, Role.AGENT_RECOUVREMENT_JURIDIQUE]
+          roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE]
         },
         {
           label: 'Nouvel Avocat',
@@ -228,51 +314,75 @@ export class SidebarComponent implements OnInit, OnDestroy {
         }
       ]
     },
+    // Agent Juridique - Menu spécifique
+    {
+      label: 'Tableau de bord',
+      icon: 'fas fa-tachometer-alt',
+      route: '/agent-juridique/dashboard',
+      roles: [Role.AGENT_RECOUVREMENT_JURIDIQUE]
+    },
+    {
+      label: 'Mes Dossiers',
+      icon: 'fas fa-folder-open',
+      route: '/agent-juridique/dossiers',
+      roles: [Role.AGENT_RECOUVREMENT_JURIDIQUE]
+    },
+    {
+      label: 'Gestion Audiences',
+      icon: 'fas fa-gavel',
+      route: '/agent-juridique/audiences',
+      roles: [Role.AGENT_RECOUVREMENT_JURIDIQUE]
+    },
+    {
+      label: 'Consultation Avocats/Huissiers',
+      icon: 'fas fa-search',
+      route: '/agent-juridique/consultation',
+      roles: [Role.AGENT_RECOUVREMENT_JURIDIQUE]
+    },
     {
       label: 'Recouvrement Amiable',
       icon: 'fas fa-handshake',
       route: '/amiable',
-      roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE, Role.AGENT_RECOUVREMENT_AMIABLE],
+      roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE],
       children: [
         {
           label: 'Dossiers Affectés',
           icon: 'fas fa-folder-open',
           route: '/dossiers/amiable',
-          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE, Role.AGENT_RECOUVREMENT_AMIABLE]
+          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE]
         },
         {
           label: 'Actions Amiables',
           icon: 'fas fa-phone',
           route: '/amiable/actions',
-          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE, Role.AGENT_RECOUVREMENT_AMIABLE]
+          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE]
         },
         {
           label: 'Relances',
           icon: 'fas fa-envelope',
           route: '/amiable/relances',
-          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE, Role.AGENT_RECOUVREMENT_AMIABLE]
+          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE]
         }
       ]
     },
+    // Agent Amiable - Menu spécifique
     {
-      label: 'Gestion Finance',
-      icon: 'fas fa-chart-line',
-      route: '/finance',
-      roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_FINANCE, Role.AGENT_FINANCE],
-      children: [
-        {
-          label: 'Tableau de Bord',
-          icon: 'fas fa-chart-pie',
-          route: '/finance/dashboard',
-          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_FINANCE, Role.AGENT_FINANCE]
-        },
-        {
-          label: 'Rapports',
-          icon: 'fas fa-file-alt',
-          route: '/finance/rapports',
-          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_FINANCE, Role.AGENT_FINANCE]
-        }
-      ]
+      label: 'Tableau de bord',
+      icon: 'fas fa-tachometer-alt',
+      route: '/agent-amiable/dashboard',
+      roles: [Role.AGENT_RECOUVREMENT_AMIABLE]
+    },
+    {
+      label: 'Mes Dossiers',
+      icon: 'fas fa-folder-open',
+      route: '/agent-amiable/dossiers',
+      roles: [Role.AGENT_RECOUVREMENT_AMIABLE]
+    },
+    {
+      label: 'Gestion Actions',
+      icon: 'fas fa-tasks',
+      route: '/agent-amiable/actions',
+      roles: [Role.AGENT_RECOUVREMENT_AMIABLE]
     },
     {
       label: 'Administration',
@@ -298,19 +408,19 @@ export class SidebarComponent implements OnInit, OnDestroy {
       label: 'Notifications',
       icon: 'fas fa-bell',
       route: '/notifications',
-      roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER, Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE, Role.AGENT_RECOUVREMENT_JURIDIQUE, Role.CHEF_DEPARTEMENT_FINANCE, Role.AGENT_FINANCE, Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE, Role.AGENT_RECOUVREMENT_AMIABLE],
+      roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER, Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE, Role.AGENT_RECOUVREMENT_JURIDIQUE, Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE, Role.AGENT_RECOUVREMENT_AMIABLE],
       children: [
         {
           label: 'Mes Notifications',
           icon: 'fas fa-bell',
           route: '/notifications',
-          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER, Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE, Role.AGENT_RECOUVREMENT_JURIDIQUE, Role.CHEF_DEPARTEMENT_FINANCE, Role.AGENT_FINANCE, Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE, Role.AGENT_RECOUVREMENT_AMIABLE]
+          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER, Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE, Role.AGENT_RECOUVREMENT_JURIDIQUE, Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE, Role.AGENT_RECOUVREMENT_AMIABLE]
         },
         {
           label: 'Envoyer Notification',
           icon: 'fas fa-paper-plane',
           route: '/send-notification',
-          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_DOSSIER, Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE, Role.CHEF_DEPARTEMENT_FINANCE, Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE]
+          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_DOSSIER, Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE, Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE]
         }
       ]
     }

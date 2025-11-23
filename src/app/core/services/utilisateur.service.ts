@@ -92,13 +92,17 @@ export class UtilisateurService {
     // Adapter la charge utile au format backend
     const payload: any = { ...utilisateur };
     
-    // Normaliser le rôle - s'assurer que roleUtilisateur est défini
+    // 🔧 CORRECTION: Retirer les champs non reconnus par le backend
+    // Le backend ne reconnaît pas "departement" dans l'entité Utilisateur
+    delete payload.departement;
+    
+    // 🔧 CORRECTION: Normaliser le rôle - utiliser uniquement roleUtilisateur
+    // Le backend ne reconnaît que "roleUtilisateur", pas "role"
     if (payload.role && !payload.roleUtilisateur) {
       payload.roleUtilisateur = payload.role;
     }
-    if (payload.roleUtilisateur && !payload.role) {
-      payload.role = payload.roleUtilisateur;
-    }
+    // Retirer "role" car le backend ne le reconnaît pas
+    delete payload.role;
     
     // Le mot de passe sera crypté côté backend, on l'envoie tel quel
     if (!payload.motDePasse) {
@@ -147,7 +151,18 @@ export class UtilisateurService {
       'Content-Type': 'application/json'
     });
 
-    return this.http.put<Utilisateur>(`${this.baseUrl}/users/${id}`, utilisateur, { headers })
+    // 🔧 CORRECTION: Retirer les champs non reconnus par le backend
+    const payload: any = { ...utilisateur };
+    delete payload.departement; // Le backend ne reconnaît pas "departement" dans l'entité Utilisateur
+    delete payload.role; // Le backend ne reconnaît que "roleUtilisateur", pas "role"
+    
+    // Normaliser le rôle si nécessaire
+    if (payload.role && !payload.roleUtilisateur) {
+      payload.roleUtilisateur = payload.role;
+      delete payload.role;
+    }
+
+    return this.http.put<Utilisateur>(`${this.baseUrl}/users/${id}`, payload, { headers })
       .pipe(
         tap(updatedUtilisateur => {
           // Mettre à jour la liste locale après modification

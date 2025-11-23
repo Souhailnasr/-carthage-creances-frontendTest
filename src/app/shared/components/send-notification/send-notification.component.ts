@@ -23,14 +23,16 @@ export class SendNotificationComponent implements OnInit {
     { value: TypeNotification.DOSSIER_CREE, label: 'Dossier créé' },
     { value: TypeNotification.DOSSIER_VALIDE, label: 'Dossier validé' },
     { value: TypeNotification.DOSSIER_REJETE, label: 'Dossier rejeté' },
-    { value: TypeNotification.DOSSIER_EN_ATTENTE, label: 'Dossier en attente' },
-    { value: TypeNotification.ENQUETE_CREE, label: 'Enquête créée' },
-    { value: TypeNotification.ENQUETE_VALIDE, label: 'Enquête validée' },
-    { value: TypeNotification.ENQUETE_REJETE, label: 'Enquête rejetée' },
-    { value: TypeNotification.ENQUETE_EN_ATTENTE, label: 'Enquête en attente' },
+    { value: TypeNotification.AUDIENCE_CREE, label: 'Audience créée' },
+    { value: TypeNotification.AUDIENCE_PROCHAINE, label: 'Audience prochaine' },
+    { value: TypeNotification.ACTION_AMIABLE_CREE, label: 'Action amiable créée' },
+    { value: TypeNotification.TACHE_AFFECTEE, label: 'Tâche affectée' },
+    { value: TypeNotification.TACHE_COMPLETEE, label: 'Tâche complétée' },
+    { value: TypeNotification.TRAITEMENT_DOSSIER, label: 'Traitement dossier' },
     { value: TypeNotification.TACHE_URGENTE, label: 'Tâche urgente' },
     { value: TypeNotification.RAPPEL, label: 'Rappel' },
-    { value: TypeNotification.INFO, label: 'Information' }
+    { value: TypeNotification.INFO, label: 'Information' },
+    { value: TypeNotification.NOTIFICATION_MANUELLE, label: 'Notification manuelle' }
   ];
 
   constructor(
@@ -73,12 +75,11 @@ export class SendNotificationComponent implements OnInit {
         destinataireId: this.notificationForm.value.destinataireId,
         type: this.notificationForm.value.type,
         titre: this.notificationForm.value.titre,
-        message: this.notificationForm.value.message,
-        lienAction: this.notificationForm.value.lienAction || undefined
+        message: this.notificationForm.value.message
       };
 
-      this.notificationService.createNotification(notificationRequest).subscribe(
-        () => {
+      this.notificationService.createNotification(notificationRequest).subscribe({
+        next: () => {
           this.showSuccess = true;
           this.notificationForm.reset();
           this.notificationForm.patchValue({
@@ -91,12 +92,12 @@ export class SendNotificationComponent implements OnInit {
             this.showSuccess = false;
           }, 3000);
         },
-        error => {
+        error: (error: any) => {
           console.error('Erreur lors de l\'envoi de la notification', error);
           this.isSubmitting = false;
           alert('Erreur lors de l\'envoi de la notification');
         }
-      );
+      });
     } else {
       this.markFormGroupTouched();
     }
@@ -126,19 +127,21 @@ export class SendNotificationComponent implements OnInit {
     return `${user.prenom} ${user.nom} (${user.email})`;
   }
 
-  getTypeIcon(type: TypeNotification): string {
-    const icons: { [key in TypeNotification]: string } = {
+  getTypeIcon(type: string): string {
+    const icons: { [key: string]: string } = {
       [TypeNotification.DOSSIER_CREE]: 'fas fa-file-plus',
       [TypeNotification.DOSSIER_VALIDE]: 'fas fa-check-circle',
       [TypeNotification.DOSSIER_REJETE]: 'fas fa-times-circle',
-      [TypeNotification.DOSSIER_EN_ATTENTE]: 'fas fa-clock',
-      [TypeNotification.ENQUETE_CREE]: 'fas fa-search-plus',
-      [TypeNotification.ENQUETE_VALIDE]: 'fas fa-check-circle',
-      [TypeNotification.ENQUETE_REJETE]: 'fas fa-times-circle',
-      [TypeNotification.ENQUETE_EN_ATTENTE]: 'fas fa-clock',
+      [TypeNotification.AUDIENCE_CREE]: 'fas fa-gavel',
+      [TypeNotification.AUDIENCE_PROCHAINE]: 'fas fa-calendar-alt',
+      [TypeNotification.ACTION_AMIABLE_CREE]: 'fas fa-handshake',
+      [TypeNotification.TACHE_AFFECTEE]: 'fas fa-tasks',
+      [TypeNotification.TACHE_COMPLETEE]: 'fas fa-check',
+      [TypeNotification.TRAITEMENT_DOSSIER]: 'fas fa-cog',
       [TypeNotification.TACHE_URGENTE]: 'fas fa-exclamation-triangle',
       [TypeNotification.RAPPEL]: 'fas fa-bell',
-      [TypeNotification.INFO]: 'fas fa-info-circle'
+      [TypeNotification.INFO]: 'fas fa-info-circle',
+      [TypeNotification.NOTIFICATION_MANUELLE]: 'fas fa-envelope'
     };
     return icons[type] || 'fas fa-bell';
   }

@@ -1,0 +1,158 @@
+.agent-juridique-audiences {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+
+  .header {
+    margin-bottom: 24px;
+
+    h1 {
+      font-size: 28px;
+      font-weight: 600;
+      color: #1a1a1a;
+      margin: 0 0 8px 0;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+
+      i {
+        color: #9c27b0;
+      }
+    }
+
+    .subtitle {
+      color: #666;
+      font-size: 14px;
+      margin: 0;
+    }
+  }
+
+  .filters-card {
+    margin-bottom: 24px;
+
+    .filters {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+
+      button {
+        &.active {
+          background: #9c27b0;
+          color: white;
+        }
+      }
+    }
+  }
+
+  mat-card {
+    margin-bottom: 24px;
+
+    mat-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+
+      mat-card-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 20px;
+        font-weight: 600;
+      }
+
+      .card-actions {
+        button {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+      }
+    }
+
+    .loading-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 20px;
+      gap: 20px;
+
+      p {
+        color: #666;
+        font-size: 14px;
+      }
+    }
+
+    .audiences-table {
+      width: 100%;
+
+      th {
+        font-weight: 600;
+        color: #1a1a1a;
+      }
+
+      td {
+        color: #666;
+      }
+    }
+
+    .no-data {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 20px;
+      gap: 16px;
+      color: #999;
+
+      i {
+        font-size: 64px;
+        opacity: 0.5;
+      }
+
+      p {
+        font-size: 16px;
+        margin: 0;
+      }
+    }
+  }
+
+  .form-card {
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+
+      .full-width {
+        grid-column: 1 / -1;
+      }
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 16px;
+      justify-content: flex-end;
+
+      button {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .agent-juridique-audiences {
+    padding: 16px;
+
+    .form-card {
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  }
+}
+

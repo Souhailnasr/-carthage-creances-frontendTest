@@ -375,67 +375,9 @@ export class EnquetePhaseComponent implements OnInit, OnDestroy {
   }
 
   private loadFallbackData(): void {
-    // Données de fallback en cas d'erreur API
-    this.dossiers = [
-      new Dossier({
-        id: '1',
-        titre: 'Dossier Client ABC',
-        numeroDossier: 'DOS-2024-001',
-        montantCreance: 15000,
-        dateCreation: new Date('2024-01-15'),
-        statut: 'VALIDE' as any,
-        urgence: 'MOYENNE' as any,
-        agentResponsable: 'John Doe',
-        valide: true,
-        dateValidation: new Date('2024-01-16'),
-        creancier: new Creancier({
-          id: 1,
-          codeCreancier: 'CRE-001',
-          nom: 'BEN ALI',
-          prenom: 'Ahmed',
-          type: 'PARTICULIER',
-          email: 'ahmed.benali@email.com',
-          telephone: '+216 20 123 456'
-        }),
-        debiteur: new Debiteur({
-          id: 1,
-          nom: 'TRAORE',
-          prenom: 'Fatima',
-          type: 'ENTREPRISE',
-          email: 'fatima.traore@company.com',
-          telephone: '+216 20 789 012'
-        })
-      }),
-      new Dossier({
-        id: '2',
-        titre: 'Dossier Client XYZ',
-        numeroDossier: 'DOS-2024-002',
-        montantCreance: 25000,
-        dateCreation: new Date('2024-01-20'),
-        statut: 'VALIDE' as any,
-        urgence: 'TRES_URGENT' as any,
-        agentResponsable: 'Jane Smith',
-        valide: true,
-        dateValidation: new Date('2024-01-21'),
-        creancier: new Creancier({
-          id: 2,
-          codeCreancier: 'CRE-002',
-          nom: 'KASSEM',
-          prenom: 'Mohamed',
-          type: 'ENTREPRISE',
-          email: 'm.kassem@business.tn',
-          telephone: '+216 20 345 678'
-        }),
-        debiteur: new Debiteur({
-          id: 2,
-          nom: 'BOUAZIZI',
-          prenom: 'Karim',
-          type: 'PARTICULIER',
-          email: 'karim.bouazizi@email.com',
-          telephone: '+216 20 456 789'
-        })
-      })
-    ];
+    // En cas d'erreur API, retourner un tableau vide
+    // Les données doivent toujours venir de l'API
+    this.dossiers = [];
     this.filterDossiers();
     this.applySortingAndPaging();
   }

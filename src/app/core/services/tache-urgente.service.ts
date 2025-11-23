@@ -1,76 +1,183 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, throwError } from 'rxjs';
+import { catchError } from 'rxjs/operators';
+import { environment } from '../../../environments/environment';
 
 export interface TacheUrgente {
   id: number;
   titre: string;
   description: string;
+  type: 'ENQUETE' | 'RELANCE' | 'DOSSIER' | 'AUDIENCE' | 'ACTION' | 'ACTION_AMIABLE' | 'VALIDATION' | 'TRAITEMENT' | 'SUIVI' | 'RAPPEL';
+  priorite: 'BASSE' | 'MOYENNE' | 'HAUTE' | 'URGENTE';
+  statut: 'EN_ATTENTE' | 'EN_COURS' | 'TERMINEE' | 'ANNULEE';
+  agentAssigné: {
+    id: number;
+    nom: string;
+    prenom: string;
+  };
+  chefCreateur: {
+    id: number;
+    nom: string;
+    prenom: string;
+  };
+  dateCreation: string; // ISO 8601
+  dateEcheance: string; // ISO 8601
+  dateCompletion?: string; // ISO 8601
+  dossier?: { id: number; numeroDossier: string };
+  commentaires?: string;
+  // Propriétés de compatibilité avec l'ancien code
+  agentId?: number;
+  agentNom?: string;
+  dossierTitre?: string;
+  montant?: number;
+  dateCloture?: Date | string;
+}
+
+export interface TacheRequest {
+  titre: string;
+  description: string;
   type: string;
   priorite: string;
-  statut: string;
-  dateCreation: Date;
-  dateEcheance: Date;
-  agentId: number;
-  agentNom: string;
-  dossierId?: number;
-  dossierTitre?: string;
-  creancierNom?: string;
-  debiteurNom?: string;
-  montant?: number;
-  dateCloture?: Date;
-  commentaires?: string;
+  agentAssigné?: { id: number };
+  chefCreateur?: { id: number };
+  dateEcheance: string;
+  dossier?: { id: number };
+}
+
+export interface TacheAffectationMultiples {
+  titre: string;
+  description: string;
+  type: string;
+  priorite: string;
+  agentIds: number[];
+  chefCreateurId: number;
+  dateEcheance: string;
 }
 
 @Injectable({
   providedIn: 'root'
 })
 export class TacheUrgenteService {
-  private apiUrl = 'http://localhost:8089/carthage-creance/api/taches-urgentes';
+  private baseUrl = `${environment.apiUrl}/api/taches-urgentes`;
 
   constructor(private http: HttpClient) {}
 
-  getAllTachesUrgentes(): Observable<TacheUrgente[]> {
-    return this.http.get<TacheUrgente[]>(this.apiUrl);
+  /**
+   * Créer une tâche (Chef ou Super Admin)
+   */
+  createTache(tache: TacheRequest): Observable<TacheUrgente> {
+    return this.http.post<TacheUrgente>(this.baseUrl, tache)
+      .pipe(
+        catchError(this.handleError)
+      );
   }
 
-  getTacheUrgenteById(id: number): Observable<TacheUrgente> {
-    return this.http.get<TacheUrgente>(`${this.apiUrl}/${id}`);
+  /**
+   * Affecter une tâche à plusieurs agents (Chef)
+   */
+  affecterTacheMultiples(data: TacheAffectationMultiples): Observable<TacheUrgente[]> {
+    return this.http.post<TacheUrgente[]>(`${this.baseUrl}/affecter-multiples`, data)
+      .pipe(
+        catchError(this.handleError)
+      );
   }
 
-  getTachesByAgent(agentId: number): Observable<TacheUrgente[]> {
-    return this.http.get<TacheUrgente[]>(`${this.apiUrl}/agent/${agentId}`);
+  /**
+   * Affecter une tâche à tous les agents d'un chef
+   */
+  affecterTacheAAgentsChef(chefId: number, data: Omit<TacheAffectationMultiples, 'agentIds' | 'chefCreateurId'> & { chefCreateurId: number }): Observable<TacheUrgente[]> {
+    return this.http.post<TacheUrgente[]>(`${this.baseUrl}/chef/${chefId}/affecter-agents`, data)
+      .pipe(
+        catchError(this.handleError)
+      );
   }
 
-  getTachesByStatut(statut: string): Observable<TacheUrgente[]> {
-    return this.http.get<TacheUrgente[]>(`${this.apiUrl}/statut/${statut}`);
+  /**
+   * Affecter une tâche à tous les utilisateurs (Super Admin)
+   */
+  affecterTacheATous(data: Omit<TacheAffectationMultiples, 'agentIds' | 'chefCreateurId'> & { chefCreateurId: number }): Observable<TacheUrgente[]> {
+    return this.http.post<TacheUrgente[]>(`${this.baseUrl}/super-admin/affecter-tous`, data)
+      .pipe(
+        catchError(this.handleError)
+      );
   }
 
-  getTachesByPriorite(priorite: string): Observable<TacheUrgente[]> {
-    return this.http.get<TacheUrgente[]>(`${this.apiUrl}/priorite/${priorite}`);
+  /**
+   * Récupérer les tâches d'un agent
+   */
+  getTachesAgent(agentId: number): Observable<TacheUrgente[]> {
+    return this.http.get<TacheUrgente[]>(`${this.baseUrl}/agent/${agentId}`)
+      .pipe(
+        catchError(this.handleError)
+      );
   }
 
-  getTachesEnRetard(): Observable<TacheUrgente[]> {
-    return this.http.get<TacheUrgente[]>(`${this.apiUrl}/en-retard`);
+  /**
+   * Récupérer les tâches d'un chef
+   */
+  getTachesChef(chefId: number): Observable<TacheUrgente[]> {
+    return this.http.get<TacheUrgente[]>(`${this.baseUrl}/chef/${chefId}`)
+      .pipe(
+        catchError(this.handleError)
+      );
   }
 
-  createTacheUrgente(tache: Partial<TacheUrgente>): Observable<TacheUrgente> {
-    return this.http.post<TacheUrgente>(this.apiUrl, tache);
+  /**
+   * Récupérer toutes les tâches (Super Admin)
+   */
+  getAllTaches(): Observable<TacheUrgente[]> {
+    return this.http.get<TacheUrgente[]>(this.baseUrl)
+      .pipe(
+        catchError(this.handleError)
+      );
   }
 
-  updateTacheUrgente(id: number, tache: Partial<TacheUrgente>): Observable<TacheUrgente> {
-    return this.http.put<TacheUrgente>(`${this.apiUrl}/${id}`, tache);
+  /**
+   * Récupérer une tâche par ID
+   */
+  getTacheById(id: number): Observable<TacheUrgente> {
+    return this.http.get<TacheUrgente>(`${this.baseUrl}/${id}`)
+      .pipe(
+        catchError(this.handleError)
+      );
   }
 
-  deleteTacheUrgente(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/${id}`);
+  /**
+   * Marquer une tâche comme terminée
+   */
+  marquerTerminee(tacheId: number, commentaires?: string): Observable<TacheUrgente> {
+    return this.http.put<TacheUrgente>(`${this.baseUrl}/${tacheId}/terminer`, { commentaires })
+      .pipe(
+        catchError(this.handleError)
+      );
   }
 
-  marquerTerminee(id: number): Observable<TacheUrgente> {
-    return this.http.post<TacheUrgente>(`${this.apiUrl}/${id}/terminer`, {});
+  /**
+   * Mettre à jour une tâche
+   */
+  updateTache(tacheId: number, tache: Partial<TacheRequest>): Observable<TacheUrgente> {
+    return this.http.put<TacheUrgente>(`${this.baseUrl}/${tacheId}`, tache)
+      .pipe(
+        catchError(this.handleError)
+      );
   }
 
-  getStatistiquesTaches(): Observable<any> {
-    return this.http.get<any>(`${this.apiUrl}/statistiques`);
+  /**
+   * Supprimer une tâche
+   */
+  deleteTache(tacheId: number): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/${tacheId}`)
+      .pipe(
+        catchError(this.handleError)
+      );
   }
+
+  /**
+   * Gestion des erreurs
+   */
+  private handleError = (error: any): Observable<never> => {
+    console.error('Erreur dans TacheUrgenteService:', error);
+    return throwError(() => error);
+  };
 }

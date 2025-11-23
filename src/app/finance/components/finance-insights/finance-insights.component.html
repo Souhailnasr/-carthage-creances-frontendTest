@@ -1,0 +1,77 @@
+<div class="insights-container">
+  <div class="header">
+    <div class="header-content">
+      <div>
+        <h1>Suggestions Intelligentes</h1>
+        <p>Recommandations générées pour optimiser la gestion financière</p>
+      </div>
+      <mat-form-field appearance="outline">
+        <mat-label>Filtrer par catégorie</mat-label>
+        <mat-select [(value)]="selectedCategory" (selectionChange)="onCategoryFilterChange()">
+          <mat-option value="ALL">Toutes</mat-option>
+          <mat-option value="OPTIMISATION_COUTS">Optimisation Coûts</mat-option>
+          <mat-option value="RISQUES_DOSSIER">Risques Dossier</mat-option>
+          <mat-option value="PERFORMANCE_AGENT">Performance Agent</mat-option>
+        </mat-select>
+      </mat-form-field>
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="loading-container">
+    <mat-spinner diameter="50"></mat-spinner>
+    <p>Chargement des suggestions...</p>
+  </div>
+
+  <div *ngIf="!loading && filteredInsights.length === 0" class="no-insights">
+    <mat-icon>check_circle</mat-icon>
+    <p>Aucune suggestion disponible</p>
+  </div>
+
+  <div *ngIf="!loading && filteredInsights.length > 0" class="insights-grid">
+    <mat-card *ngFor="let insight of filteredInsights" class="insight-card" [class]="'category-' + insight.categorie">
+      <mat-card-header>
+        <div class="card-header-content">
+          <mat-icon [class]="'icon-' + getCategoryColor(insight.categorie)">
+            {{ getCategoryIcon(insight.categorie) }}
+          </mat-icon>
+          <div>
+            <mat-card-title>{{ getCategoryLabel(insight.categorie) }}</mat-card-title>
+            <mat-card-subtitle>{{ insight.message }}</mat-card-subtitle>
+          </div>
+        </div>
+        <mat-chip [color]="getCategoryColor(insight.categorie)">
+          {{ getCategoryLabel(insight.categorie) }}
+        </mat-chip>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="insight-details">
+          <div class="action-suggestion">
+            <strong>Action suggérée:</strong>
+            <p>{{ insight.actionSuggeree }}</p>
+          </div>
+          
+          <div *ngIf="insight.dossierId" class="insight-meta">
+            <span><mat-icon>folder</mat-icon> Dossier #{{ insight.dossierId }}</span>
+          </div>
+          
+          <div *ngIf="insight.agentId" class="insight-meta">
+            <span><mat-icon>person</mat-icon> Agent #{{ insight.agentId }}</span>
+          </div>
+          
+          <div *ngIf="insight.montantPotentiel" class="insight-meta highlight">
+            <span><mat-icon>attach_money</mat-icon> Potentiel: {{ insight.montantPotentiel | number:'1.2-2' }} TND</span>
+          </div>
+        </div>
+      </mat-card-content>
+      <mat-card-actions align="end">
+        <button mat-button color="primary" (click)="marquerTraite(insight.id)">
+          <mat-icon>check</mat-icon>
+          Marquer comme traité
+        </button>
+      </mat-card-actions>
+    </mat-card>
+  </div>
+</div>
+
+
+

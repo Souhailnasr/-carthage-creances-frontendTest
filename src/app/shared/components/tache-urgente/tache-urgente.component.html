@@ -24,10 +24,10 @@
       
       <select [(ngModel)]="selectedPriorite" (change)="onPrioriteChange()">
         <option value="TOUS">Toutes les priorités</option>
-        <option value="TRES_URGENTE">Très urgente</option>
-        <option value="ELEVEE">Élevée</option>
+        <option value="URGENTE">Urgente</option>
+        <option value="HAUTE">Haute</option>
         <option value="MOYENNE">Moyenne</option>
-        <option value="FAIBLE">Faible</option>
+        <option value="BASSE">Basse</option>
       </select>
     </div>
   </div>
@@ -62,15 +62,15 @@
         <div class="form-group">
           <label>Priorité :</label>
           <select [(ngModel)]="newTache.priorite" name="priorite" required class="form-control">
-            <option value="FAIBLE">Faible</option>
+            <option value="BASSE">Basse</option>
             <option value="MOYENNE">Moyenne</option>
-            <option value="ELEVEE">Élevée</option>
-            <option value="TRES_URGENTE">Très urgente</option>
+            <option value="HAUTE">Haute</option>
+            <option value="URGENTE">Urgente</option>
           </select>
         </div>
         <div class="form-group">
           <label>Date d'échéance :</label>
-          <input type="date" [(ngModel)]="newTache.dateEcheance" name="dateEcheance" required class="form-control">
+          <input type="date" [(ngModel)]="newTache.dateEcheanceDate" name="dateEcheance" required class="form-control">
         </div>
       </div>
       
@@ -99,10 +99,10 @@
          [ngClass]="getStatutClass(tache.statut)">
       
       <div class="tache-priority" [ngClass]="getPrioriteClass(tache.priorite)">
-        <i class="fas fa-exclamation-triangle" *ngIf="tache.priorite === 'TRES_URGENTE'"></i>
-        <i class="fas fa-arrow-up" *ngIf="tache.priorite === 'ELEVEE'"></i>
+        <i class="fas fa-exclamation-triangle" *ngIf="tache.priorite === 'URGENTE'"></i>
+        <i class="fas fa-arrow-up" *ngIf="tache.priorite === 'HAUTE'"></i>
         <i class="fas fa-minus" *ngIf="tache.priorite === 'MOYENNE'"></i>
-        <i class="fas fa-arrow-down" *ngIf="tache.priorite === 'FAIBLE'"></i>
+        <i class="fas fa-arrow-down" *ngIf="tache.priorite === 'BASSE'"></i>
       </div>
       
       <div class="tache-content">
@@ -110,7 +110,7 @@
           <h3>{{ tache.titre }}</h3>
           <div class="tache-meta">
             <span class="tache-type">{{ tache.type }}</span>
-            <span class="tache-agent">{{ tache.agentNom }}</span>
+            <span class="tache-agent">{{ getAgentName(tache) }}</span>
           </div>
         </div>
         
@@ -126,9 +126,9 @@
             </span>
           </div>
           
-          <div class="tache-dossier" *ngIf="tache.dossierTitre">
+          <div class="tache-dossier" *ngIf="getDossierTitle(tache)">
             <i class="fas fa-folder"></i>
-            <span>{{ tache.dossierTitre }}</span>
+            <span>{{ getDossierTitle(tache) }}</span>
           </div>
           
           <div class="tache-montant" *ngIf="tache.montant">

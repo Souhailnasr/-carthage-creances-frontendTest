@@ -2,45 +2,40 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, BehaviorSubject, throwError, interval } from 'rxjs';
 import { tap, catchError, map, switchMap } from 'rxjs/operators';
-import { AuthService } from './auth.service';
+import { environment } from '../../../environments/environment';
+import { JwtAuthService } from './jwt-auth.service';
 
-// Types pour les notifications
-export interface NotificationRequest {
-  destinataireId: number;
-  type: TypeNotification;
+export interface Notification {
+  id: number;
+  utilisateur: {
+    id: number;
+    nom: string;
+    prenom: string;
+    email: string;
+  };
+  type: string; // TypeNotification enum
   titre: string;
   message: string;
-  lienAction?: string;
+  statut: 'NON_LUE' | 'LUE';
+  dateCreation: string; // ISO 8601
+  dateLecture?: string; // ISO 8601
   entiteId?: number;
-  typeEntite?: TypeEntite;
-}
-
-export interface NotificationStats {
-  total: number;
-  nonLues: number;
-  lues: number;
-  parType: { [key in TypeNotification]: number };
-}
-
-export interface NotificationFilter {
-  type?: TypeNotification;
-  statut?: StatutNotification;
-  dateDebut?: Date;
-  dateFin?: Date;
-  destinataireId?: number;
-  page?: number;
-  size?: number;
+  entiteType?: string; // TypeEntite enum
+  lienAction?: string;
 }
 
 export enum TypeNotification {
   DOSSIER_CREE = 'DOSSIER_CREE',
+  DOSSIER_AFFECTE = 'DOSSIER_AFFECTE',
   DOSSIER_VALIDE = 'DOSSIER_VALIDE',
   DOSSIER_REJETE = 'DOSSIER_REJETE',
-  DOSSIER_EN_ATTENTE = 'DOSSIER_EN_ATTENTE',
-  ENQUETE_CREE = 'ENQUETE_CREE',
-  ENQUETE_VALIDE = 'ENQUETE_VALIDE',
-  ENQUETE_REJETE = 'ENQUETE_REJETE',
-  ENQUETE_EN_ATTENTE = 'ENQUETE_EN_ATTENTE',
+  ACTION_AMIABLE_CREE = 'ACTION_AMIABLE_CREE',
+  AUDIENCE_PROCHAINE = 'AUDIENCE_PROCHAINE',
+  AUDIENCE_CREE = 'AUDIENCE_CREE',
+  TACHE_AFFECTEE = 'TACHE_AFFECTEE',
+  TACHE_COMPLETEE = 'TACHE_COMPLETEE',
+  TRAITEMENT_DOSSIER = 'TRAITEMENT_DOSSIER',
+  NOTIFICATION_MANUELLE = 'NOTIFICATION_MANUELLE',
   TACHE_URGENTE = 'TACHE_URGENTE',
   RAPPEL = 'RAPPEL',
   INFO = 'INFO'
@@ -51,38 +46,21 @@ export enum StatutNotification {
   LUE = 'LUE'
 }
 
-export enum TypeEntite {
-  DOSSIER = 'DOSSIER',
-  ENQUETE = 'ENQUETE',
-  TACHE = 'TACHE',
-  UTILISATEUR = 'UTILISATEUR'
-}
-
-export interface Notification {
-  id: number;
-  destinataireId: number;
-  expediteurId?: number;
-  type: TypeNotification;
+export interface NotificationRequest {
+  userIds?: number[];
+  destinataireId?: number;
+  type: string;
   titre: string;
   message: string;
-  statut: StatutNotification;
-  dateCreation: string;
-  dateLecture?: string;
-  lienAction?: string;
   entiteId?: number;
-  typeEntite?: TypeEntite;
-  utilisateur?: {
-    id: number;
-    nom: string;
-    prenom: string;
-  };
+  entiteType?: string;
 }
 
 @Injectable({
   providedIn: 'root'
 })
 export class NotificationService {
-  private baseUrl = 'http://localhost:8089/carthage-creance/api';
+  private baseUrl = `${environment.apiUrl}/api/notifications`;
   private notificationsSubject = new BehaviorSubject<Notification[]>([]);
   private unreadCountSubject = new BehaviorSubject<number>(0);
   private refreshInterval = 30000; // 30 secondes
@@ -92,7 +70,7 @@ export class NotificationService {
 
   constructor(
     private http: HttpClient,
-    private authService: AuthService
+    private jwtAuthService: JwtAuthService
   ) {
     this.startAutoRefresh();
   }
@@ -104,44 +82,28 @@ export class NotificationService {
     interval(this.refreshInterval)
       .pipe(
         switchMap(() => {
-          const currentUser = this.authService.getCurrentUser();
-          return currentUser ? this.getNotificationsByUser(Number(currentUser.id)) : [];
+          return this.jwtAuthService.getCurrentUser().pipe(
+            switchMap(user => {
+              if (user?.id) {
+                return this.getNotificationsNonLues(parseInt(user.id));
+              }
+              return [];
+            })
+          );
         })
       )
       .subscribe();
   }
 
   /**
-   * Créer une nouvelle notification
+   * Récupérer les notifications d'un utilisateur
    */
-  createNotification(notification: NotificationRequest): Observable<Notification> {
-    const headers = new HttpHeaders({
-      'Content-Type': 'application/json',
-      'Accept': 'application/json'
-    });
-
-    return this.http.post<Notification>(`${this.baseUrl}/notifications`, notification, { headers })
-      .pipe(
-        tap(() => {
-          // Rafraîchir les notifications après création
-          const currentUser = this.authService.getCurrentUser();
-          if (currentUser) {
-            this.getNotificationsByUser(Number(currentUser.id)).subscribe();
-          }
-        }),
-        catchError(this.handleError)
-      );
-  }
-
-  /**
-   * Obtenir les notifications d'un utilisateur
-   */
-  getNotificationsByUser(userId: number): Observable<Notification[]> {
-    return this.http.get<Notification[]>(`${this.baseUrl}/notifications/user/${userId}`)
+  getNotifications(userId: number): Observable<Notification[]> {
+    return this.http.get<Notification[]>(`${this.baseUrl}/user/${userId}`)
       .pipe(
         tap(notifications => {
           this.notificationsSubject.next(notifications);
-          const unreadCount = notifications.filter(n => n.statut === StatutNotification.NON_LUE).length;
+          const unreadCount = notifications.filter(n => n.statut === 'NON_LUE').length;
           this.unreadCountSubject.next(unreadCount);
         }),
         catchError(this.handleError)
@@ -149,21 +111,36 @@ export class NotificationService {
   }
 
   /**
-   * Obtenir les notifications avec filtres
+   * Récupérer les notifications non lues
    */
-  getNotificationsWithFilter(filter: NotificationFilter): Observable<{ content: Notification[], totalElements: number }> {
-    const params = new URLSearchParams();
-    
-    if (filter.type) params.append('type', filter.type);
-    if (filter.statut) params.append('statut', filter.statut);
-    if (filter.dateDebut) params.append('dateDebut', filter.dateDebut.toISOString());
-    if (filter.dateFin) params.append('dateFin', filter.dateFin.toISOString());
-    if (filter.destinataireId) params.append('destinataireId', filter.destinataireId.toString());
-    if (filter.page !== undefined) params.append('page', filter.page.toString());
-    if (filter.size !== undefined) params.append('size', filter.size.toString());
-
-    return this.http.get<{ content: Notification[], totalElements: number }>(`${this.baseUrl}/notifications?${params}`)
+  getNotificationsNonLues(userId: number): Observable<Notification[]> {
+    return this.http.get<Notification[]>(`${this.baseUrl}/user/${userId}/non-lues`)
       .pipe(
+        tap(notifications => {
+          const currentNotifications = this.notificationsSubject.value;
+          const updatedNotifications = [...currentNotifications];
+          notifications.forEach(notif => {
+            const index = updatedNotifications.findIndex(n => n.id === notif.id);
+            if (index >= 0) {
+              updatedNotifications[index] = notif;
+            } else {
+              updatedNotifications.push(notif);
+            }
+          });
+          this.notificationsSubject.next(updatedNotifications);
+          this.unreadCountSubject.next(notifications.length);
+        }),
+        catchError(this.handleError)
+      );
+  }
+
+  /**
+   * Récupérer le nombre de notifications non lues
+   */
+  getNombreNotificationsNonLues(userId: number): Observable<number> {
+    return this.http.get<number>(`${this.baseUrl}/user/${userId}/count/non-lues`)
+      .pipe(
+        tap(count => this.unreadCountSubject.next(count)),
         catchError(this.handleError)
       );
   }
@@ -171,45 +148,18 @@ export class NotificationService {
   /**
    * Marquer une notification comme lue
    */
-  marquerLue(notificationId: number): Observable<void> {
-    return this.http.put<void>(`${this.baseUrl}/notifications/${notificationId}/marquer-lue`, {})
+  marquerLue(notificationId: number): Observable<Notification> {
+    return this.http.put<Notification>(`${this.baseUrl}/${notificationId}/marquer-lue`, {})
       .pipe(
         tap(() => {
-          // Mettre à jour l'état local
           const notifications = this.notificationsSubject.value;
           const updatedNotifications = notifications.map(n => 
             n.id === notificationId 
-              ? { ...n, statut: StatutNotification.LUE, dateLecture: new Date().toISOString() }
+              ? { ...n, statut: 'LUE' as const, dateLecture: new Date().toISOString() }
               : n
           );
           this.notificationsSubject.next(updatedNotifications);
-          
-          // Mettre à jour le compteur
-          const unreadCount = updatedNotifications.filter(n => n.statut === StatutNotification.NON_LUE).length;
-          this.unreadCountSubject.next(unreadCount);
-        }),
-        catchError(this.handleError)
-      );
-  }
-
-  /**
-   * Marquer une notification comme non lue
-   */
-  marquerNonLue(notificationId: number): Observable<void> {
-    return this.http.put<void>(`${this.baseUrl}/notifications/${notificationId}/marquer-non-lue`, {})
-      .pipe(
-        tap(() => {
-          // Mettre à jour l'état local
-          const notifications = this.notificationsSubject.value;
-          const updatedNotifications = notifications.map(n => 
-            n.id === notificationId 
-              ? { ...n, statut: StatutNotification.NON_LUE, dateLecture: undefined }
-              : n
-          );
-          this.notificationsSubject.next(updatedNotifications);
-          
-          // Mettre à jour le compteur
-          const unreadCount = updatedNotifications.filter(n => n.statut === StatutNotification.NON_LUE).length;
+          const unreadCount = updatedNotifications.filter(n => n.statut === 'NON_LUE').length;
           this.unreadCountSubject.next(unreadCount);
         }),
         catchError(this.handleError)
@@ -219,15 +169,14 @@ export class NotificationService {
   /**
    * Marquer toutes les notifications comme lues
    */
-  marquerToutesLues(userId: number): Observable<void> {
-    return this.http.put<void>(`${this.baseUrl}/notifications/user/${userId}/marquer-toutes-lues`, {})
+  marquerToutesLues(userId: number): Observable<{ count: number }> {
+    return this.http.put<{ count: number }>(`${this.baseUrl}/user/${userId}/marquer-toutes-lues`, {})
       .pipe(
         tap(() => {
-          // Mettre à jour l'état local
           const notifications = this.notificationsSubject.value;
           const updatedNotifications = notifications.map(n => ({
             ...n,
-            statut: StatutNotification.LUE,
+            statut: 'LUE' as const,
             dateLecture: new Date().toISOString()
           }));
           this.notificationsSubject.next(updatedNotifications);
@@ -238,53 +187,34 @@ export class NotificationService {
   }
 
   /**
-   * Supprimer une notification
+   * Envoyer une notification à plusieurs utilisateurs (Chef)
    */
-  deleteNotification(notificationId: number): Observable<void> {
-    return this.http.delete<void>(`${this.baseUrl}/notifications/${notificationId}`)
-      .pipe(
-        tap(() => {
-          // Mettre à jour l'état local
-          const notifications = this.notificationsSubject.value;
-          const updatedNotifications = notifications.filter(n => n.id !== notificationId);
-          this.notificationsSubject.next(updatedNotifications);
-          
-          // Mettre à jour le compteur
-          const unreadCount = updatedNotifications.filter(n => n.statut === StatutNotification.NON_LUE).length;
-          this.unreadCountSubject.next(unreadCount);
-        }),
-        catchError(this.handleError)
-      );
-  }
-
-  /**
-   * Obtenir les statistiques des notifications
-   */
-  getNotificationStats(userId: number): Observable<NotificationStats> {
-    return this.http.get<NotificationStats>(`${this.baseUrl}/notifications/user/${userId}/stats`)
+  envoyerNotificationMultiples(data: NotificationRequest): Observable<{ count: number }> {
+    return this.http.post<{ count: number }>(`${this.baseUrl}/envoyer-multiples`, data)
       .pipe(
         catchError(this.handleError)
       );
   }
 
   /**
-   * Obtenir le nombre de notifications non lues
+   * Envoyer une notification à tous les agents d'un chef
    */
-  getUnreadCount(userId: number): Observable<number> {
-    return this.http.get<number>(`${this.baseUrl}/notifications/user/${userId}/unread-count`)
+  envoyerNotificationAAgentsChef(chefId: number, data: Omit<NotificationRequest, 'userIds'>): Observable<{ count: number }> {
+    return this.http.post<{ count: number }>(`${this.baseUrl}/chef/${chefId}/agents`, data)
       .pipe(
-        tap(count => this.unreadCountSubject.next(count)),
         catchError(this.handleError)
       );
   }
 
   /**
-   * Gestion des erreurs
+   * Envoyer une notification à tous les utilisateurs (Super Admin)
    */
-  private handleError = (error: any): Observable<never> => {
-    console.error('Erreur dans NotificationService:', error);
-    return throwError(() => error);
-  };
+  envoyerNotificationATous(data: Omit<NotificationRequest, 'userIds'>): Observable<{ count: number }> {
+    return this.http.post<{ count: number }>(`${this.baseUrl}/envoyer-tous`, data)
+      .pipe(
+        catchError(this.handleError)
+      );
+  }
 
   /**
    * Obtenir les notifications actuelles
@@ -299,4 +229,68 @@ export class NotificationService {
   getCurrentUnreadCount(): number {
     return this.unreadCountSubject.value;
   }
+
+  /**
+   * Créer une notification (pour compatibilité avec l'ancien code)
+   */
+  createNotification(notification: NotificationRequest): Observable<Notification> {
+    if (notification.destinataireId) {
+      // Envoyer à un seul utilisateur
+      return this.envoyerNotificationMultiples({
+        userIds: [notification.destinataireId],
+        type: notification.type,
+        titre: notification.titre,
+        message: notification.message,
+        entiteId: notification.entiteId,
+        entiteType: notification.entiteType
+      }).pipe(
+        map(() => ({
+          id: 0,
+          utilisateur: { id: notification.destinataireId!, nom: '', prenom: '', email: '' },
+          type: notification.type,
+          titre: notification.titre,
+          message: notification.message,
+          statut: 'NON_LUE' as const,
+          dateCreation: new Date().toISOString(),
+          entiteId: notification.entiteId,
+          entiteType: notification.entiteType
+        }))
+      );
+    } else if (notification.userIds && notification.userIds.length > 0) {
+      return this.envoyerNotificationMultiples(notification).pipe(
+        map(() => ({
+          id: 0,
+          utilisateur: { id: notification.userIds![0], nom: '', prenom: '', email: '' },
+          type: notification.type,
+          titre: notification.titre,
+          message: notification.message,
+          statut: 'NON_LUE' as const,
+          dateCreation: new Date().toISOString(),
+          entiteId: notification.entiteId,
+          entiteType: notification.entiteType
+        }))
+      );
+    }
+    return throwError(() => new Error('destinataireId ou userIds requis'));
+  }
+
+  /**
+   * Supprimer une notification (pour compatibilité avec l'ancien code)
+   */
+  deleteNotification(notificationId: number): Observable<void> {
+    // Le backend ne supporte peut-être pas la suppression, retourner un Observable vide
+    console.warn('deleteNotification n\'est pas implémenté côté backend');
+    return new Observable(observer => {
+      observer.next();
+      observer.complete();
+    });
+  }
+
+  /**
+   * Gestion des erreurs
+   */
+  private handleError = (error: any): Observable<never> => {
+    console.error('Erreur dans NotificationService:', error);
+    return throwError(() => error);
+  };
 }
