@@ -854,7 +854,26 @@ export class DossierApiService {
    * Récupère les dossiers assignés à un agent
    */
   getDossiersByAgent(agentId: number): Observable<DossierApi[]> {
-    return this.http.get<DossierApi[]>(`${this.apiUrl}/agent/${agentId}`);
+    const url = `${this.apiUrl}/agent/${agentId}`;
+    console.log('🔍 DossierApiService.getDossiersByAgent - URL:', url);
+    console.log('🔍 DossierApiService.getDossiersByAgent - agentId:', agentId, 'type:', typeof agentId);
+    return this.http.get<DossierApi[]>(url).pipe(
+      tap((dossiers) => {
+        console.log('✅ DossierApiService.getDossiersByAgent - Réponse reçue:', dossiers?.length || 0, 'dossiers');
+        if (dossiers && dossiers.length > 0) {
+          console.log('✅ Premier dossier:', {
+            id: dossiers[0].id,
+            titre: dossiers[0].titre,
+            agentResponsable: dossiers[0].agentResponsable
+          });
+        }
+      }),
+      catchError((error) => {
+        console.error('❌ DossierApiService.getDossiersByAgent - Erreur:', error);
+        console.error('❌ Status:', error?.status, 'URL:', error?.url);
+        return throwError(() => error);
+      })
+    );
   }
 
   /**
