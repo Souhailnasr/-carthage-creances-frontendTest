@@ -3,7 +3,6 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { CreancierApi, CreancierRequest } from '../../shared/models/creancier-api.model';
-import { JwtAuthService } from './jwt-auth.service';
 
 @Injectable({
   providedIn: 'root'
@@ -23,10 +22,41 @@ export class CreancierApiService {
     });
   }**/
 
+  private mapPayload(creancier: CreancierRequest): any {
+    // Créer un payload propre avec uniquement les champs attendus par le backend
+    const payload: any = {
+      type: creancier.typeCreancier || 'PERSONNE_PHYSIQUE',
+      codeCreancier: creancier.codeCreancier || '',
+      codeCreance: creancier.codeCreance || '',
+      nom: creancier.nom || '',
+      prenom: creancier.prenom || '',
+      email: creancier.email || '',
+      telephone: creancier.telephone || '',
+      adresse: creancier.adresse || '',
+      ville: creancier.ville || '',
+      codePostal: creancier.codePostal || '',
+      fax: creancier.fax || ''
+    };
+    
+    // Log pour déboguer
+    console.log('📤 Payload envoyé au backend:', payload);
+    
+    return payload;
+  }
+
   // ===== CRUD =====
   createCreancier(creancier: CreancierRequest): Observable<CreancierApi> {
-    return this.http.post<CreancierApi>(this.apiUrl, creancier)
-      .pipe(catchError(error => throwError(() => error)));
+    const payload = this.mapPayload(creancier);
+    return this.http.post<CreancierApi>(this.apiUrl, payload)
+      .pipe(
+        catchError(error => {
+          console.error('❌ Erreur lors de la création du créancier:', error);
+          console.error('📋 Payload envoyé:', payload);
+          console.error('📋 Réponse backend:', error.error);
+          console.error('📋 Status:', error.status, error.statusText);
+          return throwError(() => error);
+        })
+      );
   }
 
   getCreancierById(id: number): Observable<CreancierApi> {
@@ -40,8 +70,16 @@ export class CreancierApiService {
   }
 
   updateCreancier(id: number, creancier: CreancierRequest): Observable<CreancierApi> {
-    return this.http.put<CreancierApi>(`${this.apiUrl}/${id}`, creancier)
-      .pipe(catchError(error => throwError(() => error)));
+    const payload = this.mapPayload(creancier);
+    return this.http.put<CreancierApi>(`${this.apiUrl}/${id}`, payload)
+      .pipe(
+        catchError(error => {
+          console.error('❌ Erreur lors de la mise à jour du créancier:', error);
+          console.error('📋 Payload envoyé:', payload);
+          console.error('📋 Réponse backend:', error.error);
+          return throwError(() => error);
+        })
+      );
   }
 
   deleteCreancier(id: number): Observable<void> {

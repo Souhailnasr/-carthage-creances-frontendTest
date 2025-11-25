@@ -1,208 +1,407 @@
-<div class="dossier-detail-container" *ngIf="dossier">
+<div class="dossier-detail-container" *ngIf="dossier; else notFound">
+  <!-- Debug: Afficher les valeurs pour vérification -->
+  <!-- <div style="background: yellow; padding: 10px; margin: 10px;">
+    <p>Debug - isChefDossier: {{ isChefDossier() }}</p>
+    <p>Debug - canAssignToAgent: {{ canAssignToAgent() }}</p>
+    <p>Debug - currentUser role: {{ currentUser?.roleUtilisateur }}</p>
+    <p>Debug - isChefUser: {{ isChefUser }}</p>
+  </div> -->
   <div class="header">
     <div class="header-left">
       <button class="btn btn-secondary" (click)="goBack()">
         <i class="fas fa-arrow-left"></i> Retour
       </button>
-      <h1>Détails du Dossier</h1>
+      <div>
+        <p class="subtitle">Dossier {{ dossier.numeroDossier }}</p>
+        <h1>{{ dossier.titre || 'Détails du dossier' }}</h1>
+      </div>
     </div>
     <div class="header-right">
+      <span class="badge" [ngClass]="getEtatDossierBadgeClass(dossier.etatDossier)">
+        {{ dossier.etatDossier || 'NON DÉFINI' }}
+      </span>
+      <button class="btn btn-outline" *ngIf="canAssignToAgent()" (click)="toggleAssignAgentPanel()">
+        <i class="fas fa-user-plus"></i>
+        Affecter à un agent
+      </button>
       <button class="btn btn-primary" (click)="editDossier()">
         <i class="fas fa-edit"></i> Modifier
       </button>
     </div>
   </div>
 
-  <div class="dossier-content">
-    <!-- Informations générales -->
-    <div class="info-section">
-      <h2>Informations Générales</h2>
+  <div class="assign-agent-panel" *ngIf="assignAgentPanelOpen">
+    <div class="panel-header">
+      <div>
+        <h3>Affecter ce dossier</h3>
+        <p>Sélectionnez un agent dans votre département</p>
+      </div>
+      <button class="btn btn-icon" type="button" (click)="toggleAssignAgentPanel()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div class="panel-body">
+      <div class="panel-state" *ngIf="loadingAgents">
+        <i class="fas fa-spinner fa-spin"></i>
+        <span>Chargement des agents...</span>
+      </div>
+
+      <div class="panel-state error" *ngIf="agentLoadError">
+        <i class="fas fa-exclamation-circle"></i>
+        <span>{{ agentLoadError }}</span>
+        <p class="error-hint" *ngIf="agentLoadError && agentLoadError.includes('Erreur')">
+          <small>Vérifiez que le backend est démarré et que l'endpoint /api/users/chef/{{ '{' }}id{{ '}' }} est disponible.</small>
+        </p>
+      </div>
+
+      <div class="agent-list" *ngIf="!loadingAgents && !agentLoadError">
+        <label class="agent-item" *ngFor="let agent of agentsChef; trackBy: trackAgent">
+          <input type="radio" name="agentSelect" [value]="agent.id" [(ngModel)]="selectedAgentId" />
+          <div class="agent-info">
+            <strong>{{ agent.prenom }} {{ agent.nom }}</strong>
+            <small>{{ agent.email }}</small>
+          </div>
+        </label>
+        <p class="panel-state" *ngIf="!agentsChef.length">Aucun agent disponible pour le moment.</p>
+      </div>
+    </div>
+
+    <div class="panel-actions">
+      <button class="btn btn-outline" type="button" (click)="toggleAssignAgentPanel()">Annuler</button>
+      <button class="btn btn-primary" type="button" (click)="assignToAgent()" [disabled]="!selectedAgentId || assigningAgent">
+        <i class="fas fa-spinner fa-spin" *ngIf="assigningAgent"></i>
+        <i class="fas fa-check" *ngIf="!assigningAgent"></i>
+        {{ assigningAgent ? 'Affectation...' : 'Affecter' }}
+      </button>
+    </div>
+  </div>
+
+  <div class="status-cards">
+    <div class="status-card">
+      <p>Montant Total</p>
+      <h3>{{ dossier.montantTotal | tnd }}</h3>
+    </div>
+    <div class="status-card success">
+      <p>Montant Recouvré</p>
+      <h3>{{ dossier.montantRecouvre | tnd }}</h3>
+    </div>
+    <div class="status-card warning">
+      <p>Montant Restant</p>
+      <h3>{{ dossier.montantRestant | tnd }}</h3>
+    </div>
+    <div class="status-card info">
+      <p>Urgence</p>
+      <span class="urgence-badge" [ngClass]="getUrgenceClass(dossier.urgence)">
+        {{ getUrgenceLabel(dossier.urgence) }}
+      </span>
+    </div>
+  </div>
+
+  <div class="grid two-columns">
+    <section class="card" aria-labelledby="identite-header">
+      <h2 id="identite-header">Identité & Statuts</h2>
       <div class="info-grid">
-        <div class="info-item">
-          <label>ID du Dossier</label>
-          <span>{{ dossier.id }}</span>
+        <div>
+          <label>ID</label>
+          <p>{{ dossier.id }}</p>
         </div>
-        <div class="info-item">
-          <label>Numéro de Dossier</label>
-          <span>{{ dossier.numeroDossier }}</span>
+        <div>
+          <label>Créé le</label>
+          <p>{{ dossier.getFormattedDate() }}</p>
         </div>
-        <div class="info-item">
-          <label>Titre</label>
-          <span>{{ dossier.titre }}</span>
-        </div>
-        <div class="info-item">
-          <label>Description</label>
-          <span>{{ dossier.description }}</span>
-        </div>
-        <div class="info-item">
-          <label>Montant de la Créance</label>
-          <span class="amount">{{ dossier.getFormattedAmount() }}</span>
-        </div>
-        <div class="info-item">
-          <label>Date de Création</label>
-          <span>{{ dossier.getFormattedDate() }}</span>
-        </div>
-        <div class="info-item">
+        <div>
           <label>Statut Fonctionnel</label>
           <span class="status-badge" [ngClass]="getStatutClass(dossier.statut)">
             {{ getStatutLabel(dossier.statut) }}
           </span>
         </div>
-        <div class="info-item">
-          <label>Dossier Status</label>
+        <div>
+          <label>Statut Technique</label>
           <span class="status-badge" [ngClass]="getDossierStatusClass(dossier.dossierStatus)">
             {{ getDossierStatusLabel(dossier.dossierStatus) }}
           </span>
         </div>
-        <div class="info-item">
-          <label>Urgence</label>
-          <span class="urgence-badge" [ngClass]="getUrgenceClass(dossier.urgence)">
-            {{ getUrgenceLabel(dossier.urgence) }}
-          </span>
-        </div>
       </div>
-    </div>
+      <p class="description">{{ dossier.description || 'Aucune description fournie' }}</p>
+    </section>
 
-    <!-- Informations sur les parties -->
-    <div class="parties-section">
-      <div class="creancier-info">
-        <h3>Créancier</h3>
-        <div class="party-details">
-          <div class="party-item">
-            <label>Code Créancier</label>
-            <span>{{ dossier.creancier.codeCreancier }}</span>
-          </div>
-          <div class="party-item">
-            <label>Code Créance</label>
-            <span>{{ dossier.creancier.codeCreance }}</span>
-          </div>
-          <div class="party-item">
-            <label>Type</label>
-            <span class="type-badge" [ngClass]="getTypeClass(dossier.typeCreancier)">
-              {{ getTypeLabel(dossier.typeCreancier) }}
-            </span>
-          </div>
-          <div class="party-item">
-            <label>Nom</label>
-            <span>{{ dossier.creancier.getFullName() }}</span>
-          </div>
-          <div class="party-item">
-            <label>Adresse</label>
-            <span>{{ dossier.creancier.getFullAddress() }}</span>
-          </div>
-          <div class="party-item">
-            <label>Téléphone</label>
-            <span>{{ dossier.creancier.telephone }}</span>
-          </div>
-          <div class="party-item">
-            <label>Email</label>
-            <span>{{ dossier.creancier.email }}</span>
-          </div>
+    <section class="card" aria-labelledby="montant-header">
+      <h2 id="montant-header">Mise à jour des montants</h2>
+      <form [formGroup]="montantForm" (ngSubmit)="onSubmitMontants()">
+        <div class="form-row">
+          <label>Montant total</label>
+          <input type="number" formControlName="montantTotal" min="0" step="0.01" />
         </div>
+        <div class="form-row">
+          <label>Montant recouvré</label>
+          <input type="number" formControlName="montantRecouvre" min="0" step="0.01" />
+        </div>
+        <div class="form-row">
+          <label>Méthode</label>
+          <select formControlName="updateMode">
+            <option value="SET">Remplacer</option>
+            <option value="ADD">Ajouter</option>
+          </select>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" type="submit" [disabled]="montantForm.invalid">Mettre à jour</button>
+        </div>
+        <div class="form-hint" *ngIf="montantForm.hasError('montantExceeded')">
+          Le montant recouvré ne peut pas dépasser le montant total.
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <div class="grid two-columns">
+    <section class="card" aria-labelledby="creancier-header">
+      <h2 id="creancier-header">Créancier</h2>
+      <ul class="party-list">
+        <li><span>Nom</span><strong>{{ dossier.creancier.getFullName() }}</strong></li>
+        <li><span>Type</span><strong class="type-badge" [ngClass]="getTypeClass(dossier.typeCreancier)">{{ getTypeLabel(dossier.typeCreancier) }}</strong></li>
+        <li><span>Code créancier</span><strong>{{ dossier.creancier.codeCreancier }}</strong></li>
+        <li><span>Adresse</span><strong>{{ dossier.creancier.getFullAddress() }}</strong></li>
+        <li><span>Téléphone</span><strong>{{ dossier.creancier.telephone }}</strong></li>
+        <li><span>Email</span><strong>{{ dossier.creancier.email }}</strong></li>
+      </ul>
+    </section>
+
+    <section class="card" aria-labelledby="debiteur-header">
+      <h2 id="debiteur-header">Débiteur</h2>
+      <ul class="party-list">
+        <li><span>Nom</span><strong>{{ dossier.debiteur.getFullName() }}</strong></li>
+        <li><span>Type</span><strong class="type-badge" [ngClass]="getTypeClass(dossier.typeDebiteur)">{{ getTypeLabel(dossier.typeDebiteur) }}</strong></li>
+        <li><span>Code créance</span><strong>{{ dossier.debiteur.codeCreance }}</strong></li>
+        <li><span>Adresse</span><strong>{{ dossier.debiteur.getFullAddress() }}</strong></li>
+        <li><span>Téléphone</span><strong>{{ dossier.debiteur.telephone }}</strong></li>
+        <li><span>Email</span><strong>{{ dossier.debiteur.email }}</strong></li>
+      </ul>
+    </section>
+  </div>
+
+  <div class="grid two-columns" *ngIf="!isChefDossierUser">
+    <section class="card" aria-labelledby="documents-header">
+      <div class="card-header">
+        <h2 id="documents-header">Documents Huissier</h2>
+        <span class="loader" *ngIf="loadingStates.documents"></span>
       </div>
-
-      <div class="debiteur-info">
-        <h3>Débiteur</h3>
-        <div class="party-details">
-          <div class="party-item">
-            <label>Code Créance</label>
-            <span>{{ dossier.debiteur.codeCreance }}</span>
-          </div>
-          <div class="party-item">
-            <label>Type</label>
-            <span class="type-badge" [ngClass]="getTypeClass(dossier.typeDebiteur)">
-              {{ getTypeLabel(dossier.typeDebiteur) }}
-            </span>
-          </div>
-          <div class="party-item">
-            <label>Nom</label>
-            <span>{{ dossier.debiteur.getFullName() }}</span>
-          </div>
-          <div class="party-item">
-            <label>Adresse</label>
-            <span>{{ dossier.debiteur.getFullAddress() }}</span>
-          </div>
-          <div class="party-item">
-            <label>Téléphone</label>
-            <span>{{ dossier.debiteur.telephone }}</span>
-          </div>
-          <div class="party-item">
-            <label>Email</label>
-            <span>{{ dossier.debiteur.email }}</span>
-          </div>
+      <form [formGroup]="documentForm" (ngSubmit)="createDocument()" class="compact-form">
+        <div class="form-row">
+          <label>Type</label>
+          <select formControlName="typeDocument">
+            <option value="PV_MISE_EN_DEMEURE">PV Mise en demeure</option>
+            <option value="ORDONNANCE_PAIEMENT">Ordonnance de paiement</option>
+            <option value="PV_NOTIFICATION_ORDONNANCE">PV notification</option>
+          </select>
         </div>
-      </div>
-    </div>
-
-    <!-- Informations sur les agents -->
-    <div class="agents-section">
-      <h3>Agents Responsables</h3>
-      <div class="agents-grid">
-        <div class="agent-item">
-          <label>Agent Créateur</label>
-          <span>{{ dossier.agentCreateur }}</span>
+        <div class="form-row">
+          <label>Huissier</label>
+          <input type="text" formControlName="huissierName" />
         </div>
-        <div class="agent-item">
-          <label>Agent Responsable</label>
-          <span>{{ dossier.agentResponsable }}</span>
+        <div class="form-row">
+          <label>Délai légal (jours)</label>
+          <input type="number" min="1" formControlName="delaiLegalDays" />
         </div>
-      </div>
-    </div>
-
-    <!-- Informations sur les documents -->
-    <div class="documents-section">
-      <h3>Documents et Informations</h3>
-      <div class="documents-grid">
-        <div class="document-item">
-          <label>Type de Document Justificatif</label>
-          <span>{{ dossier.typeDocumentJustificatif }}</span>
+        <div class="form-row">
+          <label>Pièce jointe (URL)</label>
+          <input type="text" formControlName="pieceJointeUrl" />
         </div>
-        <div class="document-item">
-          <label>Pouvoir</label>
-          <span class="boolean-badge" [ngClass]="dossier.pouvoir ? 'true' : 'false'">
-            {{ dossier.pouvoir ? 'Oui' : 'Non' }}
-          </span>
+        <div class="form-actions">
+          <button class="btn btn-primary" type="submit" [disabled]="documentForm.invalid">Créer</button>
         </div>
-        <div class="document-item">
-          <label>Contrat Signé</label>
-          <span class="boolean-badge" [ngClass]="dossier.contratSigne ? 'true' : 'false'">
-            {{ dossier.contratSigne ? 'Oui' : 'Non' }}
-          </span>
-        </div>
-        <div class="document-item" *ngIf="canManageFiles()">
-          <label>Gérer Contrat (PDF)</label>
-          <div class="actions">
+      </form>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Type</th>
+            <th>Date</th>
+            <th>Délai</th>
+            <th>Statut</th>
+            <th>Huissier</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let doc of documents; trackBy: trackById">
+            <td>{{ doc.typeDocument }}</td>
+            <td>{{ doc.dateCreation | date:'short' }}</td>
+            <td>{{ doc.delaiLegalDays }} j</td>
+            <td><span class="badge" [ngClass]="getDocumentStatusClass(doc.status)">{{ doc.status }}</span></td>
+            <td>{{ doc.huissierName }}</td>
+          </tr>
+          <tr *ngIf="documents.length === 0">
+            <td colspan="5" class="empty-state">Aucun document enregistré.</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="file-management" *ngIf="canManageFiles() && dossier">
+        <h3>Gestion des pièces légales</h3>
+        <div class="file-row">
+          <label>Contrat signé (PDF)</label>
+          <div class="file-actions">
             <input type="file" accept="application/pdf" (change)="onUploadContrat($event)" />
-            <button class="btn btn-danger" (click)="deleteContrat()">Supprimer</button>
+            <button class="btn btn-outline" type="button" (click)="deleteContrat()">Supprimer</button>
           </div>
         </div>
-        <div class="document-item" *ngIf="canManageFiles()">
-          <label>Gérer Pouvoir (PDF)</label>
-          <div class="actions">
+        <div class="file-row">
+          <label>Pouvoir (PDF)</label>
+          <div class="file-actions">
             <input type="file" accept="application/pdf" (change)="onUploadPouvoir($event)" />
-            <button class="btn btn-danger" (click)="deletePouvoir()">Supprimer</button>
+            <button class="btn btn-outline" type="button" (click)="deletePouvoir()">Supprimer</button>
           </div>
-        </div>
-        <div class="document-item" *ngIf="dossier.valide">
-          <label>Date de Validation</label>
-          <span>{{ dossier.dateValidation | date:'dd/MM/yyyy HH:mm' }}</span>
-        </div>
-        <div class="document-item" *ngIf="dossier.dateCloture">
-          <label>Date de Clôture</label>
-          <span>{{ dossier.dateCloture | date:'dd/MM/yyyy HH:mm' }}</span>
         </div>
       </div>
-    </div>
+    </section>
+
+    <section class="card" aria-labelledby="actions-header">
+      <div class="card-header">
+        <h2 id="actions-header">Actions d'exécution</h2>
+        <span class="loader" *ngIf="loadingStates.actions"></span>
+      </div>
+      <form [formGroup]="actionForm" (ngSubmit)="createActionHuissier()" class="compact-form">
+        <div class="form-row">
+          <label>Type</label>
+          <select formControlName="typeAction">
+            <option value="ACLA_TA7AFOUDHIA">Saisie conservatoire</option>
+            <option value="ACLA_TANFITHIA">Saisie exécutive</option>
+            <option value="ACLA_TAW9IFIYA">Saisie de blocage</option>
+            <option value="ACLA_A9ARYA">Saisie immobilière</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label>Montant recouvré</label>
+          <input type="number" min="0" step="0.01" formControlName="montantRecouvre" />
+        </div>
+        <div class="form-row">
+          <label>Huissier</label>
+          <input type="text" formControlName="huissierName" />
+        </div>
+        <div class="form-row">
+          <label>Pièce jointe (URL)</label>
+          <input type="text" formControlName="pieceJointeUrl" />
+        </div>
+        <div class="form-row">
+          <label>Méthode</label>
+          <select formControlName="updateMode">
+            <option value="ADD">Ajouter</option>
+            <option value="SET">Remplacer</option>
+          </select>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" type="submit" [disabled]="actionForm.invalid">Enregistrer</button>
+        </div>
+      </form>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Type</th>
+            <th>Date</th>
+            <th>Montant</th>
+            <th>Restant</th>
+            <th>État</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let action of actionsHuissier; trackBy: trackById">
+            <td>{{ action.typeAction }}</td>
+            <td>{{ action.dateAction | date:'short' }}</td>
+            <td>{{ action.montantRecouvre | tnd }}</td>
+            <td>{{ action.montantRestant | tnd }}</td>
+            <td><span class="badge" [ngClass]="getEtatDossierBadgeClass(action.etatDossier)">{{ action.etatDossier || 'N/A' }}</span></td>
+          </tr>
+          <tr *ngIf="actionsHuissier.length === 0">
+            <td colspan="5" class="empty-state">Aucune action enregistrée.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+  </div>
+
+  <div class="grid two-columns">
+    <section class="card" aria-labelledby="amiable-header" *ngIf="!isChefDossierUser">
+      <h2 id="amiable-header">Action amiable</h2>
+      <form [formGroup]="amiableForm" (ngSubmit)="enregistrerActionAmiable()" class="compact-form">
+        <div class="form-row">
+          <label>Montant recouvré</label>
+          <input type="number" min="0" step="0.01" formControlName="montantRecouvre" />
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" type="submit" [disabled]="amiableForm.invalid">Enregistrer l'action</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="card" aria-labelledby="notifications-header">
+      <div class="card-header">
+        <h2 id="notifications-header">Notifications</h2>
+        <span class="badge badge-danger" *ngIf="unreadNotifications > 0">{{ unreadNotifications }} non lues</span>
+      </div>
+      <div class="scrollable">
+        <article class="alert" [ngClass]="getPriorityClass('LOW')" *ngFor="let notif of notifications; trackBy: trackById">
+          <header>
+            <strong>{{ notif.type }}</strong>
+            <small>{{ notif.createdAt | date:'short' }}</small>
+          </header>
+          <p>{{ notif.message }}</p>
+          <div class="alert-actions">
+            <button class="btn btn-outline" *ngIf="!notif.acked" (click)="acknowledgeNotification(notif.id)">Acquitter</button>
+          </div>
+        </article>
+        <p class="empty-state" *ngIf="notifications.length === 0">Pas de notifications pour ce dossier.</p>
+      </div>
+    </section>
+  </div>
+
+  <div class="grid two-columns">
+    <section class="card" aria-labelledby="recommandations-header">
+      <div class="card-header">
+        <h2 id="recommandations-header">Recommandations</h2>
+        <span class="badge badge-danger" *ngIf="highPriorityRecommendations > 0">{{ highPriorityRecommendations }} urgentes</span>
+      </div>
+      <div class="scrollable">
+        <article class="alert" [ngClass]="getPriorityClass(rec.priority)" *ngFor="let rec of recommendations; trackBy: trackById">
+          <header>
+            <strong>{{ rec.title }}</strong>
+            <small>{{ rec.createdAt | date:'short' }}</small>
+          </header>
+          <p>{{ rec.description }}</p>
+          <div class="alert-actions">
+            <button class="btn btn-primary" (click)="executeRecommendation(rec)">Exécuter</button>
+            <button class="btn btn-outline" (click)="acknowledgeRecommendation(rec.id)">Acquitter</button>
+          </div>
+        </article>
+        <p class="empty-state" *ngIf="recommendations.length === 0">Aucune recommandation disponible.</p>
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="audit-header">
+      <div class="card-header">
+        <h2 id="audit-header">Audit log</h2>
+        <span class="loader" *ngIf="loadingStates.audit"></span>
+      </div>
+      <div class="scrollable">
+        <div class="audit-entry" *ngFor="let log of auditLogs; trackBy: trackById">
+          <header>
+            <strong>{{ log.changeType }}</strong>
+            <small>{{ log.timestamp | date:'short' }}</small>
+          </header>
+          <p>{{ log.description || 'Modification de dossier' }}</p>
+        </div>
+        <p class="empty-state" *ngIf="auditLogs.length === 0">Aucun log pour l’instant.</p>
+      </div>
+    </section>
   </div>
 </div>
 
-<div class="dossier-not-found" *ngIf="!dossier">
-  <div class="not-found-content">
-    <i class="fas fa-exclamation-triangle"></i>
-    <h2>Dossier non trouvé</h2>
-    <p>Le dossier demandé n'existe pas ou a été supprimé.</p>
-    <button class="btn btn-primary" (click)="goBack()">
-      <i class="fas fa-arrow-left"></i> Retour à la liste
-    </button>
+<ng-template #notFound>
+  <div class="dossier-not-found">
+    <div class="not-found-content">
+      <i class="fas fa-exclamation-triangle"></i>
+      <h2>Dossier non trouvé</h2>
+      <p>Le dossier demandé n'existe pas ou a été supprimé.</p>
+      <button class="btn btn-primary" (click)="goBack()">
+        <i class="fas fa-arrow-left"></i> Retour à la liste
+      </button>
+    </div>
   </div>
-</div>
+</ng-template>

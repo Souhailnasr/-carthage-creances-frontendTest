@@ -839,10 +839,45 @@ export class DossierApiService {
   }
 
   /**
+   * Récupère les dossiers créés/affectés à un utilisateur (peu importe son rôle)
+   */
+  getDossiersByUtilisateurId(utilisateurId: number): Observable<DossierApi[]> {
+    return this.http.get<DossierApi[]>(`${this.apiUrl}/utilisateur/${utilisateurId}`).pipe(
+      catchError((error) => {
+        console.warn('⚠️ Endpoint /utilisateur/{id} indisponible, fallback sur /agent/{id}', error);
+        return this.getDossiersByAgent(utilisateurId);
+      })
+    );
+  }
+
+  /**
    * Récupère les dossiers assignés à un agent
    */
   getDossiersByAgent(agentId: number): Observable<DossierApi[]> {
     return this.http.get<DossierApi[]>(`${this.apiUrl}/agent/${agentId}`);
+  }
+
+  /**
+   * Assigne un agent responsable à un dossier
+   * PUT /api/dossiers/{dossierId}/assign/agent?agentId={agentId}
+   */
+  assignerAgent(dossierId: number, agentId: number): Observable<DossierApi> {
+    const params = new HttpParams().set('agentId', String(agentId));
+    return this.http.put<DossierApi>(`${this.apiUrl}/${dossierId}/assign/agent`, null, { params }).pipe(
+      tap(() => console.log(`✅ Agent ${agentId} assigné au dossier ${dossierId}`)),
+      catchError(error => {
+        console.error('❌ Erreur lors de l\'assignation de l\'agent:', error);
+        let errorMessage = 'Erreur lors de l\'assignation de l\'agent';
+
+        if (error.status === 404) {
+          errorMessage = 'Dossier ou agent introuvable';
+        } else if (error.status === 400) {
+          errorMessage = error.error?.message || 'Requête d\'assignation invalide';
+        }
+
+        return throwError(() => new Error(errorMessage));
+      })
+    );
   }
 
   /**

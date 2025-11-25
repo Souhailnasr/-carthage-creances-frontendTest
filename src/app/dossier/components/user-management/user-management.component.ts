@@ -8,6 +8,7 @@ import { FormInputComponent } from '../../../shared/components/form-input/form-i
 import { ToastService } from '../../../core/services/toast.service';
 import { UtilisateurService, Utilisateur, UtilisateurRequest, AuthenticationResponse } from '../../../core/services/utilisateur.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { JwtAuthService } from '../../../core/services/jwt-auth.service';
 
 @Component({
   selector: 'app-user-management',
@@ -46,14 +47,33 @@ export class UserManagementComponent implements OnInit, OnDestroy {
     private fb: FormBuilder,
     private toastService: ToastService,
     private utilisateurService: UtilisateurService,
-    private authService: AuthService
+    private authService: AuthService,
+    private jwtAuthService: JwtAuthService
   ) { }
 
   ngOnInit(): void {
-    this.currentUser = this.authService.getCurrentUser();
     this.initializeForm();
-    this.loadUsers();
+    this.loadCurrentUser();
     console.log('🔧 UserManagementComponent initialisé avec filtres avancés');
+  }
+
+  loadCurrentUser(): void {
+    this.jwtAuthService.getCurrentUser()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (user) => {
+          this.currentUser = user;
+          console.log('👤 Utilisateur connecté chargé:', this.currentUser);
+          // Recharger les utilisateurs une fois que l'utilisateur actuel est chargé
+          this.loadUsers();
+        },
+        error: (error) => {
+          console.error('❌ Erreur lors du chargement de l\'utilisateur:', error);
+          // Fallback vers AuthService
+          this.currentUser = this.authService.getCurrentUser();
+          this.loadUsers();
+        }
+      });
   }
 
   ngOnDestroy(): void {
@@ -98,15 +118,25 @@ export class UserManagementComponent implements OnInit, OnDestroy {
           let filteredUsers = utilisateurs;
           
           // Si l'utilisateur connecté est un Chef Dossier, ne montrer que les Agents de Dossier
-          if (this.currentUser && (this.currentUser.role === 'CHEF_DEPARTEMENT_DOSSIER' || this.currentUser.role === 'CHEF_DOSSIER')) {
-            filteredUsers = utilisateurs.filter(user => 
-              (user.roleUtilisateur || user.role) === 'AGENT_DOSSIER'
-            );
-            console.log('🔒 Filtre Chef Dossier appliqué - Utilisateurs filtrés:', filteredUsers.length);
+          const userRole = this.currentUser?.roleUtilisateur || (this.currentUser as any)?.role;
+          if (this.currentUser && (
+            userRole === Role.CHEF_DEPARTEMENT_DOSSIER || 
+            userRole === 'CHEF_DEPARTEMENT_DOSSIER' ||
+            String(userRole) === String(Role.CHEF_DEPARTEMENT_DOSSIER)
+          )) {
+            filteredUsers = utilisateurs.filter(user => {
+              const userRoleToCheck = user.roleUtilisateur || user.role || '';
+              return userRoleToCheck === Role.AGENT_DOSSIER || 
+                     userRoleToCheck === 'AGENT_DOSSIER' ||
+                     String(userRoleToCheck) === String(Role.AGENT_DOSSIER);
+            });
+            console.log('🔒 Filtre Chef Dossier appliqué - Agents dossier uniquement:', filteredUsers.length);
             console.log('👤 Utilisateur connecté:', this.currentUser);
+            console.log('🔍 Rôle de l\'utilisateur connecté:', userRole);
           } else {
             console.log('👑 Utilisateur avec accès complet - Tous les utilisateurs affichés');
             console.log('👤 Utilisateur connecté:', this.currentUser);
+            console.log('🔍 Rôle de l\'utilisateur connecté:', userRole);
           }
           
           this.utilisateurs = filteredUsers;
@@ -348,21 +378,26 @@ export class UserManagementComponent implements OnInit, OnDestroy {
 
   getAvailableRoles(): string[] {
     // Si l'utilisateur connecté est un Chef Dossier, ne peut créer que des Agents de Dossier
-    if (this.currentUser && (this.currentUser.role === 'CHEF_DEPARTEMENT_DOSSIER' || this.currentUser.role === 'CHEF_DOSSIER')) {
-      return ['AGENT_DOSSIER'];
+    const userRole = this.currentUser?.roleUtilisateur || (this.currentUser as any)?.role;
+    if (this.currentUser && (
+      userRole === Role.CHEF_DEPARTEMENT_DOSSIER || 
+      userRole === 'CHEF_DEPARTEMENT_DOSSIER' ||
+      String(userRole) === String(Role.CHEF_DEPARTEMENT_DOSSIER)
+    )) {
+      return [Role.AGENT_DOSSIER];
     }
     
     // Pour les autres rôles (Super Admin, etc.), tous les rôles sont disponibles
     return [
-      'SUPER_ADMIN',
-      'CHEF_DEPARTEMENT_DOSSIER',
-      'AGENT_DOSSIER',
-      'CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE',
-      'AGENT_RECOUVREMENT_JURIDIQUE',
-      'CHEF_DEPARTEMENT_FINANCE',
-      'AGENT_FINANCE',
-      'CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE',
-      'AGENT_RECOUVREMENT_AMIABLE'
+      Role.SUPER_ADMIN,
+      Role.CHEF_DEPARTEMENT_DOSSIER,
+      Role.AGENT_DOSSIER,
+      Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE,
+      Role.AGENT_RECOUVREMENT_JURIDIQUE,
+      Role.CHEF_DEPARTEMENT_FINANCE,
+      Role.AGENT_FINANCE,
+      Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE,
+      Role.AGENT_RECOUVREMENT_AMIABLE
     ];
   }
 

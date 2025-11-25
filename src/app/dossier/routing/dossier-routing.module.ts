@@ -100,6 +100,12 @@ const routes: Routes = [
     canActivate: [AuthGuard],
     data: { allowedRoles: [Role.AGENT_DOSSIER, Role.CHEF_DEPARTEMENT_DOSSIER, Role.SUPER_ADMIN] }
   },
+  {
+    path: 'mes-dossiers',
+    loadComponent: () => import('../components/liste-dossiers-agent/liste-dossiers-agent.component').then(m => m.ListeDossiersAgentComponent),
+    canActivate: [AuthGuard],
+    data: { allowedRoles: [Role.AGENT_DOSSIER, Role.AGENT_RECOUVREMENT_AMIABLE, Role.AGENT_RECOUVREMENT_JURIDIQUE, Role.AGENT_FINANCE, Role.CHEF_DEPARTEMENT_DOSSIER] }
+  },
   { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
 ];
 

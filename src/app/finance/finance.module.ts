@@ -60,10 +60,16 @@ const routes: Routes = [
     data: { allowedRoles: [Role.CHEF_DEPARTEMENT_FINANCE, Role.AGENT_FINANCE, Role.SUPER_ADMIN] }
   },
   {
+    path: 'mes-dossiers',
+    loadComponent: () => import('./components/finance-agent-dossiers/finance-agent-dossiers.component').then(m => m.FinanceAgentDossiersComponent),
+    canActivate: [AuthGuard],
+    data: { allowedRoles: [Role.AGENT_FINANCE, Role.CHEF_DEPARTEMENT_FINANCE] }
+  },
+  {
     path: 'utilisateurs',
     loadComponent: () => import('./components/finance-user-management/finance-user-management.component').then(m => m.FinanceUserManagementComponent),
     canActivate: [AuthGuard],
-    data: { allowedRoles: [Role.CHEF_DEPARTEMENT_FINANCE, Role.SUPER_ADMIN] }
+    data: { allowedRoles: [Role.CHEF_DEPARTEMENT_FINANCE] }
   },
   {
     path: 'taches',

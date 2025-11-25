@@ -106,9 +106,18 @@ export class JuridiqueSidebarComponent implements OnInit {
   logout(): void {
     // Confirmer la déconnexion
     if (confirm('Êtes-vous sûr de vouloir vous déconnecter ?')) {
-      this.jwtAuthService.logOut();
-      this.toastService.success('Déconnexion réussie !');
-      this.router.navigate(['/login']);
+      // logOut() retourne un Observable et gère déjà la redirection dans finalize()
+      this.jwtAuthService.logOut().subscribe({
+        next: (response) => {
+          console.log('✅ Logout réussi:', response);
+          this.toastService.success('Déconnexion réussie !');
+        },
+        error: (error) => {
+          console.error('❌ Erreur lors du logout:', error);
+          // La redirection est déjà gérée dans le service (finalize)
+          this.toastService.success('Déconnexion effectuée');
+        }
+      });
     }
   }
 }

@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable, of } from 'rxjs';
+import { Observable, of, throwError } from 'rxjs';
 import { catchError, map, tap } from 'rxjs/operators';
 import { DebiteurApi, DebiteurRequest, DebiteurResponse, DebiteursResponse } from '../../shared/models/debiteur-api.model';
 import { JwtAuthService } from './jwt-auth.service';
@@ -24,43 +24,45 @@ export class DebiteurApiService {
 
   // ===== CRUD OPERATIONS =====
   
+  private mapPayload(debiteur: DebiteurRequest): any {
+    // Créer un payload propre avec uniquement les champs attendus par le backend
+    // Le backend n'a PAS de champ "adresse", seulement "adresseElue"
+    const payload: any = {
+      type: debiteur.typeDebiteur || 'PERSONNE_PHYSIQUE',
+      codeCreance: debiteur.codeCreance || '',
+      nom: debiteur.nom || '',
+      prenom: debiteur.prenom || '',
+      email: debiteur.email || '',
+      telephone: debiteur.telephone ? debiteur.telephone.replace(/[^\d]/g, '').substring(0, 8) : '',
+      adresseElue: debiteur.adresseElue || '',
+      ville: debiteur.ville || '',
+      codePostal: debiteur.codePostal || '',
+      fax: debiteur.fax || ''
+    };
+    
+    // Log pour déboguer
+    console.log('📤 Payload envoyé au backend:', payload);
+    
+    return payload;
+  }
+  
   createDebiteur(debiteur: DebiteurRequest): Observable<DebiteurApi> {
     this.apiLogger.logEntityCreation('Débiteur', debiteur);
     
-    // Nettoyer et formater les données pour le backend
-    const debiteurData = {
-      type: debiteur.typeDebiteur || '',
-      codeCreance: debiteur.codeCreance || '',
-      nom: debiteur.nom,
-      prenom: debiteur.prenom,
-      email: debiteur.email,
-      telephone: debiteur.telephone.replace(/[^\d]/g, '').substring(0, 8), // Supprimer tous les caractères non numériques et limiter à 8 chiffres
-      adresse: debiteur.adresse,
-      adresseElue: debiteur.adresseElue || '',
-      ville: debiteur.ville || '',
-      codePostal: debiteur.codePostal || ''
-    };
+    const payload = this.mapPayload(debiteur);
     
-    console.log('Données envoyées au backend:', debiteurData);
-    
-    // Utiliser des headers simples sans authentification pour le moment
-    const headers = new HttpHeaders({
-      'Content-Type': 'application/json',
-      'Accept': 'application/json'
-    });
-    
-    return this.http.post<DebiteurApi>(this.apiUrl, debiteurData, { headers })
+    return this.http.post<DebiteurApi>(this.apiUrl, payload)
       .pipe(
         tap(response => {
           this.apiLogger.logEntityCreated('Débiteur', response);
         }),
         catchError(error => {
           this.apiLogger.logEntityCreationError('Débiteur', error);
-          console.error('Erreur lors de la création du débiteur:', error);
-          console.error('Détails de l\'erreur:', error.status, error.message);
-          console.error('URL:', this.apiUrl);
-          console.error('Data envoyée:', debiteurData);
-          throw error; // Propager l'erreur pour voir le vrai problème
+          console.error('❌ Erreur lors de la création du débiteur:', error);
+          console.error('📋 Payload envoyé:', payload);
+          console.error('📋 Réponse backend:', error.error);
+          console.error('📋 Status:', error.status, error.statusText);
+          return throwError(() => error);
         })
       );
   }
@@ -141,7 +143,16 @@ export class DebiteurApiService {
   }
 
   updateDebiteur(id: number, debiteur: DebiteurRequest): Observable<DebiteurApi> {
-    return this.http.put<DebiteurApi>(`${this.apiUrl}/${id}`, debiteur);
+    const payload = this.mapPayload(debiteur);
+    return this.http.put<DebiteurApi>(`${this.apiUrl}/${id}`, payload)
+      .pipe(
+        catchError(error => {
+          console.error('❌ Erreur lors de la mise à jour du débiteur:', error);
+          console.error('📋 Payload envoyé:', payload);
+          console.error('📋 Réponse backend:', error.error);
+          return throwError(() => error);
+        })
+      );
   }
 
   deleteDebiteur(id: number): Observable<void> {

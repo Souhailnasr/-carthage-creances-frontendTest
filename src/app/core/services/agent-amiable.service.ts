@@ -102,7 +102,9 @@ export class AgentAmiableService {
     return this.http.get<ActionRecouvrement[]>(`${this.apiUrl}/actions/dossier/${dossierId}`).pipe(
       map(actions => actions.map(action => ({
         ...action,
-        dateAction: new Date(action.dateAction)
+        dateAction: new Date(action.dateAction),
+        agentId: action.agentId ?? (action as any)?.creePar?.id ?? (action as any)?.agent?.id,
+        agentNom: action.agentNom ?? ((action as any)?.creePar ? `${(action as any)?.creePar?.prenom || ''} ${(action as any)?.creePar?.nom || ''}`.trim() : (action as any)?.agent?.nom)
       }))),
       catchError((error) => {
         console.error('❌ Erreur lors de la récupération des actions:', error);
@@ -115,10 +117,14 @@ export class AgentAmiableService {
    * Créer une action pour un dossier
    */
   createAction(dossierId: number, action: Partial<ActionRecouvrement>): Observable<ActionRecouvrement> {
-    return this.http.post<ActionRecouvrement>(`${this.apiUrl}/actions`, {
+    const payload = {
       dossierId,
       ...action
-    }).pipe(
+    };
+    if (action.agentId) {
+      (payload as any).agentId = action.agentId;
+    }
+    return this.http.post<ActionRecouvrement>(`${this.apiUrl}/actions`, payload).pipe(
       map(action => ({
         ...action,
         dateAction: new Date(action.dateAction)

@@ -233,9 +233,26 @@ export class UtilisateurService {
    * Obtenir les agents d'un chef via l'API backend
    */
   getAgentsByChef(chefId: number): Observable<Utilisateur[]> {
-    return this.http.get<Utilisateur[]>(`${this.baseUrl}/users/chef/${chefId}`)
+    const url = `${this.baseUrl}/users/chef/${chefId}`;
+    console.log('🔍 Tentative de chargement des agents du chef:', chefId, 'URL:', url);
+    return this.http.get<Utilisateur[]>(url)
       .pipe(
-        catchError(this.handleError)
+        tap(agents => {
+          console.log('✅ Agents chargés avec succès:', agents?.length || 0);
+        }),
+        catchError((error) => {
+          console.error('❌ Erreur getAgentsByChef - URL:', url);
+          console.error('❌ Erreur getAgentsByChef - Status:', error?.status);
+          console.error('❌ Erreur getAgentsByChef - Message:', error?.message);
+          console.error('❌ Erreur getAgentsByChef - Error body:', error?.error);
+          // Améliorer le message d'erreur
+          if (error?.status === 500) {
+            const errorMsg = error?.error?.message || error?.message || 'Erreur serveur interne';
+            console.error('❌ Erreur 500 détaillée:', errorMsg);
+            return throwError(() => new Error(`Erreur serveur lors du chargement des agents (${errorMsg})`));
+          }
+          return this.handleError(error);
+        })
       );
   }
 

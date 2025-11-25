@@ -26,6 +26,14 @@ export interface ActionRecouvrement {
   nbOccurrences: number;
   coutUnitaire?: number;
   dossier: { id: number };
+  agentId?: number;
+  agentNom?: string;
+  creePar?: {
+    id?: number;
+    nom?: string;
+    prenom?: string;
+  };
+  editable?: boolean;
 }
 
 export interface StatistiquesActions {
@@ -50,10 +58,29 @@ export class ActionRecouvrementService {
    */
   getActionsByDossier(dossierId: number): Observable<ActionRecouvrement[]> {
     return this.http.get<ActionRecouvrement[]>(`${this.apiUrl}/dossier/${dossierId}`).pipe(
-      map(actions => actions.map(action => ({
-        ...action,
-        dateAction: new Date(action.dateAction)
-      }))),
+      map(actions => actions.map(action => {
+        const resolvedAgentId =
+          action.agentId ??
+          (action as any)?.agent?.id ??
+          (action as any)?.createdBy?.id ??
+          (action as any)?.creePar?.id ??
+          (action as any)?.agentResponsable?.id;
+
+        const resolvedAgentNom =
+          action.agentNom ??
+          (action as any)?.agent?.nom ??
+          (action as any)?.createdBy?.nom ??
+          ((action as any)?.creePar ? `${(action as any)?.creePar?.prenom || ''} ${(action as any)?.creePar?.nom || ''}`.trim() : undefined) ??
+          (action as any)?.agentResponsable?.nom;
+
+        return {
+          ...action,
+          agentId: resolvedAgentId ? Number(resolvedAgentId) : undefined,
+          agentNom: resolvedAgentNom,
+          creePar: (action as any)?.creePar,
+          dateAction: new Date(action.dateAction)
+        };
+      })),
       catchError((error) => {
         console.error('❌ Erreur lors de la récupération des actions:', error);
         return throwError(() => new Error('Erreur lors de la récupération des actions'));
@@ -91,6 +118,10 @@ export class ActionRecouvrementService {
       delete payload.dossier;
     }
     
+    if (action.agentId) {
+      payload.agentId = action.agentId;
+    }
+
     // S'assurer qu'on n'envoie pas de champs undefined
     Object.keys(payload).forEach(key => {
       if (payload[key] === undefined) {

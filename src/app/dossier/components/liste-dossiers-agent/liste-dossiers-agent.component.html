@@ -23,7 +23,7 @@
   <div class="no-data" *ngIf="!loading && dossiers.length === 0 && !error">
     <i class="fas fa-folder-open"></i>
     <h3>Aucun dossier trouvé</h3>
-    <p>Vous n'avez pas encore créé de dossiers.</p>
+    <p>Aucun dossier ne vous a été affecté pour le moment.</p>
   </div>
 
   <!-- Tableau des dossiers -->
@@ -35,6 +35,7 @@
           <th>Montant</th>
           <th>Statut</th>
           <th>Date de création</th>
+          <th>Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -55,6 +56,12 @@
           </td>
           <td class="date-cell">
             <span class="date">{{ formatDate(dossier.dateCreation) }}</span>
+          </td>
+          <td class="action-cell">
+            <button class="btn btn-link" (click)="openDossier(dossier)">
+              <i class="fas fa-folder-open"></i>
+              Gérer
+            </button>
           </td>
         </tr>
       </tbody>

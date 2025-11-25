@@ -54,18 +54,35 @@
         <div class="form-row">
           <div class="form-group">
             <label for="agentId">Agent assigné *</label>
-            <select 
-              id="agentId"
-              [(ngModel)]="newTache.agentId"
-              name="agentId"
-              required
-              class="form-control">
-              <option value="">Sélectionnez un agent</option>
-              <option *ngFor="let agent of availableAgents" [value]="agent.id">
-                {{ agent.prenom }} {{ agent.nom }}
-              </option>
-            </select>
+            <ng-container *ngIf="!loadingAgents; else agentLoadingState">
+              <select 
+                id="agentId"
+                [(ngModel)]="newTache.agentId"
+                name="agentId"
+                required
+                class="form-control"
+                [disabled]="loadingAgents || !!agentLoadError || !availableAgents.length">
+                <option value="">Sélectionnez un agent</option>
+                <option *ngFor="let agent of availableAgents" [value]="agent.id">
+                  {{ agent.prenom }} {{ agent.nom }}
+                </option>
+              </select>
+            </ng-container>
+            <p class="form-hint error" *ngIf="agentLoadError">
+              {{ agentLoadError }}
+              <button type="button" class="retry-link" (click)="retryLoadAgents()">Réessayer</button>
+            </p>
+            <p class="form-hint" *ngIf="!agentLoadError && !loadingAgents && !availableAgents.length">
+              Aucun agent dossier disponible.
+            </p>
           </div>
+
+          <ng-template #agentLoadingState>
+            <div class="agent-loading">
+              <i class="fas fa-spinner fa-spin"></i>
+              <span>Chargement des agents...</span>
+            </div>
+          </ng-template>
           
           <div class="form-group">
             <label for="priorite">Priorité *</label>

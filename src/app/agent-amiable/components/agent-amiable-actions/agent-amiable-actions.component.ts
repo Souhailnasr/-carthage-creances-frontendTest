@@ -15,6 +15,7 @@ import { MatNativeDateModule } from '@angular/material/core';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { Subject, takeUntil } from 'rxjs';
 import { AgentAmiableService } from '../../../core/services/agent-amiable.service';
 import { ActionRecouvrementService, ActionRecouvrement, TypeAction, ReponseDebiteur } from '../../../core/services/action-recouvrement.service';
@@ -41,13 +42,15 @@ import { ToastService } from '../../../core/services/toast.service';
     MatNativeDateModule,
     MatProgressSpinnerModule,
     MatChipsModule,
-    MatSnackBarModule
+    MatSnackBarModule,
+    MatTooltipModule
   ],
   templateUrl: './agent-amiable-actions.component.html',
   styleUrls: ['./agent-amiable-actions.component.scss']
 })
 export class AgentAmiableActionsComponent implements OnInit, OnDestroy {
   currentUser: User | null = null;
+  currentUserId: number | null = null;
   actions: ActionRecouvrement[] = [];
   loading = false;
   showForm = false;
@@ -106,6 +109,7 @@ export class AgentAmiableActionsComponent implements OnInit, OnDestroy {
     ).subscribe({
       next: (user) => {
         this.currentUser = user;
+        this.currentUserId = user?.id ? parseInt(user.id) : null;
         this.loadActions();
       },
       error: (error) => {
@@ -126,7 +130,7 @@ export class AgentAmiableActionsComponent implements OnInit, OnDestroy {
       takeUntil(this.destroy$)
     ).subscribe({
       next: (actions) => {
-        this.actions = actions;
+        this.actions = this.applyActionPermissions(actions);
         this.loading = false;
       },
       error: (error) => {
@@ -149,6 +153,10 @@ export class AgentAmiableActionsComponent implements OnInit, OnDestroy {
   }
 
   showEditForm(action: ActionRecouvrement): void {
+    if (!this.canManageAction(action)) {
+      this.toastService.warning('Vous ne pouvez modifier que vos propres actions.');
+      return;
+    }
     this.editingAction = action;
     this.showForm = true;
     this.actionForm.patchValue({
@@ -187,10 +195,15 @@ export class AgentAmiableActionsComponent implements OnInit, OnDestroy {
       dateAction: formValue.dateAction,
       nbOccurrences: formValue.nbOccurrences,
       reponseDebiteur: formValue.reponseDebiteur,
-      coutUnitaire: formValue.coutUnitaire
+      coutUnitaire: formValue.coutUnitaire,
+      agentId: this.currentUserId || undefined
     };
 
     if (this.editingAction && this.editingAction.id) {
+      if (!this.canManageAction(this.editingAction)) {
+        this.toastService.warning('Vous ne pouvez modifier que vos propres actions.');
+        return;
+      }
       // Modifier
       this.actionService.updateAction(this.editingAction.id, actionData).pipe(
         takeUntil(this.destroy$)
@@ -225,6 +238,10 @@ export class AgentAmiableActionsComponent implements OnInit, OnDestroy {
 
   deleteAction(action: ActionRecouvrement): void {
     if (!action.id) return;
+    if (!this.canManageAction(action)) {
+      this.toastService.warning('Vous ne pouvez supprimer que vos propres actions.');
+      return;
+    }
     
     if (confirm(`Êtes-vous sûr de vouloir supprimer cette action ?`)) {
       this.actionService.deleteAction(action.id).pipe(
@@ -261,6 +278,41 @@ export class AgentAmiableActionsComponent implements OnInit, OnDestroy {
       'EN_ATTENTE': 'En attente'
     };
     return labels[reponse] || reponse;
+  }
+
+  canManageAction(action: ActionRecouvrement): boolean {
+    if (!this.currentUserId) {
+      return false;
+    }
+    return (action.agentId ?? action.creePar?.id ?? null) === this.currentUserId;
+  }
+
+  getActionOwnerLabel(action: ActionRecouvrement): string {
+    if (action.agentNom) {
+      return action.agentNom;
+    }
+    if (action.creePar) {
+      return `${action.creePar.prenom || ''} ${action.creePar.nom || ''}`.trim();
+    }
+    return 'Chef / Système';
+  }
+
+  private applyActionPermissions(actions: ActionRecouvrement[]): ActionRecouvrement[] {
+    const userId = this.currentUserId;
+    return actions.map(action => {
+      const rawOwnerId = action.agentId ?? action.creePar?.id;
+      const normalizedOwnerId = rawOwnerId !== undefined && rawOwnerId !== null ? Number(rawOwnerId) : undefined;
+      const ownerName = action.agentNom ?? (
+        action.creePar ? `${action.creePar.prenom || ''} ${action.creePar.nom || ''}`.trim() : undefined
+      );
+
+      return {
+        ...action,
+        agentId: normalizedOwnerId,
+        agentNom: ownerName,
+        editable: !!userId && normalizedOwnerId === userId
+      };
+    });
   }
 }
 

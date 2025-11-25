@@ -70,12 +70,20 @@
           <ng-container matColumnDef="actions">
             <th mat-header-cell *matHeaderCellDef>Actions</th>
             <td mat-cell *matCellDef="let action">
-              <button mat-icon-button color="primary" (click)="showEditForm(action)">
-                <mat-icon>edit</mat-icon>
-              </button>
-              <button mat-icon-button color="warn" (click)="deleteAction(action)">
-                <mat-icon>delete</mat-icon>
-              </button>
+              <div class="action-owner">
+                <small>Par {{ getActionOwnerLabel(action) }}</small>
+              </div>
+              <div class="action-buttons">
+                <button mat-icon-button color="primary" (click)="showEditForm(action)" [disabled]="!canManageAction(action)" matTooltip="Modifier" matTooltipPosition="above">
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button mat-icon-button color="warn" (click)="deleteAction(action)" [disabled]="!canManageAction(action)" matTooltip="Supprimer" matTooltipPosition="above">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </div>
+              <div class="readonly-hint" *ngIf="!canManageAction(action)">
+                <small>Historique verrouillé</small>
+              </div>
             </td>
           </ng-container>
 

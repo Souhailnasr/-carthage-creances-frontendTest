@@ -5,17 +5,52 @@ import { Router } from '@angular/router';
 import { catchError, throwError } from 'rxjs';
 import { JwtAuthService } from '../services/jwt-auth.service';
 
+/**
+ * Extrait le token JWT depuis sessionStorage
+ * Gère le cas où auth-user contient un objet JSON au lieu du token directement
+ */
+function extractJwtToken(): string | null {
+  const authUser = sessionStorage.getItem('auth-user');
+  if (!authUser) {
+    return null;
+  }
+
+  // Si c'est déjà un token JWT (commence par "eyJ" pour JWT standard)
+  if (authUser.startsWith('eyJ')) {
+    return authUser;
+  }
+
+  // Si c'est un objet JSON stringifié, essayer de le parser
+  try {
+    const parsed = JSON.parse(authUser);
+    // Chercher le token dans différentes propriétés possibles
+    const token = parsed.accessToken || parsed.token || parsed.access_token || parsed.jwt;
+    if (token && typeof token === 'string' && token.startsWith('eyJ')) {
+      console.warn('⚠️ Token trouvé dans un objet JSON, extraction du token JWT');
+      return token;
+    }
+  } catch (e) {
+    // Ce n'est pas du JSON, retourner tel quel
+  }
+
+  // Si ce n'est ni un token JWT ni un objet JSON valide, retourner null
+  console.warn('⚠️ Format de token invalide dans auth-user:', authUser.substring(0, 50));
+  return null;
+}
+
 export const AuthInterceptor: HttpInterceptorFn = (req, next) => {
   const jwtAuthService = inject(JwtAuthService);
   const router = inject(Router);
-  const token = sessionStorage.getItem('auth-user');; // getToken() vérifie déjà l'expiration
+  const token = extractJwtToken(); // Extraire le token JWT correctement
 
   // Log pour debug - TOUTES les requêtes
   console.log('🔍 AuthInterceptor - Requête vers:', req.url);
   console.log('🔍 Token disponible:', !!token);
   
   if (token) {
-    console.log('🔍 Token (premiers caractères):', token);
+    // Log les premiers caractères du token pour vérification (sans exposer le token complet)
+    const tokenPreview = token.length > 20 ? token.substring(0, 20) + '...' : token.substring(0, token.length);
+    console.log('🔍 Token JWT (premiers caractères):', tokenPreview);
   } else {
     console.warn('⚠️ AuthInterceptor - Aucun token disponible');
   }
@@ -42,15 +77,11 @@ export const AuthInterceptor: HttpInterceptorFn = (req, next) => {
         if (error.status === 401) {
           console.error('❌ 401 Unauthorized - Token expiré ou invalide');
           
-          // Nettoyer complètement
-          jwtAuthService.logOut();
-          
-          // Rediriger vers login (sauf si on est déjà sur /login)
-          if (!router.url.includes('/login')) {
-            router.navigate(['/login'], {
-              queryParams: { returnUrl: router.url, expired: 'true' }
-            });
-          }
+          // Nettoyer complètement (logOut() gère déjà la redirection dans finalize())
+          jwtAuthService.logOut().subscribe({
+            next: () => console.log('✅ Logout automatique effectué (401)'),
+            error: (logoutError) => console.error('❌ Erreur lors du logout automatique:', logoutError)
+          });
           
           return throwError(() => new Error('Session expirée. Veuillez vous reconnecter.'));
         }
@@ -61,8 +92,12 @@ export const AuthInterceptor: HttpInterceptorFn = (req, next) => {
     );
   }
   
-  // Si pas de token et que la requête n'est pas pour /auth (login/register), rediriger
-  if (!req.url.includes('/auth/authenticate') && !req.url.includes('/auth/register') && !req.url.includes('/login')) {
+  // Si pas de token et que la requête n'est pas pour /auth (login/register/logout), rediriger
+  // Note: /auth/logout peut être appelé sans token si le token a déjà été supprimé, on l'autorise quand même
+  if (!req.url.includes('/auth/authenticate') && 
+      !req.url.includes('/auth/register') && 
+      !req.url.includes('/auth/logout') && 
+      !req.url.includes('/login')) {
     console.warn('⚠️ AuthInterceptor - Requête non authentifiée, redirection vers login');
     if (!router.url.includes('/login')) {
       router.navigate(['/login'], {
@@ -71,6 +106,20 @@ export const AuthInterceptor: HttpInterceptorFn = (req, next) => {
     }
   }
   
-  console.warn('⚠️ AuthInterceptor - Requête envoyée sans token');
+  // Pour /auth/logout, permettre la requête même sans token (cas où le token a déjà été supprimé)
+  if (req.url.includes('/auth/logout')) {
+    console.log('🔐 AuthInterceptor - Requête /auth/logout détectée');
+    if (token) {
+      const tokenPreview = token.length > 20 ? token.substring(0, 20) + '...' : token.substring(0, token.length);
+      console.log('✅ Token disponible pour logout:', tokenPreview);
+      console.log('✅ Header Authorization: Bearer {token} sera ajouté automatiquement');
+    } else {
+      console.warn('⚠️ Pas de token pour logout, requête envoyée sans header Authorization');
+      console.warn('⚠️ Le backend ne pourra pas mettre à jour derniere_deconnexion sans token');
+    }
+  } else {
+    console.warn('⚠️ AuthInterceptor - Requête envoyée sans token');
+  }
+  
   return next(req);
 };

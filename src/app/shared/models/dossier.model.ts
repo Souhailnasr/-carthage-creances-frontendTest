@@ -34,6 +34,10 @@ export class Dossier {
   description: string = '';
   numeroDossier: string = '';
   montantCreance: number = 0;
+  montantTotal: number = 0;
+  montantRecouvre: number = 0;
+  montantRestant: number = 0;
+  etatDossier?: 'RECOVERED_TOTAL' | 'RECOVERED_PARTIAL' | 'NOT_RECOVERED';
   dateCreation: Date = new Date();
   dateCloture?: Date;
   // Deux statuts: dossierStatus (technique) + statut (fonctionnel)

@@ -7,6 +7,8 @@ import { TacheUrgenteService, TacheUrgente } from '../../../core/services/tache-
 import { NotificationService, TypeNotification } from '../../../core/services/notification.service';
 import { interval, Subscription } from 'rxjs';
 import { NotificationComponent } from '../../../shared/components/notification/notification.component';
+import { UtilisateurService, Utilisateur } from '../../../core/services/utilisateur.service';
+import { Role } from '../../../shared/models/enums.model';
 
 @Component({
   selector: 'app-taches',
@@ -23,7 +25,9 @@ export class TachesComponent implements OnInit, OnDestroy {
   selectedPriorite = 'TOUS';
   currentUser: any;
   showCreateTache = false;
-  availableAgents: any[] = [];
+  availableAgents: Array<{ id?: number; nom: string; prenom: string; email?: string }> = [];
+  loadingAgents = false;
+  agentLoadError: string | null = null;
   newTache: Partial<TacheUrgente> = {
     titre: '',
     description: '',
@@ -50,7 +54,8 @@ export class TachesComponent implements OnInit, OnDestroy {
   constructor(
     private tacheUrgenteService: TacheUrgenteService,
     private authService: AuthService,
-    private notificationService: NotificationService
+    private notificationService: NotificationService,
+    private utilisateurService: UtilisateurService
   ) {}
 
   ngOnInit(): void {
@@ -111,14 +116,69 @@ export class TachesComponent implements OnInit, OnDestroy {
   }
 
   loadAvailableAgents(): void {
-    // Mock data for available agents
-    this.availableAgents = [
-      { id: 1, nom: 'Ben Salah', prenom: 'Leila' },
-      { id: 2, nom: 'Mansouri', prenom: 'Omar' },
-      { id: 3, nom: 'Hammami', prenom: 'Sonia' },
-      { id: 4, nom: 'Ben Ammar', prenom: 'Ali' },
-      { id: 5, nom: 'Khelil', prenom: 'Nadia' }
-    ];
+    if (!this.currentUser?.id) {
+      this.agentLoadError = 'Chef non identifié. Veuillez vous reconnecter.';
+      return;
+    }
+
+    const chefId = Number(this.currentUser.id);
+    if (Number.isNaN(chefId)) {
+      this.agentLoadError = 'Identifiant chef invalide.';
+      return;
+    }
+
+    this.loadingAgents = true;
+    this.agentLoadError = null;
+
+    this.utilisateurService.getAgentsByChef(chefId).subscribe({
+      next: (agents) => {
+        this.availableAgents = this.filterAgentDossier(agents);
+        this.loadingAgents = false;
+        if (!this.availableAgents.length) {
+          this.agentLoadError = 'Aucun agent dossier trouvé pour votre département.';
+        }
+      },
+      error: (error) => {
+        console.error('❌ Erreur lors du chargement des agents du chef:', error);
+        this.loadAgentsFallback();
+      }
+    });
+  }
+
+  retryLoadAgents(): void {
+    this.loadAvailableAgents();
+  }
+
+  private loadAgentsFallback(): void {
+    this.utilisateurService.getAllUtilisateurs().subscribe({
+      next: (allUsers) => {
+        this.availableAgents = this.filterAgentDossier(allUsers);
+        this.loadingAgents = false;
+        if (!this.availableAgents.length) {
+          this.agentLoadError = 'Aucun agent dossier disponible.';
+        }
+      },
+      error: (error) => {
+        console.error('❌ Erreur fallback chargement agents:', error);
+        const message = error?.message || 'Erreur lors du chargement des agents.';
+        this.agentLoadError = message;
+        this.loadingAgents = false;
+      }
+    });
+  }
+
+  private filterAgentDossier(users: Utilisateur[] | null | undefined): Array<{ id?: number; nom: string; prenom: string; email?: string }> {
+    return (users || [])
+      .filter((user) => {
+        const role = user.roleUtilisateur || user.role || '';
+        return String(role) === String(Role.AGENT_DOSSIER);
+      })
+      .map((user) => ({
+        id: user.id,
+        nom: user.nom,
+        prenom: user.prenom,
+        email: user.email
+      }));
   }
 
   startPolling(): void {

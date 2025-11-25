@@ -177,15 +177,32 @@ export class LoginComponent implements OnInit, OnDestroy {
       next: (data) => {
         this.loading = false;
         
-        // 🔧 Stocker le token dans sessionStorage (auth-token et auth-user)
-        this.tokenStorage.saveToken(data.accessToken);
-        this.tokenStorage.saveUser(data);
+        // 🔧 CORRECTION: Extraire le token JWT (peut être dans accessToken ou token)
+        const jwtToken = data.accessToken || data.token || (data as any)?.access_token || (data as any)?.token;
         
-        // 🔧 CORRECTION: Stocker aussi le token directement dans auth-user pour jwtAuthService.isUserLoggedIn()
-        // Car jwtAuthService.isUserLoggedIn() vérifie auth-user, pas auth-token
-        if (data.accessToken) {
-          sessionStorage.setItem('auth-user', data.accessToken);
+        if (!jwtToken) {
+          console.error('❌ Aucun token JWT trouvé dans la réponse:', data);
+          this.toastService.error('Erreur: Token non reçu du serveur');
+          this.invalidLogin = true;
+          return;
         }
+
+        // 🔧 Stocker le token JWT dans auth-token
+        this.tokenStorage.saveToken(jwtToken);
+        
+        // 🔧 IMPORTANT: Stocker SEULEMENT le token JWT (pas l'objet complet) dans auth-user
+        // Car l'interceptor et jwtAuthService utilisent auth-user pour récupérer le token
+        sessionStorage.setItem('auth-user', jwtToken);
+        
+        // 🔧 Stocker l'objet utilisateur dans une autre clé si nécessaire (mais pas dans auth-user)
+        // Note: saveUser() stocke dans auth-user, mais on l'a déjà écrasé avec le token ci-dessus
+        // Si vous avez besoin de stocker l'utilisateur, utilisez une autre clé comme 'user-data'
+        if (data.user || data.email) {
+          // Optionnel: stocker les données utilisateur dans une autre clé
+          // sessionStorage.setItem('user-data', JSON.stringify(data.user || data));
+        }
+        
+        console.log('✅ Token JWT stocké dans auth-user:', jwtToken.substring(0, 20) + '...');
 
         // Récupérer le token depuis auth-user (utilisé par jwtAuthService)
         const token = sessionStorage.getItem('auth-user') || data.accessToken || sessionStorage.getItem('auth-token');

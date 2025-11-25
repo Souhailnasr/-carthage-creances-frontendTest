@@ -32,8 +32,16 @@ export class ChefAmiableLayoutComponent implements OnInit {
   }
 
   logout(): void {
-    this.jwtAuthService.logOut();
-    this.router.navigate(['/login']);
+    // logOut() retourne un Observable et gère déjà la redirection dans finalize()
+    this.jwtAuthService.logOut().subscribe({
+      next: (response) => {
+        console.log('✅ Logout réussi:', response);
+      },
+      error: (error) => {
+        console.error('❌ Erreur lors du logout:', error);
+        // La redirection est déjà gérée dans le service (finalize)
+      }
+    });
   }
 
   isActiveRoute(route: string): boolean {

@@ -114,7 +114,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
       label: 'Gestion Utilisateurs',
       icon: 'fas fa-users-cog',
       route: '/finance/utilisateurs',
-      roles: [Role.CHEF_DEPARTEMENT_FINANCE, Role.SUPER_ADMIN]
+      roles: [Role.CHEF_DEPARTEMENT_FINANCE]
     },
     // Tâches pour Chef Finance - après Gestion Utilisateurs
     {
@@ -122,6 +122,12 @@ export class SidebarComponent implements OnInit, OnDestroy {
       icon: 'fas fa-tasks',
       route: '/finance/taches',
       roles: [Role.CHEF_DEPARTEMENT_FINANCE, Role.AGENT_FINANCE]
+    },
+    {
+      label: 'Mes dossiers finance',
+      icon: 'fas fa-briefcase',
+      route: '/finance/mes-dossiers',
+      roles: [Role.AGENT_FINANCE, Role.CHEF_DEPARTEMENT_FINANCE]
     },
     // Notifications pour Chef Finance - après Tâches
     {
@@ -179,6 +185,12 @@ export class SidebarComponent implements OnInit, OnDestroy {
           icon: 'fas fa-history',
           route: '/dossier/mes-validations',
           roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER]
+        },
+        {
+          label: 'Mes dossiers affectés',
+          icon: 'fas fa-user-check',
+          route: '/dossier/mes-dossiers',
+          roles: [Role.AGENT_DOSSIER]
         }
       ]
     },
@@ -462,8 +474,16 @@ export class SidebarComponent implements OnInit, OnDestroy {
   }
 
   logout(): void {
-    this.jwtAuthService.logOut();
-    this.router.navigate(['/login']);
+    // logOut() retourne un Observable et gère déjà la redirection dans finalize()
+    this.jwtAuthService.logOut().subscribe({
+      next: (response) => {
+        console.log('✅ Logout réussi:', response);
+      },
+      error: (error) => {
+        console.error('❌ Erreur lors du logout:', error);
+        // La redirection est déjà gérée dans le service (finalize)
+      }
+    });
   }
 
   isMenuItemVisible(item: MenuItem): boolean {

@@ -35,6 +35,7 @@ import { JwtAuthService } from '../../../core/services/jwt-auth.service';
 export class ActionDialogAmiableComponent implements OnInit {
   actionForm!: FormGroup;
   isEditMode: boolean = false;
+  currentUserId: number | null = null;
   
   typeActions = Object.values(TypeAction);
   reponses = [null, ReponseDebiteur.POSITIVE, ReponseDebiteur.NEGATIVE];
@@ -53,6 +54,8 @@ export class ActionDialogAmiableComponent implements OnInit {
       this.dialogRef.close(false);
       return;
     }
+
+    this.currentUserId = this.jwtAuthService.getCurrentUserId();
 
     this.actionForm = this.fb.group({
       type: ['', Validators.required],
@@ -93,6 +96,7 @@ export class ActionDialogAmiableComponent implements OnInit {
         dateAction: dateFormatted,
         nbOccurrences: this.actionForm.value.nbOccurrences,
         coutUnitaire: this.actionForm.value.coutUnitaire || 0,
+        agentId: this.currentUserId || undefined,
         // Ne pas envoyer reponseDebiteur si c'est null, ou l'envoyer selon les besoins du backend
         ...(this.actionForm.value.reponseDebiteur !== null && { reponseDebiteur: this.actionForm.value.reponseDebiteur })
       };
