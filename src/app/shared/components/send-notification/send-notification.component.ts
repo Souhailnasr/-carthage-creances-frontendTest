@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { NotificationService, TypeNotification, NotificationRequest } from '../../../core/services/notification.service';
-import { UtilisateurService, Utilisateur } from '../../../core/services/utilisateur.service';
+import { UtilisateurService, Utilisateur } from '../../../services/utilisateur.service';
 
 @Component({
   selector: 'app-send-notification',

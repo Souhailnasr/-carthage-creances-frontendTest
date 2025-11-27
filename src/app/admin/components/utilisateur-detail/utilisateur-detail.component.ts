@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
-import { UtilisateurService, Utilisateur } from '../../../core/services/utilisateur.service';
+import { UtilisateurService, Utilisateur } from '../../../services/utilisateur.service';
 
 @Component({
   selector: 'app-utilisateur-detail',

@@ -201,6 +201,23 @@ export class SidebarComponent implements OnInit, OnDestroy {
       roles: [Role.SUPER_ADMIN]
     },
     {
+      label: 'Tous les Utilisateurs',
+      icon: 'fas fa-circle-user',
+      route: '/utilisateurs',
+      roles: [Role.SUPER_ADMIN]
+    },
+    {
+      label: 'Mes Agents',
+      icon: 'fas fa-user-friends',
+      route: '/utilisateurs',
+      roles: [
+        Role.CHEF_DEPARTEMENT_DOSSIER,
+        Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE,
+        Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE,
+        Role.CHEF_DEPARTEMENT_FINANCE
+      ]
+    },
+    {
       label: 'Enquêtes',
       icon: 'fas fa-clipboard-list',
       route: '/enquetes',

@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
-import { AuthGuard } from './core/guards';
+import { AuthGuard, RoleGuard } from './core/guards';
+import { Role } from './shared/models';
 
 export const routes: Routes = [
   {
@@ -20,6 +21,20 @@ export const routes: Routes = [
     path: 'admin',
     loadChildren: () => import('./admin/admin.module').then(m => m.AdminModule),
     canActivate: [AuthGuard]
+  },
+  {
+    path: 'utilisateurs',
+    loadComponent: () => import('./components/utilisateurs-list/utilisateurs-list.component').then(m => m.UtilisateursListComponent),
+    canActivate: [AuthGuard, RoleGuard],
+    data: {
+      allowedRoles: [
+        Role.SUPER_ADMIN,
+        Role.CHEF_DEPARTEMENT_DOSSIER,
+        Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE,
+        Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE,
+        Role.CHEF_DEPARTEMENT_FINANCE
+      ]
+    }
   },
   {
     path: 'dossier',

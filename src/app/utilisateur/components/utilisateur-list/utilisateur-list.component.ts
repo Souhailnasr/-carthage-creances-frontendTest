@@ -14,7 +14,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Subject, takeUntil, debounceTime, distinctUntilChanged } from 'rxjs';
 
-import { UtilisateurService, Utilisateur } from '../../../core/services/utilisateur.service';
+import { UtilisateurService, Utilisateur } from '../../../services/utilisateur.service';
 import { UtilisateurCreateComponent } from '../utilisateur-create/utilisateur-create.component';
 import { UtilisateurEditComponent } from '../utilisateur-edit/utilisateur-edit.component';
 

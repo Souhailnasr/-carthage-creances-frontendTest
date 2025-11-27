@@ -5,7 +5,7 @@ import { Subject, takeUntil } from 'rxjs';
 import { ChefAmiableService } from '../../services/chef-amiable.service';
 import { JwtAuthService } from '../../../core/services/jwt-auth.service';
 import { DossierApiService } from '../../../core/services/dossier-api.service';
-import { UtilisateurService } from '../../../core/services/utilisateur.service';
+import { UtilisateurService } from '../../../services/utilisateur.service';
 import { StatistiqueService } from '../../../core/services/statistique.service';
 import { PerformanceService } from '../../../core/services/performance.service';
 import { StatistiqueAmiable, PerformanceAgent, ChefAmiableNotification } from '../../../shared/models';

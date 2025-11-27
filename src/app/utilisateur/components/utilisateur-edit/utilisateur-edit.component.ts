@@ -10,7 +10,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
 import { Subject, takeUntil, debounceTime, distinctUntilChanged } from 'rxjs';
 
-import { UtilisateurService, Utilisateur, UtilisateurUpdateRequest } from '../../../core/services/utilisateur.service';
+import { UtilisateurService, Utilisateur, UtilisateurUpdateRequest } from '../../../services/utilisateur.service';
 
 interface DialogData {
   utilisateur: Utilisateur;

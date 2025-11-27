@@ -2,6 +2,8 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, BehaviorSubject, throwError } from 'rxjs';
 import { tap, catchError } from 'rxjs/operators';
+import { AuthService } from '../core/services/auth.service';
+import { JwtAuthService } from '../core/services/jwt-auth.service';
 
 export interface Utilisateur {
   id?: number;
@@ -14,7 +16,10 @@ export interface Utilisateur {
   role?: string; // Pour compatibilité temporaire
   departement?: string;
   chefId?: number;
+  chefCreateur?: Utilisateur; // Chef qui a créé cet agent
   actif: boolean;
+  derniereConnexion?: string | null;
+  derniereDeconnexion?: string | null;
   dateCreation?: string;
   dateModification?: string;
   motDePasse?: string;
@@ -31,6 +36,8 @@ export interface UtilisateurRequest {
   departement?: string;
   chefId?: number;
   actif: boolean;
+  derniereConnexion?: string | null;
+  derniereDeconnexion?: string | null;
   motDePasse?: string;
 }
 
@@ -47,7 +54,11 @@ export class UtilisateurService {
   private utilisateursSubject = new BehaviorSubject<Utilisateur[]>([]);
   public utilisateurs$ = this.utilisateursSubject.asObservable();
 
-  constructor(private http: HttpClient) {}
+  constructor(
+    private http: HttpClient,
+    private authService: AuthService,
+    private jwtAuthService: JwtAuthService
+  ) {}
 
   /**
    * Obtenir tous les utilisateurs depuis l'API backend
@@ -82,6 +93,7 @@ export class UtilisateurService {
   /**
    * Créer un nouvel utilisateur via l'API backend
    * Retourne maintenant AuthenticationResponse avec token JWT
+   * Ajoute automatiquement le chefId si c'est un agent créé par un chef
    */
   createUtilisateur(utilisateur: UtilisateurRequest): Observable<AuthenticationResponse> {
     const headers = new HttpHeaders({
@@ -104,6 +116,51 @@ export class UtilisateurService {
     // Retirer "role" car le backend ne le reconnaît pas
     delete payload.role;
     
+    // 🆕 NOUVEAU: Si c'est un agent, ajouter automatiquement le chefId du chef connecté
+    if (this.isAgent(payload.roleUtilisateur)) {
+      // Méthode 1: Essayer de récupérer l'ID depuis JwtAuthService (le plus fiable)
+      let currentUserId: number | null = this.jwtAuthService.getCurrentUserId();
+      
+      // Méthode 2: Si JwtAuthService ne fonctionne pas, essayer AuthService
+      if (!currentUserId) {
+        currentUserId = this.authService.getCurrentUserIdNumber();
+      }
+      
+      // Méthode 3: Si toujours pas d'ID, essayer de récupérer depuis currentUser
+      if (!currentUserId) {
+        const currentUser = this.authService.getCurrentUser();
+        if (currentUser?.id) {
+          const parsedId = parseInt(currentUser.id.toString());
+          if (!isNaN(parsedId)) {
+            currentUserId = parsedId;
+          }
+        }
+      }
+      
+      // Vérifier que l'utilisateur est un chef ou super admin
+      const currentUser = this.authService.getCurrentUser();
+      const userRole = currentUser?.roleUtilisateur?.toString();
+      const roleAuthority = this.jwtAuthService.loggedUserAuthority();
+      
+      // Vérifier le rôle depuis currentUser ou depuis le token
+      const isChefRole = userRole ? this.isChef(userRole) : (roleAuthority ? this.isChef(roleAuthority.replace(/^RoleUtilisateur_/, '')) : false);
+      const isSuperAdmin = userRole === 'SUPER_ADMIN' || roleAuthority?.includes('SUPER_ADMIN');
+      
+      if (!isChefRole && !isSuperAdmin) {
+        return throwError(() => new Error('Seuls les chefs et super admins peuvent créer des agents.'));
+      }
+      
+      if (!currentUserId) {
+        console.error('❌ Impossible de récupérer l\'ID de l\'utilisateur connecté');
+        return throwError(() => new Error('Impossible de récupérer l\'ID de l\'utilisateur connecté. Veuillez vous reconnecter.'));
+      }
+      
+      // Si le chefId n'est pas déjà fourni, l'ajouter automatiquement
+      if (!payload.chefId) {
+        payload.chefId = currentUserId;
+      }
+    }
+    
     // Le mot de passe sera crypté côté backend, on l'envoie tel quel
     if (!payload.motDePasse) {
       payload.motDePasse = 'password123'; // Mot de passe par défaut
@@ -118,6 +175,12 @@ export class UtilisateurService {
         roleUtilisateur: payload.roleUtilisateur
       });
       return throwError(() => new Error('Champs requis manquants pour la création d\'utilisateur'));
+    }
+
+    // Validation spécifique pour les agents : ils doivent avoir un chefId
+    if (this.isAgent(payload.roleUtilisateur) && !payload.chefId) {
+      console.error('❌ Un agent doit être rattaché à un chef créateur (chefId manquant)');
+      return throwError(() => new Error('Un agent doit être rattaché à un chef créateur. Veuillez contacter l\'administrateur.'));
     }
 
     console.log('🔵 UtilisateurService.createUtilisateur appelé');
@@ -141,6 +204,22 @@ export class UtilisateurService {
         }),
         catchError(this.handleError)
       );
+  }
+
+  /**
+   * Vérifie si un rôle est un agent
+   */
+  private isAgent(role: string | undefined): boolean {
+    if (!role) return false;
+    return role.startsWith('AGENT_');
+  }
+
+  /**
+   * Vérifie si un rôle est un chef
+   */
+  private isChef(role: string | undefined): boolean {
+    if (!role) return false;
+    return role.startsWith('CHEF_');
   }
 
   /**
@@ -234,21 +313,31 @@ export class UtilisateurService {
    */
   getAgentsByChef(chefId: number): Observable<Utilisateur[]> {
     const url = `${this.baseUrl}/users/chef/${chefId}`;
-    console.log('🔍 Tentative de chargement des agents du chef:', chefId, 'URL:', url);
+    
     return this.http.get<Utilisateur[]>(url)
       .pipe(
         tap(agents => {
-          console.log('✅ Agents chargés avec succès:', agents?.length || 0);
+          const count = agents?.length || 0;
+          if (count === 0) {
+            console.warn('⚠️ Aucun agent trouvé pour le chef ID:', chefId);
+          }
         }),
         catchError((error) => {
-          console.error('❌ Erreur getAgentsByChef - URL:', url);
-          console.error('❌ Erreur getAgentsByChef - Status:', error?.status);
-          console.error('❌ Erreur getAgentsByChef - Message:', error?.message);
-          console.error('❌ Erreur getAgentsByChef - Error body:', error?.error);
-          // Améliorer le message d'erreur
-          if (error?.status === 500) {
+          console.error('❌ Erreur getAgentsByChef:', {
+            url,
+            status: error?.status,
+            message: error?.error?.message || error?.message,
+            chefId
+          });
+          
+          // Améliorer le message d'erreur selon le statut
+          if (error?.status === 403 || error?.status === 401) {
+            const errorMsg = error?.error?.message || error?.message || 'Accès non autorisé';
+            return throwError(() => new Error(`Accès non autorisé: ${errorMsg}`));
+          } else if (error?.status === 404) {
+            return throwError(() => new Error(`Endpoint non trouvé: ${url}. Vérifiez que le backend expose bien GET /api/users/chef/{chefId}`));
+          } else if (error?.status === 500) {
             const errorMsg = error?.error?.message || error?.message || 'Erreur serveur interne';
-            console.error('❌ Erreur 500 détaillée:', errorMsg);
             return throwError(() => new Error(`Erreur serveur lors du chargement des agents (${errorMsg})`));
           }
           return this.handleError(error);
@@ -334,3 +423,4 @@ export class UtilisateurService {
     return throwError(() => new Error(errorMessage));
   }
 }
+

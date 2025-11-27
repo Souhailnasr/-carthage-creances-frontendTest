@@ -5,7 +5,7 @@ import { DossierService } from '../../../core/services/dossier.service';
 import { AvocatService } from '../../services/avocat.service';
 import { HuissierService } from '../../services/huissier.service';
 import { AudienceService } from '../../services/audience.service';
-import { UtilisateurService } from '../../../core/services/utilisateur.service';
+import { UtilisateurService } from '../../../services/utilisateur.service';
 import { JwtAuthService } from '../../../core/services/jwt-auth.service';
 import { DossierApiService } from '../../../core/services/dossier-api.service';
 import { StatistiqueService } from '../../../core/services/statistique.service';

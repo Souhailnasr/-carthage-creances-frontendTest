@@ -7,7 +7,7 @@ import { TacheUrgenteService, TacheUrgente } from '../../../core/services/tache-
 import { NotificationService, TypeNotification } from '../../../core/services/notification.service';
 import { interval, Subscription } from 'rxjs';
 import { NotificationComponent } from '../../../shared/components/notification/notification.component';
-import { UtilisateurService, Utilisateur } from '../../../core/services/utilisateur.service';
+import { UtilisateurService, Utilisateur } from '../../../services/utilisateur.service';
 import { Role } from '../../../shared/models/enums.model';
 
 @Component({

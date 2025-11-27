@@ -10,7 +10,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
 import { Subject, takeUntil, debounceTime, distinctUntilChanged } from 'rxjs';
 
-import { UtilisateurService, UtilisateurRequest, AuthenticationResponse } from '../../../core/services/utilisateur.service';
+import { UtilisateurService, UtilisateurRequest, AuthenticationResponse } from '../../../services/utilisateur.service';
 
 @Component({
   selector: 'app-utilisateur-create',

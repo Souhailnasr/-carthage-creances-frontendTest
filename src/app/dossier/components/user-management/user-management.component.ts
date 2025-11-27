@@ -6,7 +6,7 @@ import { Subject, takeUntil } from 'rxjs';
 import { User, Role } from '../../../shared/models';
 import { FormInputComponent } from '../../../shared/components/form-input/form-input.component';
 import { ToastService } from '../../../core/services/toast.service';
-import { UtilisateurService, Utilisateur, UtilisateurRequest, AuthenticationResponse } from '../../../core/services/utilisateur.service';
+import { UtilisateurService, Utilisateur, UtilisateurRequest, AuthenticationResponse } from '../../../services/utilisateur.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { JwtAuthService } from '../../../core/services/jwt-auth.service';
 

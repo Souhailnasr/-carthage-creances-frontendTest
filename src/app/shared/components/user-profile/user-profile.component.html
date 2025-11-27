@@ -12,6 +12,12 @@
       </div>
       <div class="user-details">
         <h2>{{ currentUser?.getFullName() }}</h2>
+        <div class="status-row" *ngIf="currentUser">
+          <span class="statut-dot" [ngClass]="getCurrentUserStatutClass()"></span>
+          <span class="statut-chip" [class.actif]="isCurrentUserActif()" [class.inactif]="!isCurrentUserActif()">
+            {{ getCurrentUserStatutText() }}
+          </span>
+        </div>
         <p class="user-role" [class]="getRoleClass()">{{ getRoleDisplayName(currentUser?.roleUtilisateur || 'AGENT_DOSSIER') }}</p>
         <p class="user-email">{{ currentUser?.email }}</p>
       </div>

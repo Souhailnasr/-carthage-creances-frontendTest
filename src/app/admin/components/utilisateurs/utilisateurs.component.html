@@ -227,6 +227,12 @@
         </div>
         <div class="user-info">
           <h3 class="user-name">{{ utilisateur.prenom }} {{ utilisateur.nom }}</h3>
+          <div class="status-indicator">
+            <span class="statut-dot" [ngClass]="getStatutClass(utilisateur)"></span>
+            <span class="statut-text" [class.actif]="isActif(utilisateur)" [class.inactif]="!isActif(utilisateur)">
+              {{ getStatutText(utilisateur) }}
+            </span>
+          </div>
           <p class="user-email">{{ utilisateur.email }}</p>
           <span class="user-role" [class]="getRoleClass(utilisateur)">
             {{ getRoleDisplayName(utilisateur.roleUtilisateur || utilisateur.role || '') }}

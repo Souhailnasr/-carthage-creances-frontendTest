@@ -145,4 +145,16 @@ export class UserProfileComponent implements OnInit, OnDestroy {
     if (!this.currentUser) return '';
     return this.currentUser.getFullName().split(' ').map(n => n[0]).join('');
   }
+
+  isCurrentUserActif(): boolean {
+    return this.currentUser?.actif !== false;
+  }
+
+  getCurrentUserStatutClass(): string {
+    return this.isCurrentUserActif() ? 'statut-actif' : 'statut-inactif';
+  }
+
+  getCurrentUserStatutText(): string {
+    return this.isCurrentUserActif() ? 'En ligne' : 'Hors ligne';
+  }
 }

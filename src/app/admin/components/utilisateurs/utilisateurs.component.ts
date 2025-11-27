@@ -6,7 +6,7 @@ import { Subject, takeUntil } from 'rxjs';
 import { User, Role } from '../../../shared/models';
 import { FormInputComponent } from '../../../shared/components/form-input/form-input.component';
 import { ToastService } from '../../../core/services/toast.service';
-import { UtilisateurService, Utilisateur, UtilisateurRequest, AuthenticationResponse } from '../../../core/services/utilisateur.service';
+import { UtilisateurService, Utilisateur, UtilisateurRequest, AuthenticationResponse } from '../../../services/utilisateur.service';
 import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
@@ -369,8 +369,16 @@ export class UtilisateursComponent implements OnInit, OnDestroy {
             
             // Afficher un message d'erreur plus détaillé
             let errorMessage = 'Erreur lors de la création de l\'utilisateur';
-            if (error.message) {
+            
+            // Gestion spécifique des erreurs liées au chefId
+            if (error.message && error.message.includes('chef créateur')) {
+              errorMessage = 'Un agent doit être rattaché à un chef créateur. Veuillez contacter l\'administrateur.';
+            } else if (error.message) {
               errorMessage = error.message;
+            } else if (error.error?.message) {
+              errorMessage = error.error.message;
+            } else if (error.error?.errors && Array.isArray(error.error.errors)) {
+              errorMessage = error.error.errors.join(', ');
             }
             
             this.toastService.error(errorMessage);
@@ -380,7 +388,8 @@ export class UtilisateursComponent implements OnInit, OnDestroy {
               message: error.message,
               status: error.status,
               url: error.url,
-              userData: utilisateurRequest
+              userData: utilisateurRequest,
+              errorBody: error.error
             });
           }
         });
@@ -571,5 +580,17 @@ export class UtilisateursComponent implements OnInit, OnDestroy {
     };
 
     return roleToDepartment[role] || 'ADMIN';
+  }
+
+  isActif(utilisateur: Utilisateur | null): boolean {
+    return utilisateur?.actif === true;
+  }
+
+  getStatutClass(utilisateur: Utilisateur): string {
+    return this.isActif(utilisateur) ? 'statut-actif' : 'statut-inactif';
+  }
+
+  getStatutText(utilisateur: Utilisateur): string {
+    return this.isActif(utilisateur) ? 'Actif' : 'Inactif';
   }
 }

@@ -22,7 +22,7 @@ import { ToastService } from '../../../core/services/toast.service';
 import { DossierApiService } from '../../../core/services/dossier-api.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { JwtAuthService } from '../../../core/services/jwt-auth.service';
-import { UtilisateurService, Utilisateur } from '../../../core/services/utilisateur.service';
+import { UtilisateurService, Utilisateur } from '../../../services/utilisateur.service';
 import { DossierMontantService } from '../../../core/services/dossier-montant.service';
 import { ActionAmiableService } from '../../../core/services/action-amiable.service';
 import { DocumentHuissierService } from '../../../core/services/document-huissier.service';

@@ -3,7 +3,7 @@ import { Observable, of, forkJoin } from 'rxjs';
 import { tap, map, catchError } from 'rxjs/operators';
 import { StatistiqueAmiable, PerformanceAgent, Action, Dossier, Tache, ChefAmiableNotification, User } from '../../shared/models';
 import { TypeAction, ReponseDebiteur, StatutTache, Role } from '../../shared/models';
-import { UtilisateurService, UtilisateurRequest } from '../../core/services/utilisateur.service';
+import { UtilisateurService, UtilisateurRequest } from '../../services/utilisateur.service';
 import { DossierApiService } from '../../core/services/dossier-api.service';
 import { DossierApi } from '../../shared/models/dossier-api.model';
 
