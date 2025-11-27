@@ -5,7 +5,7 @@
       Mes validations d'enquêtes
     </h1>
     <p class="subtitle" *ngIf="currentUser?.roleUtilisateur === 'CHEF_DEPARTEMENT_DOSSIER' || currentUser?.roleUtilisateur === 'SUPER_ADMIN'">
-      Enquêtes validées par moi et enquêtes créées par les agents
+      Enquêtes validées par moi pour mes agents
     </p>
     <p class="subtitle" *ngIf="currentUser?.roleUtilisateur === 'AGENT_DOSSIER'">
       Historique de toutes mes enquêtes et leur statut de validation

@@ -20,7 +20,7 @@ import { DossierApiService } from '../../../core/services/dossier-api.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { JwtAuthService } from '../../../core/services/jwt-auth.service';
 import { ToastService } from '../../../core/services/toast.service';
-import { DossierApi } from '../../../shared/models/dossier-api.model';
+import { DossierApi, TypeRecouvrement } from '../../../shared/models/dossier-api.model';
 import { Page } from '../../../shared/models/pagination.model';
 import { User } from '../../../shared/models';
 import { Role } from '../../../shared/models/enums.model';
@@ -149,9 +149,16 @@ export class AffectationDossiersComponent implements OnInit, OnDestroy {
       .subscribe(page => {
         const content = page?.content || [];
         console.log('📋 Dossiers validés disponibles chargés:', content.length);
-        this.dossiers = content;
-        this.totalElements = page.totalElements || 0;
-        this.totalPages = page.totalPages || 1;
+        
+        // Filtrer selon le rôle de l'utilisateur connecté
+        const dossiersDisponibles = this.filterDossiersByRole(content);
+        
+        console.log('✅ Dossiers disponibles pour affectation:', dossiersDisponibles.length, 'sur', content.length, 'dossiers validés');
+        this.dossiers = dossiersDisponibles;
+        
+        // Ajuster les totaux après filtrage
+        this.totalElements = dossiersDisponibles.length;
+        this.totalPages = Math.ceil(dossiersDisponibles.length / this.pageSize) || 1;
         this.applyFilteringAndPaging();
       });
   }
@@ -167,11 +174,73 @@ export class AffectationDossiersComponent implements OnInit, OnDestroy {
     this.searchSubject.next(searchTerm);
   }
 
+  /**
+   * Filtre les dossiers selon le rôle de l'utilisateur connecté
+   * - Chef Dossier : affiche uniquement les dossiers NON_AFFECTE (pas encore affectés)
+   * - Chef Amiable : affiche uniquement les dossiers AMIABLE (pour réaffectation au juridique)
+   */
+  filterDossiersByRole(dossiers: DossierApi[]): DossierApi[] {
+    if (!this.currentUser) {
+      console.warn('⚠️ Utilisateur non connecté, aucun filtre appliqué');
+      return dossiers;
+    }
+
+    const userRole = this.currentUser.roleUtilisateur;
+    const roleString = typeof userRole === 'string' ? userRole : String(userRole);
+
+    // Chef Dossier : afficher uniquement les dossiers NON_AFFECTE
+    if (userRole === Role.CHEF_DEPARTEMENT_DOSSIER || roleString === 'CHEF_DEPARTEMENT_DOSSIER') {
+      console.log('🔍 Filtre Chef Dossier: affichage des dossiers NON_AFFECTE uniquement');
+      return dossiers.filter((dossier: DossierApi) => {
+        const typeRecouvrement = dossier.typeRecouvrement;
+        // Vérifier si c'est NON_AFFECTE ou undefined/null
+        if (!typeRecouvrement) {
+          return true; // undefined/null = non affecté
+        }
+        // Comparer avec l'enum uniquement
+        return typeRecouvrement === TypeRecouvrement.NON_AFFECTE;
+      });
+    }
+
+    // Chef Amiable : afficher uniquement les dossiers AMIABLE (pour réaffectation au juridique)
+    if (userRole === Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE || 
+        roleString === 'CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE') {
+      console.log('🔍 Filtre Chef Amiable: affichage des dossiers AMIABLE uniquement');
+      return dossiers.filter((dossier: DossierApi) => {
+        const typeRecouvrement = dossier.typeRecouvrement;
+        // Comparer avec l'enum uniquement
+        return typeRecouvrement === TypeRecouvrement.AMIABLE;
+      });
+    }
+
+    // Super Admin : afficher tous les dossiers non affectés (comportement par défaut)
+    if (userRole === Role.SUPER_ADMIN || roleString === 'SUPER_ADMIN') {
+      console.log('🔍 Filtre Super Admin: affichage des dossiers NON_AFFECTE uniquement');
+      return dossiers.filter((dossier: DossierApi) => {
+        const typeRecouvrement = dossier.typeRecouvrement;
+        // Vérifier si c'est NON_AFFECTE ou undefined/null
+        if (!typeRecouvrement) {
+          return true; // undefined/null = non affecté
+        }
+        // Comparer avec l'enum uniquement
+        return typeRecouvrement === TypeRecouvrement.NON_AFFECTE;
+      });
+    }
+
+    // Par défaut, ne pas filtrer (pour les autres rôles)
+    console.warn('⚠️ Rôle non reconnu pour le filtrage:', userRole);
+    return dossiers;
+  }
+
   applyFilteringAndPaging(): void {
-    // Les données sont déjà filtrées et triées côté serveur
-    // On affiche simplement les résultats
+    // Les données sont déjà filtrées selon le rôle dans loadDossiers()
+    // On applique simplement la pagination
     this.filteredDossiers = [...this.dossiers];
-    this.pagedDossiers = [...this.dossiers];
+    
+    // Appliquer la pagination côté client
+    const start = this.pageIndex * this.pageSize;
+    const end = start + this.pageSize;
+    this.pagedDossiers = this.filteredDossiers.slice(start, end);
   }
 
   selectDossierByNumber(): void {
@@ -399,6 +468,36 @@ export class AffectationDossiersComponent implements OnInit, OnDestroy {
       currency: 'TND',
       minimumFractionDigits: 2
     }).format(amount);
+  }
+
+  /**
+   * Vérifie si l'utilisateur connecté est un Chef Dossier
+   */
+  isChefDossier(): boolean {
+    if (!this.currentUser) return false;
+    const userRole = this.currentUser.roleUtilisateur;
+    const roleString = typeof userRole === 'string' ? userRole : String(userRole);
+    return userRole === Role.CHEF_DEPARTEMENT_DOSSIER || roleString === 'CHEF_DEPARTEMENT_DOSSIER';
+  }
+
+  /**
+   * Vérifie si l'utilisateur connecté est un Chef Amiable
+   */
+  isChefAmiable(): boolean {
+    if (!this.currentUser) return false;
+    const userRole = this.currentUser.roleUtilisateur;
+    const roleString = typeof userRole === 'string' ? userRole : String(userRole);
+    return userRole === Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE || 
+           roleString === 'CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE';
+  }
+
+  /**
+   * Vérifie si l'utilisateur connecté est un Super Admin
+   */
+  isSuperAdmin(): boolean {
+    if (!this.currentUser) return false;
+    const userRole = this.currentUser.roleUtilisateur;
+    return userRole === Role.SUPER_ADMIN;
   }
 }
 

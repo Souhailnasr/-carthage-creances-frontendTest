@@ -192,70 +192,11 @@ export class MesValidationsEnqueteComponent implements OnInit, OnDestroy {
           
           console.log(`✅ ${validationsValides.length} validations valides (${validations.length - validationsValides.length} ignorées)`);
           
-          // Pour les chefs : charger aussi les enquêtes créées par les agents pour avoir une vue complète
+          // Pour les chefs : afficher uniquement les validations qu'ils ont effectuées pour leurs agents
           if (isChef) {
-            // Charger toutes les enquêtes pour voir celles créées par les agents
-            this.enqueteService.getAllEnquetes()
-              .pipe(
-                takeUntil(this.destroy$),
-                finalize(() => {
-                  this.loading = false;
-                  this.calculateStats();
-                })
-              )
-              .subscribe({
-                next: (allEnquetes) => {
-                  console.log('✅ Toutes les enquêtes chargées pour le chef:', allEnquetes.length);
-                  
-                  // Pour les chefs : combiner les validations qu'ils ont effectuées avec les enquêtes créées par les agents
-                  // Cela leur permet de voir toutes les enquêtes qu'ils ont validées ET celles créées par les agents
-                  const enquetesAgents = allEnquetes.filter(e => {
-                    // Enquêtes créées par des agents (pas par le chef lui-même)
-                    const agentId = e.agentCreateurId || (e.agentCreateur?.id ? Number(e.agentCreateur.id) : null);
-                    return agentId !== null && agentId !== userId;
-                  });
-                  
-                  console.log(`✅ ${enquetesAgents.length} enquêtes créées par les agents trouvées`);
-                  
-                  // Pour chaque enquête créée par un agent, créer une ValidationEnquete virtuelle si elle n'a pas déjà de validation
-                  const validationsVirtuelles: ValidationEnquete[] = enquetesAgents
-                    .filter(enquete => {
-                      // Ne pas créer de validation virtuelle si une validation existe déjà
-                      return !validationsValides.some(v => {
-                        const vEnqueteId = v.enquete?.id || v.enqueteId;
-                        return vEnqueteId === enquete.id;
-                      });
-                    })
-                    .map(enquete => ({
-                      id: undefined,
-                      enquete: enquete,
-                      enqueteId: enquete.id,
-                      agentCreateurId: enquete.agentCreateurId,
-                      agentCreateur: enquete.agentCreateur,
-                      chefValidateur: null,
-                      chefValidateurId: undefined,
-                      dateValidation: null,
-                      statut: enquete.statut === 'VALIDE' ? StatutValidation.VALIDE :
-                              enquete.statut === 'REJETE' ? StatutValidation.REJETE :
-                              StatutValidation.EN_ATTENTE,
-                      commentaires: null,
-                      dateCreation: enquete.dateCreation || new Date().toISOString(),
-                      dateModification: null
-                    } as ValidationEnquete));
-                  
-                  // Combiner les validations réelles avec les validations virtuelles
-                  const allValidations = [...validationsValides, ...validationsVirtuelles];
-                  console.log(`✅ Total validations à afficher pour le chef: ${allValidations.length} (${validationsValides.length} réelles, ${validationsVirtuelles.length} virtuelles)`);
-                  
-                  // Charger les dossiers manquants
-                  this.loadDossiersForValidations(allValidations);
-                },
-                error: (error) => {
-                  console.error('❌ Erreur lors du chargement des enquêtes pour le chef:', error);
-                  // Afficher quand même les validations chargées
-                  this.loadDossiersForValidations(validationsValides);
-                }
-              });
+            console.log(`✅ Affichage des ${validationsValides.length} validations effectuées par le chef ${userId} pour ses agents`);
+            // Charger les dossiers manquants et afficher uniquement les validations réelles
+            this.loadDossiersForValidations(validationsValides);
             return;
           }
           

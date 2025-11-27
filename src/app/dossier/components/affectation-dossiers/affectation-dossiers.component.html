@@ -60,7 +60,9 @@
         </div>
 
         <div class="affectation-buttons">
+          <!-- Bouton Affecter à l'Amiable : visible uniquement pour Chef Dossier et Super Admin -->
           <button mat-raised-button color="primary" class="affect-btn amiable-btn" 
+                  *ngIf="isChefDossier() || isSuperAdmin()"
                   (click)="affecterAmiable()" 
                   [disabled]="!selectedDossier || loading"
                   matTooltip="Affecter ce dossier au recouvrement amiable">
@@ -68,7 +70,9 @@
             Affecter au Recouvrement Amiable
           </button>
           
+          <!-- Bouton Affecter au Juridique : visible pour tous les chefs -->
           <button mat-raised-button color="accent" class="affect-btn juridique-btn" 
+                  *ngIf="isChefDossier() || isChefAmiable() || isSuperAdmin()"
                   (click)="affecterJuridique()" 
                   [disabled]="!selectedDossier || loading"
                   matTooltip="Affecter ce dossier au recouvrement juridique">
@@ -76,7 +80,9 @@
             Affecter au Recouvrement Juridique
           </button>
           
+          <!-- Bouton Clôturer : visible pour tous les chefs -->
           <button mat-raised-button color="warn" class="affect-btn cloture-btn" 
+                  *ngIf="isChefDossier() || isChefAmiable() || isSuperAdmin()"
                   (click)="cloturer()" 
                   [disabled]="!selectedDossier || loading"
                   matTooltip="Clôturer ce dossier">

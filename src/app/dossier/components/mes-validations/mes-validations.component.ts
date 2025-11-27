@@ -18,6 +18,7 @@ import { AuthService } from '../../../core/services/auth.service';
 import { JwtAuthService } from '../../../core/services/jwt-auth.service';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
+import { Role } from '../../../shared/models/enums.model';
 
 @Component({
   selector: 'app-mes-validations',
@@ -95,14 +96,32 @@ export class MesValidationsComponent implements OnInit, OnDestroy {
           return;
         }
 
-        const agentId = Number(currentUser.id);
-        console.log('✅ Chargement des validations pour l\'agent:', agentId);
+        const userId = Number(currentUser.id);
+        const userRole = currentUser.roleUtilisateur;
+        
+        // Déterminer si l'utilisateur est un chef ou un agent
+        const isChef = userRole === Role.CHEF_DEPARTEMENT_DOSSIER || 
+                       userRole === Role.SUPER_ADMIN;
+        const isAgent = userRole === Role.AGENT_DOSSIER;
 
-        this.validationService.getValidationsByAgent(agentId)
+        console.log('✅ Chargement des validations pour:', { 
+          userId, 
+          role: userRole, 
+          isChef, 
+          isAgent 
+        });
+
+        // Pour les chefs : charger les validations qu'ils ont effectuées pour leurs agents
+        // Pour les agents : charger les validations de leurs dossiers
+        const validations$ = isChef 
+          ? this.validationService.getValidationsByChef(userId)
+          : this.validationService.getValidationsByAgent(userId);
+
+        validations$
           .pipe(takeUntil(this.destroy$))
           .subscribe({
             next: (validations) => {
-              console.log('✅ Validations reçues:', validations);
+              console.log('✅ Validations reçues:', validations.length);
               this.dataSource.data = validations;
               this.updateStats(validations);
               this.applyFilters();
