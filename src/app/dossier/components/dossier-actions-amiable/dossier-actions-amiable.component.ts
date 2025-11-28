@@ -38,6 +38,7 @@ import { JwtAuthService } from '../../../core/services/jwt-auth.service';
 })
 export class DossierActionsAmiableComponent implements OnInit, OnDestroy {
   @Input() dossierId!: number;
+  @Input() typeRecouvrement?: string; // Type de recouvrement du dossier
   
   actions: ActionRecouvrement[] = [];
   statistiques: StatistiquesActions = {
@@ -117,6 +118,12 @@ export class DossierActionsAmiableComponent implements OnInit, OnDestroy {
   }
 
   addAction(): void {
+    // Vérifier si le dossier est au juridique
+    if (this.isDossierJuridique()) {
+      this.snackBar.open('Impossible d\'ajouter des actions : ce dossier est affecté au recouvrement juridique', 'Fermer', { duration: 3000 });
+      return;
+    }
+    
     const dialogRef = this.dialog.open(ActionDialogAmiableComponent, {
       width: '500px',
       data: { dossierId: this.dossierId }
@@ -127,6 +134,13 @@ export class DossierActionsAmiableComponent implements OnInit, OnDestroy {
         this.loadActions();
       }
     });
+  }
+
+  /**
+   * Vérifie si le dossier est affecté au recouvrement juridique
+   */
+  isDossierJuridique(): boolean {
+    return this.typeRecouvrement === 'JURIDIQUE';
   }
 
   editAction(action: ActionRecouvrement): void {

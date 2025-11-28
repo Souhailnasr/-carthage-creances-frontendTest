@@ -11,7 +11,7 @@
   <div class="actions-section">
     <div class="actions-header">
       <h2>Tâches</h2>
-      <button class="btn-primary" (click)="showCreateTache = true">
+      <button class="btn-primary" (click)="onOpenCreateForm()">
         <i class="fas fa-plus"></i> Créer une Tâche
       </button>
     </div>
@@ -73,7 +73,7 @@
               <button type="button" class="retry-link" (click)="retryLoadAgents()">Réessayer</button>
             </p>
             <p class="form-hint" *ngIf="!agentLoadError && !loadingAgents && !availableAgents.length">
-              Aucun agent dossier disponible.
+              Aucun agent disponible pour votre département.
             </p>
           </div>
 
@@ -291,7 +291,7 @@
         </div>
         <h3>Aucune tâche trouvée</h3>
         <p>Commencez par créer des tâches pour vos agents.</p>
-        <button class="btn-primary" (click)="showCreateTache = true">
+        <button class="btn-primary" (click)="onOpenCreateForm()">
           <i class="fas fa-plus"></i> Créer la première tâche
         </button>
       </div>

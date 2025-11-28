@@ -117,13 +117,12 @@ export class AgentAmiableService {
    * Créer une action pour un dossier
    */
   createAction(dossierId: number, action: Partial<ActionRecouvrement>): Observable<ActionRecouvrement> {
+    // Ne pas inclure agentId - le backend ne le reconnaît pas dans ActionRequestDTO
+    const { agentId, ...actionWithoutAgentId } = action;
     const payload = {
       dossierId,
-      ...action
+      ...actionWithoutAgentId
     };
-    if (action.agentId) {
-      (payload as any).agentId = action.agentId;
-    }
     return this.http.post<ActionRecouvrement>(`${this.apiUrl}/actions`, payload).pipe(
       map(action => ({
         ...action,

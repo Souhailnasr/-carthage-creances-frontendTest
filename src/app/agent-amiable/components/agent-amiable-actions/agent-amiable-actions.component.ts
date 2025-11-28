@@ -195,8 +195,8 @@ export class AgentAmiableActionsComponent implements OnInit, OnDestroy {
       dateAction: formValue.dateAction,
       nbOccurrences: formValue.nbOccurrences,
       reponseDebiteur: formValue.reponseDebiteur,
-      coutUnitaire: formValue.coutUnitaire,
-      agentId: this.currentUserId || undefined
+      coutUnitaire: formValue.coutUnitaire
+      // NE PAS envoyer agentId - le backend ne le reconnaît pas dans ActionRequestDTO
     };
 
     if (this.editingAction && this.editingAction.id) {

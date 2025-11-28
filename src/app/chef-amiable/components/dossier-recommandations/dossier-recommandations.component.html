@@ -50,10 +50,21 @@
       </mat-card-title>
     </mat-card-header>
     <mat-card-content>
-      <p>Le débiteur semble prêt à payer. Plusieurs réponses positives récentes indiquent une collaboration.</p>
-      <ul>
-        <li *ngFor="let action of statistiques.dernieresActions | slice:0:3">
-          {{ action.type }} - {{ action.dateAction | date:'dd/MM/yyyy' }} - Réponse: {{ action.reponseDebiteur || 'Aucune' }}
+      <p *ngIf="dossierApi && getMontantRestant() === 0">
+        <strong>Recouvrement total :</strong> Le montant total a été recouvré. Le dossier peut être passé au Finance pour finalisation.
+      </p>
+      <p *ngIf="!dossierApi || getMontantRestant() !== 0">
+        Le débiteur semble prêt à payer. Plusieurs réponses positives récentes indiquent une collaboration.
+      </p>
+      <ul *ngIf="dossierApi">
+        <li *ngIf="dossierApi.montantCreance">
+          <strong>Montant total :</strong> {{ dossierApi.montantCreance | number:'1.2-2' }} TND
+        </li>
+        <li *ngIf="getMontantRecouvre() > 0">
+          <strong>Montant recouvré :</strong> {{ getMontantRecouvre() | number:'1.2-2' }} TND
+        </li>
+        <li *ngIf="getMontantRestant() !== null">
+          <strong>Montant restant :</strong> {{ getMontantRestant() | number:'1.2-2' }} TND
         </li>
       </ul>
       <button mat-raised-button color="primary" (click)="passerAuFinance()" [disabled]="loading">
@@ -72,8 +83,25 @@
       </mat-card-title>
     </mat-card-header>
     <mat-card-content>
-      <p>Le débiteur ne répond pas favorablement aux actions de recouvrement amiable.</p>
-      <ul>
+      <p *ngIf="dossierApi && getMontantRestant() !== null && getMontantRestant()! > 0">
+        <strong>Recouvrement partiel :</strong> Le montant restant à recouvrer est de {{ getMontantRestant() | number:'1.2-2' }} TND. 
+        Il est recommandé de passer au recouvrement juridique pour récupérer le montant restant.
+      </p>
+      <p *ngIf="!dossierApi || (getMontantRestant() === null || getMontantRestant() === 0)">
+        Le débiteur ne répond pas favorablement aux actions de recouvrement amiable.
+      </p>
+      <ul *ngIf="dossierApi">
+        <li *ngIf="dossierApi.montantCreance">
+          <strong>Montant total :</strong> {{ dossierApi.montantCreance | number:'1.2-2' }} TND
+        </li>
+        <li *ngIf="getMontantRecouvre() > 0">
+          <strong>Montant recouvré :</strong> {{ getMontantRecouvre() | number:'1.2-2' }} TND
+        </li>
+        <li *ngIf="getMontantRestant() !== null && getMontantRestant()! > 0">
+          <strong>Montant restant :</strong> {{ getMontantRestant() | number:'1.2-2' }} TND
+        </li>
+      </ul>
+      <ul *ngIf="!dossierApi || (getMontantRestant() === null || getMontantRestant() === 0)">
         <li *ngIf="statistiques.negatives >= 3">
           {{ statistiques.negatives }} réponses négatives enregistrées
         </li>

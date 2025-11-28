@@ -1,0 +1,61 @@
+<div class="utilisateurs-list-container">
+  <div class="header">
+    <div>
+      <p class="eyebrow">Statut des agents</p>
+      <h2>Mes Agents</h2>
+    </div>
+    <button class="refresh-btn" type="button" (click)="loadUtilisateurs()" [disabled]="loading">
+      <i class="fas fa-rotate-right"></i>
+      <span>Actualiser</span>
+    </button>
+  </div>
+
+  <p class="subtitle">
+    Visualisez rapidement quels agents sont connectés pour votre équipe.
+  </p>
+
+  <div *ngIf="loading" class="loading">
+    <i class="fas fa-circle-notch fa-spin"></i>
+    <p>Chargement des utilisateurs...</p>
+  </div>
+
+  <div *ngIf="!loading && error" class="error">
+    <p>{{ error }}</p>
+  </div>
+
+  <div *ngIf="!loading && !error">
+    <div *ngIf="utilisateurs.length > 0; else emptyState" class="utilisateurs-list">
+      <div *ngFor="let utilisateur of utilisateurs" class="utilisateur-item">
+        <div class="statut-wrapper">
+          <span class="statut-dot" [ngClass]="getStatutClass(utilisateur)"></span>
+        </div>
+        <div class="utilisateur-info">
+          <div class="info-header">
+            <h3>{{ utilisateur.prenom }} {{ utilisateur.nom }}</h3>
+            <span class="statut-text" [class.actif]="isActif(utilisateur)" [class.inactif]="!isActif(utilisateur)">
+              {{ getStatutText(utilisateur) }}
+            </span>
+          </div>
+          <p class="role">{{ utilisateur.roleUtilisateur || 'Rôle non défini' }}</p>
+          <p class="email">{{ utilisateur.email }}</p>
+          <div class="meta">
+            <span *ngIf="utilisateur.derniereConnexion">
+              Dernière connexion : {{ utilisateur.derniereConnexion | date:'short' }}
+            </span>
+            <span *ngIf="utilisateur.derniereDeconnexion && !isActif(utilisateur)">
+              Dernière déconnexion : {{ utilisateur.derniereDeconnexion | date:'short' }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <ng-template #emptyState>
+      <div class="no-users">
+        <i class="fas fa-user-slash"></i>
+        <p>Aucun utilisateur trouvé.</p>
+      </div>
+    </ng-template>
+  </div>
+</div>
+

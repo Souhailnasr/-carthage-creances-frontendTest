@@ -182,6 +182,20 @@ export const routes: Routes = [
     canActivate: [AuthGuard]
   },
   {
+    path: 'mes-agents',
+    loadComponent: () => import('./shared/components/mes-agents/mes-agents.component').then(m => m.MesAgentsComponent),
+    canActivate: [AuthGuard, RoleGuard],
+    data: {
+      allowedRoles: [
+        Role.SUPER_ADMIN,
+        Role.CHEF_DEPARTEMENT_DOSSIER,
+        Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE,
+        Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE,
+        Role.CHEF_DEPARTEMENT_FINANCE
+      ]
+    }
+  },
+  {
     path: 'chef/dashboard',
     loadComponent: () => import('./chef/components/chef-dashboard/chef-dashboard.component').then(m => m.ChefDashboardComponent),
     canActivate: [AuthGuard]

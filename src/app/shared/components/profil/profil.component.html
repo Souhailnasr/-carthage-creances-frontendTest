@@ -26,69 +26,69 @@
     </div>
     
     <form [formGroup]="profileForm" (ngSubmit)="onUpdateProfile()">
-      <div class="info-grid">
-        <div class="info-column">
-          <div class="info-field">
-            <label>PRÉNOM</label>
-            <input 
-              type="text" 
+    <div class="info-grid">
+      <div class="info-column">
+        <div class="info-field">
+          <label>PRÉNOM</label>
+          <input 
+            type="text" 
               formControlName="prenom"
-              [readonly]="!isEditing"
+            [readonly]="!isEditing"
               class="info-input"
               [class.error]="profileForm.get('prenom')?.invalid && profileForm.get('prenom')?.touched">
             <span class="error-message" *ngIf="profileForm.get('prenom')?.invalid && profileForm.get('prenom')?.touched">
               Le prénom est requis
             </span>
-          </div>
-          
-          <div class="info-field">
-            <label>EMAIL</label>
-            <input 
-              type="email" 
+        </div>
+        
+        <div class="info-field">
+          <label>EMAIL</label>
+          <input 
+            type="email" 
               formControlName="email"
-              [readonly]="!isEditing"
+            [readonly]="!isEditing"
               class="info-input"
               [class.error]="profileForm.get('email')?.invalid && profileForm.get('email')?.touched">
             <span class="error-message" *ngIf="profileForm.get('email')?.invalid && profileForm.get('email')?.touched">
               Email invalide
             </span>
-          </div>
-          
-          <div class="info-field">
+        </div>
+        
+        <div class="info-field">
             <label>ADRESSE</label>
-            <input 
-              type="text" 
+          <input 
+            type="text" 
               formControlName="adresse"
               [readonly]="!isEditing"
               class="info-input"
               placeholder="Adresse non renseignée">
-          </div>
         </div>
-        
-        <div class="info-column">
-          <div class="info-field">
-            <label>NOM</label>
-            <input 
-              type="text" 
+      </div>
+      
+      <div class="info-column">
+        <div class="info-field">
+          <label>NOM</label>
+          <input 
+            type="text" 
               formControlName="nom"
-              [readonly]="!isEditing"
+            [readonly]="!isEditing"
               class="info-input"
               [class.error]="profileForm.get('nom')?.invalid && profileForm.get('nom')?.touched">
             <span class="error-message" *ngIf="profileForm.get('nom')?.invalid && profileForm.get('nom')?.touched">
               Le nom est requis
             </span>
-          </div>
-          
-          <div class="info-field">
-            <label>RÔLE</label>
-            <input 
-              type="text" 
-              [value]="getRoleDisplayName()"
-              readonly
-              class="info-input">
-          </div>
+        </div>
+        
+        <div class="info-field">
+          <label>RÔLE</label>
+          <input 
+            type="text" 
+            [value]="getRoleDisplayName()"
+            readonly
+            class="info-input">
         </div>
       </div>
+    </div>
       
       <div class="profile-actions" *ngIf="isEditing">
         <button type="button" class="btn-annuler" (click)="onCancelProfile()" [disabled]="isUpdatingProfile">
@@ -112,39 +112,39 @@
     
     <div class="security-content">
       <form [formGroup]="passwordForm" (ngSubmit)="onChangePassword()">
-        <div class="password-fields">
-          <div class="password-field">
-            <label>Mot de passe actuel *</label>
-            <input 
-              type="password" 
+      <div class="password-fields">
+        <div class="password-field">
+          <label>Mot de passe actuel *</label>
+          <input 
+            type="password" 
               formControlName="currentPassword"
-              placeholder="Entrez votre mot de passe actuel"
+            placeholder="Entrez votre mot de passe actuel"
               class="password-input"
               [class.error]="passwordForm.get('currentPassword')?.invalid && passwordForm.get('currentPassword')?.touched">
             <span class="error-message" *ngIf="passwordForm.get('currentPassword')?.invalid && passwordForm.get('currentPassword')?.touched">
               Le mot de passe actuel est requis
             </span>
-          </div>
-          
-          <div class="password-field">
-            <label>Nouveau mot de passe *</label>
-            <input 
-              type="password" 
+        </div>
+        
+        <div class="password-field">
+          <label>Nouveau mot de passe *</label>
+          <input 
+            type="password" 
               formControlName="newPassword"
-              placeholder="Entrez votre nouveau mot de passe"
+            placeholder="Entrez votre nouveau mot de passe"
               class="password-input"
               [class.error]="passwordForm.get('newPassword')?.invalid && passwordForm.get('newPassword')?.touched">
             <span class="error-message" *ngIf="passwordForm.get('newPassword')?.invalid && passwordForm.get('newPassword')?.touched">
               Le nouveau mot de passe doit contenir au moins 6 caractères
             </span>
-          </div>
-          
-          <div class="password-field">
-            <label>Confirmer le mot de passe *</label>
-            <input 
-              type="password" 
+        </div>
+        
+        <div class="password-field">
+          <label>Confirmer le mot de passe *</label>
+          <input 
+            type="password" 
               formControlName="confirmPassword"
-              placeholder="Confirmez votre nouveau mot de passe"
+            placeholder="Confirmez votre nouveau mot de passe"
               class="password-input"
               [class.error]="passwordForm.get('confirmPassword')?.invalid && passwordForm.get('confirmPassword')?.touched || passwordForm.errors?.['passwordMismatch']">
             <span class="error-message" *ngIf="passwordForm.errors?.['passwordMismatch'] && passwordForm.get('confirmPassword')?.touched">
@@ -154,18 +154,18 @@
               La confirmation du mot de passe est requise
             </span>
           </div>
-        </div>
-        
-        <div class="security-actions">
+      </div>
+      
+      <div class="security-actions">
           <button type="button" class="btn-annuler" (click)="onCancelPassword()" [disabled]="isChangingPassword">
             <i class="fas fa-times"></i>
-            Annuler
-          </button>
+          Annuler
+        </button>
           <button type="submit" class="btn-changer-password" [disabled]="passwordForm.invalid || isChangingPassword">
-            <i class="fas fa-lock"></i>
+          <i class="fas fa-lock"></i>
             {{ isChangingPassword ? 'Changement...' : 'Changer le mot de passe' }}
-          </button>
-        </div>
+        </button>
+      </div>
       </form>
     </div>
   </div>

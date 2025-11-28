@@ -2,7 +2,6 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router, NavigationEnd } from '@angular/router';
 import { RoleService } from '../../../core/services/role.service';
-import { AuthService } from '../../../core/services/auth.service';
 import { User, Role } from '../../models';
 import { Subject, takeUntil, filter } from 'rxjs';
 import { JwtAuthService } from '../../../core/services/jwt-auth.service';
@@ -56,6 +55,13 @@ export class SidebarComponent implements OnInit, OnDestroy {
       icon: 'fas fa-tachometer-alt',
       route: '/dashboard',
       roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE, Role.AGENT_RECOUVREMENT_JURIDIQUE]
+    },
+    // Chef Amiable dashboard
+    {
+      label: 'Tableau de bord',
+      icon: 'fas fa-tachometer-alt',
+      route: '/chef-amiable/dashboard',
+      roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE]
     },
     // Chef Finance dashboard - au niveau principal
     {
@@ -209,10 +215,10 @@ export class SidebarComponent implements OnInit, OnDestroy {
     {
       label: 'Mes Agents',
       icon: 'fas fa-user-friends',
-      route: '/utilisateurs',
+      route: '/mes-agents',
       roles: [
+        Role.SUPER_ADMIN,
         Role.CHEF_DEPARTEMENT_DOSSIER,
-        Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE,
         Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE,
         Role.CHEF_DEPARTEMENT_FINANCE
       ]
@@ -369,28 +375,52 @@ export class SidebarComponent implements OnInit, OnDestroy {
       roles: [Role.AGENT_RECOUVREMENT_JURIDIQUE]
     },
     {
+      label: 'Gestion des Actions',
+      icon: 'fas fa-tasks',
+      route: '/chef-amiable/gestion-actions',
+      roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE]
+    },
+    {
+      label: 'Gestion Utilisateurs',
+      icon: 'fas fa-users',
+      route: '/chef-amiable/gestion-utilisateurs',
+      roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE]
+    },
+    {
+      label: 'Mes Agents',
+      icon: 'fas fa-user-friends',
+      route: '/mes-agents',
+      roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE]
+    },
+    {
+      label: 'Tâches',
+      icon: 'fas fa-clipboard-list',
+      route: '/chef-amiable/taches',
+      roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE]
+    },
+    {
       label: 'Recouvrement Amiable',
       icon: 'fas fa-handshake',
       route: '/amiable',
-      roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE],
+      roles: [Role.SUPER_ADMIN],
       children: [
         {
           label: 'Dossiers Affectés',
           icon: 'fas fa-folder-open',
           route: '/dossiers/amiable',
-          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE]
+          roles: [Role.SUPER_ADMIN]
         },
         {
           label: 'Actions Amiables',
           icon: 'fas fa-phone',
           route: '/amiable/actions',
-          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE]
+          roles: [Role.SUPER_ADMIN]
         },
         {
           label: 'Relances',
           icon: 'fas fa-envelope',
           route: '/amiable/relances',
-          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE]
+          roles: [Role.SUPER_ADMIN]
         }
       ]
     },
@@ -437,19 +467,40 @@ export class SidebarComponent implements OnInit, OnDestroy {
       label: 'Notifications',
       icon: 'fas fa-bell',
       route: '/notifications',
-      roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER, Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE, Role.AGENT_RECOUVREMENT_JURIDIQUE, Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE, Role.AGENT_RECOUVREMENT_AMIABLE],
+      roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER, Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE, Role.AGENT_RECOUVREMENT_JURIDIQUE, Role.AGENT_RECOUVREMENT_AMIABLE],
       children: [
         {
           label: 'Mes Notifications',
           icon: 'fas fa-bell',
           route: '/notifications',
-          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER, Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE, Role.AGENT_RECOUVREMENT_JURIDIQUE, Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE, Role.AGENT_RECOUVREMENT_AMIABLE]
+          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER, Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE, Role.AGENT_RECOUVREMENT_JURIDIQUE, Role.AGENT_RECOUVREMENT_AMIABLE]
         },
         {
           label: 'Envoyer Notification',
           icon: 'fas fa-paper-plane',
           route: '/send-notification',
-          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_DOSSIER, Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE, Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE]
+          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_DOSSIER, Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE]
+        }
+      ]
+    },
+    // Notifications spécifiques pour Chef Amiable
+    {
+      label: 'Notifications',
+      icon: 'fas fa-bell',
+      route: '/chef-amiable/notifications',
+      roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE],
+      children: [
+        {
+          label: 'Mes Notifications',
+          icon: 'fas fa-bell',
+          route: '/chef-amiable/notifications',
+          roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE]
+        },
+        {
+          label: 'Envoyer Notification',
+          icon: 'fas fa-paper-plane',
+          route: '/chef-amiable/send-notification',
+          roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE]
         }
       ]
     }
@@ -463,9 +514,45 @@ export class SidebarComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     // Récupérer l'utilisateur actuel
-   this.jwtAuthService.getCurrentUser().subscribe(user => {
-      this.currentUser = user;
-    })
+    this.jwtAuthService.getCurrentUser()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (user) => {
+          this.currentUser = user;
+          console.log('✅ Sidebar - Utilisateur chargé:', user);
+          console.log('✅ Sidebar - Rôle utilisateur:', user?.roleUtilisateur);
+          
+          // Debug: vérifier la visibilité de "Mes Agents"
+          const mesAgentsItem = this.menuItems.find(item => item.label === 'Mes Agents');
+          if (mesAgentsItem) {
+            const isVisible = this.isMenuItemVisible(mesAgentsItem);
+            console.log('🔍 Sidebar - "Mes Agents" visible?', isVisible, 'Rôles autorisés:', mesAgentsItem.roles);
+          }
+        },
+        error: (error) => {
+          console.error('❌ Sidebar - Erreur lors du chargement de l\'utilisateur:', error);
+          // Fallback: essayer de récupérer l'utilisateur depuis le token JWT
+          try {
+            const userId = this.jwtAuthService.getCurrentUserId();
+            const userRole = this.jwtAuthService.loggedUserAuthority();
+            if (userId && userRole) {
+              // Créer un objet User minimal depuis les informations du token
+              const role = userRole.replace(/^RoleUtilisateur_/, '') as Role;
+              this.currentUser = new User({
+                id: userId.toString(),
+                nom: '',
+                prenom: '',
+                email: '',
+                roleUtilisateur: role,
+                actif: false
+              });
+              console.log('✅ Sidebar - Utilisateur récupéré depuis le token JWT:', this.currentUser);
+            }
+          } catch (fallbackError) {
+            console.error('❌ Sidebar - Impossible de récupérer l\'utilisateur depuis le token:', fallbackError);
+          }
+        }
+      });
 
     // Suivre les changements de route
     this.router.events
@@ -506,18 +593,40 @@ export class SidebarComponent implements OnInit, OnDestroy {
   isMenuItemVisible(item: MenuItem): boolean {
     if (!this.currentUser) return false;
     const userRole = this.currentUser.roleUtilisateur;
+    
+    // Convertir le rôle en string pour la comparaison si nécessaire
+    const userRoleStr = typeof userRole === 'string' ? userRole : String(userRole);
+    
+    // Vérifier si le rôle de l'utilisateur correspond à l'un des rôles autorisés
+    const hasAccess = item.roles.some(role => {
+      const roleStr = typeof role === 'string' ? role : String(role);
+      return roleStr === userRoleStr || role === userRole;
+    });
+    
     // Si le menu a des enfants, vérifier si au moins un enfant est visible
     if (item.children && item.children.length > 0) {
-      return item.roles.includes(userRole) && 
-             item.children.some(child => child.roles.includes(userRole));
+      const hasVisibleChild = item.children.some(child => {
+        return child.roles.some(role => {
+          const roleStr = typeof role === 'string' ? role : String(role);
+          return roleStr === userRoleStr || role === userRole;
+        });
+      });
+      return hasAccess && hasVisibleChild;
     }
+    
     // Sinon, vérifier simplement les rôles du menu
-    return item.roles.includes(userRole);
+    return hasAccess;
   }
 
   isChildMenuItemVisible(item: MenuItem): boolean {
     if (!this.currentUser) return false;
-    return item.roles.includes(this.currentUser.roleUtilisateur);
+    const userRole = this.currentUser.roleUtilisateur;
+    const userRoleStr = typeof userRole === 'string' ? userRole : String(userRole);
+    
+    return item.roles.some(role => {
+      const roleStr = typeof role === 'string' ? role : String(role);
+      return roleStr === userRoleStr || role === userRole;
+    });
   }
 
   isActiveRoute(route: string): boolean {

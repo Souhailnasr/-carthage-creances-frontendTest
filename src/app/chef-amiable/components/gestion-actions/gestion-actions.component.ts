@@ -135,6 +135,8 @@ export class GestionActionsComponent implements OnInit, OnDestroy {
 
   loadDossiers(): void {
     this.loading = true;
+    // Réinitialiser la liste des dossiers pour éviter les doublons
+    this.dossiers = [];
     // Charger les dossiers affectés au recouvrement amiable
     // Utiliser une taille de page raisonnable pour éviter les erreurs 400
     // Commencer par charger la première page avec une taille raisonnable
@@ -286,7 +288,18 @@ export class GestionActionsComponent implements OnInit, OnDestroy {
                   return false;
                 });
                 
-                this.dossiers = [...this.dossiers, ...dossiersFiltres];
+                // Éviter les doublons en vérifiant l'ID ou le numéro de dossier
+                const dossiersSansDoublons = dossiersFiltres.filter(nouveauDossier => {
+                  // Vérifier si le dossier existe déjà dans la liste
+                  const existeDeja = this.dossiers.some(dossierExistant => 
+                    (dossierExistant.id && nouveauDossier.id && dossierExistant.id === nouveauDossier.id) ||
+                    (dossierExistant.numeroDossier && nouveauDossier.numeroDossier && 
+                     dossierExistant.numeroDossier === nouveauDossier.numeroDossier)
+                  );
+                  return !existeDeja;
+                });
+                
+                this.dossiers = [...this.dossiers, ...dossiersSansDoublons];
                 // Charger le lot suivant
                 loadBatch(batchIndex + 1);
               },
@@ -541,7 +554,11 @@ export class GestionActionsComponent implements OnInit, OnDestroy {
 
   getTotalCost(): number {
     if (!this.dossierSelectionne || !this.dossierSelectionne.actions) return 0;
-    return this.dossierSelectionne.actions.reduce((total, action) => total + (action.nbOccurrences * action.coutUnitaire), 0);
+    return this.dossierSelectionne.actions.reduce((total, action) => {
+      const cout = action.coutUnitaire || 0;
+      const occurrences = action.nbOccurrences || 0;
+      return total + (occurrences * cout);
+    }, 0);
   }
 
   getPositiveResponses(): number {
@@ -552,5 +569,80 @@ export class GestionActionsComponent implements OnInit, OnDestroy {
   getNegativeResponses(): number {
     if (!this.dossierSelectionne || !this.dossierSelectionne.actions) return 0;
     return this.dossierSelectionne.actions.filter(a => a.reponseDebiteur === ReponseDebiteur.NEGATIVE).length;
+  }
+
+  /**
+   * Récupère le montant recouvré du dossier
+   */
+  getMontantRecouvre(): number | null {
+    if (!this.dossierApiSelectionne) return null;
+    // Le backend peut retourner montantRecouvre directement ou via finance
+    // FinanceApi utilise montantRecupere, mais le backend peut aussi retourner montantRecouvre directement
+    return (this.dossierApiSelectionne as any).montantRecouvre || 
+           (this.dossierApiSelectionne.finance as any)?.montantRecouvre ||
+           this.dossierApiSelectionne.finance?.montantRecupere || 
+           null;
+  }
+
+  /**
+   * Récupère le montant restant du dossier
+   */
+  getMontantRestant(): number | null {
+    if (!this.dossierApiSelectionne) return null;
+    const montantTotal = this.dossierApiSelectionne.montantCreance || 0;
+    const montantRecouvre = this.getMontantRecouvre() || 0;
+    
+    if (montantTotal === 0) return null;
+    
+    return Math.max(0, montantTotal - montantRecouvre);
+  }
+
+  /**
+   * Récupère l'icône pour un type d'action
+   */
+  getActionIcon(type: string): string {
+    const icons: { [key: string]: string } = {
+      'APPEL': 'phone',
+      'EMAIL': 'email',
+      'VISITE': 'home',
+      'LETTRE': 'mail',
+      'AUTRE': 'more_horiz'
+    };
+    return icons[type] || 'help';
+  }
+
+  /**
+   * Récupère le label pour un type d'action
+   */
+  getActionTypeLabel(type: string): string {
+    const labels: { [key: string]: string } = {
+      'APPEL': 'Appel téléphonique',
+      'EMAIL': 'Email',
+      'VISITE': 'Visite sur place',
+      'LETTRE': 'Lettre recommandée',
+      'AUTRE': 'Autre action'
+    };
+    return labels[type] || type;
+  }
+
+  /**
+   * Vérifie si le dossier est affecté au recouvrement juridique
+   */
+  isDossierJuridique(): boolean {
+    return this.dossierSelectionne?.affecteAuJuridique === true || 
+           this.dossierApiSelectionne?.typeRecouvrement === 'JURIDIQUE';
+  }
+
+  /**
+   * Récupère le label pour le type de recouvrement
+   */
+  getTypeRecouvrementLabel(type: string | undefined): string {
+    if (!type) return 'Non défini';
+    const labels: { [key: string]: string } = {
+      'AMIABLE': 'Recouvrement Amiable',
+      'JURIDIQUE': 'Recouvrement Juridique',
+      'NON_AFFECTE': 'Non Affecté'
+    };
+    return labels[type] || type;
   }
 }

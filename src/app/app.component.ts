@@ -47,8 +47,16 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   private shouldShowSidebar(url: string): boolean {
-    // Ne pas afficher la sidebar sur les pages de login, erreur, et modules avec leur propre layout
-    const hideSidebarRoutes = ['/login', '/unauthorized', '/chef-amiable', '/juridique'];
-    return !hideSidebarRoutes.some(route => url.startsWith(route)) && this.jwtAuthService.isUserLoggedIn();
+    // Ne pas afficher la sidebar sur les pages de login et erreur
+    const hideSidebarRoutes = ['/login', '/unauthorized'];
+    
+    // Ne pas afficher pour les routes de login/erreur
+    if (hideSidebarRoutes.some(route => url.startsWith(route))) {
+      return false;
+    }
+    
+    // Afficher la sidebar pour toutes les autres routes si l'utilisateur est connecté
+    // Y compris pour /chef-amiable (on utilise la sidebar principale maintenant)
+    return this.jwtAuthService.isUserLoggedIn();
   }
 }

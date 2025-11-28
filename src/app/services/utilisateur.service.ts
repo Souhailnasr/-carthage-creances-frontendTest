@@ -17,6 +17,8 @@ export interface Utilisateur {
   departement?: string;
   chefId?: number;
   chefCreateur?: Utilisateur; // Chef qui a créé cet agent
+  chef_createur_id?: number; // Format snake_case retourné par le backend
+  chefCreateurId?: number; // Format camelCase alternatif
   actif: boolean;
   derniereConnexion?: string | null;
   derniereDeconnexion?: string | null;

@@ -52,6 +52,11 @@ export class ChefAmiableLayoutComponent implements OnInit {
     this.router.navigate(['/chef-amiable/profil']);
   }
 
+  navigateToMesAgents(): void {
+    // Naviguer vers /mes-agents en sortant du layout chef-amiable
+    this.router.navigate(['/mes-agents']);
+  }
+
   getInitials(): string {
     if (this.currentUser) {
       const prenom = this.currentUser.prenom || '';

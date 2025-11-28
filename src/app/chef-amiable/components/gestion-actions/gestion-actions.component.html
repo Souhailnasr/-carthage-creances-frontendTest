@@ -126,7 +126,10 @@
       </ng-template>
       
       <div class="tab-content" *ngIf="dossierSelectionne && dossierSelectionne.id">
-        <app-dossier-actions-amiable [dossierId]="dossierSelectionne.id"></app-dossier-actions-amiable>
+        <app-dossier-actions-amiable 
+          [dossierId]="dossierSelectionne.id"
+          [typeRecouvrement]="dossierSelectionne.typeRecouvrement">
+        </app-dossier-actions-amiable>
       </div>
       
       <div class="no-selection" *ngIf="!dossierSelectionne">
@@ -175,8 +178,18 @@
               </h3>
               <div class="info-grid">
                 <div class="info-item" *ngIf="dossierApiSelectionne.montantCreance">
-                  <strong>Montant:</strong>
-                  <span>{{ dossierApiSelectionne.montantCreance | number:'1.2-2' }} TND</span>
+                  <strong>Montant total:</strong>
+                  <span class="value-amount">{{ dossierApiSelectionne.montantCreance | number:'1.2-2' }} TND</span>
+                </div>
+                <div class="info-item" *ngIf="getMontantRecouvre() !== null">
+                  <strong>Montant recouvré:</strong>
+                  <span class="value-amount success">{{ getMontantRecouvre() | number:'1.2-2' }} TND</span>
+                </div>
+                <div class="info-item" *ngIf="getMontantRestant() !== null">
+                  <strong>Montant restant:</strong>
+                  <span class="value-amount" [class.warning]="getMontantRestant()! > 0" [class.success]="getMontantRestant() === 0">
+                    {{ getMontantRestant() | number:'1.2-2' }} TND
+                  </span>
                 </div>
                 <div class="info-item" *ngIf="dossierApiSelectionne.dateCreation">
                   <strong>Date de création:</strong>
@@ -188,15 +201,67 @@
                     {{ dossierApiSelectionne.urgence }}
                   </mat-chip>
                 </div>
+                <div class="info-item" *ngIf="getActionsCount(dossierSelectionne.id) > 0">
+                  <strong>Nombre d'actions:</strong>
+                  <span>{{ getActionsCount(dossierSelectionne.id) }}</span>
+                </div>
+                <div class="info-item" *ngIf="dossierApiSelectionne?.typeRecouvrement">
+                  <strong>Type de recouvrement:</strong>
+                  <mat-chip [class]="'chip-' + (dossierApiSelectionne.typeRecouvrement?.toLowerCase() || '')">
+                    <mat-icon *ngIf="dossierApiSelectionne.typeRecouvrement === 'JURIDIQUE'">gavel</mat-icon>
+                    <mat-icon *ngIf="dossierApiSelectionne.typeRecouvrement === 'AMIABLE'">handshake</mat-icon>
+                    <mat-icon *ngIf="dossierApiSelectionne.typeRecouvrement === 'NON_AFFECTE'">help</mat-icon>
+                    {{ getTypeRecouvrementLabel(dossierApiSelectionne.typeRecouvrement) }}
+                  </mat-chip>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Section Actions -->
+            <div class="actions-section" *ngIf="dossierSelectionne && dossierSelectionne.actions && dossierSelectionne.actions.length > 0">
+              <h3>
+                <mat-icon>history</mat-icon>
+                Actions de Recouvrement
+              </h3>
+              <div class="actions-list">
+                <div class="action-item" *ngFor="let action of dossierSelectionne.actions | slice:0:5">
+                  <div class="action-header">
+                    <mat-icon>{{ getActionIcon(action.type) }}</mat-icon>
+                    <div class="action-info">
+                      <strong>{{ getActionTypeLabel(action.type) }}</strong>
+                      <span class="action-date">{{ action.dateAction | date:'dd/MM/yyyy' }}</span>
+                    </div>
+                    <mat-chip *ngIf="action.reponseDebiteur" [class]="'chip-' + action.reponseDebiteur.toLowerCase()">
+                      {{ action.reponseDebiteur }}
+                    </mat-chip>
+                  </div>
+                  <div class="action-details" *ngIf="action.nbOccurrences || action.coutUnitaire">
+                    <span *ngIf="action.nbOccurrences">{{ action.nbOccurrences }} occurrence(s)</span>
+                    <span *ngIf="action.coutUnitaire"> - Coût: {{ action.coutUnitaire | number:'1.2-2' }} TND</span>
+                  </div>
+                </div>
+                <div *ngIf="dossierSelectionne.actions.length > 5" class="more-actions">
+                  <p>Et {{ dossierSelectionne.actions.length - 5 }} autre(s) action(s)...</p>
+                </div>
               </div>
             </div>
           </mat-card-content>
           <mat-card-actions>
-            <button mat-raised-button color="accent" (click)="affecterAuJuridique()" [disabled]="loading">
+            <button 
+              mat-raised-button 
+              color="accent" 
+              (click)="affecterAuJuridique()" 
+              [disabled]="loading || isDossierJuridique()"
+              [matTooltip]="isDossierJuridique() ? 'Ce dossier est déjà affecté au recouvrement juridique' : ''">
               <mat-icon>gavel</mat-icon>
               Affecter au Juridique
             </button>
-            <button mat-raised-button color="warn" (click)="cloturerDossier()" [disabled]="loading">
+            <button 
+              mat-raised-button 
+              color="warn" 
+              (click)="cloturerDossier()" 
+              [disabled]="loading || isDossierJuridique()"
+              [matTooltip]="isDossierJuridique() ? 'Ce dossier est affecté au recouvrement juridique' : ''">
               <mat-icon>lock</mat-icon>
               Clôturer le Dossier
             </button>

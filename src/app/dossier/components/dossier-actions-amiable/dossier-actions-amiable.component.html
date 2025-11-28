@@ -45,7 +45,7 @@
       </mat-select>
     </mat-form-field>
 
-    <button mat-raised-button color="primary" (click)="addAction()">
+    <button mat-raised-button color="primary" (click)="addAction()" [disabled]="isDossierJuridique()" [matTooltip]="isDossierJuridique() ? 'Impossible d\'ajouter des actions : dossier affecté au recouvrement juridique' : ''">
       <mat-icon>add</mat-icon>
       Ajouter Action
     </button>

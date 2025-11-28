@@ -1344,6 +1344,30 @@ export class DossierApiService {
       })
     );
   }
+
+  /**
+   * Met à jour le montant recouvré d'un dossier
+   * POST /api/dossiers/{dossierId}/amiable
+   */
+  updateMontantRecouvre(dossierId: number, montantRecouvre: number): Observable<DossierApi> {
+    const url = `${this.apiUrl}/${dossierId}/amiable`;
+    const payload = {
+      montantRecouvre: montantRecouvre
+    };
+    
+    console.log('📤 Mise à jour du montant recouvré:', url, payload);
+    
+    return this.http.post<DossierApi>(url, payload).pipe(
+      tap((dossier) => {
+        console.log('✅ Montant recouvré mis à jour:', dossier);
+      }),
+      catchError((error) => {
+        console.error('❌ Erreur lors de la mise à jour du montant recouvré:', error);
+        const errorMessage = error.error?.message || error.message || 'Erreur lors de la mise à jour du montant recouvré';
+        return throwError(() => new Error(errorMessage));
+      })
+    );
+  }
 }
 
 // Types exportés pour les appels avancés
