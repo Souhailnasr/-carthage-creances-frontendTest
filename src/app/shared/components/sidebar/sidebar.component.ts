@@ -50,11 +50,19 @@ export class SidebarComponent implements OnInit, OnDestroy {
       route: '/dossier/dashboard',
       roles: [Role.AGENT_DOSSIER]
     },
+    // Chef Juridique dashboard
     {
       label: 'Tableau de bord',
       icon: 'fas fa-tachometer-alt',
-      route: '/dashboard',
-      roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE, Role.AGENT_RECOUVREMENT_JURIDIQUE]
+      route: '/juridique/dashboard',
+      roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE]
+    },
+    // Agent Juridique dashboard
+    {
+      label: 'Tableau de bord',
+      icon: 'fas fa-tachometer-alt',
+      route: '/agent-juridique/dashboard',
+      roles: [Role.AGENT_RECOUVREMENT_JURIDIQUE]
     },
     // Chef Amiable dashboard
     {
@@ -311,40 +319,87 @@ export class SidebarComponent implements OnInit, OnDestroy {
         }
       ]
     },
+    // Chef Juridique - Menus spécifiques (remplace la sidebar locale)
     {
-      label: 'Gestion Juridique',
-      icon: 'fas fa-gavel',
-      route: '/juridique',
+      label: 'Avocats',
+      icon: 'fas fa-user-tie',
+      route: '/juridique/avocats',
       roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE],
       children: [
         {
-          label: 'Dossiers Affectés',
-          icon: 'fas fa-folder-open',
-          route: '/dossiers/juridique',
-          roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE]
-        },
-        {
-          label: 'Avocats',
-          icon: 'fas fa-user-tie',
+          label: 'Liste des Avocats',
+          icon: 'fas fa-list',
           route: '/juridique/avocats',
           roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE]
         },
         {
-          label: 'Huissiers',
-          icon: 'fas fa-balance-scale',
+          label: 'Ajouter Avocat',
+          icon: 'fas fa-plus',
+          route: '/juridique/avocats/add',
+          roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE]
+        }
+      ]
+    },
+    {
+      label: 'Huissiers',
+      icon: 'fas fa-user-shield',
+      route: '/juridique/huissiers',
+      roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE],
+      children: [
+        {
+          label: 'Liste des Huissiers',
+          icon: 'fas fa-list',
           route: '/juridique/huissiers',
           roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE]
         },
         {
-          label: 'Nouvel Avocat',
-          icon: 'fas fa-user-plus',
-          route: '/juridique/avocats/ajouter',
+          label: 'Ajouter Huissier',
+          icon: 'fas fa-plus',
+          route: '/juridique/huissiers/add',
+          roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE]
+        }
+      ]
+    },
+    {
+      label: 'Affectation des Dossiers',
+      icon: 'fas fa-folder-open',
+      route: '/juridique/affectation-dossiers',
+      roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE]
+    },
+    {
+      label: 'Gestion des Audiences',
+      icon: 'fas fa-gavel',
+      route: '/juridique/gestion-audiences',
+      roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE]
+    },
+    {
+      label: 'Gestion des Utilisateurs',
+      icon: 'fas fa-users',
+      route: '/juridique/gestion-utilisateurs',
+      roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE]
+    },
+    {
+      label: 'Tâches',
+      icon: 'fas fa-tasks',
+      route: '/juridique/taches',
+      roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE]
+    },
+    {
+      label: 'Notifications',
+      icon: 'fas fa-bell',
+      route: '/juridique/notifications',
+      roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE],
+      children: [
+        {
+          label: 'Mes Notifications',
+          icon: 'fas fa-bell',
+          route: '/juridique/notifications',
           roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE]
         },
         {
-          label: 'Nouvel Huissier',
-          icon: 'fas fa-user-plus',
-          route: '/juridique/huissiers/ajouter',
+          label: 'Envoyer Notification',
+          icon: 'fas fa-paper-plane',
+          route: '/juridique/send-notification',
           roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE]
         }
       ]
@@ -467,19 +522,19 @@ export class SidebarComponent implements OnInit, OnDestroy {
       label: 'Notifications',
       icon: 'fas fa-bell',
       route: '/notifications',
-      roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER, Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE, Role.AGENT_RECOUVREMENT_JURIDIQUE, Role.AGENT_RECOUVREMENT_AMIABLE],
+      roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER, Role.AGENT_RECOUVREMENT_JURIDIQUE, Role.AGENT_RECOUVREMENT_AMIABLE],
       children: [
         {
           label: 'Mes Notifications',
           icon: 'fas fa-bell',
           route: '/notifications',
-          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER, Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE, Role.AGENT_RECOUVREMENT_JURIDIQUE, Role.AGENT_RECOUVREMENT_AMIABLE]
+          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER, Role.AGENT_RECOUVREMENT_JURIDIQUE, Role.AGENT_RECOUVREMENT_AMIABLE]
         },
         {
           label: 'Envoyer Notification',
           icon: 'fas fa-paper-plane',
           route: '/send-notification',
-          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_DOSSIER, Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE]
+          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_DOSSIER]
         }
       ]
     },
@@ -518,7 +573,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (user) => {
-          this.currentUser = user;
+      this.currentUser = user;
           console.log('✅ Sidebar - Utilisateur chargé:', user);
           console.log('✅ Sidebar - Rôle utilisateur:', user?.roleUtilisateur);
           

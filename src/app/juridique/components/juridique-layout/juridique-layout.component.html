@@ -1,6 +1,10 @@
+<!-- Sidebar locale désactivée - On utilise la sidebar principale de app.component -->
+<!-- Toute la sidebar est commentée car on utilise la sidebar principale -->
+<!-- <app-juridique-sidebar></app-juridique-sidebar> -->
+
 <div class="juridique-layout">
-  <app-juridique-sidebar></app-juridique-sidebar>
-  <main class="main-content">
+  <!-- Main Content - Sans sidebar locale, utilise la sidebar principale -->
+  <main class="main-content" style="margin-left: 0; width: 100%;">
     <router-outlet></router-outlet>
   </main>
 </div>

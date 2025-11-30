@@ -1,19 +1,19 @@
 .juridique-layout {
   display: flex;
   min-height: 100vh;
-  background-color: #f8f9fa;
+  background-color: #f4f6fb; // Aligné avec le reste de l'application
 
   .main-content {
     flex: 1;
-    margin-left: 280px;
-    transition: margin-left 0.3s ease;
+    margin-left: 0; // Pas de marge car on utilise la sidebar principale
+    width: 100%; // Prend toute la largeur disponible
     min-height: 100vh;
-    padding: 1.5rem;
-    background-color: #f8f9fa;
-
-    // When sidebar is collapsed
-    .juridique-sidebar.collapsed + & {
-      margin-left: 70px;
+    padding: 0; // Le padding est géré par les composants enfants
+    background-color: #f4f6fb; // Aligné avec le reste de l'application
+    
+    // S'assurer que les composants enfants peuvent appliquer leurs styles
+    > * {
+      width: 100%;
     }
   }
 }

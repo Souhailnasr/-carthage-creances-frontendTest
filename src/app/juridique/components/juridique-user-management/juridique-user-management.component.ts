@@ -38,8 +38,6 @@ export class JuridiqueUserManagementComponent implements OnInit, OnDestroy {
   get nomControl(): FormControl { return this.userForm.get('nom') as FormControl; }
   get prenomControl(): FormControl { return this.userForm.get('prenom') as FormControl; }
   get emailControl(): FormControl { return this.userForm.get('email') as FormControl; }
-  get telephoneControl(): FormControl { return this.userForm.get('telephone') as FormControl; }
-  get adresseControl(): FormControl { return this.userForm.get('adresse') as FormControl; }
   get motDePasseControl(): FormControl { return this.userForm.get('motDePasse') as FormControl; }
   get confirmPasswordControl(): FormControl { return this.userForm.get('confirmPassword') as FormControl; }
   get roleControl(): FormControl { return this.userForm.get('role') as FormControl; }
@@ -80,8 +78,6 @@ export class JuridiqueUserManagementComponent implements OnInit, OnDestroy {
       nom: ['', Validators.required],
       prenom: ['', Validators.required],
       email: ['', [Validators.required, Validators.email]],
-      telephone: [''],
-      adresse: [''],
       motDePasse: ['', [Validators.required, Validators.minLength(6)]],
       confirmPassword: ['', Validators.required],
       role: ['AGENT_RECOUVREMENT_JURIDIQUE', Validators.required] // Par défaut Agent Recouvrement Juridique
@@ -259,15 +255,14 @@ export class JuridiqueUserManagementComponent implements OnInit, OnDestroy {
     }
 
     const formValue = this.userForm.value;
+    // Payload identique à celui utilisé pour les agents dossier et amiable
     const utilisateurRequest: UtilisateurRequest = {
       nom: formValue.nom,
       prenom: formValue.prenom,
       email: formValue.email,
-      telephone: formValue.telephone || '',
-      adresse: formValue.adresse || '',
-      roleUtilisateur: 'AGENT_RECOUVREMENT_JURIDIQUE', // Forcer le rôle Agent Recouvrement Juridique
+      roleUtilisateur: formValue.role, // Utiliser le rôle du formulaire (déjà défini à AGENT_RECOUVREMENT_JURIDIQUE par défaut)
       motDePasse: formValue.motDePasse,
-      actif: true
+      actif: false // Initialiser à false (inactif) au début
     };
     
     if (this.isEditMode && this.editingUser) {

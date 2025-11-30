@@ -110,6 +110,11 @@ export class UtilisateurService {
     // Le backend ne reconnaît pas "departement" dans l'entité Utilisateur
     delete payload.departement;
     
+    // 🔧 CORRECTION: Retirer "telephone" et "adresse" - le backend ne les reconnaît pas
+    // L'entité Utilisateur du backend n'a pas ces champs
+    delete payload.telephone;
+    delete payload.adresse;
+    
     // 🔧 CORRECTION: Normaliser le rôle - utiliser uniquement roleUtilisateur
     // Le backend ne reconnaît que "roleUtilisateur", pas "role"
     if (payload.role && !payload.roleUtilisateur) {
@@ -118,50 +123,10 @@ export class UtilisateurService {
     // Retirer "role" car le backend ne le reconnaît pas
     delete payload.role;
     
-    // 🆕 NOUVEAU: Si c'est un agent, ajouter automatiquement le chefId du chef connecté
-    if (this.isAgent(payload.roleUtilisateur)) {
-      // Méthode 1: Essayer de récupérer l'ID depuis JwtAuthService (le plus fiable)
-      let currentUserId: number | null = this.jwtAuthService.getCurrentUserId();
-      
-      // Méthode 2: Si JwtAuthService ne fonctionne pas, essayer AuthService
-      if (!currentUserId) {
-        currentUserId = this.authService.getCurrentUserIdNumber();
-      }
-      
-      // Méthode 3: Si toujours pas d'ID, essayer de récupérer depuis currentUser
-      if (!currentUserId) {
-        const currentUser = this.authService.getCurrentUser();
-        if (currentUser?.id) {
-          const parsedId = parseInt(currentUser.id.toString());
-          if (!isNaN(parsedId)) {
-            currentUserId = parsedId;
-          }
-        }
-      }
-      
-      // Vérifier que l'utilisateur est un chef ou super admin
-      const currentUser = this.authService.getCurrentUser();
-      const userRole = currentUser?.roleUtilisateur?.toString();
-      const roleAuthority = this.jwtAuthService.loggedUserAuthority();
-      
-      // Vérifier le rôle depuis currentUser ou depuis le token
-      const isChefRole = userRole ? this.isChef(userRole) : (roleAuthority ? this.isChef(roleAuthority.replace(/^RoleUtilisateur_/, '')) : false);
-      const isSuperAdmin = userRole === 'SUPER_ADMIN' || roleAuthority?.includes('SUPER_ADMIN');
-      
-      if (!isChefRole && !isSuperAdmin) {
-        return throwError(() => new Error('Seuls les chefs et super admins peuvent créer des agents.'));
-      }
-      
-      if (!currentUserId) {
-        console.error('❌ Impossible de récupérer l\'ID de l\'utilisateur connecté');
-        return throwError(() => new Error('Impossible de récupérer l\'ID de l\'utilisateur connecté. Veuillez vous reconnecter.'));
-      }
-      
-      // Si le chefId n'est pas déjà fourni, l'ajouter automatiquement
-      if (!payload.chefId) {
-        payload.chefId = currentUserId;
-      }
-    }
+    // 🔧 CORRECTION: Le backend ne reconnaît pas "chefId" dans l'entité Utilisateur
+    // La relation chef-agent est gérée différemment par le backend (probablement via une table de relation)
+    // On retire donc chefId du payload pour éviter l'erreur "Unrecognized field"
+    delete payload.chefId;
     
     // Le mot de passe sera crypté côté backend, on l'envoie tel quel
     if (!payload.motDePasse) {
@@ -179,11 +144,8 @@ export class UtilisateurService {
       return throwError(() => new Error('Champs requis manquants pour la création d\'utilisateur'));
     }
 
-    // Validation spécifique pour les agents : ils doivent avoir un chefId
-    if (this.isAgent(payload.roleUtilisateur) && !payload.chefId) {
-      console.error('❌ Un agent doit être rattaché à un chef créateur (chefId manquant)');
-      return throwError(() => new Error('Un agent doit être rattaché à un chef créateur. Veuillez contacter l\'administrateur.'));
-    }
+    // 🔧 CORRECTION: La validation du chefId est retirée car le backend ne reconnaît pas ce champ
+    // Le backend gère la relation chef-agent via une autre mécanisme (probablement via une table de relation)
 
     console.log('🔵 UtilisateurService.createUtilisateur appelé');
     console.log('🔵 URL:', `${this.baseUrl}/users`);
@@ -235,6 +197,8 @@ export class UtilisateurService {
     // 🔧 CORRECTION: Retirer les champs non reconnus par le backend
     const payload: any = { ...utilisateur };
     delete payload.departement; // Le backend ne reconnaît pas "departement" dans l'entité Utilisateur
+    delete payload.telephone; // Le backend ne reconnaît pas "telephone" dans l'entité Utilisateur
+    delete payload.adresse; // Le backend ne reconnaît pas "adresse" dans l'entité Utilisateur
     delete payload.role; // Le backend ne reconnaît que "roleUtilisateur", pas "role"
     
     // Normaliser le rôle si nécessaire

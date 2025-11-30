@@ -59,7 +59,8 @@ export class AffectationDossiersComponent implements OnInit, OnDestroy {
     this.isLoading = true;
     
     // Load dossiers assigned to "recouvrement Juridique" using the correct API
-    this.dossierApiService.getDossiersRecouvrementJuridique(0, 1000)
+    // Note: Backend limite la taille de page à 100 max
+    this.dossierApiService.getDossiersRecouvrementJuridique(0, 100)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (page) => {

@@ -88,7 +88,8 @@ export class GestionAudiencesComponent implements OnInit, OnDestroy {
     this.isLoading = true;
     
     // IMPORTANT: Charger les dossiers EN PREMIER pour pouvoir les utiliser lors de la normalisation des audiences
-    this.dossierApiService.getDossiersRecouvrementJuridique(0, 1000)
+    // Note: Backend limite la taille de page à 100 max
+    this.dossierApiService.getDossiersRecouvrementJuridique(0, 100)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (page) => {
@@ -399,40 +400,24 @@ export class GestionAudiencesComponent implements OnInit, OnDestroy {
 
     const formValue = this.audienceForm.value;
     
-    // Construire le payload selon ce que le backend attend
-    // Le backend attend: dossier (objet), avocat (objet), huissier (objet), resultat (pas decisionResult)
-    // Propriétés connues backend: "resultat", "dateAudience", "dateProchaine", "tribunalType", 
-    // "commentaireDecision", "lieuTribunal", "huissier", "id", "avocat", "dossier"
+    // Valider que le dossier a un ID valide
+    if (!this.selectedDossier?.id) {
+      this.toastService.error('Erreur: Aucun dossier valide sélectionné.');
+      return;
+    }
+    
+    // Construire le payload - le service va convertir en format backend
     const audienceData: any = {
       dateAudience: formValue.dateAudience,
       dateProchaine: formValue.dateProchaine || null,
       tribunalType: formValue.tribunalType,
       lieuTribunal: formValue.lieuTribunal,
       commentaireDecision: formValue.commentaireDecision || null,
-      resultat: formValue.decisionResult || null // Backend attend "resultat" pas "decisionResult"
+      decisionResult: formValue.decisionResult || null, // Le service va convertir en "resultat"
+      dossierId: +this.selectedDossier.id, // Le service va convertir en dossier: { id: ... }
+      avocatId: formValue.avocatId ? +formValue.avocatId : null, // Le service va convertir en avocat: { id: ... }
+      huissierId: formValue.huissierId ? +formValue.huissierId : null // Le service va convertir en huissier: { id: ... }
     };
-    
-    // Ajouter le dossier comme objet (pas dossierId)
-    if (this.selectedDossier?.id) {
-      const dossierId = +this.selectedDossier.id;
-      audienceData.dossier = { id: dossierId };
-    } else {
-      console.error('❌ Aucun dossier sélectionné!');
-    }
-    
-    // Ajouter l'avocat comme objet si sélectionné (pas avocatId)
-    if (formValue.avocatId) {
-      audienceData.avocat = { id: +formValue.avocatId };
-    } else {
-      audienceData.avocat = null;
-    }
-    
-    // Ajouter l'huissier comme objet si sélectionné (pas huissierId)
-    if (formValue.huissierId) {
-      audienceData.huissier = { id: +formValue.huissierId };
-    } else {
-      audienceData.huissier = null;
-    }
     
     // Nettoyer les valeurs undefined
     Object.keys(audienceData).forEach(key => {
@@ -440,6 +425,8 @@ export class GestionAudiencesComponent implements OnInit, OnDestroy {
         delete audienceData[key];
       }
     });
+    
+    console.log('📋 Données du formulaire avant envoi:', audienceData);
 
 
     const request = this.isEditMode && this.selectedAudience?.id

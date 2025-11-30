@@ -81,7 +81,8 @@ export class JuridiqueDashboardComponent implements OnInit, OnDestroy {
   }
 
   loadDossiersStats(): void {
-    this.dossierApiService.getDossiersRecouvrementJuridique(0, 1000).pipe(
+    // Note: Backend limite la taille de page à 100 max
+    this.dossierApiService.getDossiersRecouvrementJuridique(0, 100).pipe(
       takeUntil(this.destroy$)
     ).subscribe({
       next: (page) => {

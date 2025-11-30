@@ -1,7 +1,9 @@
 <div class="juridique-user-management-container">
   <div class="header">
-    <h1><i class="fas fa-gavel"></i> Gestion des Agents Juridiques</h1>
-    <p class="subtitle">Gérez les agents juridiques de votre équipe</p>
+    <div>
+      <h1><i class="fas fa-gavel"></i> Gestion des Agents Juridiques</h1>
+      <p class="subtitle">Gérez les agents juridiques de votre équipe</p>
+    </div>
     <button class="btn btn-primary" (click)="showCreateUserForm()">
       <i class="fas fa-user-plus"></i> Ajouter un Agent Juridique
     </button>
@@ -21,8 +23,6 @@
         <app-form-input label="Nom" [control]="nomControl" id="nom"></app-form-input>
         <app-form-input label="Prénom" [control]="prenomControl" id="prenom"></app-form-input>
         <app-form-input label="Email" [control]="emailControl" type="email" id="email"></app-form-input>
-        <app-form-input label="Téléphone" [control]="telephoneControl" id="telephone"></app-form-input>
-        <app-form-input label="Adresse" [control]="adresseControl" id="adresse"></app-form-input>
         
         <!-- Mot de passe avec visibilité -->
         <div class="form-group password-group">

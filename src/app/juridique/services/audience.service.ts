@@ -139,36 +139,75 @@ export class AudienceService {
       'Accept': 'application/json'
     });
 
-    // Convertir AudienceRequest en format backend si nécessaire
+    // Convertir AudienceRequest en format backend
     // Le backend attend: dossier (objet), avocat (objet), huissier (objet), resultat (pas decisionResult)
-    // Propriétés connues backend: "resultat", "dateAudience", "dateProchaine", "tribunalType", 
-    // "commentaireDecision", "lieuTribunal", "huissier", "id", "avocat", "dossier"
+    // Format des dates: YYYY-MM-DD (string ISO)
     let payload: any;
     
-    if (audience.dossierId) {
-      // Si c'est un AudienceRequest avec dossierId, convertir en format backend
-      payload = {
-        dateAudience: audience.dateAudience,
-        dateProchaine: audience.dateProchaine || null,
-        tribunalType: audience.tribunalType,
-        lieuTribunal: audience.lieuTribunal,
-        commentaireDecision: audience.commentaireDecision || null,
-        resultat: audience.decisionResult || audience.resultat || null, // Backend attend "resultat"
-        dossier: { id: audience.dossierId },
-        avocat: audience.avocatId ? { id: audience.avocatId } : null,
-        huissier: audience.huissierId ? { id: audience.huissierId } : null
-      };
-    } else {
-      // Si c'est déjà au format backend (avec dossier, avocat, huissier comme objets)
-      payload = { ...audience };
+    // Extraire les IDs depuis différents formats possibles
+    const dossierId = audience.dossierId || audience.dossier?.id;
+    const avocatId = audience.avocatId || audience.avocat?.id;
+    const huissierId = audience.huissierId || audience.huissier?.id;
+    
+    // Formater les dates correctement (YYYY-MM-DD)
+    let dateAudienceFormatted = audience.dateAudience;
+    if (dateAudienceFormatted instanceof Date) {
+      dateAudienceFormatted = dateAudienceFormatted.toISOString().split('T')[0];
+    } else if (typeof dateAudienceFormatted === 'string' && dateAudienceFormatted.includes('T')) {
+      dateAudienceFormatted = dateAudienceFormatted.split('T')[0];
     }
     
-    // Nettoyer les valeurs undefined
+    let dateProchaineFormatted = audience.dateProchaine;
+    if (dateProchaineFormatted) {
+      if (dateProchaineFormatted instanceof Date) {
+        dateProchaineFormatted = dateProchaineFormatted.toISOString().split('T')[0];
+      } else if (typeof dateProchaineFormatted === 'string' && dateProchaineFormatted.includes('T')) {
+        dateProchaineFormatted = dateProchaineFormatted.split('T')[0];
+      }
+    }
+    
+    // Construire le payload avec le format attendu par le backend
+    // Utiliser des objets simples { id: ... } pour éviter la classe imbriquée DossierReference
+    payload = {
+      dateAudience: dateAudienceFormatted,
+      tribunalType: audience.tribunalType,
+      lieuTribunal: audience.lieuTribunal,
+      resultat: audience.decisionResult || audience.resultat || null
+    };
+    
+    // Ajouter dateProchaine seulement si elle existe
+    if (dateProchaineFormatted) {
+      payload.dateProchaine = dateProchaineFormatted;
+    }
+    
+    // Ajouter commentaireDecision seulement s'il existe
+    if (audience.commentaireDecision) {
+      payload.commentaireDecision = audience.commentaireDecision;
+    }
+    
+    // Ajouter dossier comme objet simple (le backend devrait pouvoir le désérialiser)
+    if (dossierId) {
+      payload.dossier = { id: Number(dossierId) };
+    }
+    
+    // Ajouter avocat comme objet simple si sélectionné
+    if (avocatId) {
+      payload.avocat = { id: Number(avocatId) };
+    }
+    
+    // Ajouter huissier comme objet simple si sélectionné
+    if (huissierId) {
+      payload.huissier = { id: Number(huissierId) };
+    }
+    
+    // Nettoyer les valeurs undefined et null pour les champs optionnels
     Object.keys(payload).forEach(key => {
       if (payload[key] === undefined) {
         delete payload[key];
       }
     });
+    
+    console.log('📤 Payload envoyé au backend:', JSON.stringify(payload, null, 2));
 
 
     return this.http.post<Audience>(`${this.baseUrl}/audiences`, payload, { headers })
@@ -191,36 +230,75 @@ export class AudienceService {
       'Accept': 'application/json'
     });
 
-    // Convertir AudienceRequest en format backend si nécessaire
+    // Convertir AudienceRequest en format backend
     // Le backend attend: dossier (objet), avocat (objet), huissier (objet), resultat (pas decisionResult)
-    // Propriétés connues backend: "resultat", "dateAudience", "dateProchaine", "tribunalType", 
-    // "commentaireDecision", "lieuTribunal", "huissier", "id", "avocat", "dossier"
+    // Format des dates: YYYY-MM-DD (string ISO)
     let payload: any;
     
-    if (audience.dossierId) {
-      // Si c'est un AudienceRequest avec dossierId, convertir en format backend
-      payload = {
-        dateAudience: audience.dateAudience,
-        dateProchaine: audience.dateProchaine || null,
-        tribunalType: audience.tribunalType,
-        lieuTribunal: audience.lieuTribunal,
-        commentaireDecision: audience.commentaireDecision || null,
-        resultat: audience.decisionResult || audience.resultat || null, // Backend attend "resultat"
-        dossier: { id: audience.dossierId },
-        avocat: audience.avocatId ? { id: audience.avocatId } : null,
-        huissier: audience.huissierId ? { id: audience.huissierId } : null
-      };
-    } else {
-      // Si c'est déjà au format backend (avec dossier, avocat, huissier comme objets)
-      payload = { ...audience };
+    // Extraire les IDs depuis différents formats possibles
+    const dossierId = audience.dossierId || audience.dossier?.id;
+    const avocatId = audience.avocatId || audience.avocat?.id;
+    const huissierId = audience.huissierId || audience.huissier?.id;
+    
+    // Formater les dates correctement (YYYY-MM-DD)
+    let dateAudienceFormatted = audience.dateAudience;
+    if (dateAudienceFormatted instanceof Date) {
+      dateAudienceFormatted = dateAudienceFormatted.toISOString().split('T')[0];
+    } else if (typeof dateAudienceFormatted === 'string' && dateAudienceFormatted.includes('T')) {
+      dateAudienceFormatted = dateAudienceFormatted.split('T')[0];
     }
     
-    // Nettoyer les valeurs undefined
+    let dateProchaineFormatted = audience.dateProchaine;
+    if (dateProchaineFormatted) {
+      if (dateProchaineFormatted instanceof Date) {
+        dateProchaineFormatted = dateProchaineFormatted.toISOString().split('T')[0];
+      } else if (typeof dateProchaineFormatted === 'string' && dateProchaineFormatted.includes('T')) {
+        dateProchaineFormatted = dateProchaineFormatted.split('T')[0];
+      }
+    }
+    
+    // Construire le payload avec le format attendu par le backend
+    // Utiliser des objets simples { id: ... } pour éviter la classe imbriquée DossierReference
+    payload = {
+      dateAudience: dateAudienceFormatted,
+      tribunalType: audience.tribunalType,
+      lieuTribunal: audience.lieuTribunal,
+      resultat: audience.decisionResult || audience.resultat || null
+    };
+    
+    // Ajouter dateProchaine seulement si elle existe
+    if (dateProchaineFormatted) {
+      payload.dateProchaine = dateProchaineFormatted;
+    }
+    
+    // Ajouter commentaireDecision seulement s'il existe
+    if (audience.commentaireDecision) {
+      payload.commentaireDecision = audience.commentaireDecision;
+    }
+    
+    // Ajouter dossier comme objet simple (le backend devrait pouvoir le désérialiser)
+    if (dossierId) {
+      payload.dossier = { id: Number(dossierId) };
+    }
+    
+    // Ajouter avocat comme objet simple si sélectionné
+    if (avocatId) {
+      payload.avocat = { id: Number(avocatId) };
+    }
+    
+    // Ajouter huissier comme objet simple si sélectionné
+    if (huissierId) {
+      payload.huissier = { id: Number(huissierId) };
+    }
+    
+    // Nettoyer les valeurs undefined et null pour les champs optionnels
     Object.keys(payload).forEach(key => {
       if (payload[key] === undefined) {
         delete payload[key];
       }
     });
+    
+    console.log('📤 Payload de mise à jour envoyé au backend:', JSON.stringify(payload, null, 2));
 
 
     return this.http.put<Audience>(`${this.baseUrl}/audiences/${id}`, payload, { headers })
@@ -303,6 +381,13 @@ export class AudienceService {
    */
   private handleError(error: any): Observable<never> {
     console.error('❌ Erreur dans AudienceService:', error);
+    console.error('❌ Détails de l\'erreur:', {
+      status: error.status,
+      statusText: error.statusText,
+      error: error.error,
+      message: error.message,
+      url: error.url
+    });
     
     let errorMessage = 'Une erreur est survenue';
     
@@ -313,12 +398,22 @@ export class AudienceService {
       // Erreur côté serveur
       if (error.status === 0) {
         errorMessage = 'Impossible de se connecter au serveur. Vérifiez que le backend est démarré.';
+      } else if (error.status === 400) {
+        // Bad Request - souvent lié à des données invalides ou des contraintes de validation
+        const backendMessage = error.error?.message || error.error?.error || 'Données invalides';
+        errorMessage = `Erreur de validation: ${backendMessage}. Vérifiez que tous les champs sont corrects et que le dossier existe.`;
       } else if (error.status === 404) {
         errorMessage = 'Endpoint non trouvé. Vérifiez l\'URL du backend.';
       } else if (error.status === 500) {
-        errorMessage = 'Erreur serveur interne.';
+        // Erreur serveur interne - peut être liée à une transaction rollback
+        const backendMessage = error.error?.message || error.error?.error || 'Erreur serveur interne';
+        if (backendMessage.includes('rollback') || backendMessage.includes('Transaction')) {
+          errorMessage = `Erreur de transaction: ${backendMessage}. Vérifiez que le dossier, l'avocat et l'huissier existent et sont valides.`;
+        } else {
+          errorMessage = `Erreur serveur interne: ${backendMessage}`;
+        }
       } else {
-        errorMessage = `Erreur ${error.status}: ${error.error?.message || error.statusText}`;
+        errorMessage = `Erreur ${error.status}: ${error.error?.message || error.error?.error || error.statusText}`;
       }
     }
     
