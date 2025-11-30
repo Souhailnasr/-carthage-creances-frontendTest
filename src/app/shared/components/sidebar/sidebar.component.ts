@@ -367,6 +367,12 @@ export class SidebarComponent implements OnInit, OnDestroy {
       roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE]
     },
     {
+      label: 'Gestion Huissier',
+      icon: 'fas fa-file-contract',
+      route: '/juridique/gestion-huissier',
+      roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE]
+    },
+    {
       label: 'Gestion des Audiences',
       icon: 'fas fa-gavel',
       route: '/juridique/gestion-audiences',

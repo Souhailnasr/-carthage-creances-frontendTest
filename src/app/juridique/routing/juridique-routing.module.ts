@@ -33,6 +33,12 @@ const routes: Routes = [
     data: { allowedRoles: [Role.CHEF_JURIDIQUE, Role.SUPER_ADMIN] }
   },
   {
+    path: 'gestion-huissier',
+    loadComponent: () => import('../components/gestion-huissier/gestion-huissier.component').then(m => m.GestionHuissierComponent),
+    canActivate: [AuthGuard],
+    data: { allowedRoles: [Role.CHEF_JURIDIQUE, Role.SUPER_ADMIN] }
+  },
+  {
     path: 'gestion-audiences',
     loadComponent: () => import('../components/gestion-audiences/gestion-audiences.component').then(m => m.GestionAudiencesComponent),
     canActivate: [AuthGuard],

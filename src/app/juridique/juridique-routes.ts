@@ -13,6 +13,7 @@ import { HuissierListComponent } from './components/huissier-list/huissier-list.
 import { HuissierDetailsComponent } from './components/huissier-details/huissier-details.component';
 import { AffectationDossiersComponent } from './components/affectation-dossiers/affectation-dossiers.component';
 import { GestionAudiencesComponent } from './components/gestion-audiences/gestion-audiences.component';
+import { GestionHuissierComponent } from './components/gestion-huissier/gestion-huissier.component';
 import { TachesComponent } from '../chef-amiable/components/taches/taches.component';
 
 export const juridiqueRoutes: Routes = [
@@ -68,6 +69,10 @@ export const juridiqueRoutes: Routes = [
       {
         path: 'affectation-dossiers',
         component: AffectationDossiersComponent
+      },
+      {
+        path: 'gestion-huissier',
+        component: GestionHuissierComponent
       },
       {
         path: 'gestion-audiences',
