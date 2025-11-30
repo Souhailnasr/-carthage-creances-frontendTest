@@ -518,6 +518,91 @@ export class GestionActionsComponent implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * Vérifie si un dossier peut être affecté au finance
+   * Conditions : le dossier doit avoir au moins une action
+   */
+  canAffecterAuFinance(dossier: DossierAvecActions | null): boolean {
+    if (!dossier || !dossier.id) return false;
+    
+    // Vérifier si le dossier a au moins une action
+    const actionsCount = this.getActionsCount(dossier.id);
+    return actionsCount > 0;
+  }
+
+  /**
+   * Affecte un dossier au département finance
+   */
+  affecterAuFinance(): void {
+    if (!this.dossierSelectionne || !this.dossierSelectionne.id) {
+      this.snackBar.open('Veuillez sélectionner un dossier', 'Fermer', {
+        duration: 3000
+      });
+      return;
+    }
+
+    if (!this.canAffecterAuFinance(this.dossierSelectionne)) {
+      this.snackBar.open('Le dossier doit avoir au moins une action pour être affecté au finance', 'Fermer', {
+        duration: 5000,
+        panelClass: ['warning-snackbar']
+      });
+      return;
+    }
+
+    const dialogData: ConfirmationDialogData = {
+      title: 'Affecter au Finance',
+      message: `Êtes-vous sûr de vouloir affecter le dossier ${this.dossierSelectionne.numeroDossier} au département finance ?\n\n` +
+               `Créancier: ${this.dossierSelectionne.nomCreancier}\n` +
+               `Débiteur: ${this.dossierSelectionne.nomDebiteur}\n` +
+               `Nombre d'actions: ${this.getActionsCount(this.dossierSelectionne.id)}\n\n` +
+               `Cette action transférera le dossier au chef financier avec toutes les informations.`,
+      confirmText: 'Affecter',
+      cancelText: 'Annuler',
+      warning: false
+    };
+
+    const dialogRef = this.dialog.open(ConfirmationDialogComponent, {
+      data: dialogData,
+      width: '500px'
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.loading = true;
+        this.dossierApiService.affecterAuFinance(this.dossierSelectionne!.id!)
+          .pipe(takeUntil(this.destroy$))
+          .subscribe({
+            next: (dossier) => {
+              this.snackBar.open('Dossier affecté au département finance avec succès', 'Fermer', {
+                duration: 3000,
+                panelClass: ['success-snackbar']
+              });
+              this.showAffectationForm = false;
+              this.numeroDossierRecherche = '';
+              this.searchTerm = '';
+              this.dossierSelectionne = null;
+              this.loadDossiers(); // Recharger la liste
+              this.loading = false;
+            },
+            error: (error) => {
+              console.error('❌ Erreur lors de l\'affectation au finance:', error);
+              let errorMessage = 'Erreur lors de l\'affectation au finance';
+              if (error.error?.message) {
+                errorMessage = error.error.message;
+              } else if (error.message) {
+                errorMessage = error.message;
+              }
+              this.snackBar.open(errorMessage, 'Fermer', {
+                duration: 5000,
+                panelClass: ['error-snackbar']
+              });
+              this.loading = false;
+            }
+          });
+      }
+    });
+  }
+
   getTypeActionLabel(type: TypeAction): string {
     const typeAction = this.typesActions.find(t => t.value === type);
     return typeAction ? typeAction.label : type;

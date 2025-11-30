@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, OnDestroy } from '@angular/core';
+import { Component, Input, OnInit, OnDestroy, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
@@ -36,7 +36,7 @@ import { JwtAuthService } from '../../../core/services/jwt-auth.service';
   templateUrl: './dossier-actions-amiable.component.html',
   styleUrls: ['./dossier-actions-amiable.component.scss']
 })
-export class DossierActionsAmiableComponent implements OnInit, OnDestroy {
+export class DossierActionsAmiableComponent implements OnInit, OnDestroy, OnChanges {
   @Input() dossierId!: number;
   @Input() typeRecouvrement?: string; // Type de recouvrement du dossier
   
@@ -75,6 +75,26 @@ export class DossierActionsAmiableComponent implements OnInit, OnDestroy {
     this.loadActions();
   }
 
+  ngOnChanges(changes: SimpleChanges): void {
+    // Recharger les actions si le dossierId change
+    if (changes['dossierId'] && !changes['dossierId'].firstChange && changes['dossierId'].currentValue) {
+      console.log('🔄 DossierId changé, rechargement des actions...', changes['dossierId'].currentValue);
+      this.actions = [];
+      this.filteredActions = [];
+      this.statistiques = {
+        total: 0,
+        positives: 0,
+        negatives: 0,
+        sansReponse: 0,
+        parType: {},
+        dernieresActions: []
+      };
+      this.selectedTypeFilter = '';
+      this.selectedReponseFilter = '';
+      this.loadActions();
+    }
+  }
+
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
@@ -86,19 +106,26 @@ export class DossierActionsAmiableComponent implements OnInit, OnDestroy {
       return;
     }
     
+    console.log('📥 Chargement des actions pour le dossier:', this.dossierId, 'Type recouvrement:', this.typeRecouvrement);
     this.loading = true;
     this.actionService.getActionsByDossier(this.dossierId).pipe(
       takeUntil(this.destroy$)
     ).subscribe({
       next: (actions) => {
-        this.actions = actions;
-        this.filteredActions = actions;
+        console.log('✅ Actions chargées:', actions.length, 'pour le dossier', this.dossierId);
+        this.actions = actions || [];
+        this.filteredActions = actions || [];
+        // Calculer les statistiques immédiatement à partir des actions chargées
+        this.calculateStatistiquesFromActions();
+        // Essayer aussi de charger les statistiques depuis le service (peut être plus détaillé)
         this.loadStatistiques();
         this.loading = false;
       },
       error: (err) => {
         console.error('❌ Erreur lors du chargement des actions:', err);
         this.snackBar.open('Erreur lors du chargement des actions', 'Fermer', { duration: 3000 });
+        this.actions = [];
+        this.filteredActions = [];
         this.loading = false;
       }
     });
@@ -113,8 +140,30 @@ export class DossierActionsAmiableComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         console.error('❌ Erreur lors du chargement des statistiques:', err);
+        // Calculer les statistiques manuellement à partir des actions chargées
+        this.calculateStatistiquesFromActions();
       }
     });
+  }
+
+  /**
+   * Calcule les statistiques à partir des actions chargées (fallback si le service échoue)
+   */
+  private calculateStatistiquesFromActions(): void {
+    this.statistiques = {
+      total: this.actions.length,
+      positives: this.actions.filter(a => a.reponseDebiteur === 'POSITIVE').length,
+      negatives: this.actions.filter(a => a.reponseDebiteur === 'NEGATIVE').length,
+      sansReponse: this.actions.filter(a => !a.reponseDebiteur || a.reponseDebiteur === 'EN_ATTENTE').length,
+      parType: this.actions.reduce((acc, action) => {
+        acc[action.type] = (acc[action.type] || 0) + 1;
+        return acc;
+      }, {} as { [key: string]: number }),
+      dernieresActions: this.actions
+        .sort((a, b) => new Date(b.dateAction).getTime() - new Date(a.dateAction).getTime())
+        .slice(0, 5)
+    };
+    console.log('📊 Statistiques calculées manuellement:', this.statistiques);
   }
 
   addAction(): void {

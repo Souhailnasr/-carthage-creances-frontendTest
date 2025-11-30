@@ -100,9 +100,14 @@
                   <mat-icon>gavel</mat-icon>
                   Affecter au Juridique
                 </button>
-                <button mat-raised-button color="warn" (click)="cloturerDossier(); $event.stopPropagation()">
-                  <mat-icon>lock</mat-icon>
-                  Clôturer
+                <button 
+                  mat-raised-button 
+                  color="primary" 
+                  (click)="affecterAuFinance(); $event.stopPropagation()"
+                  [disabled]="loading || !canAffecterAuFinance(dossier)"
+                  [matTooltip]="!canAffecterAuFinance(dossier) ? 'Le dossier doit avoir au moins une action pour être affecté au finance' : 'Affecter ce dossier au département finance'">
+                  <mat-icon>money</mat-icon>
+                  Affecter au Finance
                 </button>
               </mat-card-actions>
               <mat-card-actions *ngIf="dossierSelectionne?.numeroDossier === dossier.numeroDossier && dossier.affecteAuJuridique" class="dossier-actions-quick">
@@ -258,12 +263,12 @@
             </button>
             <button 
               mat-raised-button 
-              color="warn" 
-              (click)="cloturerDossier()" 
-              [disabled]="loading || isDossierJuridique()"
-              [matTooltip]="isDossierJuridique() ? 'Ce dossier est affecté au recouvrement juridique' : ''">
-              <mat-icon>lock</mat-icon>
-              Clôturer le Dossier
+              color="primary" 
+              (click)="affecterAuFinance()" 
+              [disabled]="loading || isDossierJuridique() || !canAffecterAuFinance(dossierSelectionne)"
+              [matTooltip]="isDossierJuridique() ? 'Ce dossier est affecté au recouvrement juridique' : (!canAffecterAuFinance(dossierSelectionne) ? 'Le dossier doit avoir au moins une action pour être affecté au finance' : 'Affecter ce dossier au département finance')">
+              <mat-icon>money</mat-icon>
+              Affecter au Finance
             </button>
           </mat-card-actions>
         </mat-card>
