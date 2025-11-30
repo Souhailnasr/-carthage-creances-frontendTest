@@ -270,6 +270,54 @@ export class DossierApiService {
   }
 
   /**
+   * Affecte un dossier traité (avec documents, actions, audiences) au département finance
+   * PUT /api/dossiers/{dossierId}/affecter/finance
+   * Note: L'endpoint doit être implémenté dans le backend
+   */
+  affecterAuFinance(dossierId: number): Observable<DossierApi> {
+    const url = `${this.apiUrl}/${dossierId}/affecter/finance`;
+    console.log('📤 Affectation au département finance:', url);
+    
+    return this.http.put<DossierApi>(url, null).pipe(
+      tap(() => console.log('✅ Affectation au finance réussie')),
+      catchError((error) => {
+        console.error('❌ Erreur lors de l\'affectation au finance:', error);
+        console.error('❌ URL appelée:', url);
+        console.error('❌ Status:', error.status);
+        console.error('❌ Message:', error.error?.message || error.message);
+        
+        let errorMessage = 'Erreur lors de l\'affectation au département finance';
+        
+        // Erreur 400 - Bad Request
+        if (error.status === 400) {
+          const errorDetail = error.error?.message || error.error?.error || '';
+          if (errorDetail.includes('étape') || errorDetail.includes('audiences')) {
+            errorMessage = 'Le dossier doit être à l\'étape audiences pour être affecté au finance.';
+          } else if (errorDetail.includes('chef')) {
+            errorMessage = 'Aucun chef du département finance trouvé. Veuillez contacter l\'administrateur.';
+          } else {
+            errorMessage = errorDetail || 'Erreur lors de l\'affectation. Veuillez vérifier que le dossier est prêt.';
+          }
+        }
+        // Si l'endpoint n'existe pas (404 ou 500 avec "No static resource")
+        else if (error.status === 404 || (error.status === 500 && error.error?.message?.includes('No static resource'))) {
+          errorMessage = 'L\'endpoint d\'affectation au finance n\'est pas encore disponible dans le backend. Veuillez contacter l\'administrateur.';
+        } 
+        // Erreur 500 - Server Error
+        else if (error.status === 500) {
+          errorMessage = 'Erreur serveur lors de l\'affectation. Veuillez réessayer ou contacter l\'administrateur.';
+        }
+        // Autres erreurs
+        else if (error.error?.message) {
+          errorMessage = error.error.message;
+        }
+        
+        return throwError(() => new Error(errorMessage));
+      })
+    );
+  }
+
+  /**
    * Affecte un dossier validé au recouvrement juridique
    * PUT /api/dossiers/{dossierId}/affecter/recouvrement-juridique
    * Note: L'endpoint doit être implémenté dans le backend

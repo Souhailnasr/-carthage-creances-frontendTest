@@ -263,6 +263,39 @@
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
         border: 1px solid #e9ecef;
 
+        .dossier-actions-buttons {
+          display: flex;
+          gap: 0.75rem;
+          align-items: center;
+          flex-wrap: wrap;
+
+          .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border: none;
+            white-space: nowrap;
+
+            &.btn-success {
+              background: linear-gradient(135deg, #28a745 0%, #218838 100%);
+              color: white;
+              box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+
+              &:hover:not(:disabled) {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
+              }
+
+              &:disabled {
+                opacity: 0.6;
+                cursor: not-allowed;
+                transform: none;
+              }
+            }
+          }
+        }
+
         .dossier-header {
           display: flex;
           justify-content: space-between;

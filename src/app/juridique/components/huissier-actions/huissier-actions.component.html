@@ -43,6 +43,21 @@
           </option>
         </select>
       </div>
+      
+      <!-- Bouton Affecter au Finance (visible si dossier sélectionné a au moins une audience) -->
+      <div class="col-12 mt-3" *ngIf="selectedDossier && canAffecterAuFinance(selectedDossier)">
+        <button 
+          class="btn btn-success w-100"
+          (click)="affecterAuFinance()"
+          [disabled]="isLoadingAffectationFinance || isLoading"
+          title="Affecter ce dossier au département finance avec toutes les informations (documents, actions, audiences)">
+          <i class="fas fa-money-bill-wave"></i> 
+          <span *ngIf="isLoadingAffectationFinance">
+            <i class="fas fa-spinner fa-spin"></i> Affectation en cours...
+          </span>
+          <span *ngIf="!isLoadingAffectationFinance">Affecter au Finance</span>
+        </button>
+      </div>
     </div>
   </div>
 
@@ -190,16 +205,33 @@
       </table>
     </div>
 
-    <!-- Bouton Passer aux Audiences (seulement si à l'étape actions) -->
-    <div class="mt-4 text-center" *ngIf="!isLoadingActions && actions.length > 0 && canCreateAction(selectedDossier!)">
+    <!-- Boutons d'action -->
+    <div class="mt-4 text-center d-flex justify-content-center gap-3 flex-wrap" *ngIf="selectedDossier">
+      <!-- Bouton Passer aux Audiences (seulement si à l'étape actions) -->
       <button 
+        *ngIf="!isLoadingActions && actions.length > 0 && canCreateAction(selectedDossier)"
         class="btn btn-success btn-lg"
         (click)="passerAuxAudiences()"
         [disabled]="!canPasserAuxAudiences() || isLoading"
         [title]="!canPasserAuxAudiences() ? 'Vous devez créer au moins une action' : 'Passer à l\'étape Audiences'">
         <i class="fas fa-arrow-right"></i> Passer aux Audiences
       </button>
-      <p class="text-muted mt-2" *ngIf="actions.length === 0">
+      
+      <!-- Bouton Affecter au Finance (visible si dossier a au moins une audience, indépendamment de l'étape) -->
+      <button 
+        *ngIf="canAffecterAuFinance(selectedDossier)"
+        class="btn btn-success btn-lg"
+        (click)="affecterAuFinance()"
+        [disabled]="isLoadingAffectationFinance || isLoading"
+        title="Affecter ce dossier au département finance avec toutes les informations (documents, actions, audiences)">
+        <i class="fas fa-money-bill-wave"></i> 
+        <span *ngIf="isLoadingAffectationFinance">
+          <i class="fas fa-spinner fa-spin"></i> Affectation...
+        </span>
+        <span *ngIf="!isLoadingAffectationFinance">Affecter au Finance</span>
+      </button>
+      
+      <p class="text-muted mt-2 w-100" *ngIf="actions.length === 0 && canCreateAction(selectedDossier)">
         <i class="fas fa-info-circle"></i> Créez au moins une action pour pouvoir passer aux audiences
       </p>
     </div>

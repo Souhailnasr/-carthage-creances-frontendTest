@@ -7,9 +7,11 @@ import { DossierApiService } from '../../../core/services/dossier-api.service';
 import { HuissierService } from '../../services/huissier.service';
 import { HuissierActionService } from '../../services/huissier-action.service';
 import { HuissierDocumentService } from '../../services/huissier-document.service';
+import { AudienceService } from '../../services/audience.service';
 import { Huissier } from '../../models/huissier.model';
 import { ActionHuissier, ActionHuissierDTO, TypeActionHuissier, EtatDossier } from '../../models/huissier-action.model';
 import { DocumentHuissier } from '../../models/huissier-document.model';
+import { Audience } from '../../models/audience.model';
 import { ToastService } from '../../../core/services/toast.service';
 
 @Component({
@@ -30,7 +32,13 @@ export class HuissierActionsComponent implements OnInit, OnDestroy {
   // Documents du dossier sélectionné
   documents: DocumentHuissier[] = [];
   
-  // Actions
+  // Audiences (pour vérifier si le dossier peut être affecté au finance)
+  audiences: Audience[] = [];
+  
+  // Toutes les actions (pour vérifier si un dossier peut être affecté au finance)
+  allActions: ActionHuissier[] = [];
+  
+  // Actions du dossier sélectionné
   actions: ActionHuissier[] = [];
   showActionForm = false;
   showActionView = false;
@@ -57,6 +65,7 @@ export class HuissierActionsComponent implements OnInit, OnDestroy {
   isLoadingActions = false;
   isLoadingDossiers = false;
   isLoadingDocuments = false;
+  isLoadingAffectationFinance = false;
   
   private destroy$ = new Subject<void>();
 
@@ -65,12 +74,14 @@ export class HuissierActionsComponent implements OnInit, OnDestroy {
     private huissierService: HuissierService,
     private actionService: HuissierActionService,
     private documentService: HuissierDocumentService,
+    private audienceService: AudienceService,
     private toastService: ToastService
   ) {}
 
   ngOnInit(): void {
     this.loadDossiers();
     this.loadHuissiers();
+    this.loadAllAudiences();
   }
 
   ngOnDestroy(): void {
@@ -124,6 +135,24 @@ export class HuissierActionsComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Charge toutes les audiences pour vérifier si un dossier peut être affecté au finance
+   */
+  loadAllAudiences(): void {
+    this.audienceService.getAllAudiences()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (audiences) => {
+          this.audiences = audiences || [];
+          console.log('✅ Audiences chargées:', this.audiences.length);
+        },
+        error: (error) => {
+          console.error('❌ Erreur lors du chargement des audiences:', error);
+          this.audiences = [];
+        }
+      });
+  }
+
+  /**
    * Sélectionne un dossier et charge ses documents et actions
    */
   onDossierSelected(dossierId: number | null): void {
@@ -132,10 +161,34 @@ export class HuissierActionsComponent implements OnInit, OnDestroy {
     if (dossierId) {
       this.loadDocuments();
       this.loadActions();
+      // Charger les actions dans allActions pour référence future
+      this.loadActionsForDossier(dossierId);
     } else {
       this.documents = [];
       this.actions = [];
     }
+  }
+
+  /**
+   * Charge les actions d'un dossier et les ajoute à allActions pour référence
+   */
+  loadActionsForDossier(dossierId: number): void {
+    this.actionService.getActionsByDossier(dossierId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (actions) => {
+          // Retirer les anciennes actions de ce dossier
+          this.allActions = this.allActions.filter(a => {
+            const actionDossierId = a.dossierId || (a as any).dossier?.id;
+            return actionDossierId !== dossierId;
+          });
+          // Ajouter les nouvelles actions
+          this.allActions.push(...actions);
+        },
+        error: (error) => {
+          console.error('Erreur lors du chargement des actions pour référence:', error);
+        }
+      });
   }
 
   /**
@@ -164,7 +217,10 @@ export class HuissierActionsComponent implements OnInit, OnDestroy {
    * Charge les actions d'un dossier
    */
   loadActions(): void {
-    if (!this.selectedDossierId) return;
+    if (!this.selectedDossierId) {
+      this.actions = [];
+      return;
+    }
     
     this.isLoadingActions = true;
     this.actionService.getActionsByDossier(this.selectedDossierId)
@@ -172,6 +228,14 @@ export class HuissierActionsComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (actions) => {
           this.actions = actions;
+          // Mettre à jour allActions pour référence future
+          // Retirer les anciennes actions de ce dossier
+          this.allActions = this.allActions.filter(a => {
+            const actionDossierId = a.dossierId || (a as any).dossier?.id;
+            return actionDossierId !== this.selectedDossierId;
+          });
+          // Ajouter les nouvelles actions
+          this.allActions.push(...actions);
           this.isLoadingActions = false;
         },
         error: (error) => {
@@ -495,6 +559,112 @@ export class HuissierActionsComponent implements OnInit, OnDestroy {
     const etape = (dossier as any).etapeHuissier;
     // Permettre la création si à l'étape actions
     return etape === 'EN_ACTIONS';
+  }
+
+  /**
+   * Récupère les audiences d'un dossier spécifique
+   */
+  getAudiencesForDossier(dossierId: number | null): Audience[] {
+    if (!dossierId || !this.audiences || this.audiences.length === 0) {
+      return [];
+    }
+    
+    // Filtrer les audiences qui correspondent à ce dossier
+    return this.audiences.filter(audience => {
+      // Vérifier si l'audience a un dossierId qui correspond
+      const audienceDossierId = audience.dossierId || (audience as any).dossier_id;
+      return audienceDossierId === dossierId;
+    });
+  }
+
+  /**
+   * Récupère les actions d'un dossier spécifique
+   */
+  getActionsForDossier(dossierId: number | null): ActionHuissier[] {
+    if (!dossierId || !this.allActions || this.allActions.length === 0) {
+      // Si c'est le dossier sélectionné, utiliser this.actions
+      if (this.selectedDossierId === dossierId) {
+        return this.actions;
+      }
+      return [];
+    }
+    
+    // Filtrer les actions qui correspondent à ce dossier
+    return this.allActions.filter(action => {
+      const actionDossierId = action.dossierId || (action as any).dossier?.id;
+      return actionDossierId === dossierId;
+    });
+  }
+
+  /**
+   * Vérifie si un dossier peut être affecté au finance
+   * Conditions : le dossier doit avoir au moins une action OU une audience
+   * INDÉPENDAMMENT de l'étape (documents, actions, audiences)
+   */
+  canAffecterAuFinance(dossier: DossierApi): boolean {
+    if (!dossier || !dossier.id) return false;
+    
+    // Vérifier si le dossier a au moins une action
+    const dossierActions = this.getActionsForDossier(dossier.id);
+    const hasActions = dossierActions.length > 0;
+    
+    // Vérifier si le dossier a au moins une audience
+    const dossierAudiences = this.getAudiencesForDossier(dossier.id);
+    const hasAudiences = dossierAudiences.length > 0;
+    
+    // Le dossier peut être affecté s'il a au moins une action OU une audience
+    return hasActions || hasAudiences;
+  }
+
+  /**
+   * Affecte un dossier au département finance
+   */
+  affecterAuFinance(): void {
+    if (!this.selectedDossier || !this.selectedDossier.id) {
+      this.toastService.error('Aucun dossier sélectionné');
+      return;
+    }
+
+    if (!this.canAffecterAuFinance(this.selectedDossier)) {
+      this.toastService.error('Ce dossier doit avoir au moins une audience pour être affecté au finance');
+      return;
+    }
+
+    const message = `Êtes-vous sûr de vouloir affecter ce dossier au département finance ?\n\n` +
+                    `Dossier: ${this.selectedDossier.numeroDossier || 'N/A'}\n` +
+                    `Créancier: ${this.selectedDossier.creancier?.nom || 'N/A'}\n` +
+                    `Montant: ${this.selectedDossier.montantCreance || 0} TND\n\n` +
+                    `Cette action transférera le dossier au chef financier avec toutes les informations (documents, actions, audiences).`;
+
+    if (!confirm(message)) {
+      return;
+    }
+
+    this.isLoadingAffectationFinance = true;
+    this.dossierApiService.affecterAuFinance(this.selectedDossier.id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (dossierUpdated) => {
+          console.log('✅ Dossier affecté au finance:', dossierUpdated);
+          this.toastService.success('Dossier affecté au département finance avec succès');
+          this.isLoadingAffectationFinance = false;
+          
+          // Mettre à jour le dossier dans la liste
+          const index = this.dossiers.findIndex(d => d.id === dossierUpdated.id);
+          if (index !== -1) {
+            this.dossiers[index] = dossierUpdated;
+          }
+          
+          // Recharger les dossiers pour mettre à jour la liste
+          this.loadDossiers();
+        },
+        error: (error) => {
+          console.error('❌ Erreur lors de l\'affectation au finance:', error);
+          this.isLoadingAffectationFinance = false;
+          const errorMessage = error.message || 'Erreur lors de l\'affectation au finance';
+          this.toastService.error(errorMessage);
+        }
+      });
   }
 }
 

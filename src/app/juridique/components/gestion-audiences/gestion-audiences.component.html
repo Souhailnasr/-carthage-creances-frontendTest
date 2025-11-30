@@ -152,9 +152,24 @@
               </div>
             </div>
           </div>
-          <button class="btn btn-primary" (click)="showAudienceModal(dossier)">
-            <i class="fas fa-plus"></i> Ajouter Audience
-          </button>
+          <div class="dossier-actions-buttons">
+            <button class="btn btn-primary" (click)="showAudienceModal(dossier)">
+              <i class="fas fa-plus"></i> Ajouter Audience
+            </button>
+            <!-- Bouton Affecter au Finance (visible si dossier a au moins une audience, indépendamment de l'étape) -->
+            <button 
+              *ngIf="canAffecterAuFinance(dossier)"
+              class="btn btn-success"
+              (click)="selectedDossier = dossier; affecterAuFinance()"
+              [disabled]="isLoadingAffectationFinance"
+              title="Affecter ce dossier au département finance avec toutes les informations (documents, actions, audiences)">
+              <i class="fas fa-money-bill-wave"></i> 
+              <span *ngIf="isLoadingAffectationFinance">
+                <i class="fas fa-spinner fa-spin"></i> Affectation...
+              </span>
+              <span *ngIf="!isLoadingAffectationFinance">Affecter au Finance</span>
+            </button>
+          </div>
         </div>
 
         <!-- Audiences for this dossier -->
@@ -573,6 +588,19 @@
           <div class="form-actions">
             <button type="button" class="btn btn-secondary" (click)="cancelAudienceForm()">
               <i class="fas fa-times"></i> {{ isViewMode ? 'Fermer' : 'Annuler' }}
+            </button>
+            <!-- Bouton Affecter au Finance (visible si dossier a au moins une audience, indépendamment de l'étape) -->
+            <button 
+              *ngIf="selectedDossier && canAffecterAuFinance(selectedDossier)"
+              type="button" 
+              class="btn btn-success"
+              (click)="affecterAuFinance()"
+              [disabled]="isLoadingAffectationFinance">
+              <i class="fas fa-money-bill-wave"></i> 
+              <span *ngIf="isLoadingAffectationFinance">
+                <i class="fas fa-spinner fa-spin"></i> Affectation...
+              </span>
+              <span *ngIf="!isLoadingAffectationFinance">Affecter au Finance</span>
             </button>
             <button *ngIf="!isViewMode" type="submit" class="btn btn-primary" [disabled]="audienceForm.invalid">
               <i class="fas" [class.fa-check]="!isEditMode" [class.fa-save]="isEditMode"></i>

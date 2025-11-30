@@ -43,6 +43,7 @@ export class GestionAudiencesComponent implements OnInit, OnDestroy {
   dossierActions: ActionHuissier[] = [];
   isLoadingDocuments: boolean = false;
   isLoadingActions: boolean = false;
+  isLoadingAffectationFinance: boolean = false;
   tribunalTypes = TribunalType;
   decisionResults = DecisionResult;
   
@@ -927,5 +928,87 @@ export class GestionAudiencesComponent implements OnInit, OnDestroy {
       hour: '2-digit',
       minute: '2-digit'
     });
+  }
+
+  /**
+   * Vérifie si un dossier peut être affecté au finance
+   * Conditions : le dossier doit avoir au moins une action OU une audience
+   * INDÉPENDAMMENT de l'étape (documents, actions, audiences)
+   * 
+   * "Indépendamment de l'étape" signifie que peu importe où se trouve le dossier
+   * dans le workflow huissier (EN_ATTENTE_DOCUMENTS, EN_DOCUMENTS, EN_ACTIONS, EN_AUDIENCES),
+   * tant qu'il a au moins une action OU une audience, il peut être affecté au finance.
+   */
+  canAffecterAuFinance(dossier: DossierApi): boolean {
+    if (!dossier || !dossier.id) return false;
+    
+    // Vérifier si le dossier a au moins une action (si c'est le dossier sélectionné)
+    const hasActions = this.selectedDossier?.id === dossier.id 
+      ? this.dossierActions.length > 0 
+      : false; // Pour les autres dossiers, on ne charge pas les actions (optimisation)
+    
+    // Vérifier si le dossier a au moins une audience
+    const dossierAudiences = this.getAudiencesForDossier(dossier.id);
+    const hasAudiences = dossierAudiences.length > 0;
+    
+    // Le dossier peut être affecté s'il a au moins une action OU une audience
+    return hasActions || hasAudiences;
+  }
+
+  /**
+   * Affecte un dossier au département finance
+   */
+  affecterAuFinance(): void {
+    if (!this.selectedDossier || !this.selectedDossier.id) {
+      this.toastService.error('Aucun dossier sélectionné');
+      return;
+    }
+
+    if (!this.canAffecterAuFinance(this.selectedDossier)) {
+      this.toastService.error('Ce dossier doit avoir au moins une action ou une audience pour être affecté au finance');
+      return;
+    }
+
+    const message = `Êtes-vous sûr de vouloir affecter ce dossier au département finance ?\n\n` +
+                    `Dossier: ${this.selectedDossier.numeroDossier || 'N/A'}\n` +
+                    `Créancier: ${this.getCreancierName(this.selectedDossier)}\n` +
+                    `Montant: ${this.selectedDossier.montantCreance || 0} TND\n\n` +
+                    `Cette action transférera le dossier au chef financier avec toutes les informations (documents, actions, audiences).`;
+
+    if (!confirm(message)) {
+      return;
+    }
+
+    this.isLoadingAffectationFinance = true;
+    this.dossierApiService.affecterAuFinance(this.selectedDossier.id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (dossierUpdated) => {
+          console.log('✅ Dossier affecté au finance:', dossierUpdated);
+          this.toastService.success('Dossier affecté au département finance avec succès');
+          this.isLoadingAffectationFinance = false;
+          
+          // Mettre à jour le dossier dans la liste
+          const index = this.dossiers.findIndex(d => d.id === dossierUpdated.id);
+          if (index !== -1) {
+            this.dossiers[index] = dossierUpdated;
+            this.filteredDossiers = [...this.dossiers];
+          }
+          
+          // Fermer le modal si ouvert
+          if (this.showAudienceForm) {
+            this.cancelAudienceForm();
+          }
+          
+          // Recharger les dossiers pour mettre à jour la liste
+          this.loadData();
+        },
+        error: (error) => {
+          console.error('❌ Erreur lors de l\'affectation au finance:', error);
+          this.isLoadingAffectationFinance = false;
+          const errorMessage = error.message || 'Erreur lors de l\'affectation au finance';
+          this.toastService.error(errorMessage);
+        }
+      });
   }
 }
