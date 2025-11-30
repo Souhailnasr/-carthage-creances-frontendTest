@@ -31,6 +31,7 @@ export interface ActionHuissierDTO {
   montantRestant?: number;
   etatDossier?: string;
   pieceJointeUrl?: string;
+  pieceJointe?: File;  // Pour l'upload de fichier
   updateMode?: 'ADD' | 'SET';  // Pour la mise à jour des montants
 }
 

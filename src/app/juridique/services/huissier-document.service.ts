@@ -108,6 +108,77 @@ export class HuissierDocumentService {
       );
   }
 
+  /**
+   * Récupère les dossiers à l'étape documents
+   * GET /api/dossiers/huissier/documents
+   */
+  getDossiersEnDocuments(page: number = 0, size: number = 100): Observable<any> {
+    const params = new HttpParams()
+      .set('page', page.toString())
+      .set('size', size.toString());
+    return this.http.get<any>(`${environment.apiUrl}/api/dossiers/huissier/documents`, { params })
+      .pipe(
+        catchError(this.handleError)
+      );
+  }
+
+  /**
+   * Crée un document avec upload de fichier
+   * POST /api/huissier/document (avec FormData)
+   */
+  createDocumentWithFile(dto: DocumentHuissierDTO, file?: File): Observable<DocumentHuissier> {
+    const formData = new FormData();
+    
+    // Ajouter les champs du DTO
+    formData.append('dossierId', dto.dossierId.toString());
+    formData.append('typeDocument', dto.typeDocument);
+    formData.append('huissierName', dto.huissierName);
+    
+    // Ajouter le fichier si présent
+    if (file) {
+      formData.append('pieceJointe', file);
+    }
+    
+    return this.http.post<DocumentHuissier>(`${this.apiUrl}/document`, formData)
+      .pipe(
+        catchError(this.handleError)
+      );
+  }
+
+  /**
+   * Met à jour un document avec upload de fichier
+   * PUT /api/huissier/document/{id} (avec FormData)
+   */
+  updateDocumentWithFile(id: number, dto: DocumentHuissierDTO, file?: File): Observable<DocumentHuissier> {
+    const formData = new FormData();
+    
+    // Ajouter les champs du DTO
+    formData.append('dossierId', dto.dossierId.toString());
+    formData.append('typeDocument', dto.typeDocument);
+    formData.append('huissierName', dto.huissierName);
+    
+    // Ajouter le fichier si présent
+    if (file) {
+      formData.append('pieceJointe', file);
+    }
+    
+    return this.http.put<DocumentHuissier>(`${this.apiUrl}/document/${id}`, formData)
+      .pipe(
+        catchError(this.handleError)
+      );
+  }
+
+  /**
+   * Transition : Passer aux actions
+   * POST /api/dossiers/{dossierId}/huissier/passer-aux-actions
+   */
+  passerAuxActions(dossierId: number): Observable<any> {
+    return this.http.post<any>(`${environment.apiUrl}/api/dossiers/${dossierId}/huissier/passer-aux-actions`, {})
+      .pipe(
+        catchError(this.handleError)
+      );
+  }
+
   private handleError(error: any): Observable<never> {
     console.error('Erreur dans HuissierDocumentService:', error);
     let errorMessage = 'Une erreur est survenue';

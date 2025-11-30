@@ -69,6 +69,114 @@ export class HuissierActionService {
       );
   }
 
+  /**
+   * Récupère les dossiers à l'étape actions
+   * GET /api/dossiers/huissier/actions
+   */
+  getDossiersEnActions(page: number = 0, size: number = 100): Observable<any> {
+    const params = new HttpParams()
+      .set('page', page.toString())
+      .set('size', size.toString());
+    return this.http.get<any>(`${environment.apiUrl}/api/dossiers/huissier/actions`, { params })
+      .pipe(
+        catchError(this.handleError)
+      );
+  }
+
+  /**
+   * Crée une action avec upload de fichier
+   * POST /api/huissier/action (avec FormData)
+   */
+  createActionWithFile(dto: ActionHuissierDTO, file?: File): Observable<ActionHuissier> {
+    const formData = new FormData();
+    
+    // Ajouter les champs du DTO
+    formData.append('dossierId', dto.dossierId.toString());
+    formData.append('typeAction', dto.typeAction);
+    formData.append('huissierName', dto.huissierName);
+    
+    if (dto.montantRecouvre !== undefined) {
+      formData.append('montantRecouvre', dto.montantRecouvre.toString());
+    }
+    if (dto.montantRestant !== undefined) {
+      formData.append('montantRestant', dto.montantRestant.toString());
+    }
+    if (dto.etatDossier) {
+      formData.append('etatDossier', dto.etatDossier);
+    }
+    if (dto.updateMode) {
+      formData.append('updateMode', dto.updateMode);
+    }
+    
+    // Ajouter le fichier si présent
+    if (file) {
+      formData.append('pieceJointe', file);
+    }
+    
+    return this.http.post<ActionHuissier>(`${this.apiUrl}/action`, formData)
+      .pipe(
+        catchError(this.handleError)
+      );
+  }
+
+  /**
+   * Met à jour une action avec upload de fichier
+   * PUT /api/huissier/action/{id} (avec FormData)
+   */
+  updateActionWithFile(id: number, dto: ActionHuissierDTO, file?: File): Observable<ActionHuissier> {
+    const formData = new FormData();
+    
+    // Ajouter les champs du DTO
+    formData.append('dossierId', dto.dossierId.toString());
+    formData.append('typeAction', dto.typeAction);
+    formData.append('huissierName', dto.huissierName);
+    
+    if (dto.montantRecouvre !== undefined) {
+      formData.append('montantRecouvre', dto.montantRecouvre.toString());
+    }
+    if (dto.montantRestant !== undefined) {
+      formData.append('montantRestant', dto.montantRestant.toString());
+    }
+    if (dto.etatDossier) {
+      formData.append('etatDossier', dto.etatDossier);
+    }
+    if (dto.updateMode) {
+      formData.append('updateMode', dto.updateMode);
+    }
+    
+    // Ajouter le fichier si présent
+    if (file) {
+      formData.append('pieceJointe', file);
+    }
+    
+    return this.http.put<ActionHuissier>(`${this.apiUrl}/action/${id}`, formData)
+      .pipe(
+        catchError(this.handleError)
+      );
+  }
+
+  /**
+   * Transition : Passer aux audiences
+   * POST /api/dossiers/{dossierId}/huissier/passer-aux-audiences
+   */
+  passerAuxAudiences(dossierId: number): Observable<any> {
+    return this.http.post<any>(`${environment.apiUrl}/api/dossiers/${dossierId}/huissier/passer-aux-audiences`, {})
+      .pipe(
+        catchError(this.handleError)
+      );
+  }
+
+  /**
+   * Récupère les documents d'un dossier (pour l'interface actions)
+   * GET /api/dossiers/{dossierId}/huissier/documents
+   */
+  getDocumentsByDossier(dossierId: number): Observable<any[]> {
+    return this.http.get<any[]>(`${environment.apiUrl}/api/dossiers/${dossierId}/huissier/documents`)
+      .pipe(
+        catchError(this.handleError)
+      );
+  }
+
   private handleError(error: any): Observable<never> {
     console.error('Erreur dans HuissierActionService:', error);
     let errorMessage = 'Une erreur est survenue';

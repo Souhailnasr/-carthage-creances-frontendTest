@@ -11,6 +11,10 @@ import { Avocat } from '../../models/avocat.model';
 import { Huissier } from '../../models/huissier.model';
 import { Audience, TribunalType, DecisionResult } from '../../models/audience.model';
 import { ToastService } from '../../../core/services/toast.service';
+import { HuissierDocumentService } from '../../services/huissier-document.service';
+import { HuissierActionService } from '../../services/huissier-action.service';
+import { DocumentHuissier } from '../../models/huissier-document.model';
+import { ActionHuissier } from '../../models/huissier-action.model';
 
 @Component({
   selector: 'app-gestion-audiences',
@@ -33,6 +37,12 @@ export class GestionAudiencesComponent implements OnInit, OnDestroy {
   isEditMode: boolean = false;
   isViewMode: boolean = false;
   audienceForm!: FormGroup;
+  
+  // Documents et actions du dossier sélectionné
+  dossierDocuments: DocumentHuissier[] = [];
+  dossierActions: ActionHuissier[] = [];
+  isLoadingDocuments: boolean = false;
+  isLoadingActions: boolean = false;
   tribunalTypes = TribunalType;
   decisionResults = DecisionResult;
   
@@ -58,7 +68,9 @@ export class GestionAudiencesComponent implements OnInit, OnDestroy {
     private huissierService: HuissierService,
     private audienceService: AudienceService,
     private fb: FormBuilder,
-    private toastService: ToastService
+    private toastService: ToastService,
+    private documentService: HuissierDocumentService,
+    private actionService: HuissierActionService
   ) {}
 
   ngOnInit(): void {
@@ -360,6 +372,12 @@ export class GestionAudiencesComponent implements OnInit, OnDestroy {
     this.showAudienceForm = true;
     this.audienceForm.reset();
     
+    // Charger les documents et actions du dossier
+    if (dossier.id) {
+      this.loadDossierDocuments(dossier.id);
+      this.loadDossierActions(dossier.id);
+    }
+    
     // Pré-remplir avec l'avocat/huissier du dossier si disponible
     const avocatId = dossier.avocat?.id ? dossier.avocat.id : null;
     const huissierId = dossier.huissier?.id ? dossier.huissier.id : null;
@@ -463,6 +481,8 @@ export class GestionAudiencesComponent implements OnInit, OnDestroy {
     this.isViewMode = false;
     this.audienceForm.reset();
     this.audienceForm.enable(); // Réactiver le formulaire
+    this.dossierDocuments = [];
+    this.dossierActions = [];
   }
 
   deleteAudience(audience: Audience): void {
@@ -829,5 +849,83 @@ export class GestionAudiencesComponent implements OnInit, OnDestroy {
     } else {
       this.toastService.warning('Dossier associé non trouvé pour cette audience');
     }
+  }
+
+  /**
+   * Charge les documents huissier d'un dossier
+   */
+  loadDossierDocuments(dossierId: number): void {
+    this.isLoadingDocuments = true;
+    this.documentService.getDocumentsByDossier(dossierId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (documents) => {
+          this.dossierDocuments = documents;
+          this.isLoadingDocuments = false;
+        },
+        error: (error) => {
+          console.error('Erreur lors du chargement des documents:', error);
+          this.isLoadingDocuments = false;
+        }
+      });
+  }
+
+  /**
+   * Charge les actions huissier d'un dossier
+   */
+  loadDossierActions(dossierId: number): void {
+    this.isLoadingActions = true;
+    this.actionService.getActionsByDossier(dossierId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (actions) => {
+          this.dossierActions = actions;
+          this.isLoadingActions = false;
+        },
+        error: (error) => {
+          console.error('Erreur lors du chargement des actions:', error);
+          this.isLoadingActions = false;
+        }
+      });
+  }
+
+  /**
+   * Formate le type de document pour l'affichage
+   */
+  getDocumentTypeLabel(type: string): string {
+    const labels: { [key: string]: string } = {
+      'PV_MISE_EN_DEMEURE': 'PV Mise en Demeure',
+      'ORDONNANCE_PAIEMENT': 'Ordonnance de Paiement',
+      'PV_NOTIFICATION_ORDONNANCE': 'PV Notification Ordonnance'
+    };
+    return labels[type] || type;
+  }
+
+  /**
+   * Formate le type d'action pour l'affichage
+   */
+  getActionTypeLabel(type: string): string {
+    const labels: { [key: string]: string } = {
+      'ACLA_TA7AFOUDHIA': 'Saisie Conservatoire',
+      'ACLA_TANFITHIA': 'Saisie Exécutive',
+      'ACLA_TAW9IFIYA': 'Saisie de Blocage',
+      'ACLA_A9ARYA': 'Saisie Immobilière'
+    };
+    return labels[type] || type;
+  }
+
+  /**
+   * Formate une date pour l'affichage
+   */
+  formatDate(dateString?: string): string {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('fr-FR', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   }
 }

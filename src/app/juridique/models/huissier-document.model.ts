@@ -27,5 +27,6 @@ export interface DocumentHuissierDTO {
   typeDocument: TypeDocumentHuissier;
   huissierName: string;
   pieceJointeUrl?: string;
+  pieceJointe?: File;  // Pour l'upload de fichier
 }
 

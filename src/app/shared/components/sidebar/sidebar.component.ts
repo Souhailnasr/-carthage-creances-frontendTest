@@ -369,8 +369,22 @@ export class SidebarComponent implements OnInit, OnDestroy {
     {
       label: 'Gestion Huissier',
       icon: 'fas fa-file-contract',
-      route: '/juridique/gestion-huissier',
-      roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE]
+      route: '/juridique/huissier/documents',
+      roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE],
+      children: [
+        {
+          label: 'Documents Huissier',
+          icon: 'fas fa-file-alt',
+          route: '/juridique/huissier/documents',
+          roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE]
+        },
+        {
+          label: 'Actions Huissier',
+          icon: 'fas fa-gavel',
+          route: '/juridique/huissier/actions',
+          roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE]
+        }
+      ]
     },
     {
       label: 'Gestion des Audiences',

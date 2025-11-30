@@ -375,6 +375,71 @@
                 <span>Aucun avocat ni huissier n'est actuellement affecté à ce dossier.</span>
               </div>
             </div>
+            
+            <!-- Section Documents Huissier -->
+            <div class="info-section">
+              <h4><i class="fas fa-file-alt"></i> Documents Huissier</h4>
+              <div *ngIf="isLoadingDocuments" class="loading-state">
+                <i class="fas fa-spinner fa-spin"></i> Chargement des documents...
+              </div>
+              <div *ngIf="!isLoadingDocuments && dossierDocuments.length === 0" class="empty-state-small">
+                <i class="fas fa-file-alt"></i>
+                <p>Aucun document huissier trouvé pour ce dossier.</p>
+              </div>
+              <div *ngIf="!isLoadingDocuments && dossierDocuments.length > 0" class="documents-list">
+                <div *ngFor="let document of dossierDocuments" class="document-item">
+                  <div class="document-info">
+                    <i class="fas fa-file-pdf"></i>
+                    <div>
+                      <strong>{{ getDocumentTypeLabel(document.typeDocument) }}</strong>
+                      <p class="document-meta">
+                        <span>Date: {{ formatDate(document.dateCreation) }}</span>
+                        <span class="badge" 
+                              [class.badge-warning]="document.status === 'PENDING'"
+                              [class.badge-danger]="document.status === 'EXPIRED'"
+                              [class.badge-success]="document.status === 'COMPLETED'">
+                          {{ document.status || 'N/A' }}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                  <a *ngIf="document.pieceJointeUrl" [href]="document.pieceJointeUrl" target="_blank" class="btn-link">
+                    <i class="fas fa-external-link-alt"></i>
+                  </a>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Section Actions Huissier -->
+            <div class="info-section">
+              <h4><i class="fas fa-gavel"></i> Actions Huissier</h4>
+              <div *ngIf="isLoadingActions" class="loading-state">
+                <i class="fas fa-spinner fa-spin"></i> Chargement des actions...
+              </div>
+              <div *ngIf="!isLoadingActions && dossierActions.length === 0" class="empty-state-small">
+                <i class="fas fa-gavel"></i>
+                <p>Aucune action huissier trouvée pour ce dossier.</p>
+              </div>
+              <div *ngIf="!isLoadingActions && dossierActions.length > 0" class="actions-list">
+                <div *ngFor="let action of dossierActions" class="action-item">
+                  <div class="action-info">
+                    <i class="fas fa-gavel"></i>
+                    <div>
+                      <strong>{{ getActionTypeLabel(action.typeAction) }}</strong>
+                      <p class="action-meta">
+                        <span>Date: {{ formatDate(action.dateAction) }}</span>
+                        <span *ngIf="action.montantRecouvre" class="amount">
+                          Montant: {{ action.montantRecouvre | number:'1.2-2' }} TND
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                  <a *ngIf="action.pieceJointeUrl" [href]="action.pieceJointeUrl" target="_blank" class="btn-link">
+                    <i class="fas fa-external-link-alt"></i>
+                  </a>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
