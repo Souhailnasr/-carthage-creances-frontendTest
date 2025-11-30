@@ -70,7 +70,35 @@ export class HuissierDocumentService {
   }
 
   /**
-   * Marque un document comme expiré
+   * Marque un document comme complété
+   * PUT /carthage-creance/api/huissier/document/{id}/complete
+   * 
+   * Contraintes :
+   * - Seulement si le statut est PENDING
+   * - Impossible si le statut est EXPIRED
+   * - Impossible si le statut est déjà COMPLETED
+   */
+  markDocumentAsCompleted(id: number): Observable<DocumentHuissier> {
+    const url = `${this.apiUrl}/document/${id}/complete`;
+    console.log('🔍 [markDocumentAsCompleted] URL complète:', url);
+    console.log('🔍 [markDocumentAsCompleted] apiUrl base:', this.apiUrl);
+    console.log('🔍 [markDocumentAsCompleted] environment.apiUrl:', environment.apiUrl);
+    console.log('🔍 [markDocumentAsCompleted] ID du document:', id);
+    
+    return this.http.put<DocumentHuissier>(url, {})
+      .pipe(
+        catchError((error) => {
+          console.error('❌ [markDocumentAsCompleted] Erreur HTTP:', error);
+          console.error('❌ [markDocumentAsCompleted] URL appelée:', url);
+          console.error('❌ [markDocumentAsCompleted] Status:', error.status);
+          console.error('❌ [markDocumentAsCompleted] Message:', error.message);
+          return this.handleError(error);
+        })
+      );
+  }
+
+  /**
+   * Marque un document comme expiré (utilisé par le scheduler, pas par l'utilisateur)
    * PUT /api/huissier/document/{id}/expire
    */
   markDocumentAsExpired(id: number): Observable<DocumentHuissier> {

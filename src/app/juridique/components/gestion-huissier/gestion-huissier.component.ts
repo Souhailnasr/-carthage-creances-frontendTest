@@ -406,6 +406,72 @@ export class GestionHuissierComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Marque un document comme complété
+   * Vérifie les contraintes avant d'appeler l'API
+   */
+  markDocumentAsCompleted(document: DocumentHuissier): void {
+    // Vérification côté client
+    if (document.status === StatutDocumentHuissier.EXPIRED) {
+      this.toastService.error('Impossible de marquer un document expiré comme complété. Le délai légal est dépassé.');
+      return;
+    }
+    
+    if (document.status === StatutDocumentHuissier.COMPLETED) {
+      this.toastService.warning('Ce document est déjà marqué comme complété.');
+      return;
+    }
+
+    if (!document.id) {
+      this.toastService.error('Document invalide');
+      return;
+    }
+
+    // Demander confirmation avec détails
+    const message = `Êtes-vous sûr de vouloir marquer ce document comme complété ?\n\n` +
+                    `Type: ${this.getDocumentTypeLabel(document.typeDocument)}\n` +
+                    `Date de création: ${this.formatDate(document.dateCreation)}\n` +
+                    `Huissier: ${document.huissierName}`;
+
+    if (!confirm(message)) {
+      return;
+    }
+
+    this.isLoading = true;
+    this.documentService.markDocumentAsCompleted(document.id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (updatedDocument) => {
+          console.log('Document marqué comme complété:', updatedDocument);
+          this.loadDocuments();
+          this.isLoading = false;
+          this.toastService.success('Document marqué comme complété avec succès');
+        },
+        error: (error) => {
+          console.error('Erreur lors du marquage du document:', error);
+          this.isLoading = false;
+          
+          // Gestion des erreurs spécifiques
+          if (error.status === 400) {
+            const errorMessage = error.error?.error || error.error?.message || 'Erreur lors du marquage du document';
+            this.toastService.error(errorMessage);
+          } else if (error.status === 404) {
+            this.toastService.error('Document non trouvé');
+          } else {
+            this.toastService.error('Erreur lors du marquage du document. Veuillez réessayer.');
+          }
+        }
+      });
+  }
+
+  /**
+   * Vérifie si un document peut être marqué comme complété
+   */
+  canMarkAsCompleted(document: DocumentHuissier): boolean {
+    // Seulement si le statut est PENDING
+    return document.status === StatutDocumentHuissier.PENDING;
+  }
+
+  /**
    * Crée ou met à jour une action
    */
   createAction(): void {

@@ -117,7 +117,8 @@
         <tbody>
           <tr *ngFor="let document of documents" 
               [class.table-warning]="isDocumentExpired(document) && document.status !== StatutDocumentHuissier.EXPIRED"
-              [class.table-danger]="document.status === StatutDocumentHuissier.EXPIRED">
+              [class.table-danger]="document.status === StatutDocumentHuissier.EXPIRED"
+              [class.table-success]="document.status === StatutDocumentHuissier.COMPLETED">
             <td>{{ getDocumentTypeLabel(document.typeDocument) }}</td>
             <td>{{ formatDate(document.dateCreation) }}</td>
             <td>{{ document.delaiLegalDays }} jours</td>
@@ -151,6 +152,30 @@
                         style="border-radius: 6px; padding: 0.4rem 0.8rem; margin-right: 0.25rem;">
                   <i class="fas fa-trash"></i>
                 </button>
+                <!-- Bouton pour marquer comme complété (seulement si PENDING) -->
+                <button class="btn btn-sm btn-success" 
+                        *ngIf="canMarkAsCompleted(document)"
+                        (click)="markDocumentAsCompleted(document)"
+                        [disabled]="isLoading"
+                        title="Marquer ce document comme complété"
+                        style="border-radius: 6px; padding: 0.4rem 0.8rem; margin-right: 0.25rem;">
+                  <i class="fas fa-check-circle"></i>
+                  <span class="d-none d-md-inline" style="margin-left: 0.25rem;">Compléter</span>
+                </button>
+                <!-- Message d'information pour EXPIRED -->
+                <span class="badge badge-danger" 
+                      *ngIf="document.status === StatutDocumentHuissier.EXPIRED"
+                      title="Ce document est expiré. Il ne peut pas être marqué comme complété."
+                      style="padding: 0.4rem 0.8rem; margin-right: 0.25rem;">
+                  <i class="fas fa-exclamation-triangle"></i> Expiré
+                </span>
+                <!-- Message de confirmation pour COMPLETED -->
+                <span class="badge badge-success" 
+                      *ngIf="document.status === StatutDocumentHuissier.COMPLETED"
+                      title="Ce document a été marqué comme complété."
+                      style="padding: 0.4rem 0.8rem; margin-right: 0.25rem;">
+                  <i class="fas fa-check"></i> Complété
+                </span>
                 <button class="btn btn-sm btn-secondary" 
                         *ngIf="document.pieceJointeUrl"
                         (click)="openDocument(document.pieceJointeUrl!)"
