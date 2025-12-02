@@ -3,7 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
-import { Facture, FactureStatut } from '../../shared/models/finance.models';
+import { Facture, FactureStatut, SoldeFactureDTO } from '../../shared/models/finance.models';
 
 @Injectable({
   providedIn: 'root'
@@ -103,6 +103,16 @@ export class FactureService {
   getFacturesEnRetard(): Observable<Facture[]> {
     return this.http.get<any[]>(`${this.apiUrl}/en-retard`).pipe(
       map(factures => factures.map(f => this.mapFactureFromBackend(f))),
+      catchError(this.handleError)
+    );
+  }
+
+  /**
+   * Calculer le solde restant d'une facture
+   * GET /api/factures/{factureId}/solde
+   */
+  getSoldeFacture(factureId: number): Observable<SoldeFactureDTO> {
+    return this.http.get<SoldeFactureDTO>(`${this.apiUrl}/${factureId}/solde`).pipe(
       catchError(this.handleError)
     );
   }

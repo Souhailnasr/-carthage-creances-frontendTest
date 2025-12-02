@@ -25,7 +25,7 @@ const routes: Routes = [
   },
   {
     path: 'paiements',
-    loadComponent: () => import('./components/paiements-gestion/paiements-gestion.component').then(m => m.PaiementsGestionComponent),
+    loadComponent: () => import('./components/paiements-list/paiements-list.component').then(m => m.PaiementsListComponent),
     canActivate: [AuthGuard],
     data: { allowedRoles: [Role.CHEF_DEPARTEMENT_FINANCE, Role.AGENT_FINANCE, Role.SUPER_ADMIN] }
   },

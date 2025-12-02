@@ -2,14 +2,77 @@
   <div class="header">
     <h1>Gestion des Paiements</h1>
     <p *ngIf="factureId">Facture ID: {{ factureId }}</p>
+    <div *ngIf="!factureId" class="header-actions">
+      <button mat-raised-button color="primary" [routerLink]="['/finance/factures']">
+        <mat-icon>receipt</mat-icon>
+        Voir les Factures
+      </button>
+    </div>
   </div>
 
-  <!-- Total des Paiements -->
-  <mat-card class="total-card" *ngIf="factureId">
+  <!-- Indicateur de chargement -->
+  <div *ngIf="loading" class="loading-overlay">
+    <mat-spinner diameter="50"></mat-spinner>
+    <p>Chargement...</p>
+  </div>
+
+  <!-- Informations Facture et Paiements -->
+  <mat-card class="total-card" *ngIf="factureId && facture">
     <mat-card-content>
-      <div class="total-info">
-        <h2>Total des Paiements</h2>
-        <p class="total-amount">{{ totalPaiements | number:'1.2-2' }} TND</p>
+      <div class="facture-info">
+        <h2>Informations Facture</h2>
+        <div class="info-grid">
+          <div class="info-item">
+            <span class="label">Numéro Facture:</span>
+            <span class="value">{{ facture.numeroFacture }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Montant TTC:</span>
+            <span class="value amount-total">{{ facture.montantTTC | number:'1.2-2' }} TND</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Total Payé:</span>
+            <span class="value amount-paid">{{ totalPaiements | number:'1.2-2' }} TND</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Montant Restant:</span>
+            <span class="value" [class.amount-remaining]="montantRestant > 0" [class.amount-zero]="montantRestant === 0">
+              {{ montantRestant | number:'1.2-2' }} TND
+            </span>
+          </div>
+          <div class="info-item">
+            <span class="label">Statut Facture:</span>
+            <mat-chip [color]="facture.statut === 'PAYEE' ? 'accent' : 'primary'">
+              {{ facture.statut }}
+            </mat-chip>
+          </div>
+        </div>
+        <!-- Section Clôture - Visible si facture entièrement payée -->
+        <div class="cloture-section" *ngIf="peutCloturer">
+          <div class="cloture-info">
+            <mat-icon class="success-icon">check_circle</mat-icon>
+            <span class="cloture-message">La facture est entièrement payée. Vous pouvez clôturer et archiver le dossier.</span>
+          </div>
+          <button 
+            mat-raised-button 
+            color="accent" 
+            (click)="cloturerEtArchiverDossier()"
+            [disabled]="loading"
+            class="btn-cloturer">
+            <mat-icon>archive</mat-icon>
+            Clôturer et Archiver le Dossier
+          </button>
+        </div>
+        <!-- Message informatif si facture non entièrement payée -->
+        <div class="info-section" *ngIf="factureId && facture && !peutCloturer && montantRestant > 0">
+          <div class="info-message">
+            <mat-icon class="info-icon">info</mat-icon>
+            <div class="info-text">
+              <strong>Facture non entièrement payée</strong>
+              <p>Il reste <strong>{{ montantRestant | number:'1.2-2' }} TND</strong> à payer. Le bouton "Clôturer et Archiver" apparaîtra automatiquement une fois la facture entièrement payée.</p>
+            </div>
+          </div>
+        </div>
       </div>
     </mat-card-content>
   </mat-card>
@@ -78,7 +141,35 @@
     <mat-card-content>
       <div *ngIf="paiements.length === 0" class="no-data">
         <mat-icon>payment</mat-icon>
-        <p>Aucun paiement enregistré</p>
+        <p><strong>Aucun paiement enregistré</strong></p>
+        <div class="help-text" *ngIf="!factureId">
+          <p class="help-title">💡 <strong>Comment enregistrer un paiement ?</strong></p>
+          <ol class="help-steps">
+            <li>Allez dans <strong>"Factures"</strong> pour voir les factures émises</li>
+            <li>Cliquez sur l'icône <mat-icon class="inline-icon">visibility</mat-icon> pour voir les détails d'une facture</li>
+            <li>Depuis le détail de la facture, cliquez sur <strong>"Gérer Paiements"</strong></li>
+            <li>Ou cliquez sur le bouton ci-dessus : <strong>"Voir les Factures"</strong></li>
+          </ol>
+          <div class="info-note">
+            <mat-icon>info</mat-icon>
+            <div>
+              <strong>Important</strong> : Les paiements ne sont <strong>pas créés automatiquement</strong> quand une facture est émise. 
+              Vous devez les enregistrer <strong>manuellement</strong> après réception du paiement du créancier 
+              (virement reçu, chèque encaissé, espèces reçues, etc.).
+            </div>
+          </div>
+        </div>
+        <div class="help-text" *ngIf="factureId">
+          <p class="help-title">💡 <strong>Pour enregistrer un paiement pour cette facture :</strong></p>
+          <p>Cliquez sur le bouton <strong>"Nouveau Paiement"</strong> ci-dessus.</p>
+          <div class="info-note">
+            <mat-icon>info</mat-icon>
+            <div>
+              <strong>Rappel</strong> : Enregistrez le paiement uniquement après avoir <strong>reçu</strong> le paiement 
+              du créancier (virement reçu, chèque encaissé, espèces reçues, etc.).
+            </div>
+          </div>
+        </div>
       </div>
 
       <table mat-table [dataSource]="paiements" *ngIf="paiements.length > 0" class="paiements-table">

@@ -93,6 +93,14 @@ export interface Paiement {
   commentaire?: string;
 }
 
+export interface SoldeFactureDTO {
+  factureId: number;
+  montantTTC: number;
+  totalPaiementsValides: number;
+  soldeRestant: number;
+  estEntierementPayee: boolean;
+}
+
 export enum ModePaiement {
   VIREMENT = 'VIREMENT',
   CHEQUE = 'CHEQUE',

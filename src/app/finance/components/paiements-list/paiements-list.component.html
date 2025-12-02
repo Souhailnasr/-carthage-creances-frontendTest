@@ -1,0 +1,90 @@
+<div class="paiements-list-container">
+  <div class="header">
+    <h1>Gestion des Paiements</h1>
+    <p class="subtitle">Vue d'ensemble de toutes les factures et leurs paiements</p>
+  </div>
+
+  <!-- Liste des Factures avec Paiements -->
+  <mat-card class="factures-card">
+    <mat-card-content>
+      <div *ngIf="loading" class="loading-container">
+        <mat-spinner diameter="50"></mat-spinner>
+        <p>Chargement des factures et paiements...</p>
+      </div>
+
+      <div *ngIf="!loading && facturesAvecPaiements.length === 0" class="no-data">
+        <mat-icon>receipt</mat-icon>
+        <p><strong>Aucune facture trouvée</strong></p>
+        <p class="help-text">Les factures apparaîtront ici une fois créées.</p>
+      </div>
+
+      <table mat-table [dataSource]="facturesAvecPaiements" *ngIf="!loading && facturesAvecPaiements.length > 0" class="factures-table">
+        <ng-container matColumnDef="numeroFacture">
+          <th mat-header-cell *matHeaderCellDef>Numéro Facture</th>
+          <td mat-cell *matCellDef="let item">{{ item.facture.numeroFacture }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="dossierId">
+          <th mat-header-cell *matHeaderCellDef>Dossier ID</th>
+          <td mat-cell *matCellDef="let item">
+            <span *ngIf="item.facture.dossierId; else noDossierId">{{ item.facture.dossierId }}</span>
+            <ng-template #noDossierId>
+              <span class="text-muted">N/A</span>
+            </ng-template>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="montantTTC">
+          <th mat-header-cell *matHeaderCellDef>Montant TTC</th>
+          <td mat-cell *matCellDef="let item" class="amount">{{ item.facture.montantTTC | number:'1.2-2' }} TND</td>
+        </ng-container>
+
+        <ng-container matColumnDef="totalPaye">
+          <th mat-header-cell *matHeaderCellDef>Total Payé</th>
+          <td mat-cell *matCellDef="let item" class="amount-paid">{{ item.totalPaye | number:'1.2-2' }} TND</td>
+        </ng-container>
+
+        <ng-container matColumnDef="soldeRestant">
+          <th mat-header-cell *matHeaderCellDef>Solde Restant</th>
+          <td mat-cell *matCellDef="let item" 
+              [class.amount-remaining]="item.soldeRestant > 0" 
+              [class.amount-zero]="item.soldeRestant === 0">
+            {{ item.soldeRestant | number:'1.2-2' }} TND
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="statut">
+          <th mat-header-cell *matHeaderCellDef>Statut</th>
+          <td mat-cell *matCellDef="let item">
+            <mat-chip [color]="getStatutColor(item.facture.statut)">
+              {{ getStatutLabel(item.facture.statut) }}
+            </mat-chip>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef>Actions</th>
+          <td mat-cell *matCellDef="let item">
+            <button 
+              mat-icon-button 
+              [routerLink]="['/finance/paiements/facture', item.facture.id]" 
+              matTooltip="Gérer les Paiements"
+              color="primary">
+              <mat-icon>payment</mat-icon>
+            </button>
+            <button 
+              mat-icon-button 
+              [routerLink]="['/finance/factures', item.facture.id]" 
+              matTooltip="Voir Détails Facture">
+              <mat-icon>visibility</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+      </table>
+    </mat-card-content>
+  </mat-card>
+</div>
+

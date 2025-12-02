@@ -1501,6 +1501,34 @@ export class DossierApiService {
       })
     );
   }
+
+  /**
+   * Vérifier si un dossier peut être clôturé
+   * GET /api/dossiers/{dossierId}/peut-etre-cloture
+   */
+  peutEtreCloture(dossierId: number): Observable<{ peutEtreCloture: boolean; raisons: string[]; factureId?: number; montantTTC?: number; totalPaiementsValides?: number; soldeRestant?: number; statutFacture?: string }> {
+    return this.http.get<any>(`${this.apiUrl}/${dossierId}/peut-etre-cloture`).pipe(
+      catchError((error) => {
+        console.error('❌ Erreur lors de la vérification:', error);
+        const errorMessage = error.error?.message || error.message || 'Erreur lors de la vérification';
+        return throwError(() => new Error(errorMessage));
+      })
+    );
+  }
+
+  /**
+   * Clôturer et archiver un dossier
+   * POST /api/dossiers/{dossierId}/cloturer-et-archiver
+   */
+  cloturerEtArchiverDossier(dossierId: number): Observable<{ dossierId: number; statut: string; dateCloture: string; archive: boolean; dateArchivage: string; message: string }> {
+    return this.http.post<any>(`${this.apiUrl}/${dossierId}/cloturer-et-archiver`, {}).pipe(
+      catchError((error) => {
+        console.error('❌ Erreur lors de la clôture:', error);
+        const errorMessage = error.error?.message || error.message || 'Erreur lors de la clôture';
+        return throwError(() => new Error(errorMessage));
+      })
+    );
+  }
 }
 
 // Types exportés pour les appels avancés

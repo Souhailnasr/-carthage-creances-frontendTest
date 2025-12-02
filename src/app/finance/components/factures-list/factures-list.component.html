@@ -81,6 +81,14 @@
             </button>
             <button 
               mat-icon-button 
+              [routerLink]="['/finance/paiements/facture', facture.id]" 
+              *ngIf="facture.statut === 'EMISE' || facture.statut === 'PAYEE'"
+              matTooltip="Gérer Paiements"
+              color="accent">
+              <mat-icon>payment</mat-icon>
+            </button>
+            <button 
+              mat-icon-button 
               (click)="finaliserFacture(facture.id!)" 
               *ngIf="facture.statut === 'BROUILLON'"
               matTooltip="Finaliser">
