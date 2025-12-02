@@ -1,0 +1,112 @@
+<div class="phase-enquete">
+  <h3>Phase Enquête</h3>
+  
+  <!-- Enquête précontentieuse (fixe) -->
+  <div class="traitement-fixe" *ngIf="enquetePrecontentieuse">
+    <div class="traitement-info">
+      <strong>Enquête Précontentieuse</strong>
+      <span class="frais-fixe">300 TND (Fixe - Annexé)</span>
+    </div>
+    <div class="statut-badge" [ngClass]="getStatutClass(enquetePrecontentieuse.statut)">
+      {{ enquetePrecontentieuse.statut }}
+    </div>
+    <button *ngIf="enquetePrecontentieuse.statut === 'EN_ATTENTE_TARIF' || (enquetePrecontentieuse.tarifExistant?.statut === 'EN_ATTENTE_VALIDATION')" 
+            mat-raised-button
+            color="primary"
+            (click)="enquetePrecontentieuse.tarifExistant ? validerTarif(enquetePrecontentieuse.tarifExistant) : validerTarifFixe(enquetePrecontentieuse)"
+            [disabled]="isLoading">
+      <mat-icon>check</mat-icon>
+      Valider
+    </button>
+  </div>
+  
+  <!-- Traitements possibles -->
+  <div class="traitements-possibles">
+    <h4>Traitements Additionnels</h4>
+    <div *ngFor="let traitement of traitementsPossibles" class="traitement-item">
+      <div class="checkbox-container">
+        <mat-checkbox 
+          [id]="'traitement-' + traitement.type"
+          [(ngModel)]="traitement.selected"
+          (change)="onTraitementToggle(traitement, $event.checked)"
+          [disabled]="!!traitement.tarifExistant">
+          <label [for]="'traitement-' + traitement.type">
+            {{ traitement.libelle }}
+          </label>
+        </mat-checkbox>
+      </div>
+      
+      <!-- Formulaire si coché et pas de tarif existant -->
+      <div *ngIf="traitement.selected && !traitement.tarifExistant" class="tarif-form">
+        <div class="form-row">
+          <mat-form-field appearance="outline">
+            <mat-label>Coût unitaire (TND) *</mat-label>
+            <input matInput 
+                   type="number" 
+                   [(ngModel)]="traitement.coutUnitaire"
+                   min="0"
+                   step="0.01"
+                   required>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Quantité</mat-label>
+            <input matInput 
+                   type="number" 
+                   [(ngModel)]="traitement.quantite"
+                   min="1"
+                   value="1">
+          </mat-form-field>
+        </div>
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Commentaire</mat-label>
+          <textarea matInput 
+                    [(ngModel)]="traitement.commentaire" 
+                    rows="2"></textarea>
+        </mat-form-field>
+        <button mat-raised-button 
+                color="primary"
+                (click)="ajouterTarif(traitement)"
+                [disabled]="isLoading || !traitement.coutUnitaire || traitement.coutUnitaire <= 0">
+          <mat-icon>add</mat-icon>
+          Ajouter Tarif
+        </button>
+      </div>
+      
+      <!-- Tarif existant -->
+      <div *ngIf="traitement.tarifExistant" class="tarif-existant">
+        <div class="tarif-info">
+          <span class="tarif-type">{{ traitement.tarifExistant.typeElement }}</span>
+          <span class="tarif-montant">
+            {{ traitement.tarifExistant.coutUnitaire }} TND × {{ traitement.tarifExistant.quantite }} = 
+            <strong>{{ traitement.tarifExistant.montantTotal }} TND</strong>
+          </span>
+        </div>
+        <div class="statut-badge" [ngClass]="getStatutClass(traitement.tarifExistant.statut)">
+          {{ traitement.tarifExistant.statut }}
+        </div>
+        <div class="actions" *ngIf="traitement.tarifExistant.statut === 'EN_ATTENTE_VALIDATION'">
+          <button mat-raised-button
+                  color="primary"
+                  (click)="validerTarif(traitement.tarifExistant)"
+                  [disabled]="isLoading">
+            <mat-icon>check</mat-icon>
+            Valider
+          </button>
+          <button mat-raised-button
+                  color="warn"
+                  (click)="ouvrirModalRejet(traitement.tarifExistant)"
+                  [disabled]="isLoading">
+            <mat-icon>close</mat-icon>
+            Rejeter
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Total phase enquête -->
+  <div class="total-phase">
+    <strong>Total Phase Enquête : {{ totalPhaseEnquete.toFixed(2) }} TND</strong>
+  </div>
+</div>
+

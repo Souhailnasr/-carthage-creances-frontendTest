@@ -3,35 +3,18 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
+import { 
+  DetailFacture as DetailFactureModel, 
+  Finance,
+  TarifDossierDTO,
+  TarifDossierRequest,
+  TraitementsDossierDTO,
+  ValidationEtatDTO,
+  FactureDetailDTO,
+  PhaseFrais
+} from '../../shared/models/finance.models';
 
-export interface Finance {
-  id?: number;
-  devise: string;
-  dateOperation: Date | string;
-  description: string;
-  fraisAvocat?: number;
-  fraisHuissier?: number;
-  fraisCreationDossier: number;
-  fraisGestionDossier: number;
-  dureeGestionMois: number;
-  coutActionsAmiable: number;
-  coutActionsJuridique: number;
-  nombreActionsAmiable: number;
-  nombreActionsJuridique: number;
-  factureFinalisee: boolean;
-  dateFacturation?: Date | string;
-  dossier: { id: number };
-}
-
-export interface DetailFacture {
-  fraisCreationDossier: number;
-  coutGestionTotal: number;
-  coutActionsAmiable: number;
-  coutActionsJuridique: number;
-  fraisAvocat: number;
-  fraisHuissier: number;
-  totalFacture: number;
-}
+// DetailFacture est maintenant importé de finance.models.ts
 
 export interface StatistiquesCouts {
   totalFraisCreation: number;
@@ -41,6 +24,18 @@ export interface StatistiquesCouts {
   totalAvocat: number;
   totalHuissier: number;
   grandTotal: number;
+  // Nouvelles statistiques
+  tauxReussiteRecouvrement?: number; // Taux de réussite de recouvrement (%)
+  nombreDossiersEnquete?: number; // Nombre de dossiers en phase d'enquête
+  nombreDossiersAmiable?: number; // Nombre de dossiers en phase amiable
+  nombreDossiersJuridique?: number; // Nombre de dossiers en phase juridique
+  nombreDossiersTotal?: number; // Nombre total de dossiers
+  nombreDossiersClotures?: number; // Nombre de dossiers clôturés
+  montantTotalRecouvre?: number; // Montant total récupéré
+  montantTotalEnCours?: number; // Montant total en cours
+  nombreFacturesEmises?: number; // Nombre de factures émises
+  nombreFacturesPayees?: number; // Nombre de factures payées
+  montantFacturesEnAttente?: number; // Montant des factures en attente
 }
 
 export interface ActionFinance {
@@ -75,11 +70,17 @@ export class FinanceService {
    */
   getFinanceByDossier(dossierId: number): Observable<Finance> {
     return this.http.get<Finance>(`${this.apiUrl}/dossier/${dossierId}`).pipe(
-      map(finance => ({
-        ...finance,
-        dateOperation: finance.dateOperation ? new Date(finance.dateOperation) : new Date(),
-        dateFacturation: finance.dateFacturation ? new Date(finance.dateFacturation) : undefined
-      })),
+      map((finance: any) => {
+        // ✅ Le backend retourne maintenant directement dossierId et numeroDossier
+        // Plus besoin de mapping complexe, juste convertir les dates
+        
+        return {
+          ...finance,
+          // dossierId et numeroDossier sont déjà présents dans la réponse du backend
+          dateOperation: finance.dateOperation ? new Date(finance.dateOperation) : new Date(),
+          dateFacturation: finance.dateFacturation ? new Date(finance.dateFacturation) : undefined
+        } as Finance;
+      }),
       catchError((error) => {
         console.error('❌ Erreur lors de la récupération de Finance:', error);
         const errorMessage = error.error?.message || error.message || 'Erreur lors de la récupération de Finance';
@@ -91,8 +92,8 @@ export class FinanceService {
   /**
    * Détail facture complète
    */
-  getDetailFacture(dossierId: number): Observable<DetailFacture> {
-    return this.http.get<DetailFacture>(`${this.apiUrl}/dossier/${dossierId}/facture`).pipe(
+  getDetailFacture(dossierId: number): Observable<DetailFactureModel> {
+    return this.http.get<DetailFactureModel>(`${this.apiUrl}/dossier/${dossierId}/detail-facture`).pipe(
       catchError((error) => {
         console.error('❌ Erreur lors de la récupération du détail facture:', error);
         const errorMessage = error.error?.message || error.message || 'Erreur lors de la récupération du détail facture';
@@ -155,6 +156,60 @@ export class FinanceService {
   }
 
   /**
+   * Statistiques étendues avec informations sur les dossiers par phase
+   * Cette méthode combine les statistiques de coûts avec les statistiques de dossiers
+   */
+  getStatistiquesEtendues(): Observable<StatistiquesCouts> {
+    // Récupérer les statistiques de coûts de base
+    return this.getStatistiquesCouts().pipe(
+      map((stats) => {
+        // Les statistiques étendues seront calculées côté client
+        // ou fournies par le backend si l'endpoint est disponible
+        // Pour l'instant, on retourne les stats de base avec des valeurs par défaut
+        return {
+          ...stats,
+          tauxReussiteRecouvrement: 0,
+          nombreDossiersEnquete: 0,
+          nombreDossiersAmiable: 0,
+          nombreDossiersJuridique: 0,
+          nombreDossiersTotal: 0,
+          nombreDossiersClotures: 0,
+          montantTotalRecouvre: 0,
+          montantTotalEnCours: 0,
+          nombreFacturesEmises: 0,
+          nombreFacturesPayees: 0,
+          montantFacturesEnAttente: 0
+        };
+      }),
+      catchError((error) => {
+        console.error('❌ Erreur lors de la récupération des statistiques étendues:', error);
+        // Retourner des statistiques vides en cas d'erreur
+        const emptyStats: StatistiquesCouts = {
+          totalFraisCreation: 0,
+          totalFraisGestion: 0,
+          totalActionsAmiable: 0,
+          totalActionsJuridique: 0,
+          totalAvocat: 0,
+          totalHuissier: 0,
+          grandTotal: 0,
+          tauxReussiteRecouvrement: 0,
+          nombreDossiersEnquete: 0,
+          nombreDossiersAmiable: 0,
+          nombreDossiersJuridique: 0,
+          nombreDossiersTotal: 0,
+          nombreDossiersClotures: 0,
+          montantTotalRecouvre: 0,
+          montantTotalEnCours: 0,
+          nombreFacturesEmises: 0,
+          nombreFacturesPayees: 0,
+          montantFacturesEnAttente: 0
+        };
+        return throwError(() => new Error('Erreur lors de la récupération des statistiques étendues'));
+      })
+    );
+  }
+
+  /**
    * Liste paginée des dossiers avec coûts
    */
   getDossiersAvecCouts(page: number = 0, size: number = 10, sort: string = 'dateOperation'): Observable<Page<Finance>> {
@@ -165,11 +220,25 @@ export class FinanceService {
     return this.http.get<Page<Finance>>(`${this.apiUrl}/dossiers-avec-couts`, { params }).pipe(
       map(page => ({
         ...page,
-        content: page.content.map(finance => ({
-          ...finance,
-          dateOperation: finance.dateOperation ? new Date(finance.dateOperation) : new Date(),
-          dateFacturation: finance.dateFacturation ? new Date(finance.dateFacturation) : undefined
-        }))
+        content: page.content.map((finance: any) => {
+          // ✅ Le backend retourne maintenant directement dossierId et numeroDossier dans le DTO
+          // Plus besoin de mapping complexe, juste convertir les dates
+          
+          // Debug: Log si dossierId est manquant (devrait être rare maintenant)
+          if (!finance.dossierId && finance.id) {
+            console.warn('⚠️ Finance sans dossierId:', {
+              financeId: finance.id,
+              rawData: finance
+            });
+          }
+          
+          return {
+            ...finance,
+            // dossierId et numeroDossier sont déjà présents dans la réponse du backend
+            dateOperation: finance.dateOperation ? new Date(finance.dateOperation) : new Date(),
+            dateFacturation: finance.dateFacturation ? new Date(finance.dateFacturation) : undefined
+          } as Finance;
+        })
       })),
       catchError((error) => {
         console.error('❌ Erreur lors de la récupération des dossiers avec coûts:', error);
@@ -184,11 +253,17 @@ export class FinanceService {
    */
   getFacturesEnAttente(): Observable<Finance[]> {
     return this.http.get<Finance[]>(`${this.apiUrl}/factures-en-attente`).pipe(
-      map(finances => finances.map(finance => ({
-        ...finance,
-        dateOperation: finance.dateOperation ? new Date(finance.dateOperation) : new Date(),
-        dateFacturation: finance.dateFacturation ? new Date(finance.dateFacturation) : undefined
-      }))),
+      map(finances => finances.map((finance: any) => {
+        // ✅ Le backend retourne maintenant directement dossierId et numeroDossier
+        // Plus besoin de mapping complexe, juste convertir les dates
+        
+        return {
+          ...finance,
+          // dossierId et numeroDossier sont déjà présents dans la réponse du backend
+          dateOperation: finance.dateOperation ? new Date(finance.dateOperation) : new Date(),
+          dateFacturation: finance.dateFacturation ? new Date(finance.dateFacturation) : undefined
+        } as Finance;
+      })),
       catchError((error) => {
         console.error('❌ Erreur lors de la récupération des factures en attente:', error);
         return throwError(() => new Error('Erreur lors de la récupération des factures en attente'));
@@ -484,6 +559,251 @@ export class FinanceService {
       catchError((error) => {
         console.error('❌ Erreur lors du marquage:', error);
         return throwError(() => new Error('Erreur lors du marquage'));
+      })
+    );
+  }
+
+  // ========== NOUVELLES MÉTHODES POUR GESTION TARIFS DOSSIER ==========
+
+  /**
+   * GET /api/finances/dossier/{dossierId}/traitements
+   * Récupérer tous les traitements d'un dossier organisés par phase
+   */
+  getTraitementsDossier(dossierId: number): Observable<TraitementsDossierDTO> {
+    return this.http.get<TraitementsDossierDTO>(`${this.apiUrl}/dossier/${dossierId}/traitements`).pipe(
+      map(traitements => {
+        // Convertir les dates string en Date objects
+        if (traitements.phaseCreation?.traitements) {
+          traitements.phaseCreation.traitements = traitements.phaseCreation.traitements.map(t => ({
+            ...t,
+            date: typeof t.date === 'string' ? new Date(t.date) : t.date
+          }));
+        }
+        if (traitements.phaseEnquete?.enquetePrecontentieuse) {
+          const ep = traitements.phaseEnquete.enquetePrecontentieuse;
+          ep.date = typeof ep.date === 'string' ? new Date(ep.date) : ep.date;
+        }
+        if (traitements.phaseAmiable?.actions) {
+          traitements.phaseAmiable.actions = traitements.phaseAmiable.actions.map(a => {
+            // Le backend retourne maintenant coutUnitaire selon la priorité :
+            // 1. Si tarif existe : tarif.getCoutUnitaire() (BigDecimal)
+            // 2. Sinon, si action.getCoutUnitaire() != null && > 0 : BigDecimal.valueOf(action.getCoutUnitaire())
+            // 3. Sinon : null
+            // Le backend fait déjà la conversion Double -> BigDecimal
+            // On s'assure juste que la conversion BigDecimal -> number est correcte
+            if (a.coutUnitaire != null) {
+              // Convertir en number si c'est un string ou autre type
+              a.coutUnitaire = typeof a.coutUnitaire === 'string' ? parseFloat(a.coutUnitaire) : Number(a.coutUnitaire);
+            } else if (a.tarifExistant?.coutUnitaire) {
+              // Fallback : utiliser celui du tarif si l'action n'en a pas
+              a.coutUnitaire = typeof a.tarifExistant.coutUnitaire === 'string' 
+                ? parseFloat(a.tarifExistant.coutUnitaire) 
+                : Number(a.tarifExistant.coutUnitaire);
+            }
+            return {
+              ...a,
+              date: typeof a.date === 'string' ? new Date(a.date) : a.date
+            };
+          });
+        }
+        if (traitements.phaseJuridique?.documentsHuissier) {
+          traitements.phaseJuridique.documentsHuissier = traitements.phaseJuridique.documentsHuissier.map(d => ({
+            ...d,
+            date: typeof d.date === 'string' ? new Date(d.date) : d.date
+          }));
+        }
+        if (traitements.phaseJuridique?.actionsHuissier) {
+          traitements.phaseJuridique.actionsHuissier = traitements.phaseJuridique.actionsHuissier.map(a => ({
+            ...a,
+            date: typeof a.date === 'string' ? new Date(a.date) : a.date
+          }));
+        }
+        if (traitements.phaseJuridique?.audiences) {
+          traitements.phaseJuridique.audiences = traitements.phaseJuridique.audiences.map(a => ({
+            ...a,
+            date: typeof a.date === 'string' ? new Date(a.date) : a.date
+          }));
+        }
+        return traitements;
+      }),
+      catchError((error) => {
+        console.error('❌ Erreur lors de la récupération des traitements:', error);
+        const errorMessage = error.error?.message || error.message || 'Erreur lors de la récupération des traitements';
+        return throwError(() => new Error(errorMessage));
+      })
+    );
+  }
+
+  /**
+   * POST /api/finances/dossier/{dossierId}/tarifs
+   * Ajouter un tarif pour un traitement
+   */
+  ajouterTarif(dossierId: number, tarif: TarifDossierRequest): Observable<TarifDossierDTO> {
+    // Mapper elementId vers le bon champ selon la phase et la catégorie
+    const requestBody: any = {
+      phase: tarif.phase,
+      categorie: tarif.categorie,
+      typeElement: tarif.typeElement,
+      coutUnitaire: tarif.coutUnitaire,
+      quantite: tarif.quantite || 1,
+      commentaire: tarif.commentaire
+    };
+
+    // Mapper elementId vers le champ spécifique attendu par le backend
+    if (tarif.elementId) {
+      if (tarif.phase === PhaseFrais.AMIABLE && tarif.categorie === 'ACTION_AMIABLE') {
+        requestBody.actionId = tarif.elementId;
+      } else if (tarif.phase === PhaseFrais.JURIDIQUE) {
+        if (tarif.categorie === 'DOCUMENT_HUISSIER') {
+          requestBody.documentHuissierId = tarif.elementId;
+        } else if (tarif.categorie === 'ACTION_HUISSIER') {
+          requestBody.actionHuissierId = tarif.elementId;
+        } else if (tarif.categorie === 'AUDIENCE' || tarif.categorie === 'HONORAIRES_AVOCAT') {
+          // Les honoraires d'avocat sont aussi liés à l'audience
+          requestBody.audienceId = tarif.elementId;
+        }
+      } else if (tarif.phase === PhaseFrais.ENQUETE && tarif.categorie === 'ENQUETE_PRECONTENTIEUSE') {
+        requestBody.enqueteId = tarif.elementId;
+      }
+    }
+
+    return this.http.post<TarifDossierDTO>(`${this.apiUrl}/dossier/${dossierId}/tarifs`, requestBody).pipe(
+      map(tarifDto => ({
+        ...tarifDto,
+        dateCreation: tarifDto.dateCreation ? new Date(tarifDto.dateCreation) : undefined,
+        dateValidation: tarifDto.dateValidation ? new Date(tarifDto.dateValidation) : undefined
+      })),
+      catchError((error) => {
+        console.error('❌ Erreur lors de l\'ajout du tarif:', error);
+        const errorMessage = error.error?.message || error.message || 'Erreur lors de l\'ajout du tarif';
+        return throwError(() => new Error(errorMessage));
+      })
+    );
+  }
+
+  /**
+   * POST /api/finances/tarifs/{tarifId}/valider
+   * Valider un tarif
+   */
+  validerTarif(tarifId: number, commentaire?: string): Observable<TarifDossierDTO> {
+    const body = commentaire ? { commentaire } : {};
+    return this.http.post<TarifDossierDTO>(`${this.apiUrl}/tarifs/${tarifId}/valider`, body).pipe(
+      map(tarifDto => ({
+        ...tarifDto,
+        dateCreation: tarifDto.dateCreation ? new Date(tarifDto.dateCreation) : undefined,
+        dateValidation: tarifDto.dateValidation ? new Date(tarifDto.dateValidation) : undefined
+      })),
+      catchError((error) => {
+        console.error('❌ Erreur lors de la validation du tarif:', error);
+        const errorMessage = error.error?.message || error.message || 'Erreur lors de la validation du tarif';
+        return throwError(() => new Error(errorMessage));
+      })
+    );
+  }
+
+  /**
+   * POST /api/finances/tarifs/{tarifId}/rejeter
+   * Rejeter un tarif
+   */
+  rejeterTarif(tarifId: number, commentaire: string): Observable<TarifDossierDTO> {
+    return this.http.post<TarifDossierDTO>(`${this.apiUrl}/tarifs/${tarifId}/rejeter`, { commentaire }).pipe(
+      map(tarifDto => ({
+        ...tarifDto,
+        dateCreation: tarifDto.dateCreation ? new Date(tarifDto.dateCreation) : undefined,
+        dateValidation: tarifDto.dateValidation ? new Date(tarifDto.dateValidation) : undefined
+      })),
+      catchError((error) => {
+        console.error('❌ Erreur lors du rejet du tarif:', error);
+        const errorMessage = error.error?.message || error.message || 'Erreur lors du rejet du tarif';
+        return throwError(() => new Error(errorMessage));
+      })
+    );
+  }
+
+  /**
+   * GET /api/finances/dossier/{dossierId}/validation-etat
+   * Récupérer l'état de validation des tarifs
+   */
+  getValidationEtat(dossierId: number): Observable<ValidationEtatDTO> {
+    return this.http.get<ValidationEtatDTO>(`${this.apiUrl}/dossier/${dossierId}/validation-etat`).pipe(
+      catchError((error) => {
+        console.error('❌ Erreur lors de la récupération de l\'état de validation:', error);
+        const errorMessage = error.error?.message || error.message || 'Erreur lors de la récupération de l\'état de validation';
+        return throwError(() => new Error(errorMessage));
+      })
+    );
+  }
+
+  /**
+   * POST /api/finances/dossier/{dossierId}/generer-facture
+   * Générer une facture avec calcul automatique
+   */
+  genererFacture(dossierId: number): Observable<FactureDetailDTO> {
+    return this.http.post<FactureDetailDTO>(`${this.apiUrl}/dossier/${dossierId}/generer-facture`, {}).pipe(
+      map(response => {
+        console.log('📊 Réponse backend complète:', response);
+        
+        // Vérifier que la réponse contient bien la structure attendue
+        if (!response) {
+          throw new Error('Réponse vide du serveur');
+        }
+        
+        // Si la réponse est directement une Facture (ancien format)
+        if (response.facture === undefined && (response as any).id) {
+          console.warn('⚠️ Format de réponse différent détecté, conversion...');
+          const facture = response as any;
+          return {
+            facture: {
+              id: facture.id,
+              numeroFacture: facture.numeroFacture || facture.numero || `FAC-${facture.id}`,
+              dateEmission: facture.dateEmission ? (typeof facture.dateEmission === 'string' ? new Date(facture.dateEmission) : facture.dateEmission) : new Date(),
+              dateEcheance: facture.dateEcheance ? (typeof facture.dateEcheance === 'string' ? new Date(facture.dateEcheance) : facture.dateEcheance) : undefined,
+              statut: facture.statut || 'EMISE',
+              montantHT: facture.montantHT || facture.montant || 0,
+              montantTTC: facture.montantTTC || facture.montantTotal || 0
+            },
+            detail: response.detail || {
+              fraisCreation: 0,
+              fraisEnquete: 0,
+              fraisAmiable: 0,
+              fraisJuridique: 0,
+              commissionsAmiable: 0,
+              commissionsJuridique: 0,
+              totalHT: facture.montantHT || facture.montant || 0,
+              tva: 0,
+              totalTTC: facture.montantTTC || facture.montantTotal || 0
+            }
+          } as FactureDetailDTO;
+        }
+        
+        // Format normal avec facture et detail
+        if (!response.facture) {
+          console.error('❌ Structure de réponse invalide:', response);
+          throw new Error('La réponse du serveur ne contient pas la propriété "facture"');
+        }
+        
+        return {
+          ...response,
+          facture: {
+            ...response.facture,
+            dateEmission: response.facture.dateEmission 
+              ? (typeof response.facture.dateEmission === 'string' 
+                ? new Date(response.facture.dateEmission) 
+                : response.facture.dateEmission)
+              : new Date(),
+            dateEcheance: response.facture.dateEcheance 
+              ? (typeof response.facture.dateEcheance === 'string' 
+                ? new Date(response.facture.dateEcheance) 
+                : response.facture.dateEcheance)
+              : undefined
+          }
+        };
+      }),
+      catchError((error) => {
+        console.error('❌ Erreur lors de la génération de la facture:', error);
+        console.error('❌ Détails de l\'erreur:', error.error);
+        const errorMessage = error.error?.message || error.message || 'Erreur lors de la génération de la facture';
+        return throwError(() => new Error(errorMessage));
       })
     );
   }

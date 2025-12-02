@@ -16,7 +16,8 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Subject, takeUntil } from 'rxjs';
-import { ChefFinanceService, TarifCatalogue } from '../../../core/services/chef-finance.service';
+import { TarifCatalogueService } from '../../../core/services/tarif-catalogue.service';
+import { TarifCatalogue, PhaseFrais } from '../../../shared/models/finance.models';
 
 @Component({
   selector: 'app-tarif-catalogue',
@@ -57,8 +58,10 @@ export class TarifCatalogueComponent implements OnInit, OnDestroy {
   
   private destroy$ = new Subject<void>();
 
+  phases = Object.values(PhaseFrais);
+
   constructor(
-    private financeService: ChefFinanceService,
+    private tarifService: TarifCatalogueService,
     private snackBar: MatSnackBar,
     private fb: FormBuilder,
     private dialog: MatDialog
@@ -90,7 +93,7 @@ export class TarifCatalogueComponent implements OnInit, OnDestroy {
 
   loadTarifs(): void {
     this.loading = true;
-    this.financeService.getTarifs().pipe(
+    this.tarifService.getAllTarifs().pipe(
       takeUntil(this.destroy$)
     ).subscribe({
       next: (tarifs) => {
@@ -144,9 +147,9 @@ export class TarifCatalogueComponent implements OnInit, OnDestroy {
       actif: true
     };
 
-    const operation = this.editingTarif
-      ? this.financeService.updateTarif(this.editingTarif.id, tarifData)
-      : this.financeService.createTarif(tarifData);
+    const operation = this.editingTarif && this.editingTarif.id
+      ? this.tarifService.updateTarif(this.editingTarif.id, tarifData)
+      : this.tarifService.createTarif(tarifData);
 
     operation.pipe(takeUntil(this.destroy$)).subscribe({
       next: () => {
@@ -168,7 +171,7 @@ export class TarifCatalogueComponent implements OnInit, OnDestroy {
   deleteTarif(tarifId: number): void {
     if (!confirm('Êtes-vous sûr de vouloir supprimer ce tarif ?')) return;
 
-    this.financeService.deleteTarif(tarifId).pipe(
+    this.tarifService.deleteTarif(tarifId).pipe(
       takeUntil(this.destroy$)
     ).subscribe({
       next: () => {
@@ -178,6 +181,39 @@ export class TarifCatalogueComponent implements OnInit, OnDestroy {
       error: (err) => {
         console.error('❌ Erreur:', err);
         this.snackBar.open('Erreur lors de la suppression', 'Fermer', { duration: 3000 });
+      }
+    });
+  }
+
+  desactiverTarif(tarifId: number): void {
+    if (!confirm('Êtes-vous sûr de vouloir désactiver ce tarif ?')) return;
+
+    this.tarifService.desactiverTarif(tarifId).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: () => {
+        this.snackBar.open('Tarif désactivé avec succès', 'Fermer', { duration: 3000 });
+        this.loadTarifs();
+      },
+      error: (err) => {
+        console.error('❌ Erreur:', err);
+        this.snackBar.open('Erreur lors de la désactivation', 'Fermer', { duration: 3000 });
+      }
+    });
+  }
+
+  voirHistorique(tarifId: number): void {
+    this.tarifService.getHistoriqueTarif(tarifId).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (historique) => {
+        console.log('Historique:', historique);
+        // Afficher dans un modal ou dialog
+        this.snackBar.open(`Historique chargé (${historique.length} versions)`, 'Fermer', { duration: 3000 });
+      },
+      error: (err) => {
+        console.error('❌ Erreur:', err);
+        this.snackBar.open('Erreur lors du chargement de l\'historique', 'Fermer', { duration: 3000 });
       }
     });
   }

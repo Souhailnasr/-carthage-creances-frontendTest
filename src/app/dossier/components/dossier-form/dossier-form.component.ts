@@ -66,42 +66,22 @@ export class DossierFormComponent implements OnInit {
     this.error = null;
     this.result = null;
 
-    // Vérifier si des fichiers sont sélectionnés
-    if (this.contratFile || this.pouvoirFile) {
-      this.createDossierWithFiles();
-    } else {
-      this.createDossierSimple();
-    }
-  }
-
-  private createDossierSimple(): void {
-    this.dossierService.createDossier(this.dossierData).subscribe({
-      next: (response) => {
-        this.result = response;
-        this.isLoading = false;
-        console.log('Dossier créé avec succès:', response);
-      },
-      error: (error) => {
-        this.error = 'Erreur lors de la création du dossier';
-        this.isLoading = false;
-        console.error('Erreur:', error);
-      }
-    });
-  }
-
-  private createDossierWithFiles(): void {
-    this.dossierService.createDossierWithFiles(
+    // ✅ NOUVEAU : Utiliser la méthode unifiée qui détecte automatiquement les fichiers
+    // Le service choisit automatiquement entre multipart (si fichiers) ou JSON (si pas de fichiers)
+    this.dossierService.createDossier(
       this.dossierData,
       this.contratFile || undefined,
-      this.pouvoirFile || undefined
+      this.pouvoirFile || undefined,
+      this.dossierData.isChef || false
     ).subscribe({
       next: (response) => {
         this.result = response;
         this.isLoading = false;
-        console.log('Dossier créé avec fichiers avec succès:', response);
+        const hasFiles = !!(this.contratFile || this.pouvoirFile);
+        console.log(`Dossier créé avec succès${hasFiles ? ' (avec fichiers)' : ''}:`, response);
       },
       error: (error) => {
-        this.error = 'Erreur lors de la création du dossier avec fichiers';
+        this.error = 'Erreur lors de la création du dossier';
         this.isLoading = false;
         console.error('Erreur:', error);
       }

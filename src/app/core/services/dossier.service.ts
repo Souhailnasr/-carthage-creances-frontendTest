@@ -12,20 +12,51 @@ export class DossierService {
   constructor(private http: HttpClient) { }
 
   /**
-   * Créer un dossier avec données JSON uniquement
+   * Créer un dossier - Détecte automatiquement si des fichiers sont présents
+   * 
+   * @param dossierData Données du dossier
+   * @param contratFile Fichier contrat (optionnel)
+   * @param pouvoirFile Fichier pouvoir (optionnel)
+   * @param isChef Indique si création en tant que chef (optionnel, défaut: false)
+   * @returns Observable du dossier créé
    */
-  createDossier(dossierData: any): Observable<any> {
+  createDossier(
+    dossierData: any,
+    contratFile?: File | null,
+    pouvoirFile?: File | null,
+    isChef: boolean = false
+  ): Observable<any> {
     // Ajouter le statut par défaut si non fourni
     const dataWithDefaults = {
       ...dossierData,
       dossierStatus: dossierData.dossierStatus || 'ENCOURSDETRAITEMENT'
     };
 
+    // Vérifier si des fichiers sont présents
+    const hasFiles = (contratFile && contratFile instanceof File) || 
+                     (pouvoirFile && pouvoirFile instanceof File);
+
+    if (hasFiles) {
+      // ✅ NOUVEAU : Utiliser multipart/form-data avec fichiers
+      return this.createDossierWithFiles(dataWithDefaults, contratFile || undefined, pouvoirFile || undefined, isChef);
+    } else {
+      // ✅ ANCIEN : Utiliser application/json sans fichiers (méthode existante)
+      return this.createDossierSimple(dataWithDefaults, isChef);
+    }
+  }
+
+  /**
+   * Créer un dossier avec données JSON uniquement
+   * ANCIEN - Garde la méthode existante qui fonctionne
+   */
+  private createDossierSimple(dossierData: any, isChef: boolean = false): Observable<any> {
     const headers = new HttpHeaders({
       'Content-Type': 'application/json'
     });
 
-    return this.http.post(`${this.baseUrl}/create`, dataWithDefaults, { headers })
+    const params = new HttpParams().set('isChef', String(isChef));
+
+    return this.http.post(`${this.baseUrl}/create`, dossierData, { headers, params })
       .pipe(
         catchError(error => {
           console.error('Erreur lors de la création du dossier:', error);
@@ -36,29 +67,33 @@ export class DossierService {
 
   /**
    * Créer un dossier avec fichiers (multipart/form-data)
+   * NOUVEAU - Utilisé automatiquement quand des fichiers sont présents
    */
-  createDossierWithFiles(dossierData: any, contratFile?: File, pouvoirFile?: File): Observable<any> {
-    // Ajouter le statut par défaut si non fourni
-    const dataWithDefaults = {
-      ...dossierData,
-      dossierStatus: dossierData.dossierStatus || 'ENCOURSDETRAITEMENT'
-    };
-
+  private createDossierWithFiles(
+    dossierData: any,
+    contratFile?: File,
+    pouvoirFile?: File,
+    isChef: boolean = false
+  ): Observable<any> {
     const formData = new FormData();
     
-    // Ajouter les données du dossier comme JSON string
-    formData.append('dossier', JSON.stringify(dataWithDefaults));
+    // 1. Ajouter le JSON du dossier (OBLIGATOIRE)
+    formData.append('dossier', JSON.stringify(dossierData));
     
-    // Ajouter les fichiers si fournis
-    if (contratFile) {
+    // 2. Ajouter les fichiers si présents (OPTIONNELS)
+    if (contratFile && contratFile instanceof File) {
       formData.append('contratSigne', contratFile);
     }
-    
-    if (pouvoirFile) {
+    if (pouvoirFile && pouvoirFile instanceof File) {
       formData.append('pouvoir', pouvoirFile);
     }
 
-    return this.http.post(`${this.baseUrl}/create`, formData)
+    // 3. Envoyer la requête multipart
+    // ⚠️ IMPORTANT : Ne PAS définir Content-Type manuellement
+    // Le navigateur ajoute automatiquement le Content-Type avec boundary
+    const params = new HttpParams().set('isChef', String(isChef));
+
+    return this.http.post(`${this.baseUrl}/create`, formData, { params })
       .pipe(
         catchError(error => {
           console.error('Erreur lors de la création du dossier avec fichiers:', error);

@@ -43,72 +43,106 @@ export class DossierApiService {
   // ==================== CRUD OPERATIONS ====================
 
   /**
-   * Crée un nouveau dossier
+   * Crée un nouveau dossier - Détecte automatiquement si des fichiers sont présents
+   * 
+   * @param dossier Données du dossier
+   * @param contratFile Fichier contrat (optionnel)
+   * @param pouvoirFile Fichier pouvoir (optionnel)
+   * @param isChef Indique si création en tant que chef
+   * @returns Observable du dossier créé
    */
-  createDossier(dossier: DossierRequest): Observable<DossierApi> {
-    return this.http.post<DossierApi>(`${this.apiUrl}`, dossier);
+  createDossier(
+    dossier: DossierRequest,
+    contratFile?: File | null,
+    pouvoirFile?: File | null,
+    isChef: boolean = false
+  ): Observable<DossierApi> {
+    // Vérifier si des fichiers sont présents
+    const hasFiles = (contratFile && contratFile instanceof File) || 
+                     (pouvoirFile && pouvoirFile instanceof File);
+    
+    if (hasFiles) {
+      // ✅ NOUVEAU : Utiliser multipart/form-data avec fichiers
+      return this.createDossierWithFiles(dossier, contratFile || undefined, pouvoirFile || undefined, isChef);
+    } else {
+      // ✅ ANCIEN : Utiliser application/json sans fichiers (méthode existante)
+      return this.createDossierSimple(dossier, isChef);
+    }
+  }
+
+  /**
+   * Crée un nouveau dossier (méthode simple sans fichiers)
+   * ANCIEN - Garde la méthode existante qui fonctionne
+   */
+  createDossierSimple(dossier: DossierRequest, isChef: boolean = false): Observable<DossierApi> {
+    return this.http.post<DossierApi>(`${this.apiUrl}/create`, dossier, {
+      params: { isChef: String(isChef) },
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
   }
 
   /**
    * Nouvelle création: POST /create?isChef=
+   * @deprecated Utiliser createDossier() à la place
    */
   create(dossier: DossierRequest, isChef: boolean): Observable<DossierApi> {
-    return this.http.post<DossierApi>(`${this.apiUrl}/create`, dossier, {
-      params: { isChef: String(isChef) }
-    });
+    return this.createDossierSimple(dossier, isChef);
   }
 
   /**
    * Création robuste: si /create renvoie un 500 (ex: Duplicate entry sur numeroDossier),
    * on régénère un numeroDossier unique et on retente sur la même route /create.
+   * 
+   * Cette méthode détecte automatiquement si des fichiers sont présents dans le DossierRequest
+   * et utilise la méthode appropriée (multipart ou JSON).
    */
   createWithFallback(dossier: DossierRequest, isChef: boolean): Observable<DossierApi> {
-  return new Observable<DossierApi>(observer => {
+    return new Observable<DossierApi>(observer => {
+      const tryCreate = (payload: DossierRequest, attempt: number = 1) => {
+        console.log(`🔄 Tentative ${attempt} de création pour numeroDossier: ${payload.numeroDossier}`);
 
-    const tryCreate = (payload: DossierRequest, attempt: number = 1) => {
-      console.log(`🔄 Tentative ${attempt} de création pour numeroDossier: ${payload.numeroDossier}`);
-
-      // 1️⃣ Construction du FormData
-      const formData = new FormData();
-      formData.append('dossier', new Blob([JSON.stringify(payload)], { type: 'application/json' }));
-
-      // Ajouter les fichiers PDF si présents
-      if (payload.contratSigneFile) formData.append('contratSigne', payload.contratSigneFile);
-      if (payload.pouvoirFile) formData.append('pouvoir', payload.pouvoirFile);
-
-      // 2️⃣ Récupérer l'ID utilisateur
-      const userId = payload.agentCreateurId;
-      if (!userId) {
-        console.error('❌ Aucun userId trouvé (agentCreateurId)');
-        observer.error('User ID manquant');
-        return;
-      }
-
-      // 3️⃣ Ajouter le token JWT si disponible
-      const token = sessionStorage.getItem('auth-user');
-      const headers: any = {};
-      if (token) headers['Authorization'] = `Bearer ${token}`;
-
-      // 4️⃣ Appel HTTP vers Spring Boot
-      this.http.post<DossierApi>(
-        `${this.apiUrl}/create/${userId}`,
-        formData,
-        {
-          params: new HttpParams().set('isChef', isChef.toString()),
-          headers: headers
+        // Détecter si des fichiers sont présents
+        const hasFiles = !!(payload.contratSigneFile || payload.pouvoirFile);
+        
+        if (hasFiles) {
+          // Utiliser la méthode multipart avec fichiers
+          this.createDossierWithFiles(
+            payload,
+            payload.contratSigneFile,
+            payload.pouvoirFile,
+            isChef
+          ).subscribe({
+            next: d => {
+              console.log(`✅ Dossier créé avec succès (multipart): ${payload.numeroDossier}`);
+              observer.next(d);
+              observer.complete();
+            },
+            error: err => {
+              handleError(err, attempt, payload);
+            }
+          });
+        } else {
+          // Utiliser la méthode JSON simple
+          this.createDossierSimple(payload, isChef).subscribe({
+            next: d => {
+              console.log(`✅ Dossier créé avec succès (JSON): ${payload.numeroDossier}`);
+              observer.next(d);
+              observer.complete();
+            },
+            error: err => {
+              handleError(err, attempt, payload);
+            }
+          });
         }
-      ).subscribe({
-        next: d => {
-          console.log(`✅ Dossier créé avec succès: ${payload.numeroDossier}`);
-          observer.next(d);
-          observer.complete();
-        },
-        error: err => {
+
+        const handleError = (err: any, attempt: number, payload: DossierRequest) => {
           console.warn(`❌ Erreur tentative ${attempt}:`, err);
 
           const msg: string = (err?.error?.error || err?.error?.message || err?.message || '').toString();
 
-          // 5️⃣ Gestion numéro de dossier dupliqué
+          // Gestion numéro de dossier dupliqué
           const isDuplicate = msg.toLowerCase().includes('duplicate') || msg.includes('numero_dossier');
 
           if (err.status === 500 && isDuplicate && attempt < 3) {
@@ -121,40 +155,100 @@ export class DossierApiService {
             console.error(`❌ Échec définitif après ${attempt} tentatives`);
             observer.error({ message: 'Impossible de créer le dossier après plusieurs tentatives', details: err });
           }
-        }
-      });
-    };
+        };
+      };
 
-    tryCreate(dossier);
-  });
-}
+      tryCreate(dossier);
+    });
+  }
 
 
 
   /**
-   * Crée un nouveau dossier avec fichiers
+   * Crée un nouveau dossier avec fichiers (multipart/form-data)
+   * NOUVEAU - Utilisé automatiquement quand des fichiers sont présents
+   * 
+   * @param dossier Données du dossier
+   * @param contratSigne Fichier contrat (optionnel)
+   * @param pouvoir Fichier pouvoir (optionnel)
+   * @param isChef Indique si création en tant que chef
+   * @returns Observable du dossier créé
    */
   createDossierWithFiles(
+    dossier: DossierRequest,
+    contratSigne?: File,
+    pouvoir?: File,
+    isChef: boolean = false
+  ): Observable<DossierApi> {
+    const formData = new FormData();
+    
+    // 1. Ajouter le JSON du dossier (OBLIGATOIRE)
+    // Utiliser JSON.stringify() comme indiqué dans le prompt
+    formData.append('dossier', JSON.stringify(dossier));
+    console.log('✅ Partie dossier ajoutée au FormData comme JSON string:', JSON.stringify(dossier, null, 2));
+    
+    // 2. Ajouter les fichiers si présents (OPTIONNELS)
+    // Utiliser les noms exacts: 'contratSigne' et 'pouvoir' (pas 'contratSigneFile' ni 'pouvoirFile')
+    if (contratSigne && contratSigne instanceof File) {
+      formData.append('contratSigne', contratSigne);
+      console.log('✅ Fichier contrat ajouté:', contratSigne.name);
+    }
+    if (pouvoir && pouvoir instanceof File) {
+      formData.append('pouvoir', pouvoir);
+      console.log('✅ Fichier pouvoir ajouté:', pouvoir.name);
+    }
+
+    // Log du contenu du FormData pour debug
+    console.log('🔍 Contenu du FormData:');
+    try {
+      for (let [key, value] of (formData as any).entries()) {
+        if (key === 'dossier') {
+          console.log(`  ${key}:`, JSON.parse(value as string));
+        } else {
+          console.log(`  ${key}:`, value instanceof File ? `${value.name} (${value.size} bytes)` : value);
+        }
+      }
+    } catch (error) {
+      console.log('  Impossible d\'afficher le contenu du FormData');
+    }
+
+    // 3. Envoyer la requête multipart
+    // ⚠️ IMPORTANT : Ne PAS définir Content-Type manuellement pour FormData
+    // Le navigateur ajoute automatiquement le Content-Type avec boundary
+    const token = sessionStorage.getItem('auth-user');
+    const headers: any = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+      console.log('🔑 Token JWT ajouté explicitement aux headers');
+    } else {
+      console.warn('⚠️ Aucun token JWT trouvé dans sessionStorage');
+    }
+
+    return this.http.post<DossierApi>(
+      `${this.apiUrl}/create?isChef=${isChef}`,
+      formData,
+      {
+        // Ne pas mettre 'Content-Type' dans les headers pour FormData
+        headers: headers
+      }
+    );
+  }
+
+  /**
+   * Crée un nouveau dossier avec fichiers (ancienne méthode - pour compatibilité)
+   * @deprecated Utiliser createDossier() à la place
+   */
+  createDossierWithFilesOld(
     dossier: DossierRequest, 
     contratSigne?: File, 
     pouvoir?: File
   ): Observable<DossierApi> {
-    const formData = new FormData();
-    formData.append('dossier', JSON.stringify(dossier));
-    
-    if (contratSigne) {
-      formData.append('contratSigne', contratSigne);
-    }
-    if (pouvoir) {
-      formData.append('pouvoir', pouvoir);
-    }
-
-    return this.http.post<DossierApi>(`${this.apiUrl}/addDossier`, formData);
+    return this.createDossierWithFiles(dossier, contratSigne, pouvoir, false);
   }
 
   /**
    * Nouvelle création avec fichiers: /create?isChef=
-   * FormData keys: dossier(json), contratSigne, pouvoir
+   * @deprecated Utiliser createDossier() à la place
    */
   createWithFiles(
     dossier: DossierRequest,
@@ -162,45 +256,7 @@ export class DossierApiService {
     pouvoir: File | undefined,
     isChef: boolean
   ): Observable<DossierApi> {
-    const formData = new FormData();
-    
-    // CORRECTION: Ajouter la partie 'dossier' que le backend attend comme Blob
-    const dossierBlob = new Blob([JSON.stringify(dossier)], { type: 'application/json' });
-    formData.append('dossier', dossierBlob);
-    console.log('✅ Partie dossier ajoutée au FormData comme Blob:', JSON.stringify(dossier, null, 2));
-    
-    // Fichiers (clés conformes au DTO: contratSigneFile, pouvoirFile)
-    if (contratSigne) formData.append('contratSigneFile', contratSigne);
-    if (pouvoir) formData.append('pouvoirFile', pouvoir);
-
-    // Log du contenu du FormData
-    console.log('🔍 Contenu du FormData:');
-    try {
-      for (let [key, value] of (formData as any).entries()) {
-        if (key === 'dossier') {
-          console.log(`  ${key}:`, JSON.parse(value as string));
-        } else {
-          console.log(`  ${key}:`, value);
-        }
-      }
-    } catch (error) {
-      console.log('  Impossible d\'afficher le contenu du FormData');
-    }
-
-    // 🔧 CORRECTION: Ajouter le token JWT explicitement aux headers
-    const token = sessionStorage.getItem('auth-user');
-    const headers: any = {};
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-      console.log('🔑 Token JWT ajouté explicitement aux headers:', token.substring(0, 20) + '...');
-    } else {
-      console.warn('⚠️ Aucun token JWT trouvé dans sessionStorage');
-    }
-
-    return this.http.post<DossierApi>(`${this.apiUrl}/create`, formData, { 
-      params: { isChef: String(isChef) },
-      headers: headers
-    });
+    return this.createDossierWithFiles(dossier, contratSigne, pouvoir, isChef);
   }
 
 
@@ -1412,6 +1468,35 @@ export class DossierApiService {
       catchError((error) => {
         console.error('❌ Erreur lors de la mise à jour du montant recouvré:', error);
         const errorMessage = error.error?.message || error.message || 'Erreur lors de la mise à jour du montant recouvré';
+        return throwError(() => new Error(errorMessage));
+      })
+    );
+  }
+
+  /**
+   * Finalise un dossier juridique avec l'état final et le montant recouvré
+   * PUT /api/dossiers/{dossierId}/juridique/finaliser
+   */
+  finaliserDossierJuridique(
+    dossierId: number,
+    etatFinal: 'RECOUVREMENT_TOTAL' | 'RECOUVREMENT_PARTIEL' | 'NON_RECOUVRE',
+    montantRecouvre: number
+  ): Observable<DossierApi> {
+    const url = `${this.apiUrl}/${dossierId}/juridique/finaliser`;
+    const payload = {
+      etatFinal: etatFinal,
+      montantRecouvre: montantRecouvre
+    };
+    
+    console.log('📤 Finalisation du dossier juridique:', url, payload);
+    
+    return this.http.put<DossierApi>(url, payload).pipe(
+      tap((dossier) => {
+        console.log('✅ Dossier juridique finalisé:', dossier);
+      }),
+      catchError((error) => {
+        console.error('❌ Erreur lors de la finalisation du dossier juridique:', error);
+        const errorMessage = error.error?.message || error.error?.error || error.message || 'Erreur lors de la finalisation du dossier juridique';
         return throwError(() => new Error(errorMessage));
       })
     );

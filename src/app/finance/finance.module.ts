@@ -7,7 +7,31 @@ import { Role } from '../shared/models';
 const routes: Routes = [
   {
     path: 'dashboard',
-    loadComponent: () => import('./components/finance-dashboard/finance-dashboard.component').then(m => m.FinanceDashboardComponent),
+    loadComponent: () => import('./components/chef-finance-dashboard/chef-finance-dashboard.component').then(m => m.ChefFinanceDashboardComponent),
+    canActivate: [AuthGuard],
+    data: { allowedRoles: [Role.CHEF_DEPARTEMENT_FINANCE, Role.AGENT_FINANCE, Role.SUPER_ADMIN] }
+  },
+  {
+    path: 'factures',
+    loadComponent: () => import('./components/factures-list/factures-list.component').then(m => m.FacturesListComponent),
+    canActivate: [AuthGuard],
+    data: { allowedRoles: [Role.CHEF_DEPARTEMENT_FINANCE, Role.AGENT_FINANCE, Role.SUPER_ADMIN] }
+  },
+  {
+    path: 'factures/:id',
+    loadComponent: () => import('./components/facture-detail/facture-detail.component').then(m => m.FactureDetailComponent),
+    canActivate: [AuthGuard],
+    data: { allowedRoles: [Role.CHEF_DEPARTEMENT_FINANCE, Role.AGENT_FINANCE, Role.SUPER_ADMIN] }
+  },
+  {
+    path: 'paiements',
+    loadComponent: () => import('./components/paiements-gestion/paiements-gestion.component').then(m => m.PaiementsGestionComponent),
+    canActivate: [AuthGuard],
+    data: { allowedRoles: [Role.CHEF_DEPARTEMENT_FINANCE, Role.AGENT_FINANCE, Role.SUPER_ADMIN] }
+  },
+  {
+    path: 'paiements/facture/:factureId',
+    loadComponent: () => import('./components/paiements-gestion/paiements-gestion.component').then(m => m.PaiementsGestionComponent),
     canActivate: [AuthGuard],
     data: { allowedRoles: [Role.CHEF_DEPARTEMENT_FINANCE, Role.AGENT_FINANCE, Role.SUPER_ADMIN] }
   },
@@ -61,15 +85,21 @@ const routes: Routes = [
   },
   {
     path: 'mes-dossiers',
-    loadComponent: () => import('./components/finance-agent-dossiers/finance-agent-dossiers.component').then(m => m.FinanceAgentDossiersComponent),
+    loadComponent: () => import('./components/mes-dossiers-finance/mes-dossiers-finance.component').then(m => m.MesDossiersFinanceComponent),
     canActivate: [AuthGuard],
-    data: { allowedRoles: [Role.AGENT_FINANCE, Role.CHEF_DEPARTEMENT_FINANCE] }
+    data: { allowedRoles: [Role.AGENT_FINANCE, Role.CHEF_DEPARTEMENT_FINANCE, Role.SUPER_ADMIN] }
   },
   {
     path: 'utilisateurs',
     loadComponent: () => import('./components/finance-user-management/finance-user-management.component').then(m => m.FinanceUserManagementComponent),
     canActivate: [AuthGuard],
     data: { allowedRoles: [Role.CHEF_DEPARTEMENT_FINANCE] }
+  },
+  {
+    path: 'validation-tarifs/:dossierId',
+    loadComponent: () => import('./components/validation-tarifs-complete/validation-tarifs-complete.component').then(m => m.ValidationTarifsCompleteComponent),
+    canActivate: [AuthGuard],
+    data: { allowedRoles: [Role.CHEF_DEPARTEMENT_FINANCE, Role.SUPER_ADMIN] }
   },
   {
     path: 'taches',

@@ -1,0 +1,120 @@
+<div class="validation-tarifs-complete">
+  <div class="header">
+    <h2>Validation des Tarifs - Dossier #{{ dossierId }}</h2>
+    <button mat-icon-button (click)="retour()" matTooltip="Retour">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+  </div>
+
+  <div *ngIf="isLoading && !traitements" class="loading">
+    <mat-spinner diameter="50"></mat-spinner>
+    <p>Chargement des traitements...</p>
+  </div>
+
+  <div *ngIf="!isLoading && !traitements" class="error-message">
+    <mat-icon>error_outline</mat-icon>
+    <p>Erreur lors du chargement des traitements. Vérifiez la console pour plus de détails.</p>
+    <button mat-raised-button color="primary" (click)="loadTraitements()">
+      <mat-icon>refresh</mat-icon>
+      Réessayer
+    </button>
+  </div>
+
+  <div *ngIf="!isLoading && traitements">
+    <!-- Onglets par phase -->
+    <mat-tab-group>
+      <mat-tab label="Création">
+        <app-validation-tarifs-creation 
+          [dossierId]="dossierId"
+          [traitements]="traitements.phaseCreation"
+          (tarifValide)="onTarifValide()">
+        </app-validation-tarifs-creation>
+      </mat-tab>
+      
+      <mat-tab label="Enquête">
+        <app-validation-tarifs-enquete 
+          [dossierId]="dossierId"
+          [traitements]="traitements.phaseEnquete"
+          (tarifValide)="onTarifValide()">
+        </app-validation-tarifs-enquete>
+      </mat-tab>
+      
+      <mat-tab label="Amiable">
+        <app-validation-tarifs-amiable 
+          [dossierId]="dossierId"
+          [traitements]="traitements.phaseAmiable"
+          (tarifValide)="onTarifValide()">
+        </app-validation-tarifs-amiable>
+      </mat-tab>
+      
+      <mat-tab label="Juridique">
+        <app-validation-tarifs-juridique 
+          [dossierId]="dossierId"
+          [traitements]="traitements.phaseJuridique"
+          (tarifValide)="onTarifValide()">
+        </app-validation-tarifs-juridique>
+      </mat-tab>
+    </mat-tab-group>
+    
+    <!-- Récapitulatif -->
+    <div class="recapitulatif">
+      <h3>Récapitulatif</h3>
+      <div class="totaux">
+        <div class="ligne-total">
+          <span>Frais Phase Création :</span>
+          <strong>{{ totalCreation.toFixed(2) }} TND</strong>
+        </div>
+        <div class="ligne-total">
+          <span>Frais Phase Enquête :</span>
+          <strong>{{ totalEnquete.toFixed(2) }} TND</strong>
+        </div>
+        <div class="ligne-total">
+          <span>Frais Phase Amiable :</span>
+          <strong>{{ totalAmiable.toFixed(2) }} TND</strong>
+        </div>
+        <div class="ligne-total">
+          <span>Commissions Amiable :</span>
+          <strong>{{ totalCommissionsAmiable.toFixed(2) }} TND</strong>
+        </div>
+        <div class="ligne-total">
+          <span>Frais Phase Juridique :</span>
+          <strong>{{ totalJuridique.toFixed(2) }} TND</strong>
+        </div>
+        <div class="ligne-total">
+          <span>Commissions Juridique :</span>
+          <strong>{{ totalCommissionsJuridique.toFixed(2) }} TND</strong>
+        </div>
+        <hr>
+        <div class="ligne-total">
+          <span>TOTAL HT :</span>
+          <strong>{{ totalHT.toFixed(2) }} TND</strong>
+        </div>
+        <div class="ligne-total">
+          <span>TVA (19%) :</span>
+          <strong>{{ tva.toFixed(2) }} TND</strong>
+        </div>
+        <div class="ligne-total total-ttc">
+          <span>TOTAL TTC :</span>
+          <strong>{{ totalTTC.toFixed(2) }} TND</strong>
+        </div>
+      </div>
+      
+      <!-- Indicateur de validation -->
+      <div class="indicateur-validation" [ngClass]="getIndicateurClass()">
+        <mat-icon>{{ getIndicateurIcon() }}</mat-icon>
+        <span>{{ getIndicateurMessage() }}</span>
+      </div>
+      
+      <!-- Bouton génération facture -->
+      <button mat-raised-button 
+              color="primary"
+              [disabled]="!validationEtat || !validationEtat.peutGenererFacture || isLoading"
+              (click)="genererFacture()"
+              class="btn-generer-facture">
+        <mat-icon>receipt</mat-icon>
+        Générer Facture
+      </button>
+    </div>
+  </div>
+</div>
+

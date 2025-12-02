@@ -14,12 +14,8 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { FormsModule } from '@angular/forms';
 import { Subject, takeUntil } from 'rxjs';
-import { ChefFinanceService, FluxFrais } from '../../../core/services/chef-finance.service';
-import {
-  PendingFraisItem,
-  PendingFraisFilter,
-  PendingFraisStats
-} from '../../models/finance-feature.interfaces';
+import { FluxFraisService } from '../../../core/services/flux-frais.service';
+import { FluxFrais, StatutFrais, PhaseFrais } from '../../../shared/models/finance.models';
 import { FraisDetailModalComponent } from './frais-detail-modal.component';
 
 @Component({
@@ -46,17 +42,24 @@ import { FraisDetailModalComponent } from './frais-detail-modal.component';
 })
 export class FraisValidationComponent implements OnInit, OnDestroy {
   frais: FluxFrais[] = [];
-  stats: PendingFraisStats = { totalFrais: 0, montantTotal: 0 };
+  stats = { totalFrais: 0, montantTotal: 0 };
   loading = false;
   
-  filters: PendingFraisFilter = {};
+  filters: {
+    phase?: PhaseFrais;
+    statut?: StatutFrais;
+    montantMin?: number;
+    montantMax?: number;
+    agentId?: number;
+  } = {};
   
-  displayedColumns: string[] = ['dossierId', 'phase', 'categorie', 'montant', 'demandeur', 'creeLe', 'actions'];
+  displayedColumns: string[] = ['dossierId', 'phase', 'categorie', 'montant', 'dateAction', 'commentaire', 'actions'];
+  phases = Object.values(PhaseFrais);
   
   private destroy$ = new Subject<void>();
 
   constructor(
-    private financeService: ChefFinanceService,
+    private fluxFraisService: FluxFraisService,
     private snackBar: MatSnackBar,
     private dialog: MatDialog
   ) {}
@@ -72,7 +75,7 @@ export class FraisValidationComponent implements OnInit, OnDestroy {
 
   loadPendingFrais(): void {
     this.loading = true;
-    this.financeService.getFraisEnAttente().pipe(
+    this.fluxFraisService.getFluxFraisEnAttente().pipe(
       takeUntil(this.destroy$)
     ).subscribe({
       next: (frais) => {
@@ -81,20 +84,20 @@ export class FraisValidationComponent implements OnInit, OnDestroy {
         if (this.filters.phase) {
           filtered = filtered.filter(f => f.phase === this.filters.phase);
         }
-        if (this.filters.agentId) {
-          // Filtrer par agent si disponible
+        if (this.filters.statut) {
+          filtered = filtered.filter(f => f.statut === this.filters.statut);
         }
         if (this.filters.montantMin) {
-          filtered = filtered.filter(f => f.montant >= (this.filters.montantMin || 0));
+          filtered = filtered.filter(f => (f.montant || 0) >= (this.filters.montantMin || 0));
         }
         if (this.filters.montantMax) {
-          filtered = filtered.filter(f => f.montant <= (this.filters.montantMax || Infinity));
+          filtered = filtered.filter(f => (f.montant || 0) <= (this.filters.montantMax || Infinity));
         }
         
         this.frais = filtered;
         this.stats = {
           totalFrais: this.frais.length,
-          montantTotal: this.frais.reduce((sum, f) => sum + f.montant, 0)
+          montantTotal: this.frais.reduce((sum, f) => sum + (f.montant || 0), 0)
         };
         this.loading = false;
       },
@@ -104,6 +107,16 @@ export class FraisValidationComponent implements OnInit, OnDestroy {
         this.loading = false;
       }
     });
+  }
+
+  filterByPhase(phase: PhaseFrais): void {
+    this.filters.phase = phase;
+    this.loadPendingFrais();
+  }
+
+  filterByStatut(statut: StatutFrais): void {
+    this.filters.statut = statut;
+    this.loadPendingFrais();
   }
 
   applyFilters(): void {
@@ -124,15 +137,15 @@ export class FraisValidationComponent implements OnInit, OnDestroy {
         phase: frais.phase,
         categorie: frais.categorie,
         montant: frais.montant,
-        demandeur: frais.agent || frais.demandeur,
+        demandeur: frais.commentaire || 'N/A',
         justificationUrl: frais.justificatifUrl,
-        creeLe: frais.dateAction || frais.creeLe || new Date().toISOString()
+        creeLe: frais.dateAction ? (typeof frais.dateAction === 'string' ? frais.dateAction : frais.dateAction.toISOString()) : new Date().toISOString()
       }
     });
   }
 
   validerFrais(fraisId: number): void {
-    this.financeService.validerFrais(fraisId).pipe(
+    this.fluxFraisService.validerFrais(fraisId).pipe(
       takeUntil(this.destroy$)
     ).subscribe({
       next: () => {
@@ -153,7 +166,7 @@ export class FraisValidationComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.financeService.rejeterFrais(fraisId, commentaire).pipe(
+    this.fluxFraisService.rejeterFrais(fraisId, { commentaire }).pipe(
       takeUntil(this.destroy$)
     ).subscribe({
       next: () => {

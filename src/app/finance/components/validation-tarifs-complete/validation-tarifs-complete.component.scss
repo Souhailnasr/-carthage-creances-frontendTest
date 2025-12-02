@@ -1,0 +1,161 @@
+.validation-tarifs-complete {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+
+    h2 {
+      margin: 0;
+      color: #333;
+    }
+  }
+
+  .loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px;
+    text-align: center;
+  }
+
+  .error-message {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px;
+    text-align: center;
+    background-color: #ffebee;
+    border-radius: 8px;
+    border: 1px solid #f44336;
+    margin: 24px 0;
+
+    mat-icon {
+      font-size: 48px;
+      width: 48px;
+      height: 48px;
+      color: #f44336;
+      margin-bottom: 16px;
+    }
+
+    p {
+      color: #c62828;
+      margin-bottom: 16px;
+    }
+
+    button {
+      margin-top: 8px;
+    }
+  }
+
+  .recapitulatif {
+    margin-top: 32px;
+    padding: 24px;
+    background-color: #f5f5f5;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+
+    h3 {
+      margin-top: 0;
+      margin-bottom: 16px;
+      color: #333;
+    }
+
+    .totaux {
+      margin-bottom: 24px;
+
+      .ligne-total {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px solid #e0e0e0;
+
+        &:last-child {
+          border-bottom: none;
+        }
+
+        span {
+          color: #666;
+        }
+
+        strong {
+          color: #333;
+          font-weight: 600;
+        }
+
+        &.total-ttc {
+          margin-top: 8px;
+          padding-top: 16px;
+          border-top: 2px solid #333;
+          font-size: 1.2em;
+
+          span, strong {
+            color: #1976d2;
+            font-weight: 700;
+          }
+        }
+      }
+
+      hr {
+        margin: 16px 0;
+        border: none;
+        border-top: 1px solid #ccc;
+      }
+    }
+
+    .indicateur-validation {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 16px;
+      border-radius: 4px;
+      margin-bottom: 16px;
+      font-weight: 500;
+
+      &.indicateur-ok {
+        background-color: #e8f5e9;
+        color: #2e7d32;
+      }
+
+      &.indicateur-attente {
+        background-color: #fff3e0;
+        color: #e65100;
+      }
+
+      mat-icon {
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+      }
+    }
+
+    .btn-generer-facture {
+      width: 100%;
+      padding: 12px;
+      font-size: 16px;
+      font-weight: 600;
+
+      mat-icon {
+        margin-right: 8px;
+      }
+
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+    }
+  }
+}
+
+::ng-deep {
+  .mat-mdc-tab-group {
+    margin-bottom: 24px;
+  }
+}
+

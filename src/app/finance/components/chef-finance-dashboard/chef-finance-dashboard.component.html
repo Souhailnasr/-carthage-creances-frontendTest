@@ -55,82 +55,197 @@
       </mat-card-content>
     </mat-card>
   </div>
+
+  <!-- Statistiques de Recouvrement et Dossiers -->
+  <div class="stats-grid">
+    <mat-card class="stat-card success">
+      <mat-card-title>Taux de Réussite</mat-card-title>
+      <mat-card-content class="stat-value">
+        {{ statistiques.tauxReussiteRecouvrement | number:'1.1-1' }}%
+      </mat-card-content>
+      <mat-card-subtitle>Recouvrement</mat-card-subtitle>
+    </mat-card>
+
+    <mat-card class="stat-card info">
+      <mat-card-title>Dossiers Total</mat-card-title>
+      <mat-card-content class="stat-value">
+        {{ statistiques.nombreDossiersTotal || 0 }}
+      </mat-card-content>
+      <mat-card-subtitle>Tous les dossiers</mat-card-subtitle>
+    </mat-card>
+
+    <mat-card class="stat-card warning">
+      <mat-card-title>Phase Enquête</mat-card-title>
+      <mat-card-content class="stat-value">
+        {{ statistiques.nombreDossiersEnquete || 0 }}
+      </mat-card-content>
+      <mat-card-subtitle>Dossiers en enquête</mat-card-subtitle>
+    </mat-card>
+
+    <mat-card class="stat-card primary">
+      <mat-card-title>Phase Amiable</mat-card-title>
+      <mat-card-content class="stat-value">
+        {{ statistiques.nombreDossiersAmiable || 0 }}
+      </mat-card-content>
+      <mat-card-subtitle>Dossiers en amiable</mat-card-subtitle>
+    </mat-card>
+
+    <mat-card class="stat-card danger">
+      <mat-card-title>Phase Juridique</mat-card-title>
+      <mat-card-content class="stat-value">
+        {{ statistiques.nombreDossiersJuridique || 0 }}
+      </mat-card-content>
+      <mat-card-subtitle>Dossiers en juridique</mat-card-subtitle>
+    </mat-card>
+
+    <mat-card class="stat-card success">
+      <mat-card-title>Dossiers Clôturés</mat-card-title>
+      <mat-card-content class="stat-value">
+        {{ statistiques.nombreDossiersClotures || 0 }}
+      </mat-card-content>
+      <mat-card-subtitle>Récupération terminée</mat-card-subtitle>
+    </mat-card>
+
+    <mat-card class="stat-card success">
+      <mat-card-title>Montant Récupéré</mat-card-title>
+      <mat-card-content class="stat-value">
+        {{ statistiques.montantTotalRecouvre | number:'1.2-2' }} TND
+      </mat-card-content>
+      <mat-card-subtitle>Total récupéré</mat-card-subtitle>
+    </mat-card>
+
+    <mat-card class="stat-card warning">
+      <mat-card-title>Montant en Cours</mat-card-title>
+      <mat-card-content class="stat-value">
+        {{ statistiques.montantTotalEnCours | number:'1.2-2' }} TND
+      </mat-card-content>
+      <mat-card-subtitle>En cours de recouvrement</mat-card-subtitle>
+    </mat-card>
+  </div>
+
+  <!-- Statistiques Factures -->
+  <div class="stats-grid">
+    <mat-card class="stat-card info">
+      <mat-card-title>Factures Émises</mat-card-title>
+      <mat-card-content class="stat-value">
+        {{ statistiques.nombreFacturesEmises || 0 }}
+      </mat-card-content>
+      <mat-card-subtitle>Total factures</mat-card-subtitle>
+    </mat-card>
+
+    <mat-card class="stat-card success">
+      <mat-card-title>Factures Payées</mat-card-title>
+      <mat-card-content class="stat-value">
+        {{ statistiques.nombreFacturesPayees || 0 }}
+      </mat-card-content>
+      <mat-card-subtitle>Paiements reçus</mat-card-subtitle>
+    </mat-card>
+
+    <mat-card class="stat-card warning">
+      <mat-card-title>Factures en Attente</mat-card-title>
+      <mat-card-content class="stat-value">
+        {{ statistiques.montantFacturesEnAttente | number:'1.2-2' }} TND
+      </mat-card-content>
+      <mat-card-subtitle>Montant en attente</mat-card-subtitle>
+    </mat-card>
+  </div>
   
-  <!-- Liste des Dossiers avec Coûts -->
-  <mat-card class="dossiers-card">
+  <!-- Frais en Attente -->
+  <mat-card class="frais-card" *ngIf="fraisEnAttente.length > 0">
     <mat-card-header>
-      <mat-card-title>Dossiers avec Coûts</mat-card-title>
+      <mat-card-title>Frais en Attente de Validation ({{ fraisEnAttente.length }})</mat-card-title>
     </mat-card-header>
     <mat-card-content>
-      <div *ngIf="loading" class="loading-container">
-        <mat-spinner diameter="50"></mat-spinner>
-        <p>Chargement des dossiers...</p>
-      </div>
-      
-      <div *ngIf="!loading && dossiersAvecCouts.length === 0" class="no-data">
-        <mat-icon>info</mat-icon>
-        <p>Aucun dossier avec coûts trouvé</p>
-      </div>
-      
-      <div *ngIf="!loading && dossiersAvecCouts.length > 0" class="dossiers-list">
-        <div class="dossier-item" *ngFor="let finance of dossiersAvecCouts">
-          <div class="dossier-info">
-            <h3>Dossier #{{ finance.dossier.id }}</h3>
-            <p class="description">{{ finance.description }}</p>
-            <div class="dossier-details">
-              <span><strong>Date:</strong> {{ finance.dateOperation | date:'dd/MM/yyyy' }}</span>
-              <span><strong>Total:</strong> {{ getTotalFacture(finance) | number:'1.2-2' }} TND</span>
-              <span [class.finalisee]="finance.factureFinalisee">
-                <strong>Statut:</strong> {{ finance.factureFinalisee ? 'Finalisée' : 'En attente' }}
-              </span>
-            </div>
-          </div>
-          <div class="dossier-actions">
-            <button mat-raised-button color="primary" (click)="voirDetail(finance.dossier.id)">
-              <mat-icon>visibility</mat-icon>
-              Voir Détail
-            </button>
-            <button 
-              mat-raised-button 
-              color="accent" 
-              (click)="finaliserFacture(finance.dossier.id)"
-              [disabled]="finance.factureFinalisee">
-              <mat-icon>check_circle</mat-icon>
-              Finaliser
-            </button>
-          </div>
-        </div>
-      </div>
-      
-      <mat-paginator
-        *ngIf="!loading && dossiersAvecCouts.length > 0"
-        [length]="totalElements"
-        [pageSize]="pageSize"
-        [pageIndex]="currentPage"
-        [pageSizeOptions]="[5, 10, 25, 50]"
-        (page)="onPageChange($event)">
-      </mat-paginator>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Phase</th>
+            <th>Catégorie</th>
+            <th>Montant</th>
+            <th>Date</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let frais of fraisEnAttente">
+            <td>{{ frais.phase }}</td>
+            <td>{{ frais.categorie }}</td>
+            <td>{{ frais.montant | number:'1.2-2' }} TND</td>
+            <td>{{ frais.dateAction | date:'short' }}</td>
+            <td>
+              <button mat-raised-button color="primary" (click)="validerFrais(frais.id!)" class="btn-success">
+                Valider
+              </button>
+              <button mat-raised-button color="warn" (click)="rejeterFrais(frais.id!)" class="btn-danger">
+                Rejeter
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </mat-card-content>
   </mat-card>
-  
+
+  <!-- Factures en Retard -->
+  <mat-card class="factures-card" *ngIf="facturesEnRetard.length > 0">
+    <mat-card-header>
+      <mat-card-title>Factures en Retard ({{ facturesEnRetard.length }})</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Numéro</th>
+            <th>Montant TTC</th>
+            <th>Date Échéance</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let facture of facturesEnRetard">
+            <td>{{ facture.numeroFacture }}</td>
+            <td>{{ facture.montantTTC | number:'1.2-2' }} TND</td>
+            <td>{{ facture.dateEcheance | date:'short' }}</td>
+            <td>
+              <button mat-raised-button color="accent" (click)="relancerFacture(facture.id!)" class="btn-warning">
+                Relancer
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </mat-card-content>
+  </mat-card>
+
   <!-- Factures en Attente -->
   <mat-card class="factures-card" *ngIf="facturesEnAttente.length > 0">
     <mat-card-header>
-      <mat-card-title>Factures en Attente ({{ facturesEnAttente.length }})</mat-card-title>
+      <mat-card-title>Factures en Attente de Finalisation ({{ facturesEnAttente.length }})</mat-card-title>
     </mat-card-header>
     <mat-card-content>
-      <div class="factures-list">
-        <div class="facture-item" *ngFor="let facture of facturesEnAttente">
-          <div class="facture-info">
-            <h4>Dossier #{{ facture.dossier.id }}</h4>
-            <p>{{ facture.description }}</p>
-            <span class="amount">{{ getTotalFacture(facture) | number:'1.2-2' }} TND</span>
-          </div>
-          <button mat-raised-button color="primary" (click)="voirDetail(facture.dossier.id)">
-            Voir Détail
-          </button>
-        </div>
-      </div>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Dossier ID</th>
+            <th>Total</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let finance of facturesEnAttente">
+            <td>{{ getDossierNumero(finance) }}</td>
+            <td>{{ calculerTotal(finance) | number:'1.2-2' }} TND</td>
+            <td>
+              <button mat-raised-button color="primary" (click)="voirDetail(finance.dossierId)" class="btn-primary" [disabled]="!finance.dossierId">
+                Voir Détail
+              </button>
+              <button mat-raised-button color="accent" (click)="finaliserFacture(finance.dossierId)" class="btn-success" [disabled]="!finance.dossierId || finance.factureFinalisee">
+                Finaliser
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </mat-card-content>
   </mat-card>
 </div>

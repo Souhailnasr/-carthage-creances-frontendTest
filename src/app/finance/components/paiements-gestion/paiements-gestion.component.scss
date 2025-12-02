@@ -1,0 +1,114 @@
+.paiements-container {
+  padding: 20px;
+
+  .header {
+    margin-bottom: 20px;
+
+    h1 {
+      margin: 0 0 8px 0;
+      color: #333;
+    }
+
+    p {
+      margin: 0;
+      color: #666;
+    }
+  }
+
+  .total-card {
+    margin-bottom: 20px;
+
+    .total-info {
+      text-align: center;
+
+      h2 {
+        margin: 0 0 8px 0;
+        color: #666;
+        font-size: 16px;
+        font-weight: 500;
+      }
+
+      .total-amount {
+        margin: 0;
+        font-size: 32px;
+        font-weight: 600;
+        color: #1976d2;
+      }
+    }
+  }
+
+  .form-card {
+    margin-bottom: 20px;
+
+    mat-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .full-width {
+      width: 100%;
+      margin-bottom: 16px;
+    }
+
+    .form-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      margin-top: 20px;
+    }
+  }
+
+  .paiements-card {
+    mat-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    mat-card-content {
+      padding: 20px;
+    }
+  }
+
+  .no-data {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    color: #666;
+
+    mat-icon {
+      font-size: 48px;
+      width: 48px;
+      height: 48px;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+  }
+
+  .paiements-table {
+    width: 100%;
+
+    th {
+      font-weight: 600;
+    }
+
+    td {
+      padding: 12px 8px;
+    }
+
+    button {
+      margin: 0 4px;
+    }
+  }
+}
+

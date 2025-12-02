@@ -868,26 +868,14 @@ private getSortParameter(): string {
           statut: isChef ? 'VALIDE' : 'EN_ATTENTE_VALIDATION'
         };
 
-        // Création du FormData si fichiers
-        const hasFiles = !!this.selectedContratFile || !!this.selectedPouvoirFile;
-        let create$: Observable<DossierApi>;
-
-        if (hasFiles) {
-          const formData = new FormData();
-          const dossierBlob = new Blob([JSON.stringify(dossierRequest)], { type: 'application/json' });
-          formData.append('dossier', dossierBlob);
-          if (this.selectedContratFile) formData.append('contratSigne', this.selectedContratFile);
-          if (this.selectedPouvoirFile) formData.append('pouvoir', this.selectedPouvoirFile);
-
-          create$ = this.dossierApiService.createWithFiles(
-            dossierRequest,
-            this.selectedContratFile,
-            this.selectedPouvoirFile,
-            isChef
-          );
-        } else {
-          create$ = this.dossierApiService.createWithFallback(dossierRequest, isChef);
-        }
+        // ✅ NOUVEAU : Utiliser la méthode unifiée qui détecte automatiquement les fichiers
+        // Le service choisit automatiquement entre multipart (si fichiers) ou JSON (si pas de fichiers)
+        const create$ = this.dossierApiService.createDossier(
+          dossierRequest,
+          this.selectedContratFile || undefined,
+          this.selectedPouvoirFile || undefined,
+          isChef
+        );
 
         // Appel au backend avec l'ID utilisateur dans le path
         create$

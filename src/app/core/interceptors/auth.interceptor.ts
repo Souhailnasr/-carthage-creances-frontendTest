@@ -59,10 +59,15 @@ export const AuthInterceptor: HttpInterceptorFn = (req, next) => {
     // 🔧 CORRECTION: Gestion spéciale pour FormData
     let cloned;
     if (req.body instanceof FormData) {
-      // Pour FormData, on ne peut pas modifier les headers de la même manière
-      // Le token doit être ajouté explicitement dans le service
-      console.log('📋 FormData détecté - Token doit être ajouté explicitement dans le service');
-      cloned = req;
+      // Pour FormData, on peut ajouter le token mais NE PAS modifier le Content-Type
+      // Le navigateur définit automatiquement le Content-Type avec le bon boundary
+      cloned = req.clone({
+        setHeaders: {
+          'Authorization': `Bearer ${token}`
+          // ❌ NE PAS ajouter 'Content-Type' ici - le navigateur le fait automatiquement
+        }
+      });
+      console.log('📋 FormData détecté - Token JWT ajouté, Content-Type géré par le navigateur');
     } else {
       // Pour les requêtes JSON normales
       cloned = req.clone({

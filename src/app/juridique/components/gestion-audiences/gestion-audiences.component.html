@@ -156,6 +156,15 @@
             <button class="btn btn-primary" (click)="showAudienceModal(dossier)">
               <i class="fas fa-plus"></i> Ajouter Audience
             </button>
+            <!-- Bouton Finaliser le Dossier Juridique (visible si dossier a au moins une audience) -->
+            <button 
+              *ngIf="canFinaliserDossier(dossier)"
+              class="btn btn-warning"
+              (click)="openFinalisationForm(dossier)"
+              title="Finaliser le dossier juridique avec l'état final et le montant recouvré">
+              <i class="fas fa-check-circle"></i> 
+              Finaliser le Dossier
+            </button>
             <!-- Bouton Affecter au Finance (visible si dossier a au moins une audience, indépendamment de l'étape) -->
             <button 
               *ngIf="canAffecterAuFinance(dossier)"
@@ -608,6 +617,126 @@
             </button>
             <button *ngIf="isViewMode" type="button" class="btn btn-primary" (click)="isViewMode = false; isEditMode = true; audienceForm.enable()">
               <i class="fas fa-edit"></i> Modifier
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Finalisation du Dossier Juridique -->
+  <div class="modal-overlay" *ngIf="showFinalisationForm" (click)="closeFinalisationForm()">
+    <div class="modal-content finalisation-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>
+          <i class="fas fa-check-circle"></i>
+          Finaliser le Dossier Juridique
+        </h2>
+        <button class="close-btn" (click)="closeFinalisationForm()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="dossier-info-finalisation" *ngIf="selectedDossierForFinalisation">
+          <div class="info-section">
+            <h3>Informations du Dossier</h3>
+            <div class="info-grid">
+              <div class="info-item">
+                <span class="label">Numéro:</span>
+                <span class="value">{{ selectedDossierForFinalisation.numeroDossier || 'N/A' }}</span>
+              </div>
+              <div class="info-item">
+                <span class="label">Créancier:</span>
+                <span class="value">{{ getCreancierName(selectedDossierForFinalisation) }}</span>
+              </div>
+              <div class="info-item">
+                <span class="label">Montant Créance:</span>
+                <span class="value amount">{{ selectedDossierForFinalisation.montantCreance || 0 | number:'1.2-2' }} TND</span>
+              </div>
+              <div class="info-item">
+                <span class="label">Nombre d'Audiences:</span>
+                <span class="value">{{ getAudiencesForDossier(selectedDossierForFinalisation.id).length }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <form [formGroup]="finalisationForm" (ngSubmit)="finaliserDossierJuridique()">
+          <div class="form-section">
+            <h3>État Final du Dossier</h3>
+            <p class="form-description">Sélectionnez l'état final du dossier après les audiences :</p>
+            
+            <div class="etat-buttons">
+              <button 
+                type="button"
+                class="btn-etat btn-total"
+                [class.active]="finalisationForm.get('etatFinal')?.value === etatFinalDossier.RECOUVREMENT_TOTAL"
+                (click)="setEtatFinal(etatFinalDossier.RECOUVREMENT_TOTAL)">
+                <i class="fas fa-check-circle"></i>
+                <span>Recouvrement Total</span>
+              </button>
+              <button 
+                type="button"
+                class="btn-etat btn-partiel"
+                [class.active]="finalisationForm.get('etatFinal')?.value === etatFinalDossier.RECOUVREMENT_PARTIEL"
+                (click)="setEtatFinal(etatFinalDossier.RECOUVREMENT_PARTIEL)">
+                <i class="fas fa-percent"></i>
+                <span>Recouvrement Partiel</span>
+              </button>
+              <button 
+                type="button"
+                class="btn-etat btn-non-recouvre"
+                [class.active]="finalisationForm.get('etatFinal')?.value === etatFinalDossier.NON_RECOUVRE"
+                (click)="setEtatFinal(etatFinalDossier.NON_RECOUVRE)">
+                <i class="fas fa-times-circle"></i>
+                <span>Non Recouvré</span>
+              </button>
+            </div>
+            
+            <div class="form-group" *ngIf="finalisationForm.get('etatFinal')?.value">
+              <label>
+                <i class="fas fa-info-circle"></i>
+                État sélectionné: <strong>{{ getEtatFinalLabel(finalisationForm.get('etatFinal')?.value) }}</strong>
+              </label>
+              <input type="hidden" formControlName="etatFinal">
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h3>Montant Recouvré</h3>
+            <p class="form-description">Indiquez le montant recouvré dans cette étape juridique :</p>
+            
+            <div class="form-group">
+              <label for="montantRecouvre">
+                <i class="fas fa-money-bill-wave"></i>
+                Montant Recouvré (TND)
+              </label>
+              <input 
+                type="number" 
+                id="montantRecouvre"
+                formControlName="montantRecouvre"
+                class="form-control"
+                min="0"
+                step="0.01"
+                placeholder="0.00">
+              <div class="form-hint" *ngIf="selectedDossierForFinalisation">
+                Montant de la créance: <strong>{{ selectedDossierForFinalisation.montantCreance || 0 | number:'1.2-2' }} TND</strong>
+              </div>
+              <div class="form-error" *ngIf="finalisationForm.get('montantRecouvre')?.invalid && finalisationForm.get('montantRecouvre')?.touched">
+                <span *ngIf="finalisationForm.get('montantRecouvre')?.errors?.['required']">Le montant recouvré est obligatoire</span>
+                <span *ngIf="finalisationForm.get('montantRecouvre')?.errors?.['min']">Le montant doit être positif</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" (click)="closeFinalisationForm()" [disabled]="isLoadingFinalisation">
+              <i class="fas fa-times"></i> Annuler
+            </button>
+            <button type="submit" class="btn btn-primary" [disabled]="finalisationForm.invalid || isLoadingFinalisation">
+              <i class="fas fa-check-circle" *ngIf="!isLoadingFinalisation"></i>
+              <i class="fas fa-spinner fa-spin" *ngIf="isLoadingFinalisation"></i>
+              {{ isLoadingFinalisation ? 'Finalisation...' : 'Finaliser le Dossier' }}
             </button>
           </div>
         </form>

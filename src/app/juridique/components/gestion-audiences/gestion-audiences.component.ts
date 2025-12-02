@@ -16,6 +16,12 @@ import { HuissierActionService } from '../../services/huissier-action.service';
 import { DocumentHuissier } from '../../models/huissier-document.model';
 import { ActionHuissier } from '../../models/huissier-action.model';
 
+export enum EtatFinalDossierJuridique {
+  RECOUVREMENT_TOTAL = 'RECOUVREMENT_TOTAL',
+  RECOUVREMENT_PARTIEL = 'RECOUVREMENT_PARTIEL',
+  NON_RECOUVRE = 'NON_RECOUVRE'
+}
+
 @Component({
   selector: 'app-gestion-audiences',
   standalone: true,
@@ -44,8 +50,15 @@ export class GestionAudiencesComponent implements OnInit, OnDestroy {
   isLoadingDocuments: boolean = false;
   isLoadingActions: boolean = false;
   isLoadingAffectationFinance: boolean = false;
+  isLoadingFinalisation: boolean = false;
   tribunalTypes = TribunalType;
   decisionResults = DecisionResult;
+  etatFinalDossier = EtatFinalDossierJuridique;
+  
+  // Formulaire de finalisation
+  showFinalisationForm: boolean = false;
+  finalisationForm!: FormGroup;
+  selectedDossierForFinalisation: DossierApi | null = null;
   
   // Filtres
   filterType: 'all' | 'upcoming' | 'past' | 'reported' = 'all';
@@ -94,6 +107,11 @@ export class GestionAudiencesComponent implements OnInit, OnDestroy {
       decisionResult: [''],
       avocatId: [''],
       huissierId: ['']
+    });
+    
+    this.finalisationForm = this.fb.group({
+      etatFinal: ['', Validators.required],
+      montantRecouvre: [0, [Validators.required, Validators.min(0)]]
     });
   }
 
@@ -953,6 +971,150 @@ export class GestionAudiencesComponent implements OnInit, OnDestroy {
     
     // Le dossier peut être affecté s'il a au moins une action OU une audience
     return hasActions || hasAudiences;
+  }
+
+  /**
+   * Ouvre le formulaire de finalisation du dossier juridique
+   */
+  openFinalisationForm(dossier: DossierApi): void {
+    if (!dossier || !dossier.id) {
+      this.toastService.error('Dossier invalide');
+      return;
+    }
+    
+    // Vérifier que le dossier a au moins une audience
+    const dossierAudiences = this.getAudiencesForDossier(dossier.id);
+    if (dossierAudiences.length === 0) {
+      this.toastService.error('Ce dossier doit avoir au moins une audience pour être finalisé');
+      return;
+    }
+    
+    this.selectedDossierForFinalisation = dossier;
+    this.finalisationForm.reset({
+      etatFinal: '',
+      montantRecouvre: 0
+    });
+    this.showFinalisationForm = true;
+  }
+
+  /**
+   * Ferme le formulaire de finalisation
+   */
+  closeFinalisationForm(): void {
+    this.showFinalisationForm = false;
+    this.selectedDossierForFinalisation = null;
+    this.finalisationForm.reset();
+  }
+
+  /**
+   * Définit l'état final du dossier via un bouton
+   */
+  setEtatFinal(etat: EtatFinalDossierJuridique): void {
+    if (!this.selectedDossierForFinalisation) {
+      this.toastService.error('Aucun dossier sélectionné');
+      return;
+    }
+    
+    this.finalisationForm.patchValue({ etatFinal: etat });
+  }
+
+  /**
+   * Finalise le dossier juridique avec l'état final et le montant recouvré
+   */
+  finaliserDossierJuridique(): void {
+    if (!this.selectedDossierForFinalisation || !this.selectedDossierForFinalisation.id) {
+      this.toastService.error('Aucun dossier sélectionné');
+      return;
+    }
+
+    if (this.finalisationForm.invalid) {
+      this.toastService.error('Veuillez remplir tous les champs obligatoires');
+      return;
+    }
+
+    const formValue = this.finalisationForm.value;
+    const etatFinal = formValue.etatFinal;
+    const montantRecouvre = formValue.montantRecouvre;
+
+    // Validation du montant selon l'état
+    const montantCreance = this.selectedDossierForFinalisation.montantCreance || 0;
+    if (etatFinal === EtatFinalDossierJuridique.RECOUVREMENT_TOTAL && montantRecouvre !== montantCreance) {
+      if (!confirm(`Le montant recouvré (${montantRecouvre} TND) ne correspond pas au montant de la créance (${montantCreance} TND).\n\nVoulez-vous continuer ?`)) {
+        return;
+      }
+    }
+
+    if (etatFinal === EtatFinalDossierJuridique.RECOUVREMENT_PARTIEL && montantRecouvre >= montantCreance) {
+      this.toastService.error('Pour un recouvrement partiel, le montant recouvré doit être inférieur au montant de la créance');
+      return;
+    }
+
+    if (etatFinal === EtatFinalDossierJuridique.NON_RECOUVRE && montantRecouvre > 0) {
+      if (!confirm(`Vous avez indiqué "Non recouvré" mais un montant recouvré a été saisi (${montantRecouvre} TND).\n\nVoulez-vous continuer ?`)) {
+        return;
+      }
+    }
+
+    const message = `Êtes-vous sûr de vouloir finaliser ce dossier juridique ?\n\n` +
+                    `Dossier: ${this.selectedDossierForFinalisation.numeroDossier || 'N/A'}\n` +
+                    `État final: ${this.getEtatFinalLabel(etatFinal)}\n` +
+                    `Montant recouvré: ${montantRecouvre} TND\n\n` +
+                    `Cette action marquera la fin du processus de recouvrement juridique.`;
+
+    if (!confirm(message)) {
+      return;
+    }
+
+    this.isLoadingFinalisation = true;
+    this.dossierApiService.finaliserDossierJuridique(
+      this.selectedDossierForFinalisation.id,
+      etatFinal,
+      montantRecouvre
+    )
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (dossierUpdated) => {
+          console.log('✅ Dossier juridique finalisé:', dossierUpdated);
+          this.toastService.success('Dossier juridique finalisé avec succès');
+          this.isLoadingFinalisation = false;
+          
+          // Mettre à jour le dossier dans la liste
+          const index = this.dossiers.findIndex(d => d.id === dossierUpdated.id);
+          if (index !== -1) {
+            this.dossiers[index] = dossierUpdated;
+            this.filteredDossiers = [...this.dossiers];
+          }
+          
+          this.closeFinalisationForm();
+        },
+        error: (error) => {
+          console.error('❌ Erreur lors de la finalisation du dossier:', error);
+          this.isLoadingFinalisation = false;
+          const errorMessage = error.error?.message || error.error?.error || 'Erreur lors de la finalisation du dossier';
+          this.toastService.error(errorMessage);
+        }
+      });
+  }
+
+  /**
+   * Obtient le label d'affichage pour l'état final
+   */
+  getEtatFinalLabel(etat: EtatFinalDossierJuridique | string): string {
+    const labels: { [key: string]: string } = {
+      'RECOUVREMENT_TOTAL': 'Recouvrement Total',
+      'RECOUVREMENT_PARTIEL': 'Recouvrement Partiel',
+      'NON_RECOUVRE': 'Non Recouvré'
+    };
+    return labels[etat] || etat;
+  }
+
+  /**
+   * Vérifie si un dossier peut être finalisé (doit avoir au moins une audience)
+   */
+  canFinaliserDossier(dossier: DossierApi): boolean {
+    if (!dossier || !dossier.id) return false;
+    const dossierAudiences = this.getAudiencesForDossier(dossier.id);
+    return dossierAudiences.length > 0;
   }
 
   /**

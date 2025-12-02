@@ -1,14 +1,19 @@
 <div class="facture-container" *ngIf="detailFacture && finance && !loading">
   <mat-toolbar class="facture-toolbar">
-    <span>Facture - Dossier #{{ dossierId }}</span>
+    <span>Facture - Dossier #{{ dossierId || '...' }}</span>
     <span class="spacer"></span>
-    <button mat-icon-button (click)="recalculerCouts()" matTooltip="Recalculer les coûts" [disabled]="loading">
+    <button mat-raised-button color="primary" (click)="recalculerCouts()" [disabled]="loading">
       <mat-icon>refresh</mat-icon>
+      Recalculer
     </button>
-    <button mat-icon-button (click)="finaliserFacture()" 
-            [disabled]="finance.factureFinalisee || loading" 
-            matTooltip="Finaliser la facture">
+    <button mat-raised-button color="accent" (click)="genererFacture()" [disabled]="loading">
+      <mat-icon>receipt</mat-icon>
+      Générer Facture
+    </button>
+    <button mat-raised-button color="primary" (click)="finaliserFacture()" 
+            [disabled]="finance.factureFinalisee || loading">
       <mat-icon>check_circle</mat-icon>
+      Finaliser
     </button>
     <button mat-icon-button (click)="imprimerFacture()" matTooltip="Imprimer">
       <mat-icon>print</mat-icon>
@@ -34,6 +39,39 @@
         <div class="facture-line subtotal">
           <span>Sous-total</span>
           <span class="amount">{{ detailFacture.fraisCreationDossier + detailFacture.coutGestionTotal | number:'1.2-2' }} TND</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Section 1.5: Enquête (si présente) -->
+    <mat-card class="facture-section" *ngIf="(dossier && dossier.enquette) || enquete">
+      <mat-card-title>1.5. Phase Enquête</mat-card-title>
+      <mat-card-content>
+        <div class="facture-line">
+          <span>Enquête effectuée</span>
+          <span class="amount">Oui</span>
+        </div>
+        <div class="facture-line" *ngIf="dossier?.enquette?.dateEnquete || getEnqueteDate(enquete)">
+          <span>Date de l'enquête</span>
+          <span class="amount">{{ (dossier?.enquette?.dateEnquete || getEnqueteDate(enquete)) | date:'dd/MM/yyyy' }}</span>
+        </div>
+        <div class="facture-line" *ngIf="dossier?.enquette?.statut || enquete?.statut">
+          <span>Statut</span>
+          <span class="amount">{{ dossier?.enquette?.statut || enquete?.statut }}</span>
+        </div>
+        <!-- Résultat simplifié - on n'affiche que les observations si disponibles -->
+        <div class="facture-line" *ngIf="getEnqueteObservations()">
+          <span>Observations</span>
+          <span class="amount">{{ getEnqueteObservations() }}</span>
+        </div>
+        <!-- Frais fixe enquête selon l'annexe -->
+        <div class="facture-line">
+          <span>Frais enquête précontentieuse (Fixe - Annexé)</span>
+          <span class="amount">{{ FRAIS_FIXE_ENQUETE | number:'1.2-2' }} TND</span>
+        </div>
+        <div class="facture-line subtotal">
+          <span>Sous-total Enquête</span>
+          <span class="amount">{{ (detailFacture && detailFacture.fraisEnquete ? detailFacture.fraisEnquete : FRAIS_FIXE_ENQUETE) | number:'1.2-2' }} TND</span>
         </div>
       </mat-card-content>
     </mat-card>
@@ -130,7 +168,30 @@
       </mat-card-content>
     </mat-card>
     
-    <!-- Section 4: Total Facture -->
+    <!-- Section 4: Commissions (si présentes) -->
+    <mat-card class="facture-section" *ngIf="detailFacture.commissionAmiable || detailFacture.commissionJuridique || detailFacture.commissionRelance || detailFacture.commissionInterets">
+      <mat-card-title>4. Commissions</mat-card-title>
+      <mat-card-content>
+        <div class="facture-line" *ngIf="detailFacture.commissionAmiable">
+          <span>Commission amiable</span>
+          <span class="amount">{{ detailFacture.commissionAmiable | number:'1.2-2' }} TND</span>
+        </div>
+        <div class="facture-line" *ngIf="detailFacture.commissionJuridique">
+          <span>Commission juridique</span>
+          <span class="amount">{{ detailFacture.commissionJuridique | number:'1.2-2' }} TND</span>
+        </div>
+        <div class="facture-line" *ngIf="detailFacture.commissionRelance">
+          <span>Commission relance</span>
+          <span class="amount">{{ detailFacture.commissionRelance | number:'1.2-2' }} TND</span>
+        </div>
+        <div class="facture-line" *ngIf="detailFacture.commissionInterets">
+          <span>Commission intérêts</span>
+          <span class="amount">{{ detailFacture.commissionInterets | number:'1.2-2' }} TND</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+    
+    <!-- Section 5: Total Facture -->
     <mat-card class="facture-section total-card">
       <mat-card-title>Total Facture</mat-card-title>
       <mat-card-content>

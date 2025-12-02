@@ -86,39 +86,21 @@ export class SidebarComponent implements OnInit, OnDestroy {
       roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_FINANCE, Role.AGENT_FINANCE],
       children: [
         {
-          label: 'Validation Frais',
-          icon: 'fas fa-check-circle',
-          route: '/finance/validation-frais',
-          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_FINANCE]
-        },
-        {
-          label: 'Catalogue Tarifs',
-          icon: 'fas fa-tags',
-          route: '/finance/tarifs',
-          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_FINANCE]
-        },
-        {
-          label: 'Import Frais',
-          icon: 'fas fa-file-upload',
-          route: '/finance/import-frais',
+          label: 'Mes Dossiers Finance',
+          icon: 'fas fa-briefcase',
+          route: '/finance/mes-dossiers',
           roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_FINANCE, Role.AGENT_FINANCE]
         },
         {
-          label: 'Rapports',
-          icon: 'fas fa-file-alt',
-          route: '/finance/rapports',
+          label: 'Factures',
+          icon: 'fas fa-file-invoice',
+          route: '/finance/factures',
           roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_FINANCE, Role.AGENT_FINANCE]
         },
         {
-          label: 'Reporting',
-          icon: 'fas fa-chart-bar',
-          route: '/finance/reporting',
-          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_FINANCE, Role.AGENT_FINANCE]
-        },
-        {
-          label: 'Insights',
-          icon: 'fas fa-lightbulb',
-          route: '/finance/insights',
+          label: 'Paiements',
+          icon: 'fas fa-money-check-alt',
+          route: '/finance/paiements',
           roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_FINANCE, Role.AGENT_FINANCE]
         }
       ]
@@ -136,12 +118,6 @@ export class SidebarComponent implements OnInit, OnDestroy {
       icon: 'fas fa-tasks',
       route: '/finance/taches',
       roles: [Role.CHEF_DEPARTEMENT_FINANCE, Role.AGENT_FINANCE]
-    },
-    {
-      label: 'Mes dossiers finance',
-      icon: 'fas fa-briefcase',
-      route: '/finance/mes-dossiers',
-      roles: [Role.AGENT_FINANCE, Role.CHEF_DEPARTEMENT_FINANCE]
     },
     // Notifications pour Chef Finance - après Tâches
     {

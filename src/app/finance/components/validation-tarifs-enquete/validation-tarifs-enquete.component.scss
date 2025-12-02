@@ -1,0 +1,165 @@
+.phase-enquete {
+  padding: 24px;
+
+  h3 {
+    margin-top: 0;
+    color: #333;
+    border-bottom: 2px solid #1976d2;
+    padding-bottom: 8px;
+  }
+
+  .traitement-fixe {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    background-color: #f5f5f5;
+    border-radius: 8px;
+    margin-bottom: 24px;
+
+    .traitement-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+
+      strong {
+        color: #333;
+        font-size: 16px;
+      }
+
+      .frais-fixe {
+        color: #666;
+        font-size: 14px;
+      }
+    }
+
+    .statut-badge {
+      padding: 6px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+  }
+
+  .traitements-possibles {
+    margin-bottom: 24px;
+
+    h4 {
+      margin-bottom: 16px;
+      color: #555;
+    }
+
+    .traitement-item {
+      margin-bottom: 24px;
+      padding: 16px;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      background-color: #fafafa;
+
+      .checkbox-container {
+        margin-bottom: 12px;
+
+        label {
+          font-weight: 500;
+          color: #333;
+        }
+      }
+
+      .tarif-form {
+        margin-top: 16px;
+        padding: 16px;
+        background-color: white;
+        border-radius: 4px;
+        border: 1px solid #e0e0e0;
+
+        .form-row {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 16px;
+          margin-bottom: 16px;
+        }
+
+        .full-width {
+          width: 100%;
+          margin-bottom: 16px;
+        }
+
+        button {
+          margin-top: 8px;
+        }
+      }
+
+      .tarif-existant {
+        margin-top: 16px;
+        padding: 16px;
+        background-color: white;
+        border-radius: 4px;
+        border: 1px solid #e0e0e0;
+
+        .tarif-info {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 12px;
+
+          .tarif-type {
+            font-weight: 500;
+            color: #333;
+          }
+
+          .tarif-montant {
+            color: #666;
+            font-size: 14px;
+
+            strong {
+              color: #1976d2;
+              font-size: 16px;
+            }
+          }
+        }
+
+        .actions {
+          display: flex;
+          gap: 8px;
+          margin-top: 12px;
+        }
+      }
+    }
+  }
+
+  .total-phase {
+    margin-top: 24px;
+    padding: 16px;
+    background-color: #e3f2fd;
+    border-radius: 8px;
+    text-align: right;
+    font-size: 18px;
+    color: #1976d2;
+    border: 2px solid #1976d2;
+  }
+
+  .statut-badge {
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    display: inline-block;
+
+    &.statut-valide {
+      background-color: #4caf50;
+      color: white;
+    }
+
+    &.statut-attente {
+      background-color: #ff9800;
+      color: white;
+    }
+
+    &.statut-rejete {
+      background-color: #f44336;
+      color: white;
+    }
+  }
+}
+

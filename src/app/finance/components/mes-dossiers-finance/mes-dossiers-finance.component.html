@@ -1,0 +1,79 @@
+<div class="mes-dossiers-container">
+  <div class="header">
+    <h1>Mes Dossiers Finance</h1>
+    <p>Gestion des dossiers avec coûts et factures</p>
+  </div>
+  
+  <!-- Liste des Dossiers avec Coûts -->
+  <mat-card class="dossiers-card">
+    <mat-card-header>
+      <mat-card-title>Dossiers avec Coûts</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <div *ngIf="loading" class="loading-container">
+        <mat-spinner diameter="50"></mat-spinner>
+        <p>Chargement des dossiers...</p>
+      </div>
+      
+      <div *ngIf="!loading && dossiersAvecCouts.length === 0" class="no-data">
+        <mat-icon>info</mat-icon>
+        <p>Aucun dossier avec coûts trouvé</p>
+      </div>
+      
+      <div *ngIf="!loading && dossiersAvecCouts.length > 0" class="dossiers-list">
+        <div class="dossier-item" *ngFor="let finance of dossiersAvecCouts">
+          <div class="dossier-info">
+            <h3>Dossier {{ getDossierNumero(finance) }}</h3>
+            <p class="description">{{ finance.description || 'Aucune description' }}</p>
+            <div class="dossier-details">
+              <span><strong>Date:</strong> {{ finance.dateOperation | date:'dd/MM/yyyy' }}</span>
+              <span><strong>Total:</strong> {{ getTotalFacture(finance) | number:'1.2-2' }} TND</span>
+              <span [class.finalisee]="finance.factureFinalisee">
+                <strong>Statut:</strong> {{ finance.factureFinalisee ? 'Finalisée' : 'En attente' }}
+              </span>
+            </div>
+          </div>
+          <div class="dossier-actions">
+            <button 
+              mat-raised-button 
+              color="primary" 
+              (click)="validerTarifs(finance.dossierId)" 
+              [disabled]="!finance.dossierId"
+              [matTooltip]="!finance.dossierId ? 'Dossier ID manquant' : 'Valider les tarifs du dossier'">
+              <mat-icon>verified</mat-icon>
+              Valider les Tarifs
+            </button>
+            <button 
+              mat-raised-button 
+              color="primary" 
+              (click)="voirDetail(finance.dossierId)" 
+              [disabled]="!finance.dossierId"
+              [matTooltip]="!finance.dossierId ? 'Dossier ID manquant - Impossible d\'afficher les détails' : 'Voir les détails de la facture'">
+              <mat-icon>visibility</mat-icon>
+              Voir Détail
+            </button>
+            <button 
+              mat-raised-button 
+              color="accent" 
+              (click)="finaliserFacture(finance.dossierId)"
+              [disabled]="finance.factureFinalisee || !finance.dossierId"
+              [matTooltip]="finance.factureFinalisee ? 'Facture déjà finalisée' : (!finance.dossierId ? 'Dossier ID manquant - Impossible de finaliser' : 'Finaliser la facture')">
+              <mat-icon>check_circle</mat-icon>
+              Finaliser
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <mat-paginator
+        *ngIf="!loading && dossiersAvecCouts.length > 0"
+        [length]="totalElements"
+        [pageSize]="pageSize"
+        [pageIndex]="currentPage"
+        [pageSizeOptions]="[5, 10, 25, 50]"
+        (page)="onPageChange($event)">
+      </mat-paginator>
+    </mat-card-content>
+  </mat-card>
+</div>
+

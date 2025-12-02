@@ -1,0 +1,119 @@
+<div class="factures-list-container">
+  <div class="header">
+    <h1>Liste des Factures</h1>
+  </div>
+
+  <!-- Filtres -->
+  <mat-card class="filters-card">
+    <mat-card-content>
+      <mat-form-field appearance="outline">
+        <mat-label>Filtrer par statut</mat-label>
+        <mat-select [(value)]="filterStatut" (selectionChange)="onStatutFilterChange($event.value)">
+          <mat-option value="">Tous</mat-option>
+          <mat-option *ngFor="let statut of statuts" [value]="statut">
+            {{ getStatutLabel(statut) }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Liste des Factures -->
+  <mat-card class="factures-card">
+    <mat-card-content>
+      <div *ngIf="loading" class="loading-container">
+        <mat-spinner diameter="50"></mat-spinner>
+        <p>Chargement des factures...</p>
+      </div>
+
+      <div *ngIf="!loading && factures.length === 0" class="no-data">
+        <mat-icon>receipt</mat-icon>
+        <p>Aucune facture trouvée</p>
+      </div>
+
+      <table mat-table [dataSource]="factures" *ngIf="!loading && factures.length > 0" class="factures-table">
+        <ng-container matColumnDef="numeroFacture">
+          <th mat-header-cell *matHeaderCellDef>Numéro</th>
+          <td mat-cell *matCellDef="let facture">{{ facture.numeroFacture }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="dossierId">
+          <th mat-header-cell *matHeaderCellDef>Dossier ID</th>
+          <td mat-cell *matCellDef="let facture">
+            <span *ngIf="facture.dossierId; else noDossierId">{{ facture.dossierId }}</span>
+            <ng-template #noDossierId>
+              <span class="text-muted" style="color: #999;">N/A</span>
+            </ng-template>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="montantTTC">
+          <th mat-header-cell *matHeaderCellDef>Montant TTC</th>
+          <td mat-cell *matCellDef="let facture">{{ facture.montantTTC | number:'1.2-2' }} TND</td>
+        </ng-container>
+
+        <ng-container matColumnDef="dateEmission">
+          <th mat-header-cell *matHeaderCellDef>Date Émission</th>
+          <td mat-cell *matCellDef="let facture">{{ facture.dateEmission | date:'dd/MM/yyyy' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="dateEcheance">
+          <th mat-header-cell *matHeaderCellDef>Date Échéance</th>
+          <td mat-cell *matCellDef="let facture">
+            {{ facture.dateEcheance ? (facture.dateEcheance | date:'dd/MM/yyyy') : '-' }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="statut">
+          <th mat-header-cell *matHeaderCellDef>Statut</th>
+          <td mat-cell *matCellDef="let facture">
+            <mat-chip [color]="getStatutColor(facture.statut)">
+              {{ getStatutLabel(facture.statut) }}
+            </mat-chip>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef>Actions</th>
+          <td mat-cell *matCellDef="let facture">
+            <button mat-icon-button [routerLink]="['/finance/factures', facture.id]" matTooltip="Voir détails">
+              <mat-icon>visibility</mat-icon>
+            </button>
+            <button 
+              mat-icon-button 
+              (click)="finaliserFacture(facture.id!)" 
+              *ngIf="facture.statut === 'BROUILLON'"
+              matTooltip="Finaliser">
+              <mat-icon>check_circle</mat-icon>
+            </button>
+            <button 
+              mat-icon-button 
+              (click)="envoyerFacture(facture.id!)" 
+              *ngIf="facture.statut === 'EMISE' && !facture.envoyee"
+              matTooltip="Envoyer">
+              <mat-icon>send</mat-icon>
+            </button>
+            <button 
+              mat-icon-button 
+              (click)="relancerFacture(facture.id!)" 
+              *ngIf="facture.statut === 'EN_RETARD' || (facture.statut === 'EMISE' && facture.envoyee)"
+              matTooltip="Relancer">
+              <mat-icon>refresh</mat-icon>
+            </button>
+            <button 
+              mat-icon-button 
+              (click)="downloadPdf(facture.id!)" 
+              *ngIf="facture.statut !== 'BROUILLON'"
+              matTooltip="Télécharger PDF">
+              <mat-icon>download</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+      </table>
+    </mat-card-content>
+  </mat-card>
+</div>
+
