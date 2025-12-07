@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { AuthService } from '../../../core/services/auth.service';
-import { Router } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { ToastService } from '../../../core/services/toast.service';
 import { Subject, takeUntil } from 'rxjs';
 import { Role } from '../../../shared/models';
@@ -15,7 +15,7 @@ import { RoleUtilisateur } from '../../../shared/models/dossier-api.model';
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule],
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.scss']
 })
@@ -621,47 +621,6 @@ export class LoginComponent implements OnInit, OnDestroy {
           });
         }
       });
-  }
-
-  // Helper methods for quick login during development
-  loginAsChefDossier(): void {
-    this.loginForm.patchValue({
-      email: 'jane.smith@carthage-creance.tn',
-      password: 'password123'
-    });
-    this.onSubmit();
-  }
-
-  loginAsAgentDossier(): void {
-    this.loginForm.patchValue({
-      email: 'john.doe@carthage-creance.tn',
-      password: 'password123'
-    });
-    this.onSubmit();
-  }
-
-  loginAsChefJuridique(): void {
-    this.loginForm.patchValue({
-      email: 'fatma.trabelsi@carthage-creance.tn',
-      password: 'password123'
-    });
-    this.onSubmit();
-  }
-
-  loginAsSuperAdmin(): void {
-    this.loginForm.patchValue({
-      email: 'mohamed.khelil@carthage-creance.tn',
-      password: 'password123'
-    });
-    this.onSubmit();
-  }
-
-  loginAsChefAmiable(): void {
-    this.loginForm.patchValue({
-      email: 'chef.amiable@carthage-creance.tn',
-      password: 'password123'
-    });
-    this.onSubmit();
   }
 
   togglePasswordVisibility(): void {

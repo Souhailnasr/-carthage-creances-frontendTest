@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable, BehaviorSubject, throwError } from 'rxjs';
-import { tap, catchError, map } from 'rxjs/operators';
+import { Observable, BehaviorSubject, throwError, timer } from 'rxjs';
+import { tap, catchError, map, switchMap } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { Audience, AudienceRequest } from '../models/audience.model';
 
@@ -14,6 +14,23 @@ export class AudienceService {
   public audiences$ = this.audiencesSubject.asObservable();
 
   constructor(private http: HttpClient) {}
+
+  /**
+   * Obtenir toutes les audiences brutes depuis l'API backend (sans normalisation)
+   */
+  getAllAudiencesRaw(): Observable<any[]> {
+    console.log('📤 AudienceService.getAllAudiencesRaw - Appel API:', `${this.baseUrl}/audiences`);
+    return this.http.get<any[]>(`${this.baseUrl}/audiences`).pipe(
+      tap(rawAudiences => {
+        console.log('📥 AudienceService.getAllAudiencesRaw - Audiences brutes reçues:', rawAudiences?.length || 0);
+        if (rawAudiences && rawAudiences.length > 0) {
+          console.log('📥 AudienceService.getAllAudiencesRaw - PREMIÈRE AUDIENCE BRUTE:', rawAudiences[0]);
+          console.log('📥 AudienceService.getAllAudiencesRaw - Clés:', Object.keys(rawAudiences[0]));
+        }
+      }),
+      catchError(this.handleError)
+    );
+  }
 
   /**
    * Obtenir toutes les audiences depuis l'API backend
@@ -55,11 +72,16 @@ export class AudienceService {
             });
             
             // PRIORITÉ 1: Vérifier dossier_id (avec underscore) - format base de données
-            if (audience.dossier_id !== null && audience.dossier_id !== undefined) {
-              audience.dossierId = typeof audience.dossier_id === 'string' 
+            if (audience.dossier_id !== null && audience.dossier_id !== undefined && audience.dossier_id !== '') {
+              const dossierIdValue = typeof audience.dossier_id === 'string' 
                 ? parseInt(audience.dossier_id, 10) 
                 : audience.dossier_id;
-              console.log(`🔧 AudienceService - Audience ${audience.id}: dossierId extrait de dossier_id = ${audience.dossierId}`);
+              if (!isNaN(dossierIdValue)) {
+                audience.dossierId = dossierIdValue;
+                console.log(`🔧 AudienceService - Audience ${audience.id}: dossierId extrait de dossier_id = ${audience.dossierId}`);
+              } else {
+                console.warn(`⚠️ AudienceService - Audience ${audience.id}: dossier_id n'est pas un nombre valide: ${audience.dossier_id}`);
+              }
             }
             // PRIORITÉ 2: Si l'audience a déjà dossierId (camelCase)
             else if (audience.dossierId !== null && audience.dossierId !== undefined) {
@@ -79,10 +101,12 @@ export class AudienceService {
               console.log(`🔧 AudienceService - Audience ${audience.id}: dossierId extrait de dossier.id = ${audience.dossierId}`);
             }
             else {
-              console.error(`❌ AudienceService - Audience ${audience.id} n'a AUCUN champ dossierId/dossier_id/dossier!`, {
-                allKeys: Object.keys(audience),
-                audience: audience
+              // Audience sans dossierId - on l'avertit mais on continue
+              console.warn(`⚠️ AudienceService - Audience ${audience.id} n'a AUCUN champ dossierId/dossier_id/dossier. Elle sera ignorée.`, {
+                allKeys: Object.keys(audience)
               });
+              // Marquer cette audience comme invalide pour qu'elle soit filtrée plus tard
+              audience._invalid = true;
             }
             
             // Si l'audience a resultat mais pas decisionResult, mapper
@@ -99,8 +123,13 @@ export class AudienceService {
             return audience as Audience;
           });
           
-          console.log('✅ AudienceService - Audiences normalisées:', normalized.length);
-          return normalized;
+          // Filtrer les audiences invalides (sans dossierId)
+          const validAudiences = normalized.filter(a => !(a as any)._invalid);
+          if (validAudiences.length < normalized.length) {
+            console.warn(`⚠️ AudienceService - ${normalized.length - validAudiences.length} audience(s) sans dossierId ont été ignorées`);
+          }
+          console.log('✅ AudienceService - Audiences normalisées:', validAudiences.length);
+          return validAudiences;
         }),
         tap(normalizedAudiences => {
           console.log('📤 AudienceService - Envoi des audiences normalisées au composant:', normalizedAudiences);
@@ -128,6 +157,72 @@ export class AudienceService {
       .pipe(
         catchError(this.handleError)
       );
+  }
+
+  /**
+   * Crée une audience et récupère le dossier mis à jour avec le nouveau score IA
+   */
+  createAudienceWithDossier(audience: AudienceRequest | any): Observable<{ audience: Audience; dossier?: any }> {
+    return this.createAudience(audience).pipe(
+      switchMap((createdAudience) => {
+        // Attendre 2 secondes pour laisser le temps au backend de recalculer le score IA
+        return timer(2000).pipe(
+          switchMap(() => {
+            // Récupérer le dossier mis à jour
+            // Le backend peut retourner createdAudience.dossier (objet) ou createdAudience.dossierId (number)
+            const dossierId = (createdAudience as any).dossier?.id || createdAudience.dossierId || audience.dossierId;
+            if (dossierId) {
+              return this.http.get<any>(`${this.baseUrl}/dossiers/${dossierId}`).pipe(
+                map((dossier) => ({ audience: createdAudience, dossier })),
+                catchError(() => {
+                  // Si la récupération du dossier échoue, retourner quand même l'audience
+                  console.warn('⚠️ AudienceService - Impossible de récupérer le dossier mis à jour');
+                  return [{ audience: createdAudience }];
+                })
+              );
+            }
+            return [{ audience: createdAudience }];
+          })
+        );
+      }),
+      catchError((error) => {
+        console.error('❌ AudienceService - Erreur lors de la création de l\'audience:', error);
+        return throwError(() => error);
+      })
+    );
+  }
+
+  /**
+   * Met à jour une audience et récupère le dossier mis à jour avec le nouveau score IA
+   */
+  updateAudienceWithDossier(id: number, audience: AudienceRequest | any): Observable<{ audience: Audience; dossier?: any }> {
+    return this.updateAudience(id, audience).pipe(
+      switchMap((updatedAudience) => {
+        // Attendre 2 secondes pour laisser le temps au backend de recalculer le score IA
+        return timer(2000).pipe(
+          switchMap(() => {
+            // Récupérer le dossier mis à jour
+            // Le backend peut retourner updatedAudience.dossier (objet) ou updatedAudience.dossierId (number)
+            const dossierId = (updatedAudience as any).dossier?.id || updatedAudience.dossierId || audience.dossierId;
+            if (dossierId) {
+              return this.http.get<any>(`${this.baseUrl}/dossiers/${dossierId}`).pipe(
+                map((dossier) => ({ audience: updatedAudience, dossier })),
+                catchError(() => {
+                  // Si la récupération du dossier échoue, retourner quand même l'audience
+                  console.warn('⚠️ AudienceService - Impossible de récupérer le dossier mis à jour');
+                  return [{ audience: updatedAudience }];
+                })
+              );
+            }
+            return [{ audience: updatedAudience }];
+          })
+        );
+      }),
+      catchError((error) => {
+        console.error('❌ AudienceService - Erreur lors de la mise à jour de l\'audience:', error);
+        return throwError(() => error);
+      })
+    );
   }
 
   /**

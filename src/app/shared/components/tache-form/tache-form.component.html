@@ -1,0 +1,99 @@
+<div class="tache-form-container">
+  <mat-card>
+    <mat-card-header>
+      <mat-card-title>{{ isEditMode ? 'Modifier la tâche' : 'Créer une tâche' }}</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <form [formGroup]="tacheForm" (ngSubmit)="onSubmit()">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Titre *</mat-label>
+          <input matInput formControlName="titre" required>
+          <mat-error *ngIf="tacheForm.get('titre')?.hasError('required')">
+            Le titre est obligatoire
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Description</mat-label>
+          <textarea matInput formControlName="description" rows="4"></textarea>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Type *</mat-label>
+          <mat-select formControlName="type" required>
+            <mat-option value="ENQUETE">Enquête</mat-option>
+            <mat-option value="RELANCE">Relance</mat-option>
+            <mat-option value="DOSSIER">Dossier</mat-option>
+            <mat-option value="AUDIENCE">Audience</mat-option>
+            <mat-option value="ACTION">Action</mat-option>
+            <mat-option value="ACTION_AMIABLE">Action amiable</mat-option>
+            <mat-option value="VALIDATION">Validation</mat-option>
+            <mat-option value="TRAITEMENT">Traitement</mat-option>
+            <mat-option value="SUIVI">Suivi</mat-option>
+            <mat-option value="RAPPEL">Rappel</mat-option>
+          </mat-select>
+          <mat-error *ngIf="tacheForm.get('type')?.hasError('required')">
+            Le type est obligatoire
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Priorité *</mat-label>
+          <mat-select formControlName="priorite" required>
+            <mat-option value="FAIBLE">Faible</mat-option>
+            <mat-option value="MOYENNE">Moyenne</mat-option>
+            <mat-option value="ELEVEE">Élevée</mat-option>
+            <mat-option value="TRES_URGENTE">Très urgente</mat-option>
+          </mat-select>
+          <mat-error *ngIf="tacheForm.get('priorite')?.hasError('required')">
+            La priorité est obligatoire
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Agent assigné *</mat-label>
+          <mat-select formControlName="agentAssignéId" required>
+            <mat-option *ngFor="let agent of agents" [value]="agent.id">
+              {{ agent.nom }} {{ agent.prenom }} ({{ agent.roleUtilisateur }})
+            </mat-option>
+          </mat-select>
+          <mat-error *ngIf="tacheForm.get('agentAssignéId')?.hasError('required')">
+            L'agent assigné est obligatoire
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Date d'échéance *</mat-label>
+          <input matInput [matDatepicker]="picker" formControlName="dateEcheance" required>
+          <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+          <mat-datepicker #picker></mat-datepicker>
+          <mat-error *ngIf="tacheForm.get('dateEcheance')?.hasError('required')">
+            La date d'échéance est obligatoire
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Dossier (optionnel)</mat-label>
+          <input matInput type="number" formControlName="dossierId" placeholder="ID du dossier">
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Enquête (optionnel)</mat-label>
+          <input matInput type="number" formControlName="enqueteId" placeholder="ID de l'enquête">
+        </mat-form-field>
+
+        <div class="actions">
+          <button mat-button type="button" routerLink="/taches">Annuler</button>
+          <button mat-raised-button 
+                  type="submit" 
+                  color="primary" 
+                  [disabled]="tacheForm.invalid || loading">
+            <span *ngIf="loading">{{ isEditMode ? 'Modification...' : 'Création...' }}</span>
+            <span *ngIf="!loading">{{ isEditMode ? 'Modifier' : 'Créer' }}</span>
+          </button>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+</div>
+

@@ -1,0 +1,227 @@
+<div class="dossiers-clotures-container">
+  <div class="header">
+    <h1>Dossiers Clôturés</h1>
+    <p class="subtitle">Gestion et réactivation des dossiers clôturés</p>
+  </div>
+
+  <!-- Statistiques -->
+  <div class="stats-section" *ngIf="!loadingStats">
+    <div class="stats-grid">
+      <mat-card class="stat-card">
+        <mat-card-header>
+          <mat-card-title>Total Clôturés</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="stat-value">{{ stats.totalClotures }}</div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="stat-card">
+        <mat-card-header>
+          <mat-card-title>Taux de Recouvrement</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="stat-value">{{ stats.tauxRecouvrement.toFixed(1) }}%</div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="stat-card">
+        <mat-card-header>
+          <mat-card-title>Montant Total Recouvré</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="stat-value">{{ stats.montantTotalRecouvre | number:'1.2-2' }} TND</div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
+
+  <!-- Filtres -->
+  <mat-card class="filters-card">
+    <mat-card-header>
+      <mat-card-title>Filtres</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <form [formGroup]="filtersForm">
+        <div class="filters-row">
+          <mat-form-field appearance="outline">
+            <mat-label>Motif</mat-label>
+            <mat-select formControlName="motif" multiple>
+              <mat-option *ngFor="let motif of motifs" [value]="motif">
+                {{ motif }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Période Début</mat-label>
+            <input matInput [matDatepicker]="picker1" formControlName="periodeDebut">
+            <mat-datepicker-toggle matSuffix [for]="picker1"></mat-datepicker-toggle>
+            <mat-datepicker #picker1></mat-datepicker>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Période Fin</mat-label>
+            <input matInput [matDatepicker]="picker2" formControlName="periodeFin">
+            <mat-datepicker-toggle matSuffix [for]="picker2"></mat-datepicker-toggle>
+            <mat-datepicker #picker2></mat-datepicker>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Montant Min</mat-label>
+            <input matInput type="number" formControlName="montantMin">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Montant Max</mat-label>
+            <input matInput type="number" formControlName="montantMax">
+          </mat-form-field>
+        </div>
+
+        <div class="filters-actions">
+          <button mat-raised-button color="primary" (click)="applyFilters()">
+            <mat-icon>search</mat-icon>
+            Appliquer
+          </button>
+          <button mat-button (click)="resetFilters()">
+            <mat-icon>refresh</mat-icon>
+            Réinitialiser
+          </button>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Résultats -->
+  <mat-card class="results-card">
+    <mat-card-header>
+      <mat-card-title>
+        Résultats : {{ totalElements }} dossiers
+      </mat-card-title>
+      <div class="header-actions">
+        <button mat-raised-button color="accent" (click)="exporterSelectionCSV()">
+          <mat-icon>file_download</mat-icon>
+          Export CSV
+        </button>
+      </div>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="table-container" *ngIf="!loading; else loadingTemplate">
+        <table mat-table [dataSource]="dossiers" class="dossiers-table">
+          <!-- Colonne Référence -->
+          <ng-container matColumnDef="reference">
+            <th mat-header-cell *matHeaderCellDef>Référence</th>
+            <td mat-cell *matCellDef="let dossier">{{ dossier.numeroDossier }}</td>
+          </ng-container>
+
+          <!-- Colonne Débiteur -->
+          <ng-container matColumnDef="debiteur">
+            <th mat-header-cell *matHeaderCellDef>Débiteur</th>
+            <td mat-cell *matCellDef="let dossier">
+              {{ dossier.debiteur?.nom }} {{ dossier.debiteur?.prenom }}
+            </td>
+          </ng-container>
+
+          <!-- Colonne Montant Initial -->
+          <ng-container matColumnDef="montantInitial">
+            <th mat-header-cell *matHeaderCellDef>Montant Initial</th>
+            <td mat-cell *matCellDef="let dossier">
+              {{ dossier.montantCreance | number:'1.2-2' }} TND
+            </td>
+          </ng-container>
+
+          <!-- Colonne Montant Recouvré -->
+          <ng-container matColumnDef="montantRecouvre">
+            <th mat-header-cell *matHeaderCellDef>Montant Recouvré</th>
+            <td mat-cell *matCellDef="let dossier">
+              {{ dossier.montantCreance | number:'1.2-2' }} TND
+            </td>
+          </ng-container>
+
+          <!-- Colonne Taux Recouvrement -->
+          <ng-container matColumnDef="tauxRecouvrement">
+            <th mat-header-cell *matHeaderCellDef>Taux</th>
+            <td mat-cell *matCellDef="let dossier">
+              {{ calculerTauxRecouvrement(dossier) }}%
+            </td>
+          </ng-container>
+
+          <!-- Colonne Motif Clôture -->
+          <ng-container matColumnDef="motifCloture">
+            <th mat-header-cell *matHeaderCellDef>Motif</th>
+            <td mat-cell *matCellDef="let dossier">
+              <mat-chip>RECOUVRE</mat-chip>
+            </td>
+          </ng-container>
+
+          <!-- Colonne Date Clôture -->
+          <ng-container matColumnDef="dateCloture">
+            <th mat-header-cell *matHeaderCellDef>Date Clôture</th>
+            <td mat-cell *matCellDef="let dossier">
+              {{ dossier.dateCloture | date:'short' }}
+            </td>
+          </ng-container>
+
+          <!-- Colonne Agent -->
+          <ng-container matColumnDef="agentResponsable">
+            <th mat-header-cell *matHeaderCellDef>Agent</th>
+            <td mat-cell *matCellDef="let dossier">
+              {{ dossier.agentResponsable?.nom }} {{ dossier.agentResponsable?.prenom }}
+            </td>
+          </ng-container>
+
+          <!-- Colonne Durée -->
+          <ng-container matColumnDef="dureeTotale">
+            <th mat-header-cell *matHeaderCellDef>Durée</th>
+            <td mat-cell *matCellDef="let dossier">
+              {{ calculerDureeTotale(dossier) }} jours
+            </td>
+          </ng-container>
+
+          <!-- Colonne Actions -->
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef>Actions</th>
+            <td mat-cell *matCellDef="let dossier">
+              <button mat-icon-button [matMenuTriggerFor]="menu" matTooltip="Actions">
+                <mat-icon>more_vert</mat-icon>
+              </button>
+              <mat-menu #menu="matMenu">
+                <button mat-menu-item (click)="voirHistorique(dossier)">
+                  <mat-icon>history</mat-icon>
+                  Voir historique
+                </button>
+                <button mat-menu-item (click)="reactiverDossier(dossier)">
+                  <mat-icon>refresh</mat-icon>
+                  Réactiver
+                </button>
+                <button mat-menu-item (click)="exporterDossierPDF(dossier)">
+                  <mat-icon>picture_as_pdf</mat-icon>
+                  Exporter PDF
+                </button>
+              </mat-menu>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+        </table>
+
+        <mat-paginator
+          [length]="totalElements"
+          [pageSize]="pageSize"
+          [pageIndex]="pageIndex"
+          [pageSizeOptions]="[25, 50, 100]"
+          (page)="onPageChange($event)">
+        </mat-paginator>
+      </div>
+
+      <ng-template #loadingTemplate>
+        <div class="loading-container">
+          <mat-progress-spinner mode="indeterminate" diameter="50"></mat-progress-spinner>
+          <p>Chargement des dossiers...</p>
+        </div>
+      </ng-template>
+    </mat-card-content>
+  </mat-card>
+</div>
+

@@ -1,0 +1,49 @@
+<div class="ia-prediction-badge" [ngClass]="'size-' + size">
+  <!-- Indicateur de chargement -->
+  <div *ngIf="loading" class="loading-indicator">
+    <mat-spinner diameter="24" *ngIf="size === 'small'; else defaultSpinner"></mat-spinner>
+    <ng-template #defaultSpinner>
+      <mat-spinner diameter="32"></mat-spinner>
+    </ng-template>
+    <span>Calcul de la prédiction...</span>
+  </div>
+
+  <!-- Badge de prédiction -->
+  <div *ngIf="!loading && prediction" class="prediction-content">
+    <!-- Badge principal : Niveau de risque -->
+    <div class="risk-badge" [ngClass]="'risk-' + getRiskLevelColor(prediction.riskLevel)">
+      <mat-icon class="risk-icon">{{ getRiskLevelIcon(prediction.riskLevel) }}</mat-icon>
+      <span class="risk-level">{{ prediction.riskLevel }}</span>
+      <span class="risk-score" [ngClass]="'score-' + getScoreColor(prediction.riskScore)">
+        {{ prediction.riskScore }}%
+      </span>
+    </div>
+
+    <!-- Détails (si showDetails = true) -->
+    <div *ngIf="showDetails" class="prediction-details">
+      <div class="detail-item">
+        <span class="detail-label">État Final Prédit :</span>
+        <mat-chip [color]="getEtatFinalColor(prediction.etatFinal)" class="detail-chip">
+          {{ getEtatFinalLabel(prediction.etatFinal) }}
+        </mat-chip>
+      </div>
+      <div class="detail-item">
+        <span class="detail-label">Score de Risque :</span>
+        <span class="score-value" [ngClass]="'score-' + getScoreColor(prediction.riskScore)">
+          {{ prediction.riskScore }}%
+        </span>
+      </div>
+      <div class="detail-item" *ngIf="prediction.datePrediction">
+        <span class="detail-label">Date Prédiction :</span>
+        <span class="date-value">{{ prediction.datePrediction | date:'short' }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Message si pas de prédiction -->
+  <div *ngIf="!loading && !prediction" class="no-prediction">
+    <mat-icon>info</mat-icon>
+    <span>Prédiction IA non disponible</span>
+  </div>
+</div>
+

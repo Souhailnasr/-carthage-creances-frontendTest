@@ -51,36 +51,117 @@ export class DossierApiService {
    * @param isChef Indique si création en tant que chef
    * @returns Observable du dossier créé
    */
+  /**
+   * Crée un nouveau dossier - Détecte automatiquement si des fichiers sont nécessaires
+   * 
+   * D'après le backend, les fichiers doivent être envoyés seulement si :
+   * - La checkbox est cochée ET le fichier est présent
+   * 
+   * @param dossier Données du dossier
+   * @param contratChecked Checkbox contrat cochée
+   * @param pouvoirChecked Checkbox pouvoir cochée
+   * @param contratFile Fichier contrat (optionnel)
+   * @param pouvoirFile Fichier pouvoir (optionnel)
+   * @param isChef Indique si création en tant que chef
+   * @returns Observable du dossier créé
+   */
   createDossier(
     dossier: DossierRequest,
+    contratChecked: boolean = false,
+    pouvoirChecked: boolean = false,
     contratFile?: File | null,
     pouvoirFile?: File | null,
     isChef: boolean = false
   ): Observable<DossierApi> {
-    // Vérifier si des fichiers sont présents
-    const hasFiles = (contratFile && contratFile instanceof File) || 
-                     (pouvoirFile && pouvoirFile instanceof File);
+    // Détecter si des fichiers sont nécessaires
+    // Un fichier est nécessaire si la checkbox est cochée ET le fichier est présent
+    const hasContrat = contratChecked && contratFile && contratFile instanceof File;
+    const hasPouvoir = pouvoirChecked && pouvoirFile && pouvoirFile instanceof File;
+    const hasFiles = hasContrat || hasPouvoir;
     
     if (hasFiles) {
-      // ✅ NOUVEAU : Utiliser multipart/form-data avec fichiers
-      return this.createDossierWithFiles(dossier, contratFile || undefined, pouvoirFile || undefined, isChef);
+      // ✅ Utiliser multipart/form-data avec fichiers
+      return this.createDossierWithFiles(
+        dossier, 
+        hasContrat ? contratFile : undefined, 
+        hasPouvoir ? pouvoirFile : undefined, 
+        isChef
+      );
     } else {
-      // ✅ ANCIEN : Utiliser application/json sans fichiers (méthode existante)
+      // ✅ Utiliser application/json sans fichiers
       return this.createDossierSimple(dossier, isChef);
     }
   }
 
   /**
-   * Crée un nouveau dossier (méthode simple sans fichiers)
-   * ANCIEN - Garde la méthode existante qui fonctionne
+   * Crée un nouveau dossier (méthode simple sans fichiers - application/json)
+   * 
+   * D'après le backend modifié :
+   * - Content-Type: application/json
+   * - Body: Objet JSON direct (pas de JSON.stringify)
+   * - Le paramètre isChef est passé dans l'URL (?isChef=true/false)
+   * - Le token JWT est ajouté automatiquement par AuthInterceptor
+   * - ⚠️ IMPORTANT : Le JSON ne doit PAS contenir contratSigne ni pouvoir
+   * 
+   * @param dossier Données du dossier
+   * @param isChef Indique si création en tant que chef
+   * @returns Observable du dossier créé
    */
   createDossierSimple(dossier: DossierRequest, isChef: boolean = false): Observable<DossierApi> {
-    return this.http.post<DossierApi>(`${this.apiUrl}/create`, dossier, {
-      params: { isChef: String(isChef) },
+    // Nettoyer le JSON pour retirer les champs non acceptés par le backend
+    // ⚠️ IMPORTANT : S'assurer que le JSON ne contient PAS contratSigne ni pouvoir
+    // Ces champs ne font pas partie du DTO backend DossierRequest
+    const dossierClean: any = { ...dossier };
+    delete dossierClean.contratSigne;
+    delete dossierClean.pouvoir;
+    
+    console.log('📋 Dossier JSON (nettoyé, sans contratSigne ni pouvoir):', JSON.stringify(dossierClean, null, 2));
+    
+    return this.http.post<DossierApi>(`${this.apiUrl}/create?isChef=${isChef}`, dossierClean, {
       headers: {
         'Content-Type': 'application/json'
       }
-    });
+    }).pipe(
+      catchError((error) => {
+        console.error('❌ Erreur lors de la création du dossier (JSON simple):', error);
+        console.error('❌ Status:', error?.status);
+        console.error('❌ Error body:', error?.error);
+        
+        // Extraire le message d'erreur depuis le body de la réponse
+        // Le backend retourne {"error": "...", "message": "...", "code": "...", "timestamp": "..."}
+        let errorMessage = 'Erreur lors de la création du dossier';
+        
+        if (error?.error) {
+          if (error.error.message) {
+            errorMessage = error.error.message;
+          } else if (error.error.error) {
+            errorMessage = error.error.error;
+          } else if (typeof error.error === 'string') {
+            errorMessage = error.error;
+          }
+        }
+        
+        // Gestion spécifique selon le code HTTP
+        if (error?.status === 400) {
+          errorMessage = errorMessage || 'Format de données invalide ou validation échouée';
+          console.error('❌ Erreur 400: Format de données invalide ou validation échouée');
+        } else if (error?.status === 401) {
+          errorMessage = errorMessage || 'Token d\'authentification requis ou expiré';
+          console.error('❌ Erreur 401: Token d\'authentification requis ou expiré');
+        } else if (error?.status === 500) {
+          errorMessage = errorMessage || 'Erreur interne du serveur';
+          console.error('❌ Erreur 500: Erreur interne du serveur');
+        }
+        
+        // Enrichir l'erreur avec le message extrait
+        const enrichedError = {
+          ...error,
+          message: errorMessage
+        };
+        
+        return throwError(() => enrichedError);
+      })
+    );
   }
 
   /**
@@ -174,6 +255,21 @@ export class DossierApiService {
    * @param isChef Indique si création en tant que chef
    * @returns Observable du dossier créé
    */
+  /**
+   * Crée un nouveau dossier avec fichiers (multipart/form-data)
+   * 
+   * D'après le backend modifié :
+   * - Le champ `dossier` doit être une String JSON (JSON.stringify)
+   * - Les fichiers sont optionnels (contratSigne, pouvoir)
+   * - Le Content-Type est géré automatiquement par le navigateur
+   * - Le token JWT est ajouté automatiquement par AuthInterceptor
+   * 
+   * @param dossier Données du dossier
+   * @param contratSigne Fichier contrat (optionnel)
+   * @param pouvoir Fichier pouvoir (optionnel)
+   * @param isChef Indique si création en tant que chef
+   * @returns Observable du dossier créé
+   */
   createDossierWithFiles(
     dossier: DossierRequest,
     contratSigne?: File,
@@ -183,54 +279,86 @@ export class DossierApiService {
     const formData = new FormData();
     
     // 1. Ajouter le JSON du dossier (OBLIGATOIRE)
-    // Utiliser JSON.stringify() comme indiqué dans le prompt
-    formData.append('dossier', JSON.stringify(dossier));
-    console.log('✅ Partie dossier ajoutée au FormData comme JSON string:', JSON.stringify(dossier, null, 2));
+    // ✅ CORRECT : Le backend accepte maintenant dossier comme String JSON
+    // Le backend désérialise manuellement avec ObjectMapper
+    // ⚠️ IMPORTANT : S'assurer que le JSON ne contient PAS contratSigne ni pouvoir
+    // Ces champs ne font pas partie du DTO backend DossierRequest
+    // Les fichiers sont envoyés séparément dans FormData
+    
+    // Nettoyer le JSON pour retirer les champs non acceptés par le backend
+    const dossierClean: any = { ...dossier };
+    // Retirer contratSigne et pouvoir s'ils sont présents (ne doivent pas être dans le JSON)
+    delete dossierClean.contratSigne;
+    delete dossierClean.pouvoir;
+    
+    formData.append('dossier', JSON.stringify(dossierClean));
+    console.log('✅ Partie dossier ajoutée au FormData comme JSON string');
+    console.log('📋 Dossier JSON (nettoyé, sans contratSigne ni pouvoir):', JSON.stringify(dossierClean, null, 2));
     
     // 2. Ajouter les fichiers si présents (OPTIONNELS)
-    // Utiliser les noms exacts: 'contratSigne' et 'pouvoir' (pas 'contratSigneFile' ni 'pouvoirFile')
+    // Utiliser les noms exacts: 'contratSigne' et 'pouvoir'
     if (contratSigne && contratSigne instanceof File) {
       formData.append('contratSigne', contratSigne);
-      console.log('✅ Fichier contrat ajouté:', contratSigne.name);
+      console.log('✅ Fichier contrat ajouté:', contratSigne.name, `(${contratSigne.size} bytes)`);
     }
     if (pouvoir && pouvoir instanceof File) {
       formData.append('pouvoir', pouvoir);
-      console.log('✅ Fichier pouvoir ajouté:', pouvoir.name);
-    }
-
-    // Log du contenu du FormData pour debug
-    console.log('🔍 Contenu du FormData:');
-    try {
-      for (let [key, value] of (formData as any).entries()) {
-        if (key === 'dossier') {
-          console.log(`  ${key}:`, JSON.parse(value as string));
-        } else {
-          console.log(`  ${key}:`, value instanceof File ? `${value.name} (${value.size} bytes)` : value);
-        }
-      }
-    } catch (error) {
-      console.log('  Impossible d\'afficher le contenu du FormData');
+      console.log('✅ Fichier pouvoir ajouté:', pouvoir.name, `(${pouvoir.size} bytes)`);
     }
 
     // 3. Envoyer la requête multipart
     // ⚠️ IMPORTANT : Ne PAS définir Content-Type manuellement pour FormData
     // Le navigateur ajoute automatiquement le Content-Type avec boundary
-    const token = sessionStorage.getItem('auth-user');
-    const headers: any = {};
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-      console.log('🔑 Token JWT ajouté explicitement aux headers');
-    } else {
-      console.warn('⚠️ Aucun token JWT trouvé dans sessionStorage');
-    }
-
+    // ⚠️ IMPORTANT : Ne PAS définir Authorization manuellement
+    // L'AuthInterceptor ajoute automatiquement le token JWT pour toutes les requêtes
+    
     return this.http.post<DossierApi>(
       `${this.apiUrl}/create?isChef=${isChef}`,
-      formData,
-      {
-        // Ne pas mettre 'Content-Type' dans les headers pour FormData
-        headers: headers
-      }
+      formData
+      // Ne pas mettre de headers ici - l'interceptor gère le token et le navigateur gère le Content-Type
+    ).pipe(
+      catchError((error) => {
+        console.error('❌ Erreur lors de la création du dossier avec fichiers:', error);
+        console.error('❌ Status:', error?.status);
+        console.error('❌ Error body:', error?.error);
+        
+        // Extraire le message d'erreur depuis le body de la réponse
+        // Le backend retourne {"error": "...", "message": "...", "code": "...", "timestamp": "..."}
+        let errorMessage = 'Erreur lors de la création du dossier';
+        
+        if (error?.error) {
+          if (error.error.message) {
+            errorMessage = error.error.message;
+          } else if (error.error.error) {
+            errorMessage = error.error.error;
+          } else if (typeof error.error === 'string') {
+            errorMessage = error.error;
+          }
+        }
+        
+        // Gestion spécifique selon le code HTTP
+        if (error?.status === 400) {
+          // JSON invalide, validation, etc.
+          errorMessage = errorMessage || 'Format de données invalide ou validation échouée';
+          console.error('❌ Erreur 400: Format de données invalide ou validation échouée');
+        } else if (error?.status === 401) {
+          // Token manquant/expiré
+          errorMessage = errorMessage || 'Token d\'authentification requis ou expiré';
+          console.error('❌ Erreur 401: Token d\'authentification requis ou expiré');
+        } else if (error?.status === 500) {
+          // Erreur serveur
+          errorMessage = errorMessage || 'Erreur interne du serveur';
+          console.error('❌ Erreur 500: Erreur interne du serveur');
+        }
+        
+        // Enrichir l'erreur avec le message extrait
+        const enrichedError = {
+          ...error,
+          message: errorMessage
+        };
+        
+        return throwError(() => enrichedError);
+      })
     );
   }
 
@@ -676,6 +804,16 @@ export class DossierApiService {
     }
     
     return this.http.get<Page<DossierApi>>(url, { params }).pipe(
+      tap((response) => {
+        // 🔍 DEBUG: Vérifier la réponse brute du backend
+        console.log('📥 Réponse brute du backend (getDossiersRecouvrementJuridique):', response);
+        if (response?.content && response.content.length > 0) {
+          const firstDossier = response.content[0] as any;
+          console.log('📥 Premier dossier dans la réponse:', firstDossier);
+          console.log('📥 etape_huissier du premier dossier:', firstDossier.etape_huissier);
+          console.log('📥 Toutes les clés du premier dossier:', Object.keys(firstDossier));
+        }
+      }),
       catchError((error) => {
         console.error('❌ Erreur lors de la récupération des dossiers juridiques:', error);
         
@@ -750,7 +888,18 @@ export class DossierApiService {
     if (sort) {
       params.sort = sort;
     }
-    return this.http.get<Page<DossierApi>>(this.apiUrl, { params });
+    return this.http.get<Page<DossierApi>>(this.apiUrl, { params }).pipe(
+      tap((response) => {
+        // 🔍 DEBUG: Vérifier la réponse brute du backend
+        console.log('📥 Réponse brute du backend (getAllDossiers):', response);
+        if (response?.content && response.content.length > 0) {
+          const firstDossier = response.content[0] as any;
+          console.log('📥 Premier dossier dans getAllDossiers:', firstDossier);
+          console.log('📥 etape_huissier du premier dossier:', firstDossier.etape_huissier);
+          console.log('📥 Toutes les clés du premier dossier:', Object.keys(firstDossier));
+        }
+      })
+    );
   }
 
   /**
@@ -781,9 +930,84 @@ export class DossierApiService {
 
   /**
    * Supprime un dossier
+   * 
+   * @param id ID du dossier à supprimer
+   * @param isChef Indique si l'utilisateur est un chef (pour les permissions backend)
+   * @returns Observable<void>
    */
-  deleteDossier(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/${id}`);
+  deleteDossier(id: number, isChef: boolean = false): Observable<void> {
+    // D'après le backend modifié, l'endpoint retourne :
+    // - 204 NO_CONTENT : Suppression réussie (pas de body)
+    // - 404 NOT_FOUND : Dossier introuvable avec {"error": "...", "message": "..."}
+    // - 400 BAD_REQUEST : Validations EN_ATTENTE avec {"error": "...", "message": "..."}
+    // - 500 INTERNAL_SERVER_ERROR : Autres erreurs avec {"error": "...", "message": "..."}
+    const endpoint = `${this.apiUrl}/${id}`;
+    
+    console.log('🗑️ Suppression du dossier ID:', id);
+    console.log('🗑️ Endpoint:', endpoint);
+    
+    // Utiliser observe: 'response' pour accéder au status code
+    return this.http.delete(endpoint, { observe: 'response' }).pipe(
+      tap((response) => {
+        if (response.status === 204) {
+          console.log('✅ Suppression réussie (204 NO_CONTENT)');
+        } else {
+          console.warn('⚠️ Status code inattendu:', response.status);
+        }
+      }),
+      map((response) => {
+        // Le backend retourne 204 NO_CONTENT pour le succès (pas de body)
+        if (response.status === 204) {
+          return; // Succès, pas de body
+        }
+        // Si on arrive ici, c'est un cas inattendu
+        throw new Error(`Réponse inattendue du serveur: ${response.status}`);
+      }),
+      catchError((error) => {
+        console.error('❌ Erreur lors de la suppression:', error);
+        console.error('❌ Status:', error?.status);
+        console.error('❌ StatusText:', error?.statusText);
+        console.error('❌ URL complète appelée:', error?.url);
+        console.error('❌ Error body:', error?.error);
+        
+        // Extraire le message d'erreur depuis le body de la réponse
+        let errorMessage = 'Erreur lors de la suppression du dossier';
+        
+        if (error?.error) {
+          // Le backend retourne {"error": "...", "message": "..."}
+          if (error.error.message) {
+            errorMessage = error.error.message;
+          } else if (error.error.error) {
+            errorMessage = error.error.error;
+          } else if (typeof error.error === 'string') {
+            errorMessage = error.error;
+          }
+        }
+        
+        // Gestion spécifique selon le code HTTP
+        if (error?.status === 400) {
+          // Validations EN_ATTENTE
+          errorMessage = errorMessage || 'Impossible de supprimer le dossier : des validations sont en cours (EN_ATTENTE)';
+          console.error('❌ Erreur 400: Validations EN_ATTENTE - Suppression bloquée');
+        } else if (error?.status === 404) {
+          // Dossier introuvable
+          errorMessage = errorMessage || 'Dossier introuvable';
+          console.error('❌ Erreur 404: Dossier introuvable');
+        } else if (error?.status === 500) {
+          // Erreur serveur
+          errorMessage = errorMessage || 'Erreur interne du serveur';
+          console.error('❌ Erreur 500: Erreur interne du serveur');
+        }
+        
+        // Enrichir l'erreur avec le message extrait
+        const enrichedError = {
+          ...error,
+          message: errorMessage
+        };
+        
+        return throwError(() => enrichedError);
+      })
+    );
   }
 
   // ==================== SEARCH OPERATIONS ====================
@@ -924,6 +1148,52 @@ export class DossierApiService {
 
   deletePouvoir(dossierId: number): Observable<DossierApi> {
     return this.http.delete<DossierApi>(`${this.apiUrl}/${dossierId}/upload/pouvoir`);
+  }
+
+  /**
+   * Télécharge un fichier PDF (contrat signé ou pouvoir) d'un dossier
+   * Le backend ne sert pas les fichiers comme ressources statiques
+   * Il faut utiliser un endpoint API pour télécharger les fichiers
+   * 
+   * @param dossierId ID du dossier
+   * @param fileType Type de fichier ('contratSigne' ou 'pouvoir')
+   * @returns Observable<Blob> pour télécharger le fichier
+   */
+  downloadDossierFile(dossierId: number, fileType: 'contratSigne' | 'pouvoir'): Observable<Blob> {
+    // Le backend devrait avoir un endpoint comme :
+    // GET /api/dossiers/{id}/download/contrat
+    // GET /api/dossiers/{id}/download/pouvoir
+    // ou
+    // GET /api/dossiers/{id}/files/contrat
+    // GET /api/dossiers/{id}/files/pouvoir
+    // ou
+    // GET /api/files/download?dossierId={id}&type={type}
+    
+    // Normaliser le type de fichier pour l'endpoint
+    const normalizedType = fileType === 'contratSigne' ? 'contrat' : 'pouvoir';
+    
+    // Essayer plusieurs endpoints possibles
+    const endpoint = `${this.apiUrl}/${dossierId}/download/${normalizedType}`;
+    
+    console.log('📥 Tentative de téléchargement du fichier:', {
+      dossierId,
+      fileType,
+      normalizedType,
+      endpoint
+    });
+    
+    // Essayer l'endpoint API
+    return this.http.get(endpoint, { responseType: 'blob' }).pipe(
+      tap(() => console.log('✅ Fichier téléchargé avec succès via API')),
+      catchError((error) => {
+        console.error('❌ Erreur lors du téléchargement via API:', error);
+        console.error('❌ Le backend doit exposer un endpoint pour télécharger les fichiers.');
+        console.error('❌ Endpoint attendu:', endpoint);
+        // Si l'endpoint API n'existe pas, on ne peut pas télécharger via API
+        // Il faudra que le backend expose un endpoint pour servir les fichiers
+        return throwError(() => new Error(`Endpoint de téléchargement non disponible. Le backend doit exposer GET ${endpoint} pour télécharger les fichiers.`));
+      })
+    );
   }
 
   /**
@@ -1497,6 +1767,35 @@ export class DossierApiService {
       catchError((error) => {
         console.error('❌ Erreur lors de la finalisation du dossier juridique:', error);
         const errorMessage = error.error?.message || error.error?.error || error.message || 'Erreur lors de la finalisation du dossier juridique';
+        return throwError(() => new Error(errorMessage));
+      })
+    );
+  }
+
+  /**
+   * Finalise un dossier amiable avec l'état final et le montant recouvré
+   * PUT /api/dossiers/{dossierId}/amiable/finaliser
+   */
+  finaliserDossierAmiable(
+    dossierId: number,
+    etatFinal: 'RECOUVREMENT_TOTAL' | 'RECOUVREMENT_PARTIEL' | 'NON_RECOUVRE',
+    montantRecouvre: number
+  ): Observable<DossierApi> {
+    const url = `${this.apiUrl}/${dossierId}/amiable/finaliser`;
+    const payload = {
+      etatFinal: etatFinal,
+      montantRecouvre: montantRecouvre
+    };
+    
+    console.log('📤 Finalisation du dossier amiable:', url, payload);
+    
+    return this.http.put<DossierApi>(url, payload).pipe(
+      tap((dossier) => {
+        console.log('✅ Dossier amiable finalisé:', dossier);
+      }),
+      catchError((error) => {
+        console.error('❌ Erreur lors de la finalisation du dossier amiable:', error);
+        const errorMessage = error.error?.message || error.error?.error || error.message || 'Erreur lors de la finalisation du dossier amiable';
         return throwError(() => new Error(errorMessage));
       })
     );

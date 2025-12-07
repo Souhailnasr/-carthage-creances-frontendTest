@@ -1332,3 +1332,74 @@
     }
   }
 }
+
+// Styles pour les indicateurs de recalcul du score IA
+.ia-prediction-section {
+  position: relative;
+  
+  &.score-recalculating {
+    opacity: 0.7;
+    pointer-events: none;
+  }
+  
+  &.score-updated {
+    animation: scoreUpdatePulse 0.5s ease-in-out;
+  }
+  
+  .score-update-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background-color: #fff3cd;
+    color: #856404;
+    border-radius: 8px;
+    font-size: 12px;
+    margin-top: 8px;
+    animation: fadeIn 0.3s;
+    
+    i {
+      animation: spin 1s linear infinite;
+    }
+  }
+  
+  .score-update-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    background-color: #4caf50;
+    color: white;
+    border-radius: 12px;
+    font-size: 11px;
+    margin-top: 8px;
+    animation: fadeInSlide 0.3s ease;
+    box-shadow: 0 2px 4px rgba(76, 175, 80, 0.3);
+  }
+}
+
+@keyframes scoreUpdatePulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); box-shadow: 0 4px 8px rgba(76, 175, 80, 0.3); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInSlide {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

@@ -98,12 +98,14 @@
               <mat-icon>edit</mat-icon>
             </button>
 
-            <!-- Bouton Changer Statut -->
+            <!-- ✅ NOUVEAU : Bouton Activer/Désactiver (uniquement pour SUPER_ADMIN) -->
             <button mat-icon-button 
-                    [color]="utilisateur.statut === 'ACTIF' ? 'warn' : 'primary'"
+                    *ngIf="isSuperAdmin"
+                    [color]="utilisateur.actif ? 'warn' : 'primary'"
                     (click)="toggleStatut(utilisateur)"
-                    [matTooltip]="utilisateur.statut === 'ACTIF' ? 'Désactiver' : 'Activer'">
-              <mat-icon>{{ utilisateur.statut === 'ACTIF' ? 'block' : 'check_circle' }}</mat-icon>
+                    [disabled]="utilisateur.roleUtilisateur === 'SUPER_ADMIN' && utilisateur.actif"
+                    [matTooltip]="utilisateur.roleUtilisateur === 'SUPER_ADMIN' && utilisateur.actif ? 'Impossible de désactiver un Super Admin' : (utilisateur.actif ? 'Désactiver' : 'Activer')">
+              <mat-icon>{{ utilisateur.actif ? 'block' : 'check_circle' }}</mat-icon>
             </button>
 
             <!-- Bouton Supprimer -->

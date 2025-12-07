@@ -1,223 +1,343 @@
 <div class="huissier-documents-container">
-  <div class="page-header">
-    <h2>
-      <i class="fas fa-file-alt"></i>
-      Documents Huissier
-    </h2>
-    <p class="subtitle">Créez et gérez les documents huissier pour chaque dossier. Une fois les documents créés, vous pourrez passer aux actions.</p>
-  </div>
-
-  <!-- Sélection du dossier et de l'huissier -->
-  <div class="selection-section">
-    <div class="row g-3">
-      <div class="col-md-6">
-        <label for="dossier-select" class="form-label">
-          <i class="fas fa-folder-open"></i> Sélectionner un dossier *
-        </label>
-        <select 
-          id="dossier-select"
-          class="form-control"
-          [(ngModel)]="selectedDossierId"
-          (change)="onDossierSelected(selectedDossierId)"
-          [disabled]="isLoadingDossiers || isLoading">
-          <option [ngValue]="null">Sélectionner un dossier...</option>
-          <option *ngFor="let dossier of dossiers" [ngValue]="dossier.id">
-            {{ dossier.numeroDossier || 'Dossier #' + dossier.id }} - 
-            {{ dossier.creancier?.nom || 'N/A' }}
-            <span *ngIf="getDossierEtape(dossier) !== 'N/A'"> ({{ getDossierEtape(dossier) }})</span>
-          </option>
-        </select>
-      </div>
-      <div class="col-md-6">
-        <label for="huissier-select" class="form-label">
-          <i class="fas fa-user-shield"></i> Sélectionner un huissier
-        </label>
-        <select 
-          id="huissier-select"
-          class="form-control"
-          [(ngModel)]="selectedHuissierId"
-          [disabled]="isLoading">
-          <option [ngValue]="null">Sélectionner un huissier...</option>
-          <option *ngFor="let huissier of huissiers" [ngValue]="huissier.id">
-            {{ huissier.prenom }} {{ huissier.nom }}
-          </option>
-        </select>
+  <div class="header">
+    <div class="header-content">
+      <div>
+        <h1>
+          <i class="fas fa-file-alt"></i>
+          Documents Huissier
+        </h1>
+        <p class="subtitle">Créez et gérez les documents huissier pour chaque dossier. Une fois les documents créés, vous pourrez passer aux actions.</p>
       </div>
     </div>
   </div>
 
-  <!-- Section Documents -->
-  <div class="documents-section" *ngIf="selectedDossierId">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-      <h3>
+  <!-- Statistics Cards -->
+  <div class="stats-section">
+    <div class="stat-card">
+      <div class="stat-icon stat-primary">
+        <i class="fas fa-folder"></i>
+      </div>
+      <div class="stat-content">
+        <div class="stat-value">{{ stats.totalDossiers }}</div>
+        <div class="stat-label">Dossiers</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon stat-info">
         <i class="fas fa-file-alt"></i>
-        Documents du Dossier
-      </h3>
-      <div class="d-flex align-items-center gap-3">
-        <span *ngIf="selectedDossier" class="badge badge-info">
-          <i class="fas fa-info-circle"></i> Étape actuelle : {{ getDossierEtape(selectedDossier) }}
-        </span>
-        <button 
-          class="btn btn-primary"
-          (click)="openDocumentForm()"
-          [disabled]="isLoading || !canCreateDocument(selectedDossier!)"
-          [title]="!canCreateDocument(selectedDossier!) ? 'Ce dossier est passé aux actions ou audiences. Vous ne pouvez que consulter les documents existants.' : 'Créer un nouveau document'">
-          <i class="fas fa-plus"></i> Créer un Document
+      </div>
+      <div class="stat-content">
+        <div class="stat-value">{{ stats.totalDocuments }}</div>
+        <div class="stat-label">Documents Total</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon stat-warning">
+        <i class="fas fa-clock"></i>
+      </div>
+      <div class="stat-content">
+        <div class="stat-value">{{ stats.pendingDocuments }}</div>
+        <div class="stat-label">En Attente</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon stat-success">
+        <i class="fas fa-check-circle"></i>
+      </div>
+      <div class="stat-content">
+        <div class="stat-value">{{ stats.completedDocuments }}</div>
+        <div class="stat-label">Complétés</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon stat-danger">
+        <i class="fas fa-exclamation-triangle"></i>
+      </div>
+      <div class="stat-content">
+        <div class="stat-value">{{ stats.expiredDocuments }}</div>
+        <div class="stat-label">Expirés</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search and Filters Section -->
+  <div class="filters-section">
+    <div class="search-bar">
+      <div class="search-input-group">
+        <i class="fas fa-search"></i>
+        <input 
+          type="text" 
+          [(ngModel)]="searchTerm" 
+          (input)="applyFilters()" 
+          placeholder="Rechercher par numéro de dossier, créancier ou débiteur..."
+          class="search-input"
+        >
+        <button class="clear-search" *ngIf="searchTerm" (click)="searchTerm = ''; applyFilters()">
+          <i class="fas fa-times"></i>
         </button>
       </div>
     </div>
-
-    <!-- Liste des documents -->
-    <div *ngIf="isLoadingDocuments" class="text-center py-5">
-      <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
-        <span class="visually-hidden">Chargement...</span>
-      </div>
-      <p class="mt-3 text-muted">Chargement des documents...</p>
-    </div>
-
-    <div *ngIf="!isLoadingDocuments && documents.length === 0" class="alert alert-info">
-      <i class="fas fa-info-circle"></i> 
-      <div>
-        <strong>Aucun document trouvé.</strong> 
-        Créez votre premier document pour ce dossier en cliquant sur le bouton "Créer un Document".
-      </div>
-    </div>
-
-    <div *ngIf="!isLoadingDocuments && documents.length > 0" class="table-responsive">
-      <table class="table table-striped table-hover">
-        <thead>
-          <tr>
-            <th>Type</th>
-            <th>Date de Création</th>
-            <th>Délai Légal</th>
-            <th>Date d'Expiration</th>
-            <th>Statut</th>
-            <th>Huissier</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let document of documents" 
-              [class.table-warning]="isDocumentExpired(document) && document.status !== StatutDocumentHuissier.EXPIRED"
-              [class.table-danger]="document.status === StatutDocumentHuissier.EXPIRED"
-              [class.table-success]="document.status === StatutDocumentHuissier.COMPLETED">
-            <td>{{ getDocumentTypeLabel(document.typeDocument) }}</td>
-            <td>{{ formatDate(document.dateCreation) }}</td>
-            <td>{{ document.delaiLegalDays }} jours</td>
-            <td>{{ getExpirationDate(document) }}</td>
-            <td>
-              <span class="badge" 
-                    [class.badge-warning]="document.status === StatutDocumentHuissier.PENDING"
-                    [class.badge-danger]="document.status === StatutDocumentHuissier.EXPIRED"
-                    [class.badge-success]="document.status === StatutDocumentHuissier.COMPLETED">
-                {{ getStatusLabel(document.status) }}
-              </span>
-            </td>
-            <td>{{ document.huissierName }}</td>
-            <td>
-              <div class="action-buttons">
-                <button class="btn btn-sm btn-info" 
-                        (click)="viewDocument(document)"
-                        title="Visualiser"
-                        style="border-radius: 6px; padding: 0.4rem 0.8rem; margin-right: 0.25rem;">
-                  <i class="fas fa-eye"></i>
-                </button>
-                <button class="btn btn-sm btn-warning" 
-                        (click)="openDocumentForm(document)"
-                        title="Modifier"
-                        style="border-radius: 6px; padding: 0.4rem 0.8rem; margin-right: 0.25rem;">
-                  <i class="fas fa-edit"></i>
-                </button>
-                <button class="btn btn-sm btn-danger" 
-                        (click)="deleteDocument(document)"
-                        title="Supprimer"
-                        style="border-radius: 6px; padding: 0.4rem 0.8rem; margin-right: 0.25rem;">
-                  <i class="fas fa-trash"></i>
-                </button>
-                <button class="btn btn-sm btn-success" 
-                        *ngIf="canMarkAsCompleted(document)"
-                        (click)="markDocumentAsCompleted(document)"
-                        [disabled]="isLoading"
-                        title="Marquer ce document comme complété"
-                        style="border-radius: 6px; padding: 0.4rem 0.8rem; margin-right: 0.25rem;">
-                  <i class="fas fa-check-circle"></i>
-                  <span class="d-none d-md-inline" style="margin-left: 0.25rem;">Compléter</span>
-                </button>
-                <span class="badge badge-danger" 
-                      *ngIf="document.status === StatutDocumentHuissier.EXPIRED"
-                      title="Ce document est expiré. Il ne peut pas être marqué comme complété."
-                      style="padding: 0.4rem 0.8rem; margin-right: 0.25rem;">
-                  <i class="fas fa-exclamation-triangle"></i> Expiré
-                </span>
-                <span class="badge badge-success" 
-                      *ngIf="document.status === StatutDocumentHuissier.COMPLETED"
-                      title="Ce document a été marqué comme complété."
-                      style="padding: 0.4rem 0.8rem; margin-right: 0.25rem;">
-                  <i class="fas fa-check"></i> Complété
-                </span>
-                <button class="btn btn-sm btn-secondary" 
-                        *ngIf="document.pieceJointeUrl"
-                        (click)="openDocument(document.pieceJointeUrl!)"
-                        title="Ouvrir la pièce jointe"
-                        style="border-radius: 6px; padding: 0.4rem 0.8rem;">
-                  <i class="fas fa-external-link-alt"></i>
-                </button>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Bouton Passer aux Actions (seulement si à l'étape documents) -->
-    <div class="mt-4 text-center" *ngIf="!isLoadingDocuments && documents.length > 0 && canCreateDocument(selectedDossier!)">
+    
+    <div class="filter-buttons">
       <button 
-        class="btn btn-success btn-lg"
-        (click)="passerAuxActions()"
-        [disabled]="!canPasserAuxActions() || isLoading"
-        [title]="!canPasserAuxActions() ? 'Vous devez créer au moins un document' : 'Passer à l\'étape Actions'">
-        <i class="fas fa-arrow-right"></i> Passer aux Actions
+        class="filter-btn" 
+        [class.active]="filterType === 'all'"
+        (click)="filterType = 'all'; applyFilters()">
+        <i class="fas fa-list"></i> Tous
       </button>
-      <p class="text-muted mt-2" *ngIf="documents.length === 0">
-        <i class="fas fa-info-circle"></i> Créez au moins un document pour pouvoir passer aux actions
-      </p>
-    </div>
-    <!-- Message informatif si le dossier est passé aux actions/audiences -->
-    <div class="mt-4 alert alert-info" *ngIf="selectedDossier && !canCreateDocument(selectedDossier)">
-      <i class="fas fa-info-circle"></i>
-      <strong>Ce dossier est à l'étape "{{ getDossierEtape(selectedDossier) }}".</strong>
-      Vous pouvez consulter les documents créés précédemment, mais vous ne pouvez plus en créer de nouveaux.
+      <button 
+        class="filter-btn" 
+        [class.active]="filterType === 'pending'"
+        (click)="filterType = 'pending'; applyFilters()">
+        <i class="fas fa-clock"></i> En Attente
+      </button>
+      <button 
+        class="filter-btn" 
+        [class.active]="filterType === 'completed'"
+        (click)="filterType = 'completed'; applyFilters()">
+        <i class="fas fa-check-circle"></i> Complétés
+      </button>
+      <button 
+        class="filter-btn" 
+        [class.active]="filterType === 'expired'"
+        (click)="filterType = 'expired'; applyFilters()">
+        <i class="fas fa-exclamation-triangle"></i> Expirés
+      </button>
     </div>
   </div>
 
-  <!-- Message si aucun dossier sélectionné -->
-  <div *ngIf="!selectedDossierId" class="alert alert-warning text-center">
-    <i class="fas fa-exclamation-triangle"></i>
-    <strong>Veuillez sélectionner un dossier</strong> pour voir et gérer ses documents.
+  <!-- Dossiers with Documents -->
+  <div class="dossiers-section">
+    <div class="loading-spinner" *ngIf="isLoadingDossiers">
+      <i class="fas fa-spinner fa-spin"></i>
+      <p>Chargement des dossiers...</p>
+    </div>
+    
+    <div class="dossiers-list" *ngIf="!isLoadingDossiers && filteredDossiers.length > 0; else noDossiers">
+      <div class="dossier-item" *ngFor="let dossier of filteredDossiers; trackBy: trackByDossierId">
+        <div class="dossier-header">
+          <div class="dossier-info">
+            <h3 class="dossier-number">{{ dossier.numeroDossier || 'N/A' }}</h3>
+            <div class="dossier-details">
+              <span><strong>Créancier:</strong> {{ getCreancierName(dossier) }}</span>
+              <span><strong>Débiteur:</strong> {{ getDebiteurName(dossier) }}</span>
+              <span *ngIf="dossier.montantCreance"><strong>Montant:</strong> {{ dossier.montantCreance | currency:'TND':'symbol':'1.2-2' }}</span>
+              
+              <!-- Affichage de l'huissier affecté -->
+              <div class="assignments-info" *ngIf="hasHuissier(dossier)">
+                <div class="assignment-item">
+                  <i class="fas fa-file-signature"></i>
+                  <span><strong>Huissier:</strong> {{ getHuissierName(dossier) }}</span>
+                </div>
+              </div>
+              <div class="no-assignment" *ngIf="!hasHuissier(dossier)">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span class="warning-text">Aucun huissier affecté</span>
+              </div>
+              
+              <!-- Étape actuelle du dossier -->
+              <div class="dossier-etape" *ngIf="getDossierEtape(dossier) !== 'N/A'">
+                <i class="fas fa-info-circle"></i>
+                <span><strong>Étape:</strong> {{ getDossierEtape(dossier) }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="dossier-actions-buttons">
+            <button 
+              class="btn btn-primary" 
+              (click)="openDocumentFormForDossierById(dossier.id); $event.stopPropagation(); $event.preventDefault()"
+              [disabled]="!canCreateDocument(dossier) || isLoading"
+              [title]="!canCreateDocument(dossier) ? 'Les documents ne peuvent être créés qu\'à l\'étape EN_ATTENTE_DOCUMENTS. Ce dossier est passé aux actions ou audiences. Vous ne pouvez que consulter les documents existants.' : 'Créer un nouveau document'"
+              type="button"
+              [attr.data-dossier-id]="dossier.id"
+              [attr.data-can-create]="canCreateDocument(dossier)"
+              [attr.data-is-loading]="isLoading">
+              <i class="fas fa-plus"></i> Créer Document
+            </button>
+            <!-- Bouton Passer aux Actions (visible si à l'étape documents) -->
+            <button 
+              *ngIf="canCreateDocument(dossier) && getDocumentsForDossier(dossier.id).length > 0"
+              class="btn btn-success"
+              (click)="selectedDossier = dossier; selectedDossierId = dossier.id; passerAuxActions()"
+              [disabled]="isLoading || !canPasserAuxActions()"
+              title="Passer à l'étape Actions">
+              <i class="fas fa-arrow-right"></i> Passer aux Actions
+            </button>
+          </div>
+        </div>
+
+        <!-- Documents for this dossier -->
+        <div class="documents-section" *ngIf="getFilteredDocumentsForDossier(dossier.id).length > 0">
+          <div class="documents-header">
+            <h4>
+              <i class="fas fa-file-alt"></i>
+              Documents ({{ getFilteredDocumentsForDossier(dossier.id).length }})
+            </h4>
+          </div>
+          <div class="documents-list">
+            <div class="document-card" 
+                 *ngFor="let document of getFilteredDocumentsForDossier(dossier.id); trackBy: trackByDocumentId"
+                 [class.pending]="document.status === StatutDocumentHuissier.PENDING"
+                 [class.completed]="document.status === StatutDocumentHuissier.COMPLETED"
+                 [class.expired]="document.status === StatutDocumentHuissier.EXPIRED">
+              <div class="document-card-header">
+                <div class="document-main-info">
+                  <div class="document-type-badge">
+                    <i class="fas fa-file-alt"></i>
+                    <span>{{ getDocumentTypeLabel(document.typeDocument) }}</span>
+                  </div>
+                  <div class="document-status-badge" [ngClass]="'status-' + document.status">
+                    <i class="fas" 
+                       [class.fa-clock]="document.status === StatutDocumentHuissier.PENDING"
+                       [class.fa-check-circle]="document.status === StatutDocumentHuissier.COMPLETED"
+                       [class.fa-exclamation-triangle]="document.status === StatutDocumentHuissier.EXPIRED"></i>
+                    <span>{{ getStatusLabel(document.status) }}</span>
+                  </div>
+                  <div class="document-date-badge">
+                    <i class="fas fa-calendar"></i>
+                    <span>{{ formatDate(document.dateCreation) }}</span>
+                  </div>
+                </div>
+                <div class="document-actions">
+                  <button class="action-btn view-btn" (click)="selectedDossier = dossier; selectedDossierId = dossier.id; viewDocument(document)" title="Voir les détails">
+                    <i class="fas fa-eye"></i>
+                  </button>
+                  <button 
+                    class="action-btn edit-btn" 
+                    (click)="selectedDossier = dossier; selectedDossierId = dossier.id; openDocumentForm(document)" 
+                    [disabled]="!canCreateDocument(dossier)"
+                    title="Modifier">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  <button 
+                    class="action-btn delete-btn" 
+                    (click)="selectedDossier = dossier; selectedDossierId = dossier.id; deleteDocument(document)" 
+                    [disabled]="!canCreateDocument(dossier)"
+                    title="Supprimer">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                  <button 
+                    *ngIf="canMarkAsCompleted(document)"
+                    class="action-btn complete-btn" 
+                    (click)="selectedDossier = dossier; selectedDossierId = dossier.id; markDocumentAsCompleted(document)" 
+                    [disabled]="isLoading"
+                    title="Marquer comme complété">
+                    <i class="fas fa-check"></i>
+                  </button>
+                </div>
+              </div>
+              
+              <div class="document-details">
+                <div class="detail-row">
+                  <i class="fas fa-user-shield"></i>
+                  <span><strong>Huissier:</strong> {{ document.huissierName }}</span>
+                </div>
+                <div class="detail-row">
+                  <i class="fas fa-calendar-alt"></i>
+                  <span><strong>Délai légal:</strong> {{ document.delaiLegalDays }} jours</span>
+                </div>
+                <div class="detail-row">
+                  <i class="fas fa-hourglass-end"></i>
+                  <span><strong>Date d'expiration:</strong> {{ getExpirationDate(document) }}</span>
+                </div>
+                <div class="detail-row" *ngIf="document.pieceJointeUrl">
+                  <i class="fas fa-paperclip"></i>
+                  <span>
+                    <strong>Pièce jointe:</strong> 
+                    <button class="btn-link" (click)="openDocument(document.pieceJointeUrl!)">
+                      <i class="fas fa-external-link-alt"></i> Ouvrir
+                    </button>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Message si aucun document -->
+        <div class="no-documents" *ngIf="getDocumentsForDossier(dossier.id).length === 0">
+          <div class="empty-state">
+            <i class="fas fa-file-alt"></i>
+            <p>Aucun document enregistré pour ce dossier.</p>
+            <button 
+              *ngIf="canCreateDocument(dossier)"
+              class="btn btn-outline-primary" 
+              (click)="openDocumentFormForDossier(dossier)">
+              <i class="fas fa-plus"></i> Créer le premier document
+            </button>
+          </div>
+        </div>
+        
+        <!-- Message si documents filtrés vides mais documents existent -->
+        <div class="no-documents-filtered" *ngIf="getFilteredDocumentsForDossier(dossier.id).length === 0 && getDocumentsForDossier(dossier.id).length > 0">
+          <div class="empty-state">
+            <i class="fas fa-filter"></i>
+            <p>Aucun document ne correspond aux filtres sélectionnés.</p>
+            <button class="btn btn-outline-secondary" (click)="filterType = 'all'; applyFilters()">
+              <i class="fas fa-times"></i> Réinitialiser les filtres
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <ng-template #noDossiers>
+      <div class="no-dossiers">
+        <i class="fas fa-folder-open"></i>
+        <h3>Aucun dossier trouvé</h3>
+        <p>Aucun dossier n'est disponible pour la gestion des documents huissier.</p>
+      </div>
+    </ng-template>
   </div>
 
   <!-- Modal de création/modification de document -->
-  <div class="modal" 
-       [class.show]="showDocumentForm"
+  <div class="modal-overlay" 
        *ngIf="showDocumentForm"
        (click)="closeDocumentForm()">
-    <div class="modal-dialog" (click)="$event.stopPropagation()">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">
-            {{ isEditDocumentMode ? 'Modifier un Document Huissier' : 'Créer un Document Huissier' }}
-          </h5>
-          <button type="button" class="close" (click)="closeDocumentForm()">
-            <span>&times;</span>
-          </button>
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>
+          <i class="fas" 
+             [class.fa-plus]="!isEditDocumentMode" 
+             [class.fa-edit]="isEditDocumentMode"></i>
+          {{ isEditDocumentMode ? 'Modifier un Document Huissier' : 'Créer un Document Huissier' }}
+        </h2>
+        <button class="close-btn" (click)="closeDocumentForm()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="dossier-info-modal" *ngIf="selectedDossier">
+          <h3>{{ selectedDossier.numeroDossier || 'N/A' }}</h3>
+          <div class="dossier-info-grid">
+            <div class="info-section">
+              <h4><i class="fas fa-info-circle"></i> Informations générales</h4>
+              <p *ngIf="selectedDossier.titre"><strong>Titre:</strong> {{ selectedDossier.titre }}</p>
+              <p *ngIf="selectedDossier.montantCreance">
+                <strong>Montant:</strong> {{ selectedDossier.montantCreance | currency:'TND':'symbol':'1.2-2' }}
+              </p>
+            </div>
+            <div class="info-section">
+              <h4><i class="fas fa-users"></i> Parties</h4>
+              <p><strong>Créancier:</strong> {{ getCreancierName(selectedDossier) }}</p>
+              <p><strong>Débiteur:</strong> {{ getDebiteurName(selectedDossier) }}</p>
+            </div>
+            <div class="info-section" *ngIf="hasHuissier(selectedDossier)">
+              <h4><i class="fas fa-user-shield"></i> Huissier affecté</h4>
+              <p><strong>Huissier:</strong> {{ getHuissierName(selectedDossier) }}</p>
+            </div>
+          </div>
         </div>
-        <div class="modal-body">
+
+        <form class="document-form">
           <div class="form-group">
             <label for="typeDocument">Type de Document *</label>
             <select 
               id="typeDocument"
               class="form-control"
               [(ngModel)]="documentForm.typeDocument"
+              name="typeDocument"
               [disabled]="isLoading">
               <option [value]="TypeDocumentHuissier.PV_MISE_EN_DEMEURE">PV Mise en Demeure</option>
               <option [value]="TypeDocumentHuissier.ORDONNANCE_PAIEMENT">Ordonnance de Paiement</option>
@@ -232,6 +352,7 @@
               id="huissierName"
               class="form-control"
               [(ngModel)]="documentForm.huissierName"
+              name="huissierName"
               [disabled]="isLoading"
               placeholder="Ex: Said ben salem">
           </div>
@@ -259,88 +380,89 @@
               </span>
             </div>
           </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" (click)="closeDocumentForm()">
-            Annuler
-          </button>
-          <button type="button" class="btn btn-primary" (click)="createDocument()" [disabled]="isLoading">
-            <span *ngIf="isLoading" class="spinner-border spinner-border-sm mr-2"></span>
-            {{ isEditDocumentMode ? 'Modifier' : 'Créer' }}
-          </button>
-        </div>
+        </form>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeDocumentForm()">
+          Annuler
+        </button>
+        <button type="button" class="btn btn-primary" (click)="createDocument()" [disabled]="isLoading">
+          <span *ngIf="isLoading" class="spinner-border spinner-border-sm mr-2"></span>
+          {{ isEditDocumentMode ? 'Modifier' : 'Créer' }}
+        </button>
       </div>
     </div>
   </div>
 
   <!-- Modal de visualisation de document -->
-  <div class="modal" 
-       [class.show]="showDocumentView"
+  <div class="modal-overlay" 
        *ngIf="showDocumentView && selectedDocument"
        (click)="closeDocumentView()">
-    <div class="modal-dialog modal-lg" (click)="$event.stopPropagation()">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">
-            <i class="fas fa-file-alt"></i> Détails du Document
-          </h5>
-          <button type="button" class="close" (click)="closeDocumentView()">
-            <span>&times;</span>
-          </button>
-        </div>
-        <div class="modal-body">
-          <div class="document-details">
-            <div class="detail-row">
-              <span class="detail-label">Type de Document:</span>
-              <span class="detail-value">{{ getDocumentTypeLabel(selectedDocument.typeDocument) }}</span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label">Date de Création:</span>
-              <span class="detail-value">{{ formatDate(selectedDocument.dateCreation) }}</span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label">Délai Légal:</span>
-              <span class="detail-value">{{ selectedDocument.delaiLegalDays }} jours</span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label">Date d'Expiration:</span>
-              <span class="detail-value">{{ getExpirationDate(selectedDocument) }}</span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label">Statut:</span>
-              <span class="detail-value">
-                <span class="badge" 
-                      [class.badge-warning]="selectedDocument.status === StatutDocumentHuissier.PENDING"
-                      [class.badge-danger]="selectedDocument.status === StatutDocumentHuissier.EXPIRED"
-                      [class.badge-success]="selectedDocument.status === StatutDocumentHuissier.COMPLETED">
-                  {{ getStatusLabel(selectedDocument.status) }}
-                </span>
+    <div class="modal-content modal-lg" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>
+          <i class="fas fa-file-alt"></i> Détails du Document
+        </h2>
+        <button class="close-btn" (click)="closeDocumentView()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="document-details-view">
+          <div class="detail-row">
+            <span class="detail-label">Type de Document:</span>
+            <span class="detail-value">{{ getDocumentTypeLabel(selectedDocument.typeDocument) }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Date de Création:</span>
+            <span class="detail-value">{{ formatDate(selectedDocument.dateCreation) }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Délai Légal:</span>
+            <span class="detail-value">{{ selectedDocument.delaiLegalDays }} jours</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Date d'Expiration:</span>
+            <span class="detail-value">{{ getExpirationDate(selectedDocument) }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Statut:</span>
+            <span class="detail-value">
+              <span class="badge" 
+                    [class.badge-warning]="selectedDocument.status === StatutDocumentHuissier.PENDING"
+                    [class.badge-danger]="selectedDocument.status === StatutDocumentHuissier.EXPIRED"
+                    [class.badge-success]="selectedDocument.status === StatutDocumentHuissier.COMPLETED">
+                {{ getStatusLabel(selectedDocument.status) }}
               </span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label">Huissier:</span>
-              <span class="detail-value">{{ selectedDocument.huissierName }}</span>
-            </div>
-            <div class="detail-row" *ngIf="selectedDocument.pieceJointeUrl">
-              <span class="detail-label">Pièce Jointe:</span>
-              <span class="detail-value">
-                <button class="btn btn-sm btn-info" (click)="openDocument(selectedDocument.pieceJointeUrl!)">
-                  <i class="fas fa-external-link-alt"></i> Ouvrir
-                </button>
-              </span>
-            </div>
+            </span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Huissier:</span>
+            <span class="detail-value">{{ selectedDocument.huissierName }}</span>
+          </div>
+          <div class="detail-row" *ngIf="selectedDocument.pieceJointeUrl">
+            <span class="detail-label">Pièce Jointe:</span>
+            <span class="detail-value">
+              <button class="btn btn-sm btn-info" (click)="openDocument(selectedDocument.pieceJointeUrl!)">
+                <i class="fas fa-external-link-alt"></i> Ouvrir
+              </button>
+            </span>
           </div>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" (click)="closeDocumentView()">
-            Fermer
-          </button>
-          <button type="button" class="btn btn-warning" (click)="openDocumentForm(selectedDocument); closeDocumentView()">
-            <i class="fas fa-edit"></i> Modifier
-          </button>
-        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeDocumentView()">
+          Fermer
+        </button>
+        <button 
+          *ngIf="canCreateDocument(selectedDossier!)"
+          type="button" 
+          class="btn btn-warning" 
+          (click)="openDocumentForm(selectedDocument); closeDocumentView()">
+          <i class="fas fa-edit"></i> Modifier
+        </button>
       </div>
     </div>
   </div>
 </div>
-

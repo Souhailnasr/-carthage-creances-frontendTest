@@ -1,0 +1,73 @@
+<div class="supervision-finance">
+  <div class="header">
+    <div class="header-content">
+      <h1><i class="fas fa-chart-line"></i> Supervision - Finance</h1>
+      <p class="subtitle">Vue d'ensemble consolidée du département financier</p>
+    </div>
+    <button class="btn btn-primary" (click)="loadData()">
+      <i class="fas fa-sync-alt"></i> Actualiser
+    </button>
+  </div>
+
+  <div *ngIf="loading" class="loading-container">
+    <mat-progress-spinner mode="indeterminate" diameter="50"></mat-progress-spinner>
+    <p>Chargement des statistiques...</p>
+  </div>
+
+  <div class="stats-section" *ngIf="!loading && statsFinancieres">
+    <app-stat-card 
+      title="Financier"
+      [stats]="getFinancierStats()"
+      icon="attach_money"
+      color="accent">
+    </app-stat-card>
+
+    <app-stat-card 
+      title="Factures"
+      [stats]="{
+        'Total': (statsFinancieres.totalFactures !== null && statsFinancieres.totalFactures !== undefined) ? statsFinancieres.totalFactures : 0,
+        'Payées': (statsFinancieres.facturesPayees !== null && statsFinancieres.facturesPayees !== undefined) ? statsFinancieres.facturesPayees : 0,
+        'En attente': (statsFinancieres.facturesEnAttente !== null && statsFinancieres.facturesEnAttente !== undefined) ? statsFinancieres.facturesEnAttente : 0
+      }"
+      icon="file-invoice"
+      color="primary">
+    </app-stat-card>
+
+    <app-stat-card 
+      title="Paiements"
+      [stats]="{
+        'Total': (statsFinancieres.totalPaiements !== null && statsFinancieres.totalPaiements !== undefined) ? statsFinancieres.totalPaiements : 0,
+        'Ce mois': (statsFinancieres.paiementsCeMois !== null && statsFinancieres.paiementsCeMois !== undefined) ? statsFinancieres.paiementsCeMois : 0
+      }"
+      icon="money-check-alt"
+      color="warn">
+    </app-stat-card>
+
+    <!-- ✅ NOUVEAU : Section Recouvrement par Phase -->
+    <div class="recouvrement-phase-section" *ngIf="statsFinancieres && (statsFinancieres.montantRecouvrePhaseAmiable || statsFinancieres.montantRecouvrePhaseJuridique)">
+      <h3><i class="fas fa-chart-pie"></i> Recouvrement par Phase</h3>
+      <div class="phase-cards">
+        <app-stat-card 
+          title="Recouvrement Amiable"
+          [stats]="{
+            'Montant': formatAmount(statsFinancieres.montantRecouvrePhaseAmiable || 0),
+            'Pourcentage': statsFinancieres.montantRecouvre ? ((statsFinancieres.montantRecouvrePhaseAmiable || 0) / statsFinancieres.montantRecouvre * 100).toFixed(2) + '%' : '0%'
+          }"
+          icon="handshake"
+          color="primary">
+        </app-stat-card>
+
+        <app-stat-card 
+          title="Recouvrement Juridique"
+          [stats]="{
+            'Montant': formatAmount(statsFinancieres.montantRecouvrePhaseJuridique || 0),
+            'Pourcentage': statsFinancieres.montantRecouvre ? ((statsFinancieres.montantRecouvrePhaseJuridique || 0) / statsFinancieres.montantRecouvre * 100).toFixed(2) + '%' : '0%'
+          }"
+          icon="gavel"
+          color="accent">
+        </app-stat-card>
+      </div>
+    </div>
+  </div>
+</div>
+

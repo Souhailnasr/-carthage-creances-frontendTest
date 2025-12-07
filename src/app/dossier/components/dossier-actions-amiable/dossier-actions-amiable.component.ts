@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, OnDestroy, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
@@ -39,6 +39,9 @@ import { JwtAuthService } from '../../../core/services/jwt-auth.service';
 export class DossierActionsAmiableComponent implements OnInit, OnDestroy, OnChanges {
   @Input() dossierId!: number;
   @Input() typeRecouvrement?: string; // Type de recouvrement du dossier
+  @Output() actionCreated = new EventEmitter<void>();
+  @Output() actionUpdated = new EventEmitter<void>();
+  @Output() actionDeleted = new EventEmitter<void>();
   
   actions: ActionRecouvrement[] = [];
   statistiques: StatistiquesActions = {
@@ -201,6 +204,7 @@ export class DossierActionsAmiableComponent implements OnInit, OnDestroy, OnChan
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
         this.loadActions();
+        this.actionUpdated.emit(); // Notifier la modification d'action
       }
     });
   }
@@ -213,6 +217,7 @@ export class DossierActionsAmiableComponent implements OnInit, OnDestroy, OnChan
         next: () => {
           this.snackBar.open('Action supprimée avec succès', 'Fermer', { duration: 3000 });
           this.loadActions();
+          this.actionDeleted.emit(); // Notifier la suppression d'action
         },
         error: (err) => {
           console.error('❌ Erreur lors de la suppression:', err);

@@ -1,0 +1,143 @@
+.dossiers-actifs-container {
+  padding: 24px;
+  max-width: 100%;
+
+  .header {
+    margin-bottom: 24px;
+
+    h1 {
+      margin: 0 0 8px 0;
+      font-size: 32px;
+      font-weight: bold;
+      color: #212121;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: #757575;
+      font-size: 16px;
+    }
+  }
+
+  .filters-card {
+    margin-bottom: 24px;
+
+    mat-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .filters-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .advanced-filters {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid #E0E0E0;
+    }
+
+    .filters-actions {
+      display: flex;
+      gap: 16px;
+      margin-top: 16px;
+    }
+  }
+
+  .results-card {
+    .header-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .table-container {
+      overflow-x: auto;
+
+      .dossiers-table {
+        width: 100%;
+
+        th {
+          font-weight: 600;
+          color: #212121;
+        }
+
+        td, th {
+          padding: 12px;
+        }
+
+        .statut-en_cours {
+          background-color: #2196F3;
+          color: white;
+        }
+
+        .statut-cloture {
+          background-color: #4CAF50;
+          color: white;
+        }
+
+        .statut-en_attente_validation {
+          background-color: #FF9800;
+          color: white;
+        }
+
+        .score-faible {
+          color: #F44336;
+          font-weight: bold;
+        }
+
+        .score-moyen {
+          color: #FF9800;
+          font-weight: bold;
+        }
+
+        .score-eleve {
+          color: #4CAF50;
+          font-weight: bold;
+        }
+
+        .urgence-tres-urgent {
+          background-color: #F44336;
+          color: white;
+        }
+
+        .urgence-urgent {
+          background-color: #FF9800;
+          color: white;
+        }
+
+        .urgence-normal {
+          background-color: #757575;
+          color: white;
+        }
+      }
+    }
+
+    .loading-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 48px;
+
+      p {
+        margin-top: 16px;
+        color: #757575;
+      }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .dossiers-actifs-container {
+    padding: 16px;
+
+    .filters-row {
+      grid-template-columns: 1fr;
+    }
+  }
+}
+

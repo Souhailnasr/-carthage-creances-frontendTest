@@ -48,6 +48,17 @@ export class HuissierDocumentService {
   }
 
   /**
+   * Récupère tous les documents (sans filtre)
+   * GET /api/huissier/documents
+   */
+  getAllDocuments(): Observable<DocumentHuissier[]> {
+    return this.http.get<DocumentHuissier[]>(`${this.apiUrl}/documents`)
+      .pipe(
+        catchError(this.handleError)
+      );
+  }
+
+  /**
    * Met à jour un document huissier
    * PUT /api/huissier/document/{id}
    */
@@ -123,49 +134,75 @@ export class HuissierDocumentService {
   }
 
   /**
-   * Crée un document avec upload de fichier
-   * POST /api/huissier/document (avec FormData)
+   * Crée un document avec ou sans upload de fichier
+   * POST /api/huissier/document
+   * - Si file est fourni : envoie FormData (multipart/form-data)
+   * - Si file n'est pas fourni : envoie JSON (application/json)
    */
   createDocumentWithFile(dto: DocumentHuissierDTO, file?: File): Observable<DocumentHuissier> {
-    const formData = new FormData();
-    
-    // Ajouter les champs du DTO
-    formData.append('dossierId', dto.dossierId.toString());
-    formData.append('typeDocument', dto.typeDocument);
-    formData.append('huissierName', dto.huissierName);
-    
-    // Ajouter le fichier si présent
+    // Si un fichier est fourni, utiliser FormData
     if (file) {
+      const formData = new FormData();
+      
+      // Ajouter les champs du DTO
+      formData.append('dossierId', dto.dossierId.toString());
+      formData.append('typeDocument', dto.typeDocument);
+      formData.append('huissierName', dto.huissierName);
       formData.append('pieceJointe', file);
+      
+      console.log('📤 Envoi avec FormData (multipart/form-data)');
+      console.log('📤 Fichier:', file.name, '(', file.size, 'bytes)');
+      
+      return this.http.post<DocumentHuissier>(`${this.apiUrl}/document`, formData)
+        .pipe(
+          catchError(this.handleError)
+        );
+    } else {
+      // Si pas de fichier, envoyer du JSON
+      console.log('📤 Envoi avec JSON (application/json)');
+      console.log('📤 DTO:', dto);
+      
+      return this.http.post<DocumentHuissier>(`${this.apiUrl}/document`, dto)
+        .pipe(
+          catchError(this.handleError)
+        );
     }
-    
-    return this.http.post<DocumentHuissier>(`${this.apiUrl}/document`, formData)
-      .pipe(
-        catchError(this.handleError)
-      );
   }
 
   /**
-   * Met à jour un document avec upload de fichier
-   * PUT /api/huissier/document/{id} (avec FormData)
+   * Met à jour un document avec ou sans upload de fichier
+   * PUT /api/huissier/document/{id}
+   * - Si file est fourni : envoie FormData (multipart/form-data)
+   * - Si file n'est pas fourni : envoie JSON (application/json)
    */
   updateDocumentWithFile(id: number, dto: DocumentHuissierDTO, file?: File): Observable<DocumentHuissier> {
-    const formData = new FormData();
-    
-    // Ajouter les champs du DTO
-    formData.append('dossierId', dto.dossierId.toString());
-    formData.append('typeDocument', dto.typeDocument);
-    formData.append('huissierName', dto.huissierName);
-    
-    // Ajouter le fichier si présent
+    // Si un fichier est fourni, utiliser FormData
     if (file) {
+      const formData = new FormData();
+      
+      // Ajouter les champs du DTO
+      formData.append('dossierId', dto.dossierId.toString());
+      formData.append('typeDocument', dto.typeDocument);
+      formData.append('huissierName', dto.huissierName);
       formData.append('pieceJointe', file);
+      
+      console.log('📤 Mise à jour avec FormData (multipart/form-data)');
+      console.log('📤 Fichier:', file.name, '(', file.size, 'bytes)');
+      
+      return this.http.put<DocumentHuissier>(`${this.apiUrl}/document/${id}`, formData)
+        .pipe(
+          catchError(this.handleError)
+        );
+    } else {
+      // Si pas de fichier, envoyer du JSON
+      console.log('📤 Mise à jour avec JSON (application/json)');
+      console.log('📤 DTO:', dto);
+      
+      return this.http.put<DocumentHuissier>(`${this.apiUrl}/document/${id}`, dto)
+        .pipe(
+          catchError(this.handleError)
+        );
     }
-    
-    return this.http.put<DocumentHuissier>(`${this.apiUrl}/document/${id}`, formData)
-      .pipe(
-        catchError(this.handleError)
-      );
   }
 
   /**

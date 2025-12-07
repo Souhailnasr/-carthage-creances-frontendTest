@@ -7,6 +7,110 @@
   font-family: 'Roboto', sans-serif;
   color: #333;
 
+  .quick-actions-new-section {
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+    h2 {
+      margin-bottom: 1rem;
+      color: #333;
+      font-size: 1.5rem;
+    }
+
+    .actions-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1rem;
+    }
+
+    .action-card {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem;
+      background: #f8f9fa;
+      border-radius: 8px;
+      text-decoration: none;
+      color: inherit;
+      transition: transform 0.2s, box-shadow 0.2s;
+
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .action-icon {
+        font-size: 2rem;
+        color: #667eea;
+      }
+
+      .action-content {
+        h4 {
+          margin: 0 0 0.25rem 0;
+          color: #333;
+        }
+
+        p {
+          margin: 0;
+          color: #666;
+          font-size: 0.9rem;
+        }
+      }
+    }
+  }
+
+  .stats-completes-section {
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    min-height: 200px; // Éviter les sections trop petites
+
+    h2 {
+      margin-bottom: 1.5rem;
+      color: #333;
+      font-size: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .stats-grid-completes {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+      
+      // Masquer si aucune carte n'est affichée
+      &:empty {
+        display: none;
+      }
+    }
+
+    .loading-stats {
+      text-align: center;
+      padding: 3rem 2rem;
+      color: #666;
+      background: rgba(255, 255, 255, 0.8);
+      border-radius: 8px;
+
+      i {
+        font-size: 2rem;
+        margin-bottom: 1rem;
+        display: block;
+        color: #8e44ad;
+      }
+    }
+  }
+  
+  // Masquer les sections vides
+  .stats-completes-section:empty {
+    display: none;
+  }
+
   .dashboard-header {
     margin-bottom: 2rem;
     background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
@@ -403,6 +507,102 @@
           .activity-date {
             font-size: 0.8rem;
             color: #6c757d;
+          }
+        }
+      }
+    }
+  }
+
+  // Section Prédictions IA
+  .ia-predictions-section {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+
+    h2 {
+      margin: 0 0 1.5rem 0;
+      color: #2c3e50;
+      font-size: 1.5rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+
+      i {
+        color: #f5576c;
+      }
+    }
+
+    .predictions-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1.5rem;
+
+      .prediction-card {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1.5rem;
+        border: 1px solid #e9ecef;
+        transition: all 0.3s ease;
+
+        &:hover {
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+          transform: translateY(-2px);
+        }
+
+        .dossier-header-prediction {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 1rem;
+          padding-bottom: 1rem;
+          border-bottom: 1px solid #dee2e6;
+
+          h4 {
+            margin: 0;
+            color: #2c3e50;
+            font-size: 1.1rem;
+            font-weight: 600;
+          }
+
+          .montant-badge {
+            padding: 0.5rem 1rem;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.9rem;
+          }
+        }
+
+        .prediction-content {
+          display: flex;
+          flex-direction: column;
+          gap: 1rem;
+          align-items: center;
+
+          .btn {
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+
+            &.btn-primary {
+              background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+              color: white;
+
+              &:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 8px rgba(245, 87, 108, 0.3);
+              }
+            }
           }
         }
       }

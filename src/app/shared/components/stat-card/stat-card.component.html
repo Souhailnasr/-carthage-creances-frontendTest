@@ -1,0 +1,15 @@
+<mat-card [class]="'stat-card stat-card-' + color">
+  <mat-card-header>
+    <mat-card-title>
+      <mat-icon>{{ icon }}</mat-icon>
+      {{ title }}
+    </mat-card-title>
+  </mat-card-header>
+  <mat-card-content>
+    <div *ngFor="let stat of stats | keyvalue" class="stat-item">
+      <span class="stat-label">{{ stat.key }}:</span>
+      <span class="stat-value">{{ formatValue(stat.value) }}</span>
+    </div>
+  </mat-card-content>
+</mat-card>
+

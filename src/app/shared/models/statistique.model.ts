@@ -4,9 +4,12 @@ export class StatistiqueAmiable {
   dossiersClotures: number = 0;
   tauxReussite: number = 0;
   montantRecupere: number = 0;
+  montantRecouvre: number = 0; // Alias pour compatibilité
   montantEnCours: number = 0;
   actionsEffectuees: number = 0;
   actionsReussies: number = 0;
+  actionsAmiables: number = 0; // Total actions amiables
+  actionsAmiablesCompletees: number = 0; // Actions amiables complétées
   coutTotalActions: number = 0;
 
   constructor(data?: Partial<StatistiqueAmiable>) {

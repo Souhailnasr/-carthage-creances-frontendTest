@@ -9,49 +9,49 @@
     <mat-card class="stat-card">
       <mat-card-title>Frais Création</mat-card-title>
       <mat-card-content class="stat-value">
-        {{ statistiques.totalFraisCreation | number:'1.2-2' }} TND
+        {{ (statistiques.totalFraisCreation !== null && statistiques.totalFraisCreation !== undefined) ? (statistiques.totalFraisCreation | number:'1.2-2') + ' TND' : 0 }}
       </mat-card-content>
     </mat-card>
     
     <mat-card class="stat-card">
       <mat-card-title>Frais Gestion</mat-card-title>
       <mat-card-content class="stat-value">
-        {{ statistiques.totalFraisGestion | number:'1.2-2' }} TND
+        {{ (statistiques.totalFraisGestion !== null && statistiques.totalFraisGestion !== undefined) ? (statistiques.totalFraisGestion | number:'1.2-2') + ' TND' : 0 }}
       </mat-card-content>
     </mat-card>
     
     <mat-card class="stat-card">
       <mat-card-title>Actions Amiable</mat-card-title>
       <mat-card-content class="stat-value">
-        {{ statistiques.totalActionsAmiable | number:'1.2-2' }} TND
+        {{ (statistiques.totalActionsAmiable !== null && statistiques.totalActionsAmiable !== undefined) ? (statistiques.totalActionsAmiable | number:'1.2-2') + ' TND' : 0 }}
       </mat-card-content>
     </mat-card>
     
     <mat-card class="stat-card">
       <mat-card-title>Actions Juridique</mat-card-title>
       <mat-card-content class="stat-value">
-        {{ statistiques.totalActionsJuridique | number:'1.2-2' }} TND
+        {{ (statistiques.totalActionsJuridique !== null && statistiques.totalActionsJuridique !== undefined) ? (statistiques.totalActionsJuridique | number:'1.2-2') + ' TND' : 0 }}
       </mat-card-content>
     </mat-card>
     
     <mat-card class="stat-card">
       <mat-card-title>Frais Avocat</mat-card-title>
       <mat-card-content class="stat-value">
-        {{ statistiques.totalAvocat | number:'1.2-2' }} TND
+        {{ (statistiques.totalAvocat !== null && statistiques.totalAvocat !== undefined) ? (statistiques.totalAvocat | number:'1.2-2') + ' TND' : 0 }}
       </mat-card-content>
     </mat-card>
     
     <mat-card class="stat-card">
       <mat-card-title>Frais Huissier</mat-card-title>
       <mat-card-content class="stat-value">
-        {{ statistiques.totalHuissier | number:'1.2-2' }} TND
+        {{ (statistiques.totalHuissier !== null && statistiques.totalHuissier !== undefined) ? (statistiques.totalHuissier | number:'1.2-2') + ' TND' : 0 }}
       </mat-card-content>
     </mat-card>
     
     <mat-card class="stat-card total">
       <mat-card-title>Grand Total</mat-card-title>
       <mat-card-content class="stat-value">
-        {{ statistiques.grandTotal | number:'1.2-2' }} TND
+        {{ (statistiques.grandTotal !== null && statistiques.grandTotal !== undefined) ? (statistiques.grandTotal | number:'1.2-2') + ' TND' : 0 }}
       </mat-card-content>
     </mat-card>
   </div>
@@ -61,7 +61,7 @@
     <mat-card class="stat-card success">
       <mat-card-title>Taux de Réussite</mat-card-title>
       <mat-card-content class="stat-value">
-        {{ statistiques.tauxReussiteRecouvrement | number:'1.1-1' }}%
+        {{ (statistiques.tauxReussiteRecouvrement !== null && statistiques.tauxReussiteRecouvrement !== undefined) ? (statistiques.tauxReussiteRecouvrement | number:'1.1-1') + '%' : 0 }}
       </mat-card-content>
       <mat-card-subtitle>Recouvrement</mat-card-subtitle>
     </mat-card>
@@ -69,7 +69,7 @@
     <mat-card class="stat-card info">
       <mat-card-title>Dossiers Total</mat-card-title>
       <mat-card-content class="stat-value">
-        {{ statistiques.nombreDossiersTotal || 0 }}
+        {{ statistiques.nombreDossiersTotal !== null && statistiques.nombreDossiersTotal !== undefined ? statistiques.nombreDossiersTotal : 0 }}
       </mat-card-content>
       <mat-card-subtitle>Tous les dossiers</mat-card-subtitle>
     </mat-card>
@@ -77,7 +77,7 @@
     <mat-card class="stat-card warning">
       <mat-card-title>Phase Enquête</mat-card-title>
       <mat-card-content class="stat-value">
-        {{ statistiques.nombreDossiersEnquete || 0 }}
+        {{ statistiques.nombreDossiersEnquete !== null && statistiques.nombreDossiersEnquete !== undefined ? statistiques.nombreDossiersEnquete : 0 }}
       </mat-card-content>
       <mat-card-subtitle>Dossiers en enquête</mat-card-subtitle>
     </mat-card>
@@ -85,7 +85,7 @@
     <mat-card class="stat-card primary">
       <mat-card-title>Phase Amiable</mat-card-title>
       <mat-card-content class="stat-value">
-        {{ statistiques.nombreDossiersAmiable || 0 }}
+        {{ statistiques.nombreDossiersAmiable !== null && statistiques.nombreDossiersAmiable !== undefined ? statistiques.nombreDossiersAmiable : 0 }}
       </mat-card-content>
       <mat-card-subtitle>Dossiers en amiable</mat-card-subtitle>
     </mat-card>
@@ -93,7 +93,7 @@
     <mat-card class="stat-card danger">
       <mat-card-title>Phase Juridique</mat-card-title>
       <mat-card-content class="stat-value">
-        {{ statistiques.nombreDossiersJuridique || 0 }}
+        {{ statistiques.nombreDossiersJuridique !== null && statistiques.nombreDossiersJuridique !== undefined ? statistiques.nombreDossiersJuridique : 0 }}
       </mat-card-content>
       <mat-card-subtitle>Dossiers en juridique</mat-card-subtitle>
     </mat-card>
@@ -101,7 +101,7 @@
     <mat-card class="stat-card success">
       <mat-card-title>Dossiers Clôturés</mat-card-title>
       <mat-card-content class="stat-value">
-        {{ statistiques.nombreDossiersClotures || 0 }}
+        {{ statistiques.nombreDossiersClotures !== null && statistiques.nombreDossiersClotures !== undefined ? statistiques.nombreDossiersClotures : 0 }}
       </mat-card-content>
       <mat-card-subtitle>Récupération terminée</mat-card-subtitle>
     </mat-card>
@@ -109,7 +109,7 @@
     <mat-card class="stat-card success">
       <mat-card-title>Montant Récupéré</mat-card-title>
       <mat-card-content class="stat-value">
-        {{ statistiques.montantTotalRecouvre | number:'1.2-2' }} TND
+        {{ (statistiques.montantTotalRecouvre !== null && statistiques.montantTotalRecouvre !== undefined) ? (statistiques.montantTotalRecouvre | number:'1.2-2') + ' TND' : 0 }}
       </mat-card-content>
       <mat-card-subtitle>Total récupéré</mat-card-subtitle>
     </mat-card>
@@ -117,18 +117,71 @@
     <mat-card class="stat-card warning">
       <mat-card-title>Montant en Cours</mat-card-title>
       <mat-card-content class="stat-value">
-        {{ statistiques.montantTotalEnCours | number:'1.2-2' }} TND
+        {{ (statistiques.montantTotalEnCours !== null && statistiques.montantTotalEnCours !== undefined) ? (statistiques.montantTotalEnCours | number:'1.2-2') + ' TND' : 0 }}
       </mat-card-content>
       <mat-card-subtitle>En cours de recouvrement</mat-card-subtitle>
     </mat-card>
   </div>
 
-  <!-- Statistiques Factures -->
+  <!-- ✅ NOUVEAU : Statistiques Financières Globales -->
   <div class="stats-grid">
     <mat-card class="stat-card info">
-      <mat-card-title>Factures Émises</mat-card-title>
+      <mat-card-title>Total Frais Engagés</mat-card-title>
       <mat-card-content class="stat-value">
-        {{ statistiques.nombreFacturesEmises || 0 }}
+        {{ (statistiques.totalFraisEngages !== null && statistiques.totalFraisEngages !== undefined) ? (statistiques.totalFraisEngages | number:'1.2-2') + ' TND' : 0 }}
+      </mat-card-content>
+      <mat-card-subtitle>Frais totaux engagés</mat-card-subtitle>
+    </mat-card>
+
+    <mat-card class="stat-card success">
+      <mat-card-title>Frais Récupérés</mat-card-title>
+      <mat-card-content class="stat-value">
+        {{ (statistiques.fraisRecuperes !== null && statistiques.fraisRecuperes !== undefined) ? (statistiques.fraisRecuperes | number:'1.2-2') + ' TND' : 0 }}
+      </mat-card-content>
+      <mat-card-subtitle>Frais récupérés</mat-card-subtitle>
+    </mat-card>
+
+    <mat-card class="stat-card success total">
+      <mat-card-title>Net Généré</mat-card-title>
+      <mat-card-content class="stat-value">
+        {{ (statistiques.netGenere !== null && statistiques.netGenere !== undefined) ? (statistiques.netGenere | number:'1.2-2') + ' TND' : 0 }}
+      </mat-card-content>
+      <mat-card-subtitle>Bénéfice net</mat-card-subtitle>
+    </mat-card>
+  </div>
+
+  <!-- ✅ NOUVEAU : Section Recouvrement par Phase -->
+  <div class="recouvrement-phase-section" *ngIf="statsRecouvrement">
+    <h2><i class="fas fa-chart-pie"></i> Recouvrement par Phase</h2>
+    <div class="stats-grid">
+      <mat-card class="stat-card primary">
+        <mat-card-title>Recouvrement Amiable</mat-card-title>
+        <mat-card-content class="stat-value">
+          {{ (statsRecouvrement.montantRecouvrePhaseAmiable || 0) | number:'1.2-2' }} TND
+        </mat-card-content>
+        <mat-card-subtitle>
+          {{ statsRecouvrement.montantRecouvreTotal ? ((statsRecouvrement.montantRecouvrePhaseAmiable || 0) / statsRecouvrement.montantRecouvreTotal * 100).toFixed(2) + '%' : '0%' }} du total
+        </mat-card-subtitle>
+      </mat-card>
+
+      <mat-card class="stat-card accent">
+        <mat-card-title>Recouvrement Juridique</mat-card-title>
+        <mat-card-content class="stat-value">
+          {{ (statsRecouvrement.montantRecouvrePhaseJuridique || 0) | number:'1.2-2' }} TND
+        </mat-card-content>
+        <mat-card-subtitle>
+          {{ statsRecouvrement.montantRecouvreTotal ? ((statsRecouvrement.montantRecouvrePhaseJuridique || 0) / statsRecouvrement.montantRecouvreTotal * 100).toFixed(2) + '%' : '0%' }} du total
+        </mat-card-subtitle>
+      </mat-card>
+    </div>
+  </div>
+
+  <!-- ✅ NOUVEAU : Statistiques Factures et Paiements (depuis statsFinancieres) -->
+  <div class="stats-grid" *ngIf="statsFinancieres">
+    <mat-card class="stat-card info">
+      <mat-card-title>Total Factures</mat-card-title>
+      <mat-card-content class="stat-value">
+        {{ (statsFinancieres.totalFactures !== null && statsFinancieres.totalFactures !== undefined) ? statsFinancieres.totalFactures : (statistiques.nombreFacturesEmises || 0) }}
       </mat-card-content>
       <mat-card-subtitle>Total factures</mat-card-subtitle>
     </mat-card>
@@ -136,7 +189,7 @@
     <mat-card class="stat-card success">
       <mat-card-title>Factures Payées</mat-card-title>
       <mat-card-content class="stat-value">
-        {{ statistiques.nombreFacturesPayees || 0 }}
+        {{ (statsFinancieres.facturesPayees !== null && statsFinancieres.facturesPayees !== undefined) ? statsFinancieres.facturesPayees : (statistiques.nombreFacturesPayees || 0) }}
       </mat-card-content>
       <mat-card-subtitle>Paiements reçus</mat-card-subtitle>
     </mat-card>
@@ -144,7 +197,50 @@
     <mat-card class="stat-card warning">
       <mat-card-title>Factures en Attente</mat-card-title>
       <mat-card-content class="stat-value">
-        {{ statistiques.montantFacturesEnAttente | number:'1.2-2' }} TND
+        {{ (statsFinancieres.facturesEnAttente !== null && statsFinancieres.facturesEnAttente !== undefined) ? statsFinancieres.facturesEnAttente : 0 }}
+      </mat-card-content>
+      <mat-card-subtitle>En attente de paiement</mat-card-subtitle>
+    </mat-card>
+
+    <mat-card class="stat-card primary">
+      <mat-card-title>Total Paiements</mat-card-title>
+      <mat-card-content class="stat-value">
+        {{ (statsFinancieres.totalPaiements !== null && statsFinancieres.totalPaiements !== undefined) ? statsFinancieres.totalPaiements : 0 }}
+      </mat-card-content>
+      <mat-card-subtitle>Tous les paiements</mat-card-subtitle>
+    </mat-card>
+
+    <mat-card class="stat-card accent">
+      <mat-card-title>Paiements ce Mois</mat-card-title>
+      <mat-card-content class="stat-value">
+        {{ (statsFinancieres.paiementsCeMois !== null && statsFinancieres.paiementsCeMois !== undefined) ? statsFinancieres.paiementsCeMois : 0 }}
+      </mat-card-content>
+      <mat-card-subtitle>Ce mois</mat-card-subtitle>
+    </mat-card>
+  </div>
+
+  <!-- Statistiques Factures (ancien système - conservé pour compatibilité) -->
+  <div class="stats-grid" *ngIf="!statsFinancieres">
+    <mat-card class="stat-card info">
+      <mat-card-title>Factures Émises</mat-card-title>
+      <mat-card-content class="stat-value">
+        {{ statistiques.nombreFacturesEmises !== null && statistiques.nombreFacturesEmises !== undefined ? statistiques.nombreFacturesEmises : 0 }}
+      </mat-card-content>
+      <mat-card-subtitle>Total factures</mat-card-subtitle>
+    </mat-card>
+
+    <mat-card class="stat-card success">
+      <mat-card-title>Factures Payées</mat-card-title>
+      <mat-card-content class="stat-value">
+        {{ statistiques.nombreFacturesPayees !== null && statistiques.nombreFacturesPayees !== undefined ? statistiques.nombreFacturesPayees : 0 }}
+      </mat-card-content>
+      <mat-card-subtitle>Paiements reçus</mat-card-subtitle>
+    </mat-card>
+
+    <mat-card class="stat-card warning">
+      <mat-card-title>Factures en Attente</mat-card-title>
+      <mat-card-content class="stat-value">
+        {{ (statistiques.montantFacturesEnAttente !== null && statistiques.montantFacturesEnAttente !== undefined) ? (statistiques.montantFacturesEnAttente | number:'1.2-2') + ' TND' : 0 }}
       </mat-card-content>
       <mat-card-subtitle>Montant en attente</mat-card-subtitle>
     </mat-card>
@@ -241,6 +337,73 @@
               </button>
               <button mat-raised-button color="accent" (click)="finaliserFacture(finance.dossierId)" class="btn-success" [disabled]="!finance.dossierId || finance.factureFinalisee">
                 Finaliser
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- ✅ Section Dossiers Récents avec Prédiction IA -->
+  <mat-card class="dossiers-recents-card">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>psychology</mat-icon>
+        Dossiers Récents avec Prédiction IA
+      </mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <div *ngIf="loadingDossiersRecents" class="loading-container">
+        <mat-spinner diameter="40"></mat-spinner>
+        <p>Chargement des dossiers...</p>
+      </div>
+      
+      <div *ngIf="!loadingDossiersRecents && dossiersRecents.length === 0" class="no-data">
+        <mat-icon>folder_open</mat-icon>
+        <p>Aucun dossier récent</p>
+      </div>
+
+      <table class="table" *ngIf="!loadingDossiersRecents && dossiersRecents.length > 0">
+        <thead>
+          <tr>
+            <th>Numéro</th>
+            <th>Titre</th>
+            <th>Montant</th>
+            <th>Prédiction IA</th>
+            <th>Statut</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let dossier of dossiersRecents">
+            <td>{{ dossier.numeroDossier }}</td>
+            <td>{{ dossier.titre }}</td>
+            <td>{{ dossier.montantCreance | number:'1.2-2' }} TND</td>
+            <td class="prediction-cell">
+              <app-ia-prediction-badge
+                [prediction]="getPrediction(dossier)"
+                [showDetails]="false"
+                size="small"
+              ></app-ia-prediction-badge>
+              <button 
+                mat-icon-button 
+                *ngIf="!getPrediction(dossier)"
+                (click)="triggerPrediction(dossier.id, $event)"
+                matTooltip="Calculer Prédiction IA"
+                color="primary"
+                class="btn-predict">
+                <mat-icon>psychology</mat-icon>
+              </button>
+            </td>
+            <td>
+              <mat-chip [color]="dossier.statut === 'VALIDE' ? 'accent' : 'primary'">
+                {{ dossier.statut || 'N/A' }}
+              </mat-chip>
+            </td>
+            <td>
+              <button mat-icon-button color="primary" (click)="viewDossier(dossier.id)" matTooltip="Voir Détails">
+                <mat-icon>visibility</mat-icon>
               </button>
             </td>
           </tr>

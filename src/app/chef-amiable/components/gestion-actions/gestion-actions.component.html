@@ -87,6 +87,10 @@
                   <mat-chip *ngIf="dossier.statut" [color]="dossier.statut === 'CLOTURE' ? 'warn' : 'primary'">
                     {{ dossier.statut }}
                   </mat-chip>
+                  <mat-chip *ngIf="isDossierFinalise(dossier)" color="primary" class="finalise-badge">
+                    <mat-icon>check_circle</mat-icon>
+                    Finalisé
+                  </mat-chip>
                 </mat-card-subtitle>
               </mat-card-header>
               <mat-card-content>
@@ -95,25 +99,37 @@
                   <p><strong>Débiteur:</strong> {{ dossier.nomDebiteur }}</p>
                 </div>
               </mat-card-content>
-              <mat-card-actions *ngIf="dossierSelectionne?.numeroDossier === dossier.numeroDossier && !dossier.affecteAuJuridique" class="dossier-actions-quick">
-                <button mat-raised-button color="accent" (click)="affecterAuJuridique(); $event.stopPropagation()">
+              <mat-card-actions *ngIf="dossierSelectionne?.numeroDossier === dossier.numeroDossier && !dossier.affecteAuJuridique && !isDossierFinalise(dossier)" class="dossier-actions-quick">
+                <button 
+                  mat-raised-button 
+                  color="accent" 
+                  (click)="affecterAuJuridique(); $event.stopPropagation()"
+                  [disabled]="loading || isDossierJuridique()"
+                  [matTooltip]="isDossierJuridique() ? 'Ce dossier est déjà affecté au recouvrement juridique' : 'Affecter ce dossier au recouvrement juridique'">
                   <mat-icon>gavel</mat-icon>
                   Affecter au Juridique
                 </button>
                 <button 
+                  *ngIf="canFinaliserDossierAmiable(dossier)"
                   mat-raised-button 
-                  color="primary" 
-                  (click)="affecterAuFinance(); $event.stopPropagation()"
-                  [disabled]="loading || !canAffecterAuFinance(dossier)"
-                  [matTooltip]="!canAffecterAuFinance(dossier) ? 'Le dossier doit avoir au moins une action pour être affecté au finance' : 'Affecter ce dossier au département finance'">
-                  <mat-icon>money</mat-icon>
-                  Affecter au Finance
+                  color="warn" 
+                  (click)="openFinalisationForm(); $event.stopPropagation()"
+                  [disabled]="loading"
+                  [matTooltip]="'Finaliser le dossier amiable avec l\'état final et le montant recouvré'">
+                  <mat-icon>check_circle</mat-icon>
+                  Finaliser
                 </button>
               </mat-card-actions>
               <mat-card-actions *ngIf="dossierSelectionne?.numeroDossier === dossier.numeroDossier && dossier.affecteAuJuridique" class="dossier-actions-quick">
                 <p class="info-message">
                   <mat-icon>info</mat-icon>
                   Ce dossier a été affecté au recouvrement juridique. Vous pouvez toujours consulter l'historique des actions.
+                </p>
+              </mat-card-actions>
+              <mat-card-actions *ngIf="dossierSelectionne?.numeroDossier === dossier.numeroDossier && isDossierFinalise(dossier)" class="dossier-actions-quick">
+                <p class="info-message finalise-message">
+                  <mat-icon>check_circle</mat-icon>
+                  Ce dossier est finalisé. Consultation seule.
                 </p>
               </mat-card-actions>
             </mat-card>
@@ -133,7 +149,9 @@
       <div class="tab-content" *ngIf="dossierSelectionne && dossierSelectionne.id">
         <app-dossier-actions-amiable 
           [dossierId]="dossierSelectionne.id"
-          [typeRecouvrement]="dossierSelectionne.typeRecouvrement">
+          [typeRecouvrement]="dossierSelectionne.typeRecouvrement"
+          (actionCreated)="recalculatePredictionAfterAction()"
+          (actionUpdated)="recalculatePredictionAfterAction()">
         </app-dossier-actions-amiable>
       </div>
       
@@ -219,6 +237,34 @@
                     {{ getTypeRecouvrementLabel(dossierApiSelectionne.typeRecouvrement) }}
                   </mat-chip>
                 </div>
+                <!-- Prédiction IA -->
+                <div class="info-item prediction-item">
+                  <strong>Prédiction IA:</strong>
+                  <div class="prediction-content">
+                    <app-ia-prediction-badge
+                      [prediction]="getPrediction()"
+                      [loading]="loadingPrediction"
+                      [showDetails]="true"
+                      size="medium"
+                    ></app-ia-prediction-badge>
+                    <button 
+                      *ngIf="!getPrediction() && !loadingPrediction"
+                      mat-icon-button
+                      color="primary"
+                      (click)="triggerPrediction()"
+                      matTooltip="Calculer Prédiction IA">
+                      <mat-icon>psychology</mat-icon>
+                    </button>
+                    <button 
+                      *ngIf="getPrediction() && !loadingPrediction"
+                      mat-icon-button
+                      color="accent"
+                      (click)="triggerPrediction()"
+                      matTooltip="Recalculer Prédiction IA">
+                      <mat-icon>refresh</mat-icon>
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
             
@@ -251,7 +297,7 @@
               </div>
             </div>
           </mat-card-content>
-          <mat-card-actions>
+          <mat-card-actions *ngIf="!isDossierFinalise(dossierSelectionne)">
             <button 
               mat-raised-button 
               color="accent" 
@@ -262,14 +308,21 @@
               Affecter au Juridique
             </button>
             <button 
+              *ngIf="canFinaliserDossierAmiable(dossierSelectionne)"
               mat-raised-button 
-              color="primary" 
-              (click)="affecterAuFinance()" 
-              [disabled]="loading || isDossierJuridique() || !canAffecterAuFinance(dossierSelectionne)"
-              [matTooltip]="isDossierJuridique() ? 'Ce dossier est affecté au recouvrement juridique' : (!canAffecterAuFinance(dossierSelectionne) ? 'Le dossier doit avoir au moins une action pour être affecté au finance' : 'Affecter ce dossier au département finance')">
-              <mat-icon>money</mat-icon>
-              Affecter au Finance
+              color="warn" 
+              (click)="openFinalisationForm()"
+              [disabled]="loading"
+              matTooltip="Finaliser le dossier amiable avec l'état final et le montant recouvré">
+              <mat-icon>check_circle</mat-icon>
+              Finaliser
             </button>
+          </mat-card-actions>
+          <mat-card-actions *ngIf="isDossierFinalise(dossierSelectionne)">
+            <p class="info-message finalise-message">
+              <mat-icon>check_circle</mat-icon>
+              Ce dossier est finalisé. Consultation seule.
+            </p>
           </mat-card-actions>
         </mat-card>
       </div>
@@ -297,4 +350,130 @@
       </div>
     </mat-tab>
   </mat-tab-group>
+
+  <!-- Modal de Finalisation du Dossier Amiable -->
+  <div class="modal-overlay" *ngIf="showFinalisationForm" (click)="closeFinalisationForm()">
+    <div class="modal-content finalisation-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>
+          <mat-icon>check_circle</mat-icon>
+          Finaliser le Dossier Amiable
+        </h2>
+        <button class="close-btn" (click)="closeFinalisationForm()">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="dossier-info-finalisation" *ngIf="selectedDossierForFinalisation">
+          <div class="info-section">
+            <h3>Informations du Dossier</h3>
+            <div class="info-grid">
+              <div class="info-item">
+                <span class="label">Numéro:</span>
+                <span class="value">{{ selectedDossierForFinalisation.numeroDossier || 'N/A' }}</span>
+              </div>
+              <div class="info-item">
+                <span class="label">Créancier:</span>
+                <span class="value">{{ selectedDossierForFinalisation.creancier?.nom || 'N/A' }}</span>
+              </div>
+              <div class="info-item">
+                <span class="label">Montant Créance:</span>
+                <span class="value amount">{{ selectedDossierForFinalisation.montantCreance || 0 | number:'1.2-2' }} TND</span>
+              </div>
+              <div class="info-item">
+                <span class="label">Nombre d'Actions:</span>
+                <span class="value">{{ getActionsCount(selectedDossierForFinalisation.id) }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <form [formGroup]="finalisationForm" (ngSubmit)="finaliserDossierAmiable()">
+          <div class="form-section">
+            <h3>État Final du Dossier</h3>
+            <p class="form-description">Sélectionnez l'état final du dossier après les actions amiable :</p>
+            
+            <div class="etat-buttons">
+              <button 
+                type="button"
+                class="btn-etat btn-total"
+                [class.active]="finalisationForm.get('etatFinal')?.value === etatFinalDossier.RECOUVREMENT_TOTAL"
+                (click)="setEtatFinal(etatFinalDossier.RECOUVREMENT_TOTAL)">
+                <mat-icon>check_circle</mat-icon>
+                <span>Recouvrement Total</span>
+              </button>
+              <button 
+                type="button"
+                class="btn-etat btn-partiel"
+                [class.active]="finalisationForm.get('etatFinal')?.value === etatFinalDossier.RECOUVREMENT_PARTIEL"
+                (click)="setEtatFinal(etatFinalDossier.RECOUVREMENT_PARTIEL)">
+                <mat-icon>percent</mat-icon>
+                <span>Recouvrement Partiel</span>
+              </button>
+              <button 
+                type="button"
+                class="btn-etat btn-non-recouvre"
+                [class.active]="finalisationForm.get('etatFinal')?.value === etatFinalDossier.NON_RECOUVRE"
+                (click)="setEtatFinal(etatFinalDossier.NON_RECOUVRE)">
+                <mat-icon>cancel</mat-icon>
+                <span>Non Recouvré</span>
+              </button>
+            </div>
+            
+            <div class="form-group" *ngIf="finalisationForm.get('etatFinal')?.value">
+              <label>
+                <mat-icon>info</mat-icon>
+                État sélectionné: <strong>{{ getEtatFinalLabel(finalisationForm.get('etatFinal')?.value) }}</strong>
+              </label>
+              <input type="hidden" formControlName="etatFinal">
+            </div>
+          </div>
+
+          <div class="form-section" *ngIf="shouldShowMontantRecouvre()">
+            <h3>Montant Recouvré</h3>
+            <p class="form-description">Indiquez le montant recouvré dans cette étape amiable :</p>
+            
+            <div class="form-group">
+              <label for="montantRecouvre">
+                <mat-icon>attach_money</mat-icon>
+                Montant Recouvré (TND)
+              </label>
+              <input 
+                type="number" 
+                id="montantRecouvre"
+                formControlName="montantRecouvre"
+                class="form-control"
+                [readonly]="isMontantRecouvreReadOnly()"
+                [class.readonly]="isMontantRecouvreReadOnly()"
+                min="0"
+                step="0.01"
+                placeholder="0.00">
+              <div class="form-hint" *ngIf="selectedDossierForFinalisation">
+                Montant de la créance: <strong>{{ selectedDossierForFinalisation.montantCreance || 0 | number:'1.2-2' }} TND</strong>
+              </div>
+              <div class="form-hint" *ngIf="selectedDossierForFinalisation && getMontantRestantFinalisation() >= 0">
+                Montant restant: <strong>{{ getMontantRestantFinalisation() | number:'1.2-2' }} TND</strong>
+              </div>
+              <div class="form-error" *ngIf="finalisationForm.get('montantRecouvre')?.invalid && finalisationForm.get('montantRecouvre')?.touched">
+                <span *ngIf="finalisationForm.get('montantRecouvre')?.errors?.['required']">Le montant recouvré est obligatoire</span>
+                <span *ngIf="finalisationForm.get('montantRecouvre')?.errors?.['min']">Le montant doit être positif</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" mat-button (click)="closeFinalisationForm()" [disabled]="isLoadingFinalisation">
+              <mat-icon>close</mat-icon>
+              Annuler
+            </button>
+            <button type="submit" mat-raised-button color="primary" [disabled]="finalisationForm.invalid || isLoadingFinalisation">
+              <mat-icon *ngIf="!isLoadingFinalisation">check_circle</mat-icon>
+              <mat-spinner *ngIf="isLoadingFinalisation" diameter="20"></mat-spinner>
+              {{ isLoadingFinalisation ? 'Finalisation...' : 'Finaliser le Dossier' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
 </div>

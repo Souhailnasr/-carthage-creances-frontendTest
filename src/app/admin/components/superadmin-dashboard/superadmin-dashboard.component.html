@@ -18,231 +18,467 @@
     </div>
   </div>
 
-  <!-- Statistiques Globales -->
-  <div class="global-stats-section">
-    <h2>Vue d'ensemble du système</h2>
-    <div class="stats-grid">
-      <div class="stat-card primary">
-        <div class="stat-icon">
-          <i class="fas fa-users"></i>
+  <!-- Zone 1: Vue d'ensemble stratégique -->
+  <div class="strategic-overview-section">
+    <div class="section-header">
+      <h2><i class="fas fa-chart-line"></i> Vue d'Ensemble Stratégique</h2>
+      <p class="section-description">Indicateurs clés et tendances globales</p>
+    </div>
+    
+    <!-- KPIs Globaux -->
+    <div class="kpis-global" *ngIf="kpis && !loadingAnalytics">
+      <div class="kpi-card-global">
+        <div class="kpi-icon">
+          <i class="fas fa-money-bill-wave"></i>
         </div>
-        <div class="stat-content">
-          <h3>{{ formatNumber(globalStats.totalUsers) }}</h3>
-          <p>Utilisateurs Total</p>
-          <span class="stat-trend up">
-            <i class="fas fa-arrow-up"></i>
-            +12%
-          </span>
+        <div class="kpi-content">
+          <h3>Taux de Recouvrement Global</h3>
+          <div class="kpi-value-large">{{ kpis.tauxRecouvrementGlobal.pourcentage.toFixed(1) }}%</div>
+          <div class="kpi-objectif">Objectif: {{ kpis.tauxRecouvrementGlobal.objectif }}%</div>
+          <div class="kpi-performance" [class]="'perf-' + kpis.tauxRecouvrementGlobal.performance">
+            {{ kpis.tauxRecouvrementGlobal.performance }}
+          </div>
         </div>
       </div>
 
-      <div class="stat-card success">
-        <div class="stat-icon">
+      <div class="kpi-card-global">
+        <div class="kpi-icon">
           <i class="fas fa-folder-open"></i>
         </div>
-        <div class="stat-content">
-          <h3>{{ formatNumber(globalStats.totalDossiers) }}</h3>
-          <p>Dossiers Total</p>
-          <span class="stat-trend up">
-            <i class="fas fa-arrow-up"></i>
-            +8%
-          </span>
+        <div class="kpi-content">
+          <h3>Dossiers Actifs</h3>
+          <div class="kpi-value-large">{{ statsCompletes?.dossiersEnCours || 0 }}</div>
+          <div class="kpi-subtitle">sur {{ statsCompletes?.totalDossiers || 0 }} total</div>
         </div>
       </div>
 
-      <div class="stat-card info">
-        <div class="stat-icon">
-          <i class="fas fa-handshake"></i>
+      <div class="kpi-card-global">
+        <div class="kpi-icon">
+          <i class="fas fa-coins"></i>
         </div>
-        <div class="stat-content">
-          <h3>{{ formatNumber(globalStats.recouvrementAmiable) }}</h3>
-          <p>Recouvrement Amiable</p>
-          <span class="stat-trend up">
-            <i class="fas fa-arrow-up"></i>
-            +15%
-          </span>
-        </div>
-      </div>
-
-      <div class="stat-card warning">
-        <div class="stat-icon">
-          <i class="fas fa-gavel"></i>
-        </div>
-        <div class="stat-content">
-          <h3>{{ formatNumber(globalStats.recouvrementJuridique) }}</h3>
-          <p>Recouvrement Juridique</p>
-          <span class="stat-trend stable">
-            <i class="fas fa-minus"></i>
-            +2%
-          </span>
+        <div class="kpi-content">
+          <h3>Montant Total en Cours</h3>
+          <div class="kpi-value-large">{{ formatAmount(kpis.totalCreancesEnCours.montant) }}</div>
+          <div class="kpi-trend" [class]="'trend-' + kpis.totalCreancesEnCours.tendance">
+            <i class="fas" [class.fa-arrow-up]="kpis.totalCreancesEnCours.tendance === 'up'"
+                       [class.fa-arrow-down]="kpis.totalCreancesEnCours.tendance === 'down'"
+                       [class.fa-minus]="kpis.totalCreancesEnCours.tendance === 'stable'"></i>
+            {{ kpis.totalCreancesEnCours.variationMoisPrecedent > 0 ? '+' : '' }}{{ kpis.totalCreancesEnCours.variationMoisPrecedent }}%
+          </div>
         </div>
       </div>
 
-      <div class="stat-card danger">
-        <div class="stat-icon">
-          <i class="fas fa-clock"></i>
+      <div class="kpi-card-global">
+        <div class="kpi-icon">
+          <i class="fas fa-users"></i>
         </div>
-        <div class="stat-content">
-          <h3>{{ formatNumber(globalStats.dossiersEnCours) }}</h3>
-          <p>Dossiers en Cours</p>
-          <span class="stat-trend down">
-            <i class="fas fa-arrow-down"></i>
-            -5%
-          </span>
-        </div>
-      </div>
-
-      <div class="stat-card dark">
-        <div class="stat-icon">
-          <i class="fas fa-chart-line"></i>
-        </div>
-        <div class="stat-content">
-          <h3>{{ globalStats.performanceGlobale }}%</h3>
-          <p>Performance Globale</p>
-          <span class="stat-trend up">
-            <i class="fas fa-arrow-up"></i>
-            +7%
-          </span>
+        <div class="kpi-content">
+          <h3>Agents Actifs</h3>
+          <div class="kpi-value-large">{{ kpis.agentsActifs.actifs }} / {{ kpis.agentsActifs.total }}</div>
+          <div class="kpi-subtitle">{{ kpis.agentsActifs.tauxActivite.toFixed(1) }}% d'activité</div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Statistiques par Module -->
-  <div class="modules-stats-section">
-    <h2>Performance par Module</h2>
-    <div class="modules-grid">
-      <div class="module-card" *ngFor="let module of moduleStats">
-        <div class="module-header">
-          <div class="module-icon" [style.background-color]="module.color">
-            <i [class]="module.icon"></i>
+  <!-- Zone 2: Alertes et actions critiques -->
+  <div class="alertes-section" *ngIf="alertes && alertes.dossiersAttention.length > 0 && !loadingAnalytics">
+    <div class="section-header">
+      <h2><i class="fas fa-exclamation-triangle"></i> Alertes et Actions Critiques</h2>
+      <p class="section-description">Situations nécessitant une attention immédiate</p>
+      <a routerLink="/admin/alertes-actions" class="btn btn-sm btn-outline-primary">
+        <i class="fas fa-arrow-right"></i> Voir toutes les alertes
+      </a>
+    </div>
+    <div class="alertes-preview">
+      <mat-card class="alerte-card-preview" 
+                *ngFor="let alerte of alertes.dossiersAttention.slice(0, 6)"
+                [class]="'severity-' + (alerte.joursRetard && alerte.joursRetard > 60 ? 'high' : 'medium')">
+        <mat-card-content>
+          <div class="alerte-header">
+            <strong>{{ alerte.reference }}</strong>
+            <mat-chip *ngIf="alerte.joursRetard" class="severity-chip">
+              {{ alerte.joursRetard }} jours
+            </mat-chip>
           </div>
-          <div class="module-info">
-            <h4>{{ module.name }}</h4>
-            <div class="module-trend" [style.color]="getTrendColor(module.trend)">
-              <i [class]="getTrendIcon(module.trend)"></i>
-              <span>{{ module.percentage > 0 ? '+' : '' }}{{ module.percentage }}%</span>
+          <p class="raison">{{ alerte.raison }}</p>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
+
+  <!-- Zone 3: Performance par département -->
+  <div class="performance-departements-section" *ngIf="performanceDepartements && !loadingAnalytics">
+    <div class="section-header">
+      <h2><i class="fas fa-chart-pie"></i> Performance par Département</h2>
+      <p class="section-description">Comparaison des performances entre départements</p>
+    </div>
+    <div class="departements-grid">
+      <mat-card class="dept-card" *ngFor="let dept of performanceDepartements.departements">
+        <mat-card-header>
+          <mat-card-title>{{ dept.nom }}</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="dept-stats">
+            <div class="stat-item">
+              <span class="stat-label">Taux de Recouvrement:</span>
+              <span class="stat-value">{{ dept.tauxRecouvrement.toFixed(1) }}%</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Dossiers Traités:</span>
+              <span class="stat-value">{{ dept.dossiersTraites }}</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Temps Moyen:</span>
+              <span class="stat-value">{{ dept.tempsMoyenTraitement }} jours</span>
             </div>
           </div>
-        </div>
-        <div class="module-value">
-          <h2>{{ formatNumber(module.value) }}</h2>
-        </div>
-        <div class="module-progress">
-          <div class="progress-bar">
-            <div class="progress-fill" 
-                 [style.width.%]="Math.abs(module.percentage)" 
-                 [style.background-color]="module.color">
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
+
+  <!-- Statistiques Complètes -->
+  <div class="stats-completes-section" *ngIf="statsCompletes">
+    <div class="section-header">
+      <h2><i class="fas fa-chart-bar"></i> Statistiques Globales</h2>
+      <p class="section-description">Vue d'ensemble complète du système</p>
+      <button class="btn btn-sm btn-outline-primary" (click)="recalculerStatistiques()">
+        <i class="fas fa-sync-alt"></i> Recalculer
+      </button>
+    </div>
+    <div class="stats-grid-completes" *ngIf="!loadingStatsCompletes">
+      <app-stat-card 
+        title="Dossiers"
+        [stats]="{
+          'Total': statsCompletes.totalDossiers,
+          'En cours': statsCompletes.dossiersEnCours,
+          'Clôturés': statsCompletes.dossiersClotures,
+          'Créés ce mois': statsCompletes.dossiersCreesCeMois
+        }"
+        icon="folder"
+        color="primary">
+      </app-stat-card>
+
+      <app-stat-card 
+        title="Dossiers par Phase"
+        [stats]="{
+          'Création': statsCompletes.dossiersPhaseCreation,
+          'Enquête': statsCompletes.dossiersPhaseEnquete,
+          'Amiable': statsCompletes.dossiersPhaseAmiable,
+          'Juridique': statsCompletes.dossiersPhaseJuridique
+        }"
+        icon="layers"
+        color="accent">
+      </app-stat-card>
+
+      <app-stat-card 
+        title="Actions Amiables"
+        [stats]="{
+          'Total': statsCompletes.actionsAmiables,
+          'Complétées': statsCompletes.actionsAmiablesCompletees
+        }"
+        icon="handshake"
+        color="primary">
+      </app-stat-card>
+
+      <app-stat-card 
+        title="Documents Huissier"
+        [stats]="{
+          'Créés': statsCompletes.documentsHuissierCrees,
+          'Complétés': statsCompletes.documentsHuissierCompletes
+        }"
+        icon="description"
+        color="accent">
+      </app-stat-card>
+
+      <app-stat-card 
+        title="Actions Huissier"
+        [stats]="{
+          'Créées': statsCompletes.actionsHuissierCrees,
+          'Complétées': statsCompletes.actionsHuissierCompletes
+        }"
+        icon="gavel"
+        color="warn">
+      </app-stat-card>
+
+      <app-stat-card 
+        title="Audiences"
+        [stats]="{
+          'Total': statsCompletes.audiencesTotales,
+          'Prochaines (7j)': statsCompletes.audiencesProchaines
+        }"
+        icon="event"
+        color="primary">
+      </app-stat-card>
+
+      <app-stat-card 
+        title="Tâches"
+        [stats]="{
+          'Complétées': statsCompletes.tachesCompletees,
+          'En cours': statsCompletes.tachesEnCours,
+          'En retard': statsCompletes.tachesEnRetard
+        }"
+        icon="assignment"
+        color="warn">
+      </app-stat-card>
+
+      <app-stat-card 
+        title="Financier"
+        [stats]="{
+          'Montant recouvré': formatAmount(statsCompletes.montantRecouvre),
+          'Montant en cours': formatAmount(statsCompletes.montantEnCours),
+          'Taux de réussite': statsCompletes.tauxReussiteGlobal.toFixed(2) + '%'
+        }"
+        icon="attach_money"
+        color="accent">
+      </app-stat-card>
+    </div>
+    <div *ngIf="loadingStatsCompletes" class="loading-stats">
+      <i class="fas fa-spinner fa-spin"></i> Chargement des statistiques...
+    </div>
+  </div>
+
+  <!-- KPIs Améliorés -->
+  <div class="kpis-section" *ngIf="kpis && !loadingAnalytics">
+    <div class="section-header">
+      <h2><i class="fas fa-tachometer-alt"></i> Indicateurs Clés de Performance</h2>
+      <p class="section-description">Métriques essentielles pour le suivi de performance</p>
+    </div>
+    <div class="kpis-grid">
+      <mat-card class="kpi-card">
+        <mat-card-header>
+          <mat-card-title>Total Créances en Cours</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="kpi-value">{{ formatAmount(kpis.totalCreancesEnCours.montant) }}</div>
+          <div class="kpi-trend" [class]="'trend-' + kpis.totalCreancesEnCours.tendance">
+            <mat-icon>{{ kpis.totalCreancesEnCours.tendance === 'up' ? 'trending_up' : kpis.totalCreancesEnCours.tendance === 'down' ? 'trending_down' : 'trending_flat' }}</mat-icon>
+            <span>{{ kpis.totalCreancesEnCours.variationMoisPrecedent > 0 ? '+' : '' }}{{ kpis.totalCreancesEnCours.variationMoisPrecedent }}%</span>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="kpi-card">
+        <mat-card-header>
+          <mat-card-title>Taux de Recouvrement Global</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="kpi-value">{{ kpis.tauxRecouvrementGlobal.pourcentage.toFixed(1) }}%</div>
+          <div class="kpi-objectif">Objectif: {{ kpis.tauxRecouvrementGlobal.objectif }}%</div>
+          <div class="kpi-performance" [class]="'perf-' + kpis.tauxRecouvrementGlobal.performance">
+            {{ kpis.tauxRecouvrementGlobal.performance }}
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="kpi-card">
+        <mat-card-header>
+          <mat-card-title>Dossiers en Retard</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="retard-stats">
+            <div class="retard-item">
+              <span class="retard-label">>30j:</span>
+              <span class="retard-value">{{ kpis.dossiersEnRetard.plus30j }}</span>
+            </div>
+            <div class="retard-item">
+              <span class="retard-label">>60j:</span>
+              <span class="retard-value warning">{{ kpis.dossiersEnRetard.plus60j }}</span>
+            </div>
+            <div class="retard-item">
+              <span class="retard-label">>90j:</span>
+              <span class="retard-value danger">{{ kpis.dossiersEnRetard.plus90j }}</span>
             </div>
           </div>
-        </div>
-      </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="kpi-card">
+        <mat-card-header>
+          <mat-card-title>Agents Actifs</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="kpi-value">{{ kpis.agentsActifs.actifs }} / {{ kpis.agentsActifs.total }}</div>
+          <div class="kpi-taux">{{ kpis.agentsActifs.tauxActivite.toFixed(1) }}% d'activité</div>
+        </mat-card-content>
+      </mat-card>
     </div>
   </div>
 
   <!-- Graphiques et Analyses -->
-  <div class="charts-section">
+  <div class="charts-section" *ngIf="!loadingAnalytics">
+    <div class="section-header">
+      <h2><i class="fas fa-chart-line"></i> Analyses et Graphiques</h2>
+      <p class="section-description">Visualisations des tendances et performances</p>
+    </div>
     <div class="charts-grid">
-      <!-- Graphique des dossiers par mois -->
-      <div class="chart-card">
-        <div class="chart-header">
-          <h3>Évolution des Dossiers</h3>
-          <div class="chart-actions">
-            <button class="btn btn-sm btn-outline-primary">
-              <i class="fas fa-download"></i>
-              Exporter
-            </button>
+      <!-- Graphique Évolution Mensuelle -->
+      <mat-card class="chart-card" *ngIf="evolutionChartData">
+        <mat-card-header>
+          <mat-card-title>Évolution Mensuelle du Recouvrement</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="chart-container" style="height: 300px;">
+            <app-chart type="line" [data]="evolutionChartData" [options]="{
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: { display: true, position: 'top' },
+                tooltip: { mode: 'index', intersect: false }
+              },
+              scales: {
+                y: { beginAtZero: true }
+              }
+            }"></app-chart>
           </div>
-        </div>
-        <div class="chart-content">
-          <div class="chart-placeholder">
-            <i class="fas fa-chart-area"></i>
-            <p>Graphique des dossiers créés par mois</p>
-            <div class="chart-data">
-              <div class="data-point" *ngFor="let data of chartData.dossiersParMois.datasets[0].data; let i = index">
-                <span class="data-label">{{ chartData.dossiersParMois.labels[i] }}</span>
-                <span class="data-value">{{ data }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+        </mat-card-content>
+      </mat-card>
 
-      <!-- Graphique de performance des agents -->
-      <div class="chart-card">
-        <div class="chart-header">
-          <h3>Performance des Agents</h3>
-          <div class="chart-actions">
-            <button class="btn btn-sm btn-outline-primary">
-              <i class="fas fa-eye"></i>
-              Détails
-            </button>
+      <!-- Graphique Répartition par Statut -->
+      <mat-card class="chart-card" *ngIf="repartitionChartData">
+        <mat-card-header>
+          <mat-card-title>Répartition par Statut</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="chart-container" style="height: 300px;">
+            <app-chart type="pie" [data]="repartitionChartData" [options]="{
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: { display: true, position: 'right' },
+                tooltip: { enabled: true }
+              }
+            }"></app-chart>
           </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Graphique Performance par Département -->
+      <mat-card class="chart-card" *ngIf="performanceChartData">
+        <mat-card-header>
+          <mat-card-title>Performance par Département</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="chart-container" style="height: 300px;">
+            <app-chart type="bar" [data]="performanceChartData" [options]="{
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: { display: true, position: 'top' },
+                tooltip: { mode: 'index', intersect: false }
+              },
+              scales: {
+                y: { beginAtZero: true }
+              }
+            }"></app-chart>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
+
+  <!-- Prédictions IA -->
+  <div class="ia-predictions-section" *ngIf="recentDossiers.length > 0">
+    <div class="section-header">
+      <h2><i class="fas fa-brain"></i> Prédictions IA - Dossiers Récents</h2>
+      <p class="section-description">Analyse prédictive des dossiers récemment créés</p>
+    </div>
+    <div class="predictions-grid">
+      <div class="prediction-card" *ngFor="let dossier of recentDossiers">
+        <div class="dossier-header-prediction">
+          <h4>{{ dossier.numeroDossier || 'N/A' }}</h4>
+          <span class="montant-badge">{{ formatAmount(dossier.montantCreance || 0) }}</span>
         </div>
-        <div class="chart-content">
-          <div class="chart-placeholder">
-            <i class="fas fa-chart-bar"></i>
-            <p>Performance moyenne par agent</p>
-            <div class="performance-list">
-              <div class="performance-item" *ngFor="let data of chartData.performanceAgents.datasets[0].data; let i = index">
-                <div class="agent-info">
-                  <span class="agent-name">{{ chartData.performanceAgents.labels[i] }}</span>
-                  <span class="agent-performance">{{ data }}%</span>
-                </div>
-                <div class="performance-bar">
-                  <div class="performance-fill" [style.width.%]="data"></div>
-                </div>
-              </div>
-            </div>
-          </div>
+        <div class="prediction-content">
+          <app-ia-prediction-badge
+            [prediction]="getPrediction(dossier)"
+            [loading]="isLoadingPrediction(dossier)"
+            [showDetails]="true"
+            size="small"
+          ></app-ia-prediction-badge>
+          <button 
+            *ngIf="!getPrediction(dossier) && !isLoadingPrediction(dossier)"
+            class="btn btn-sm btn-primary"
+            (click)="triggerPrediction(dossier.id!)"
+            title="Calculer Prédiction IA">
+            <i class="fas fa-brain"></i> Calculer
+          </button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Actions Rapides -->
-  <div class="quick-actions-section">
-    <h2>Actions Rapides</h2>
-    <div class="actions-grid">
-      <a routerLink="/admin/utilisateurs" class="action-card">
-        <div class="action-icon">
-          <i class="fas fa-users-cog"></i>
-        </div>
-        <div class="action-content">
-          <h4>Gestion des Utilisateurs</h4>
-          <p>Gérer les comptes et permissions</p>
-        </div>
-      </a>
-
-      <a routerLink="/dossier" class="action-card">
-        <div class="action-icon">
-          <i class="fas fa-folder-plus"></i>
-        </div>
-        <div class="action-content">
-          <h4>Créer un Dossier</h4>
-          <p>Nouveau dossier de recouvrement</p>
-        </div>
-      </a>
-
-      <a routerLink="/notifications" class="action-card">
-        <div class="action-icon">
-          <i class="fas fa-bell"></i>
-        </div>
-        <div class="action-content">
-          <h4>Notifications</h4>
-          <p>Voir toutes les notifications</p>
-        </div>
-      </a>
-
-      <a routerLink="/admin/parametres" class="action-card">
-        <div class="action-icon">
-          <i class="fas fa-cog"></i>
-        </div>
-        <div class="action-content">
-          <h4>Paramètres Système</h4>
-          <p>Configuration de l'application</p>
-        </div>
-      </a>
+  <!-- Alertes -->
+  <div class="alertes-section" *ngIf="alertes && alertes.dossiersAttention.length > 0">
+    <div class="section-header">
+      <h2><i class="fas fa-exclamation-triangle"></i> Alertes et Actions Nécessaires</h2>
+      <p class="section-description">Dossiers nécessitant une attention immédiate</p>
     </div>
+    <mat-card>
+      <mat-card-header>
+        <mat-card-title>Dossiers Nécessitant Attention</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="alertes-list">
+          <div class="alerte-item" *ngFor="let alerte of alertes.dossiersAttention">
+            <mat-icon class="alerte-icon">warning</mat-icon>
+            <div class="alerte-content">
+              <strong>{{ alerte.reference }}</strong>
+              <span>{{ alerte.raison }}</span>
+              <span *ngIf="alerte.scoreIA" class="score-badge">Score IA: {{ alerte.scoreIA }}</span>
+              <span *ngIf="alerte.joursRetard" class="retard-badge">{{ alerte.joursRetard }} jours</span>
+            </div>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Activité Récente -->
+  <div class="activite-section" *ngIf="activiteRecente && activiteRecente.content.length > 0">
+    <div class="section-header">
+      <h2><i class="fas fa-history"></i> Activité Récente</h2>
+      <p class="section-description">Dernières actions effectuées dans le système (24h)</p>
+    </div>
+    <mat-card>
+      <mat-card-header>
+        <mat-card-title>Dernières Actions (24h)</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <table mat-table [dataSource]="activiteRecente.content" class="activite-table">
+          <ng-container matColumnDef="dateHeure">
+            <th mat-header-cell *matHeaderCellDef>Date/Heure</th>
+            <td mat-cell *matCellDef="let item">{{ item.dateHeure | date:'short' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="utilisateur">
+            <th mat-header-cell *matHeaderCellDef>Utilisateur</th>
+            <td mat-cell *matCellDef="let item">{{ item.utilisateur.nom }} {{ item.utilisateur.prenom }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="action">
+            <th mat-header-cell *matHeaderCellDef>Action</th>
+            <td mat-cell *matCellDef="let item">
+              <mat-chip>{{ item.action }}</mat-chip>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="details">
+            <th mat-header-cell *matHeaderCellDef>Détails</th>
+            <td mat-cell *matCellDef="let item">{{ item.details }}</td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="['dateHeure', 'utilisateur', 'action', 'details']"></tr>
+          <tr mat-row *matRowDef="let row; columns: ['dateHeure', 'utilisateur', 'action', 'details'];"></tr>
+        </table>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loadingAnalytics" class="loading-analytics">
+    <mat-progress-spinner mode="indeterminate" diameter="50"></mat-progress-spinner>
+    <p>Chargement des données analytiques...</p>
   </div>
 </div>

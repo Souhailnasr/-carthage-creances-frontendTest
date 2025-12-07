@@ -32,6 +32,24 @@
         color: #666;
         font-size: 14px;
       }
+
+      .badge-automatique {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 8px;
+        background-color: #e3f2fd;
+        color: #1976d2;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 500;
+        margin-left: 8px;
+        mat-icon {
+          font-size: 16px;
+          width: 16px;
+          height: 16px;
+        }
+      }
     }
 
     .statut-badge {

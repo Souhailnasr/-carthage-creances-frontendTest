@@ -1,0 +1,58 @@
+<div class="supervision-amiable">
+  <div class="header">
+    <div class="header-content">
+      <h1><i class="fas fa-handshake"></i> Supervision - Amiable</h1>
+      <p class="subtitle">Vue d'ensemble consolidée du département amiable</p>
+    </div>
+    <button class="btn btn-primary" (click)="loadData()">
+      <i class="fas fa-sync-alt"></i> Actualiser
+    </button>
+  </div>
+
+  <div *ngIf="loading" class="loading-container">
+    <mat-progress-spinner mode="indeterminate" diameter="50"></mat-progress-spinner>
+    <p>Chargement des statistiques...</p>
+  </div>
+
+  <div class="stats-section" *ngIf="!loading && statsAmiables">
+    <app-stat-card 
+      title="Actions Amiables"
+      [stats]="{
+        'Total': (statsAmiables.total !== null && statsAmiables.total !== undefined) ? statsAmiables.total : (statsAmiables.actionsAmiables !== null && statsAmiables.actionsAmiables !== undefined ? statsAmiables.actionsAmiables : 0),
+        'Complétées': (statsAmiables.completees !== null && statsAmiables.completees !== undefined) ? statsAmiables.completees : (statsAmiables.actionsAmiablesCompletees !== null && statsAmiables.actionsAmiablesCompletees !== undefined ? statsAmiables.actionsAmiablesCompletees : 0),
+        'En cours': (statsAmiables.enCours !== null && statsAmiables.enCours !== undefined) ? statsAmiables.enCours : (((statsAmiables.total !== null && statsAmiables.total !== undefined ? statsAmiables.total : (statsAmiables.actionsAmiables !== null && statsAmiables.actionsAmiables !== undefined ? statsAmiables.actionsAmiables : 0)) - (statsAmiables.completees !== null && statsAmiables.completees !== undefined ? statsAmiables.completees : (statsAmiables.actionsAmiablesCompletees !== null && statsAmiables.actionsAmiablesCompletees !== undefined ? statsAmiables.actionsAmiablesCompletees : 0))))
+      }"
+      icon="handshake"
+      color="primary">
+    </app-stat-card>
+
+    <app-stat-card 
+      title="Performance"
+      [stats]="{
+        'Taux de réussite': (statsAmiables.tauxReussite !== null && statsAmiables.tauxReussite !== undefined) ? (statsAmiables.tauxReussite * 100).toFixed(2) + '%' : '0%',
+        'Actions réussies': (statsAmiables.completees !== null && statsAmiables.completees !== undefined) ? statsAmiables.completees : (statsAmiables.actionsAmiablesCompletees !== null && statsAmiables.actionsAmiablesCompletees !== undefined ? statsAmiables.actionsAmiablesCompletees : 0)
+      }"
+      icon="chart-line"
+      color="accent">
+    </app-stat-card>
+
+    <!-- ✅ NOUVEAU : Section Recouvrement Amiable -->
+    <app-stat-card 
+      *ngIf="statsRecouvrement"
+      title="Recouvrement Amiable"
+      [stats]="{
+        'Montant recouvré': formatAmount(statsRecouvrement.montantRecouvrePhaseAmiable || 0),
+        'Nombre de dossiers': statsRecouvrement.dossiersAvecRecouvrementAmiable || 0,
+        'Taux de recouvrement': (statsRecouvrement.tauxRecouvrementAmiable || 0).toFixed(2) + '%'
+      }"
+      icon="handshake"
+      color="primary">
+    </app-stat-card>
+  </div>
+
+  <div class="empty-state" *ngIf="!loading && !statsAmiables">
+    <i class="fas fa-info-circle"></i>
+    <p>Aucune statistique disponible</p>
+  </div>
+</div>
+

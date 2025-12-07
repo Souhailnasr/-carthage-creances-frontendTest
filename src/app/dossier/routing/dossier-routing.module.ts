@@ -10,6 +10,9 @@ import { UserManagementComponent } from '../components/user-management/user-mana
 import { UserProfileComponent } from '../../shared/components/user-profile/user-profile.component';
 import { AuthGuard, ChefDossierGuard } from '../../core/guards';
 import { Role } from '../../shared/models';
+// Imports directs pour éviter les erreurs de résolution TypeScript
+import { SendNotificationComponent } from '../../shared/components/send-notification/send-notification.component';
+import { TacheFormComponent } from '../../shared/components/tache-form/tache-form.component';
 
 const routes: Routes = [
   {
@@ -17,6 +20,12 @@ const routes: Routes = [
     loadComponent: () => import('../../shared/components/dashboard/dashboard.component').then(m => m.DashboardComponent),
     canActivate: [AuthGuard],
     data: { allowedRoles: [Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER, Role.SUPER_ADMIN] }
+  },
+  {
+    path: 'chef-dashboard',
+    loadComponent: () => import('../../chef-dossier/chef-dossier.component').then(m => m.ChefDossierComponent),
+    canActivate: [AuthGuard],
+    data: { allowedRoles: [Role.CHEF_DEPARTEMENT_DOSSIER, Role.SUPER_ADMIN] }
   },
   {
     path: 'chef-dashboard',
@@ -105,6 +114,24 @@ const routes: Routes = [
     loadComponent: () => import('../components/liste-dossiers-agent/liste-dossiers-agent.component').then(m => m.ListeDossiersAgentComponent),
     canActivate: [AuthGuard],
     data: { allowedRoles: [Role.AGENT_DOSSIER, Role.AGENT_RECOUVREMENT_AMIABLE, Role.AGENT_RECOUVREMENT_JURIDIQUE, Role.AGENT_FINANCE, Role.CHEF_DEPARTEMENT_DOSSIER] }
+  },
+  {
+    path: 'notifications/envoyer',
+    component: SendNotificationComponent,
+    canActivate: [AuthGuard],
+    data: { allowedRoles: [Role.CHEF_DEPARTEMENT_DOSSIER, Role.SUPER_ADMIN] }
+  },
+  {
+    path: 'taches/create',
+    component: TacheFormComponent,
+    canActivate: [AuthGuard],
+    data: { allowedRoles: [Role.CHEF_DEPARTEMENT_DOSSIER, Role.SUPER_ADMIN] }
+  },
+  {
+    path: 'taches/:id/edit',
+    component: TacheFormComponent,
+    canActivate: [AuthGuard],
+    data: { allowedRoles: [Role.CHEF_DEPARTEMENT_DOSSIER, Role.SUPER_ADMIN] }
   },
   { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
 ];

@@ -48,6 +48,17 @@ export class HuissierActionService {
   }
 
   /**
+   * Récupère toutes les actions huissier
+   * GET /api/huissier/actions/all
+   */
+  getAllActions(): Observable<ActionHuissier[]> {
+    return this.http.get<ActionHuissier[]>(`${this.apiUrl}/actions/all`)
+      .pipe(
+        catchError(this.handleError)
+      );
+  }
+
+  /**
    * Met à jour une action huissier
    * PUT /api/huissier/action/{id}
    */
@@ -84,75 +95,103 @@ export class HuissierActionService {
   }
 
   /**
-   * Crée une action avec upload de fichier
-   * POST /api/huissier/action (avec FormData)
+   * Crée une action avec ou sans upload de fichier
+   * POST /api/huissier/action
+   * - Si file est fourni : envoie FormData (multipart/form-data)
+   * - Si file n'est pas fourni : envoie JSON (application/json)
    */
   createActionWithFile(dto: ActionHuissierDTO, file?: File): Observable<ActionHuissier> {
-    const formData = new FormData();
-    
-    // Ajouter les champs du DTO
-    formData.append('dossierId', dto.dossierId.toString());
-    formData.append('typeAction', dto.typeAction);
-    formData.append('huissierName', dto.huissierName);
-    
-    if (dto.montantRecouvre !== undefined) {
-      formData.append('montantRecouvre', dto.montantRecouvre.toString());
-    }
-    if (dto.montantRestant !== undefined) {
-      formData.append('montantRestant', dto.montantRestant.toString());
-    }
-    if (dto.etatDossier) {
-      formData.append('etatDossier', dto.etatDossier);
-    }
-    if (dto.updateMode) {
-      formData.append('updateMode', dto.updateMode);
-    }
-    
-    // Ajouter le fichier si présent
+    // Si un fichier est fourni, utiliser FormData
     if (file) {
+      const formData = new FormData();
+      
+      // Ajouter les champs du DTO
+      formData.append('dossierId', dto.dossierId.toString());
+      formData.append('typeAction', dto.typeAction);
+      formData.append('huissierName', dto.huissierName);
+      
+      if (dto.montantRecouvre !== undefined) {
+        formData.append('montantRecouvre', dto.montantRecouvre.toString());
+      }
+      if (dto.montantRestant !== undefined) {
+        formData.append('montantRestant', dto.montantRestant.toString());
+      }
+      if (dto.etatDossier) {
+        formData.append('etatDossier', dto.etatDossier);
+      }
+      if (dto.updateMode) {
+        formData.append('updateMode', dto.updateMode);
+      }
+      
       formData.append('pieceJointe', file);
+      
+      console.log('📤 Envoi action avec FormData (multipart/form-data)');
+      console.log('📤 Fichier:', file.name, '(', file.size, 'bytes)');
+      
+      return this.http.post<ActionHuissier>(`${this.apiUrl}/action`, formData)
+        .pipe(
+          catchError(this.handleError)
+        );
+    } else {
+      // Si pas de fichier, envoyer du JSON
+      console.log('📤 Envoi action avec JSON (application/json)');
+      console.log('📤 DTO:', dto);
+      
+      return this.http.post<ActionHuissier>(`${this.apiUrl}/action`, dto)
+        .pipe(
+          catchError(this.handleError)
+        );
     }
-    
-    return this.http.post<ActionHuissier>(`${this.apiUrl}/action`, formData)
-      .pipe(
-        catchError(this.handleError)
-      );
   }
 
   /**
-   * Met à jour une action avec upload de fichier
-   * PUT /api/huissier/action/{id} (avec FormData)
+   * Met à jour une action avec ou sans upload de fichier
+   * PUT /api/huissier/action/{id}
+   * - Si file est fourni : envoie FormData (multipart/form-data)
+   * - Si file n'est pas fourni : envoie JSON (application/json)
    */
   updateActionWithFile(id: number, dto: ActionHuissierDTO, file?: File): Observable<ActionHuissier> {
-    const formData = new FormData();
-    
-    // Ajouter les champs du DTO
-    formData.append('dossierId', dto.dossierId.toString());
-    formData.append('typeAction', dto.typeAction);
-    formData.append('huissierName', dto.huissierName);
-    
-    if (dto.montantRecouvre !== undefined) {
-      formData.append('montantRecouvre', dto.montantRecouvre.toString());
-    }
-    if (dto.montantRestant !== undefined) {
-      formData.append('montantRestant', dto.montantRestant.toString());
-    }
-    if (dto.etatDossier) {
-      formData.append('etatDossier', dto.etatDossier);
-    }
-    if (dto.updateMode) {
-      formData.append('updateMode', dto.updateMode);
-    }
-    
-    // Ajouter le fichier si présent
+    // Si un fichier est fourni, utiliser FormData
     if (file) {
+      const formData = new FormData();
+      
+      // Ajouter les champs du DTO
+      formData.append('dossierId', dto.dossierId.toString());
+      formData.append('typeAction', dto.typeAction);
+      formData.append('huissierName', dto.huissierName);
+      
+      if (dto.montantRecouvre !== undefined) {
+        formData.append('montantRecouvre', dto.montantRecouvre.toString());
+      }
+      if (dto.montantRestant !== undefined) {
+        formData.append('montantRestant', dto.montantRestant.toString());
+      }
+      if (dto.etatDossier) {
+        formData.append('etatDossier', dto.etatDossier);
+      }
+      if (dto.updateMode) {
+        formData.append('updateMode', dto.updateMode);
+      }
+      
       formData.append('pieceJointe', file);
+      
+      console.log('📤 Mise à jour action avec FormData (multipart/form-data)');
+      console.log('📤 Fichier:', file.name, '(', file.size, 'bytes)');
+      
+      return this.http.put<ActionHuissier>(`${this.apiUrl}/action/${id}`, formData)
+        .pipe(
+          catchError(this.handleError)
+        );
+    } else {
+      // Si pas de fichier, envoyer du JSON
+      console.log('📤 Mise à jour action avec JSON (application/json)');
+      console.log('📤 DTO:', dto);
+      
+      return this.http.put<ActionHuissier>(`${this.apiUrl}/action/${id}`, dto)
+        .pipe(
+          catchError(this.handleError)
+        );
     }
-    
-    return this.http.put<ActionHuissier>(`${this.apiUrl}/action/${id}`, formData)
-      .pipe(
-        catchError(this.handleError)
-      );
   }
 
   /**

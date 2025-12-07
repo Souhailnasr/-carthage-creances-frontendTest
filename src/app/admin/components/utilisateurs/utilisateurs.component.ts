@@ -2,17 +2,36 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormControl, FormsModule } from '@angular/forms';
-import { Subject, takeUntil } from 'rxjs';
+import { Subject, takeUntil, forkJoin } from 'rxjs';
 import { User, Role } from '../../../shared/models';
 import { FormInputComponent } from '../../../shared/components/form-input/form-input.component';
 import { ToastService } from '../../../core/services/toast.service';
 import { UtilisateurService, Utilisateur, UtilisateurRequest, AuthenticationResponse } from '../../../services/utilisateur.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { UserPerformanceService, UserPerformance } from '../../../core/services/user-performance.service';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatChipsModule } from '@angular/material/chips';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { ChartComponent } from '../../../shared/components/chart/chart.component';
+import { JwtAuthService } from '../../../core/services/jwt-auth.service';
 
 @Component({
   selector: 'app-utilisateurs',
   standalone: true,
-  imports: [CommonModule, RouterModule, ReactiveFormsModule, FormsModule, FormInputComponent],
+  imports: [
+    CommonModule,
+    RouterModule,
+    ReactiveFormsModule,
+    FormsModule,
+    FormInputComponent,
+    MatDialogModule,
+    MatButtonModule,
+    MatIconModule,
+    MatChipsModule,
+    MatProgressSpinnerModule
+  ],
   templateUrl: './utilisateurs.component.html',
   styleUrls: ['./utilisateurs.component.scss']
 })
@@ -36,6 +55,10 @@ export class UtilisateursComponent implements OnInit, OnDestroy {
   isLoading: boolean = false;
   currentUser: any;
   private destroy$ = new Subject<void>();
+  
+  // Performance
+  userPerformances: Map<number, number> = new Map(); // userId -> scorePerformance
+  loadingPerformances: Set<number> = new Set();
 
   // Getters pour les contrôles de formulaire
   get nomControl(): FormControl { return this.userForm.get('nom') as FormControl; }
@@ -49,14 +72,123 @@ export class UtilisateursComponent implements OnInit, OnDestroy {
     private fb: FormBuilder,
     private toastService: ToastService,
     private utilisateurService: UtilisateurService,
-    private authService: AuthService
+    private authService: AuthService,
+    private userPerformanceService: UserPerformanceService,
+    private dialog: MatDialog,
+    private jwtAuthService: JwtAuthService
   ) { }
 
+  /**
+   * Vérifie si l'utilisateur connecté est un SUPER_ADMIN
+   */
+  get isSuperAdmin(): boolean {
+    // Si currentUser n'est pas encore chargé, essayer de le récupérer
+    if (!this.currentUser) {
+      // Essayer avec AuthService (synchrone)
+      this.currentUser = this.authService.getCurrentUser();
+      
+      // Si toujours null, essayer avec JwtAuthService (asynchrone mais on ne peut pas attendre dans un getter)
+      if (!this.currentUser) {
+        // Le getter ne peut pas être async, donc on retourne false pour l'instant
+        // Le chargement asynchrone se fera dans ngOnInit
+        return false;
+      }
+    }
+    
+    const user = this.currentUser;
+    if (!user) {
+      return false;
+    }
+    
+    const isAdmin = user.role === 'SUPER_ADMIN' || user.roleUtilisateur === 'SUPER_ADMIN';
+    return isAdmin;
+  }
+
+  /**
+   * Active ou désactive un utilisateur
+   */
+  toggleUserStatus(utilisateur: Utilisateur): void {
+    // Vérifier que l'utilisateur connecté est SUPER_ADMIN
+    if (!this.isSuperAdmin) {
+      this.toastService.error('Seul un Super Admin peut activer/désactiver des utilisateurs');
+      return;
+    }
+
+    // Empêcher la désactivation d'un SUPER_ADMIN
+    if ((utilisateur.roleUtilisateur === 'SUPER_ADMIN' || utilisateur.role === 'SUPER_ADMIN') && utilisateur.actif) {
+      this.toastService.error('Impossible de désactiver un Super Admin');
+      return;
+    }
+
+    const action = utilisateur.actif ? 'désactiver' : 'activer';
+    const confirmed = confirm(`Êtes-vous sûr de vouloir ${action} l'utilisateur ${utilisateur.prenom} ${utilisateur.nom} ?`);
+    
+    if (!confirmed) {
+      return;
+    }
+
+    this.isLoading = true;
+    const action$ = utilisateur.actif 
+      ? this.utilisateurService.desactiverUtilisateur(utilisateur.id!)
+      : this.utilisateurService.activerUtilisateur(utilisateur.id!);
+
+    action$.pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (utilisateurModifie) => {
+          // Mettre à jour l'utilisateur dans la liste
+          const index = this.utilisateurs.findIndex(u => u.id === utilisateur.id);
+          if (index !== -1) {
+            this.utilisateurs[index] = utilisateurModifie;
+            this.applyFilters(); // Réappliquer les filtres pour mettre à jour l'affichage
+          }
+          
+          this.toastService.success(`Utilisateur ${action} avec succès`);
+          this.isLoading = false;
+        },
+        error: (error) => {
+          console.error('❌ Erreur lors du changement de statut:', error);
+          const errorMessage = error.error?.message || error.message || 'Erreur lors du changement de statut';
+          this.toastService.error(errorMessage);
+          this.isLoading = false;
+        }
+      });
+  }
+
   ngOnInit(): void {
-    this.currentUser = this.authService.getCurrentUser();
+    // ✅ CORRECTION : Charger l'utilisateur de manière asynchrone avec JwtAuthService
+    this.loadCurrentUser();
     this.initializeForm();
     this.loadUsers();
     console.log('🔧 UtilisateursComponent initialisé avec filtres avancés');
+  }
+
+  /**
+   * ✅ NOUVEAU : Charge l'utilisateur connecté de manière asynchrone
+   */
+  loadCurrentUser(): void {
+    // Essayer d'abord avec AuthService (synchrone)
+    this.currentUser = this.authService.getCurrentUser();
+    
+    // Si null, essayer avec JwtAuthService (asynchrone)
+    if (!this.currentUser) {
+      this.jwtAuthService.getCurrentUser()
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (user) => {
+            this.currentUser = user;
+            console.log('✅ Utilisateur connecté chargé:', user);
+            console.log('✅ isSuperAdmin:', this.isSuperAdmin);
+          },
+          error: (error) => {
+            console.error('❌ Erreur lors du chargement de l\'utilisateur:', error);
+            // Fallback avec AuthService
+            this.currentUser = this.authService.getCurrentUser();
+          }
+        });
+    } else {
+      console.log('✅ Utilisateur connecté (AuthService):', this.currentUser);
+      console.log('✅ isSuperAdmin:', this.isSuperAdmin);
+    }
   }
 
   ngOnDestroy(): void {
@@ -113,6 +245,7 @@ export class UtilisateursComponent implements OnInit, OnDestroy {
           this.utilisateurs = filteredUsers;
           this.filteredUtilisateurs = [...filteredUsers];
           this.applyFilters(); // Appliquer les filtres et le tri
+          this.loadPerformancesForUsers(filteredUsers); // Charger les performances
           this.isLoading = false;
           console.log('✅ Utilisateurs chargés:', filteredUsers);
         },
@@ -298,6 +431,14 @@ export class UtilisateursComponent implements OnInit, OnDestroy {
       confirmPassword: ['', []], // Optionnel en mode édition
       role: [utilisateur.roleUtilisateur || utilisateur.role, Validators.required]
     }, { validators: this.passwordMatchValidator });
+    
+    // ✅ CORRECTION : Faire défiler vers le formulaire après un court délai pour permettre le rendu
+    setTimeout(() => {
+      const formElement = document.querySelector('.form-container');
+      if (formElement) {
+        formElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 100);
   }
 
   onSubmit(): void {
@@ -592,5 +733,80 @@ export class UtilisateursComponent implements OnInit, OnDestroy {
 
   getStatutText(utilisateur: Utilisateur): string {
     return this.isActif(utilisateur) ? 'Actif' : 'Inactif';
+  }
+
+  /**
+   * Charge les performances pour tous les utilisateurs
+   */
+  loadPerformancesForUsers(utilisateurs: Utilisateur[]): void {
+    utilisateurs.forEach(user => {
+      const userId = user.id;
+      if (userId && !this.userPerformances.has(Number(userId))) {
+        this.loadPerformanceForUser(Number(userId));
+      }
+    });
+  }
+
+  /**
+   * Charge la performance pour un utilisateur spécifique
+   */
+  loadPerformanceForUser(userId: number): void {
+    if (this.loadingPerformances.has(userId)) return;
+    
+    this.loadingPerformances.add(userId);
+    this.userPerformanceService.getQuickPerformanceScore(userId).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (score) => {
+        this.userPerformances.set(userId, score);
+        this.loadingPerformances.delete(userId);
+      },
+      error: (error) => {
+        console.error(`❌ Erreur lors du chargement de la performance pour l'utilisateur ${userId}:`, error);
+        this.userPerformances.set(userId, 0);
+        this.loadingPerformances.delete(userId);
+      }
+    });
+  }
+
+  /**
+   * Récupère le score de performance d'un utilisateur
+   */
+  getPerformanceScore(utilisateur: Utilisateur): number {
+    const userId = utilisateur.id;
+    if (!userId) return 0;
+    return this.userPerformances.get(Number(userId)) || 0;
+  }
+
+  /**
+   * Récupère la classe CSS pour le score de performance
+   */
+  getPerformanceClass(score: number): string {
+    if (score >= 80) return 'performance-excellent';
+    if (score >= 60) return 'performance-bon';
+    if (score >= 40) return 'performance-moyen';
+    return 'performance-faible';
+  }
+
+  /**
+   * Ouvre la modal de performance détaillée
+   */
+  voirPerformance(utilisateur: Utilisateur): void {
+    const userId = utilisateur.id;
+    if (!userId) return;
+    
+    this.userPerformanceService.getPerformance(Number(userId)).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (performance) => {
+        // TODO: Ouvrir modal avec performance détaillée
+        console.log('Performance détaillée:', performance);
+        this.toastService.info(`Performance: ${performance.metriques.scorePerformance.toFixed(1)}%`);
+      },
+      error: (error) => {
+        console.error('❌ Erreur lors du chargement de la performance détaillée:', error);
+        this.toastService.error('Erreur lors du chargement de la performance');
+      }
+    });
   }
 }

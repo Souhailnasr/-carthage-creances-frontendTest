@@ -5,6 +5,7 @@ import { RoleService } from '../../../core/services/role.service';
 import { User, Role } from '../../models';
 import { Subject, takeUntil, filter } from 'rxjs';
 import { JwtAuthService } from '../../../core/services/jwt-auth.service';
+import { NotificationCompleteService } from '../../../core/services/notification-complete.service';
 
 interface MenuItem {
   label: string;
@@ -26,16 +27,118 @@ export class SidebarComponent implements OnInit, OnDestroy {
   currentRoute: string = '';
   isCollapsed: boolean = false;
   expandedMenus: Set<string> = new Set();
+  unreadNotificationsCount: number = 0;
   private destroy$ = new Subject<void>();
 
   menuItems: MenuItem[] = [
-    // Super Admin dashboard points to admin dashboard
+    // ============================================
+    // SECTION SUPER ADMIN - Architecture Supervision
+    // ============================================
     {
       label: 'Tableau de bord',
       icon: 'fas fa-tachometer-alt',
       route: '/admin/dashboard',
       roles: [Role.SUPER_ADMIN]
     },
+    {
+      label: 'Supervision',
+      icon: 'fas fa-eye',
+      route: '/admin/supervision',
+      roles: [Role.SUPER_ADMIN],
+      children: [
+        {
+          label: 'Vue d\'ensemble Dossiers',
+          icon: 'fas fa-folder-open',
+          route: '/admin/supervision/dossiers',
+          roles: [Role.SUPER_ADMIN]
+        },
+        {
+          label: 'Dossiers Archivés',
+          icon: 'fas fa-archive',
+          route: '/admin/supervision/dossiers-archives',
+          roles: [Role.SUPER_ADMIN]
+        },
+        {
+          label: 'Vue d\'ensemble Juridique',
+          icon: 'fas fa-gavel',
+          route: '/admin/supervision/juridique',
+          roles: [Role.SUPER_ADMIN]
+        },
+        {
+          label: 'Vue d\'ensemble Finance',
+          icon: 'fas fa-chart-line',
+          route: '/admin/supervision/finance',
+          roles: [Role.SUPER_ADMIN]
+        },
+        {
+          label: 'Vue d\'ensemble Amiable',
+          icon: 'fas fa-handshake',
+          route: '/admin/supervision/amiable',
+          roles: [Role.SUPER_ADMIN]
+        }
+      ]
+    },
+    {
+      label: 'Alertes & Actions',
+      icon: 'fas fa-exclamation-triangle',
+      route: '/admin/alertes-actions',
+      roles: [Role.SUPER_ADMIN]
+    },
+    {
+      label: 'Rapports & Analyses',
+      icon: 'fas fa-chart-bar',
+      route: '/admin/rapports-analyses',
+      roles: [Role.SUPER_ADMIN]
+    },
+    {
+      label: 'Administration',
+      icon: 'fas fa-cogs',
+      route: '/admin',
+      roles: [Role.SUPER_ADMIN],
+      children: [
+        {
+          label: 'Gestion Utilisateurs',
+          icon: 'fas fa-users-cog',
+          route: '/admin/utilisateurs',
+          roles: [Role.SUPER_ADMIN]
+        },
+        {
+          label: 'Mes Agents',
+          icon: 'fas fa-user-friends',
+          route: '/mes-agents',
+          roles: [Role.SUPER_ADMIN]
+        },
+        {
+          label: 'Paramètres Système',
+          icon: 'fas fa-sliders-h',
+          route: '/admin/parametres',
+          roles: [Role.SUPER_ADMIN]
+        }
+      ]
+    },
+    {
+      label: 'Notifications',
+      icon: 'fas fa-bell',
+      route: '/notifications',
+      roles: [Role.SUPER_ADMIN],
+      children: [
+        {
+          label: 'Mes Notifications',
+          icon: 'fas fa-bell',
+          route: '/notifications',
+          roles: [Role.SUPER_ADMIN]
+        },
+        {
+          label: 'Envoyer Notification',
+          icon: 'fas fa-paper-plane',
+          route: '/admin/notifications/envoyer',
+          roles: [Role.SUPER_ADMIN]
+        }
+      ]
+    },
+    // ============================================
+    // FIN SECTION SUPER ADMIN
+    // ============================================
     // Chef Dossier dashboard
     {
       label: 'Tableau de bord',
@@ -78,30 +181,30 @@ export class SidebarComponent implements OnInit, OnDestroy {
       route: '/finance/dashboard',
       roles: [Role.CHEF_DEPARTEMENT_FINANCE, Role.AGENT_FINANCE]
     },
-    // Gestion Finance - juste après Tableau de bord
+    // Gestion Finance - juste après Tableau de bord (SUPER_ADMIN retiré)
     {
       label: 'Gestion Finance',
       icon: 'fas fa-chart-line',
       route: '/finance',
-      roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_FINANCE, Role.AGENT_FINANCE],
+      roles: [Role.CHEF_DEPARTEMENT_FINANCE, Role.AGENT_FINANCE],
       children: [
         {
           label: 'Mes Dossiers Finance',
           icon: 'fas fa-briefcase',
           route: '/finance/mes-dossiers',
-          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_FINANCE, Role.AGENT_FINANCE]
+          roles: [Role.CHEF_DEPARTEMENT_FINANCE, Role.AGENT_FINANCE]
         },
         {
           label: 'Factures',
           icon: 'fas fa-file-invoice',
           route: '/finance/factures',
-          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_FINANCE, Role.AGENT_FINANCE]
+          roles: [Role.CHEF_DEPARTEMENT_FINANCE, Role.AGENT_FINANCE]
         },
         {
           label: 'Paiements',
           icon: 'fas fa-money-check-alt',
           route: '/finance/paiements',
-          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_FINANCE, Role.AGENT_FINANCE]
+          roles: [Role.CHEF_DEPARTEMENT_FINANCE, Role.AGENT_FINANCE]
         }
       ]
     },
@@ -119,62 +222,41 @@ export class SidebarComponent implements OnInit, OnDestroy {
       route: '/finance/taches',
       roles: [Role.CHEF_DEPARTEMENT_FINANCE, Role.AGENT_FINANCE]
     },
-    // Notifications pour Chef Finance - après Tâches
-    {
-      label: 'Notifications',
-      icon: 'fas fa-bell',
-      route: '/notifications',
-      roles: [Role.CHEF_DEPARTEMENT_FINANCE, Role.AGENT_FINANCE],
-      children: [
-        {
-          label: 'Mes Notifications',
-          icon: 'fas fa-bell',
-          route: '/notifications',
-          roles: [Role.CHEF_DEPARTEMENT_FINANCE, Role.AGENT_FINANCE]
-        },
-        {
-          label: 'Envoyer Notification',
-          icon: 'fas fa-paper-plane',
-          route: '/send-notification',
-          roles: [Role.CHEF_DEPARTEMENT_FINANCE]
-        }
-      ]
-    },
     {
       label: 'Créanciers',
       icon: 'fas fa-user-tie',
       route: '/creanciers',
-      roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER]
+      roles: [Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER]
     },
     {
       label: 'Débiteurs',
       icon: 'fas fa-user-friends',
       route: '/debiteurs',
-      roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER]
+      roles: [Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER]
     },
     {
       label: 'Dossiers',
       icon: 'fas fa-folder-open',
       route: '/dossier',
-      roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER],
+      roles: [Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER],
       children: [
         {
           label: 'Gestion des Dossiers',
           icon: 'fas fa-folder-open',
           route: '/dossier/gestion',
-          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER]
+          roles: [Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER]
         },
         {
           label: 'Dossiers en Attente',
           icon: 'fas fa-clock',
           route: '/dossier/en-attente',
-          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_DOSSIER]
+          roles: [Role.CHEF_DEPARTEMENT_DOSSIER]
         },
         {
           label: 'Mes Validations',
           icon: 'fas fa-history',
           route: '/dossier/mes-validations',
-          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER]
+          roles: [Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER]
         },
         {
           label: 'Mes dossiers affectés',
@@ -185,57 +267,34 @@ export class SidebarComponent implements OnInit, OnDestroy {
       ]
     },
     {
-      label: 'Utilisateurs',
-      icon: 'fas fa-users',
-      route: '/admin/utilisateurs',
-      roles: [Role.SUPER_ADMIN]
-    },
-    {
-      label: 'Tous les Utilisateurs',
-      icon: 'fas fa-circle-user',
-      route: '/utilisateurs',
-      roles: [Role.SUPER_ADMIN]
-    },
-    {
-      label: 'Mes Agents',
-      icon: 'fas fa-user-friends',
-      route: '/mes-agents',
-      roles: [
-        Role.SUPER_ADMIN,
-        Role.CHEF_DEPARTEMENT_DOSSIER,
-        Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE,
-        Role.CHEF_DEPARTEMENT_FINANCE
-      ]
-    },
-    {
       label: 'Enquêtes',
       icon: 'fas fa-clipboard-list',
       route: '/enquetes',
-      roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER],
+      roles: [Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER],
       children: [
         {
           label: 'Gestion des Enquêtes',
           icon: 'fas fa-list-alt',
           route: '/enquetes/gestion',
-          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER]
+          roles: [Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER]
         },
         {
           label: 'Créer une Enquête',
           icon: 'fas fa-plus-circle',
           route: '/enquetes/nouvelle',
-          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER]
+          roles: [Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER]
         },
         {
           label: 'Enquêtes en Attente',
           icon: 'fas fa-clock',
           route: '/enquetes/en-attente',
-          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_DOSSIER]
+          roles: [Role.CHEF_DEPARTEMENT_DOSSIER]
         },
         {
           label: 'Mes Validations',
           icon: 'fas fa-history',
           route: '/enquetes/mes-validations',
-          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER]
+          roles: [Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER]
         }
       ]
     },
@@ -243,7 +302,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
       label: 'Affectation des Dossiers',
       icon: 'fas fa-assignment',
       route: '/dossier/affectation',
-      roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER]
+      roles: [Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER]
     },
     {
       label: 'Gestion des Utilisateurs',
@@ -252,48 +311,16 @@ export class SidebarComponent implements OnInit, OnDestroy {
       roles: [Role.CHEF_DEPARTEMENT_DOSSIER]
     },
     {
-      label: 'Tâches',
-      icon: 'fas fa-tasks',
-      route: '/admin/taches',
-      roles: [Role.SUPER_ADMIN]
+      label: 'Mes Agents',
+      icon: 'fas fa-user-friends',
+      route: '/mes-agents',
+      roles: [Role.CHEF_DEPARTEMENT_DOSSIER]
     },
     {
       label: 'Tâches',
       icon: 'fas fa-tasks',
       route: '/dossier/taches',
       roles: [Role.CHEF_DEPARTEMENT_DOSSIER]
-    },
-    {
-      label: 'Gestion Juridique',
-      icon: 'fas fa-gavel',
-      route: '/admin/juridique',
-      roles: [Role.SUPER_ADMIN],
-      children: [
-        {
-          label: 'Vue d\'ensemble',
-          icon: 'fas fa-chart-pie',
-          route: '/admin/juridique',
-          roles: [Role.SUPER_ADMIN]
-        },
-        {
-          label: 'Avocats',
-          icon: 'fas fa-user-tie',
-          route: '/admin/juridique/avocats',
-          roles: [Role.SUPER_ADMIN]
-        },
-        {
-          label: 'Huissiers',
-          icon: 'fas fa-balance-scale',
-          route: '/admin/juridique/huissiers',
-          roles: [Role.SUPER_ADMIN]
-        },
-        {
-          label: 'Audiences',
-          icon: 'fas fa-gavel',
-          route: '/admin/juridique/audiences',
-          roles: [Role.SUPER_ADMIN]
-        }
-      ]
     },
     // Chef Juridique - Menus spécifiques (remplace la sidebar locale)
     {
@@ -380,23 +407,47 @@ export class SidebarComponent implements OnInit, OnDestroy {
       route: '/juridique/taches',
       roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE]
     },
+    // Notifications pour tous les utilisateurs SAUF SUPER_ADMIN (après Tâches)
     {
       label: 'Notifications',
       icon: 'fas fa-bell',
-      route: '/juridique/notifications',
-      roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE],
+      route: '/notifications',
+      roles: [
+        Role.CHEF_DEPARTEMENT_DOSSIER,
+        Role.AGENT_DOSSIER,
+        Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE,
+        Role.AGENT_RECOUVREMENT_AMIABLE,
+        Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE,
+        Role.AGENT_RECOUVREMENT_JURIDIQUE,
+        Role.CHEF_DEPARTEMENT_FINANCE,
+        Role.AGENT_FINANCE
+      ],
       children: [
         {
           label: 'Mes Notifications',
           icon: 'fas fa-bell',
-          route: '/juridique/notifications',
-          roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE]
+          route: '/notifications',
+          roles: [
+            Role.CHEF_DEPARTEMENT_DOSSIER,
+            Role.AGENT_DOSSIER,
+            Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE,
+            Role.AGENT_RECOUVREMENT_AMIABLE,
+            Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE,
+            Role.AGENT_RECOUVREMENT_JURIDIQUE,
+            Role.CHEF_DEPARTEMENT_FINANCE,
+            Role.AGENT_FINANCE
+          ]
         },
         {
           label: 'Envoyer Notification',
           icon: 'fas fa-paper-plane',
-          route: '/juridique/send-notification',
-          roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE]
+          route: '/admin/notifications/envoyer',
+          roles: [
+            Role.CHEF_DEPARTEMENT_DOSSIER,
+            Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE,
+            Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE,
+            Role.CHEF_DEPARTEMENT_FINANCE
+          ]
         }
       ]
     },
@@ -449,32 +500,6 @@ export class SidebarComponent implements OnInit, OnDestroy {
       route: '/chef-amiable/taches',
       roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE]
     },
-    {
-      label: 'Recouvrement Amiable',
-      icon: 'fas fa-handshake',
-      route: '/amiable',
-      roles: [Role.SUPER_ADMIN],
-      children: [
-        {
-          label: 'Dossiers Affectés',
-          icon: 'fas fa-folder-open',
-          route: '/dossiers/amiable',
-          roles: [Role.SUPER_ADMIN]
-        },
-        {
-          label: 'Actions Amiables',
-          icon: 'fas fa-phone',
-          route: '/amiable/actions',
-          roles: [Role.SUPER_ADMIN]
-        },
-        {
-          label: 'Relances',
-          icon: 'fas fa-envelope',
-          route: '/amiable/relances',
-          roles: [Role.SUPER_ADMIN]
-        }
-      ]
-    },
     // Agent Amiable - Menu spécifique
     {
       label: 'Tableau de bord',
@@ -494,73 +519,13 @@ export class SidebarComponent implements OnInit, OnDestroy {
       route: '/agent-amiable/actions',
       roles: [Role.AGENT_RECOUVREMENT_AMIABLE]
     },
-    {
-      label: 'Administration',
-      icon: 'fas fa-cogs',
-      route: '/admin',
-      roles: [Role.SUPER_ADMIN],
-      children: [
-        {
-          label: 'Utilisateurs',
-          icon: 'fas fa-users-cog',
-          route: '/admin/utilisateurs',
-          roles: [Role.SUPER_ADMIN]
-        },
-        {
-          label: 'Paramètres',
-          icon: 'fas fa-sliders-h',
-          route: '/admin/parametres',
-          roles: [Role.SUPER_ADMIN]
-        }
-      ]
-    },
-    {
-      label: 'Notifications',
-      icon: 'fas fa-bell',
-      route: '/notifications',
-      roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER, Role.AGENT_RECOUVREMENT_JURIDIQUE, Role.AGENT_RECOUVREMENT_AMIABLE],
-      children: [
-        {
-          label: 'Mes Notifications',
-          icon: 'fas fa-bell',
-          route: '/notifications',
-          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_DOSSIER, Role.AGENT_DOSSIER, Role.AGENT_RECOUVREMENT_JURIDIQUE, Role.AGENT_RECOUVREMENT_AMIABLE]
-        },
-        {
-          label: 'Envoyer Notification',
-          icon: 'fas fa-paper-plane',
-          route: '/send-notification',
-          roles: [Role.SUPER_ADMIN, Role.CHEF_DEPARTEMENT_DOSSIER]
-        }
-      ]
-    },
-    // Notifications spécifiques pour Chef Amiable
-    {
-      label: 'Notifications',
-      icon: 'fas fa-bell',
-      route: '/chef-amiable/notifications',
-      roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE],
-      children: [
-        {
-          label: 'Mes Notifications',
-          icon: 'fas fa-bell',
-          route: '/chef-amiable/notifications',
-          roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE]
-        },
-        {
-          label: 'Envoyer Notification',
-          icon: 'fas fa-paper-plane',
-          route: '/chef-amiable/send-notification',
-          roles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE]
-        }
-      ]
-    }
   ];
 
   constructor(
     private router: Router,
     private jwtAuthService: JwtAuthService,
-    private roleService: RoleService
+    private roleService: RoleService,
+    private notificationService: NotificationCompleteService
   ) {}
 
   ngOnInit(): void {
@@ -572,6 +537,13 @@ export class SidebarComponent implements OnInit, OnDestroy {
       this.currentUser = user;
           console.log('✅ Sidebar - Utilisateur chargé:', user);
           console.log('✅ Sidebar - Rôle utilisateur:', user?.roleUtilisateur);
+          
+          // Charger le nombre de notifications non lues
+          if (user?.id) {
+            const userId = typeof user.id === 'string' ? parseInt(user.id) : Number(user.id);
+            this.loadUnreadNotificationsCount(userId);
+            this.subscribeToUnreadCount();
+          }
           
           // Debug: vérifier la visibilité de "Mes Agents"
           const mesAgentsItem = this.menuItems.find(item => item.label === 'Mes Agents');
@@ -752,5 +724,37 @@ export class SidebarComponent implements OnInit, OnDestroy {
     if (!this.currentUser) return '';
     const fullName = `${this.currentUser.prenom} ${this.currentUser.nom}`;
     return fullName.split(' ').map((n: string) => n[0]).join('');
+  }
+
+  private loadUnreadNotificationsCount(userId: number): void {
+    this.notificationService.getNombreNotificationsNonLues(userId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (count) => {
+          this.unreadNotificationsCount = count;
+        },
+        error: (error) => {
+          console.error('Erreur lors du chargement du compteur de notifications:', error);
+          this.unreadNotificationsCount = 0;
+        }
+      });
+  }
+
+  private subscribeToUnreadCount(): void {
+    this.notificationService.unreadCount$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(count => {
+        this.unreadNotificationsCount = count;
+      });
+  }
+
+  hasUnreadNotifications(): boolean {
+    return this.unreadNotificationsCount > 0;
+  }
+
+  getNotificationBadgeCount(): string {
+    if (this.unreadNotificationsCount === 0) return '';
+    if (this.unreadNotificationsCount > 99) return '99+';
+    return this.unreadNotificationsCount.toString();
   }
 }

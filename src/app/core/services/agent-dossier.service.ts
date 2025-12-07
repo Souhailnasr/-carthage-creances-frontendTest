@@ -162,6 +162,7 @@ export class AgentDossierService {
    * Supprime un dossier
    */
   supprimerDossier(id: number): Observable<void> {
+    // Le backend n'attend pas de paramètres de requête, juste l'ID
     return this.dossierApiService.deleteDossier(id).pipe(
       tap(() => {
         // Retirer de la liste locale

@@ -192,9 +192,22 @@ export class ActionDialogAmiableComponent implements OnInit {
             
             // Si c'est une création avec montant, afficher un message plus détaillé
             if (response.montantUpdated && response.dossier) {
-              message = `Action créée avec succès. Montant recouvré mis à jour. Montant restant: ${response.dossier.montantRestant || 0} TND`;
+              const montantRestant = response.dossier.montantRestant || 
+                                    (response.dossier.montantCreance - (response.dossier.montantRecouvre || 0));
+              message = `Action créée avec succès. Montant recouvré mis à jour. Montant restant: ${montantRestant.toFixed(2)} TND`;
             } else if (response.error) {
-              message = `Action créée avec succès, mais la mise à jour du montant a échoué.`;
+              const errorStatus = response.error?.status;
+              const errorMessage = response.error?.error?.message || response.error?.message || 'Erreur inconnue';
+              
+              if (errorStatus === 404) {
+                message = `Action créée avec succès, mais la mise à jour du montant a échoué (endpoint non trouvé). Veuillez vérifier que le dossier est bien en phase amiable.`;
+              } else if (errorMessage.includes('Transaction') || errorMessage.includes('rollback')) {
+                message = `Action créée avec succès, mais la mise à jour du montant a échoué (erreur de transaction backend). Veuillez contacter l'administrateur.`;
+              } else {
+                message = `Action créée avec succès, mais la mise à jour du montant a échoué: ${errorMessage}`;
+              }
+              
+              console.error('❌ Erreur lors de la mise à jour du montant:', response.error);
             }
             
             this.snackBar.open(message, 'Fermer', { duration: 5000 });

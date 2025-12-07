@@ -8,9 +8,10 @@ import { GestionUtilisateursComponent } from './components/gestion-utilisateurs/
 import { TachesComponent } from './components/taches/taches.component';
 import { NotificationsComponent } from './components/notifications/notifications.component';
 import { ProfilChefAmiableComponent } from './components/profil-chef-amiable/profil-chef-amiable.component';
-import { SendNotificationComponent } from './components/send-notification/send-notification.component';
-// import { NotificationsPageComponent } from '../../shared/components/notifications-page/notifications-page.component';
-// import { SendNotificationComponent } from '../../shared/components/send-notification/send-notification.component';
+// Imports directs depuis shared/ - même pattern que dossier-routing et juridique-routing
+// Depuis chef-amiable/, le chemin vers shared/ est ../shared/ (un seul niveau au-dessus)
+import { SendNotificationComponent } from '../shared/components/send-notification/send-notification.component';
+import { TacheFormComponent } from '../shared/components/tache-form/tache-form.component';
 
 const routes: Routes = [
   {
@@ -45,6 +46,18 @@ const routes: Routes = [
       {
         path: 'send-notification',
         component: SendNotificationComponent
+      },
+      {
+        path: 'notifications/envoyer',
+        component: SendNotificationComponent
+      },
+      {
+        path: 'taches/create',
+        component: TacheFormComponent
+      },
+      {
+        path: 'taches/:id/edit',
+        component: TacheFormComponent
       },
       {
         path: 'profil',

@@ -33,7 +33,7 @@
           <i class="fas fa-folder"></i>
         </div>
         <div class="stat-content">
-          <h4>{{ stats.totalDossiers }}</h4>
+          <h4>{{ stats.totalDossiers !== null && stats.totalDossiers !== undefined ? stats.totalDossiers : 0 }}</h4>
           <p>Total Dossiers</p>
         </div>
       </div>
@@ -43,7 +43,7 @@
           <i class="fas fa-clock"></i>
         </div>
         <div class="stat-content">
-          <h4>{{ stats.dossiersEnCours }}</h4>
+          <h4>{{ stats.dossiersEnCours !== null && stats.dossiersEnCours !== undefined ? stats.dossiersEnCours : 0 }}</h4>
           <p>En Cours</p>
         </div>
       </div>
@@ -53,7 +53,7 @@
           <i class="fas fa-handshake"></i>
         </div>
         <div class="stat-content">
-          <h4>{{ stats.dossiersAmiables }}</h4>
+          <h4>{{ stats.dossiersAmiables !== null && stats.dossiersAmiables !== undefined ? stats.dossiersAmiables : 0 }}</h4>
           <p>Recouvrement Amiable</p>
         </div>
       </div>
@@ -63,7 +63,7 @@
           <i class="fas fa-gavel"></i>
         </div>
         <div class="stat-content">
-          <h4>{{ stats.dossiersJuridiques }}</h4>
+          <h4>{{ stats.dossiersJuridiques !== null && stats.dossiersJuridiques !== undefined ? stats.dossiersJuridiques : 0 }}</h4>
           <p>Recouvrement Juridique</p>
         </div>
       </div>
@@ -73,7 +73,7 @@
           <i class="fas fa-check-circle"></i>
         </div>
         <div class="stat-content">
-          <h4>{{ stats.dossiersClotures }}</h4>
+          <h4>{{ stats.dossiersClotures !== null && stats.dossiersClotures !== undefined ? stats.dossiersClotures : 0 }}</h4>
           <p>Clôturés</p>
         </div>
       </div>
@@ -83,7 +83,7 @@
           <i class="fas fa-plus-circle"></i>
         </div>
         <div class="stat-content">
-          <h4>{{ stats.dossiersCrees }}</h4>
+          <h4>{{ stats.dossiersCrees !== null && stats.dossiersCrees !== undefined ? stats.dossiersCrees : 0 }}</h4>
           <p>Créés ce Mois</p>
         </div>
       </div>
@@ -93,7 +93,7 @@
           <i class="fas fa-users"></i>
         </div>
         <div class="stat-content">
-          <h4>{{ stats.agentsActifs }}</h4>
+          <h4>{{ stats.agentsActifs !== null && stats.agentsActifs !== undefined ? stats.agentsActifs : 0 }}</h4>
           <p>Agents Actifs</p>
         </div>
       </div>

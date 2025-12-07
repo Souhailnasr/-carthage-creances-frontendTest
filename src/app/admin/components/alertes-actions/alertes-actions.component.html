@@ -1,0 +1,99 @@
+<div class="alertes-actions">
+  <div class="header">
+    <div class="header-content">
+      <h1><i class="fas fa-exclamation-triangle"></i> Alertes & Actions Nécessaires</h1>
+      <p class="subtitle">Dossiers et situations nécessitant une attention immédiate</p>
+    </div>
+    <button class="btn btn-primary" (click)="loadData()">
+      <i class="fas fa-sync-alt"></i> Actualiser
+    </button>
+  </div>
+
+  <div *ngIf="loading" class="loading-container">
+    <mat-progress-spinner mode="indeterminate" diameter="50"></mat-progress-spinner>
+    <p>Chargement des alertes...</p>
+  </div>
+
+  <!-- Dossiers nécessitant attention -->
+  <div class="alertes-section" *ngIf="!loading && alertes">
+    <h2><i class="fas fa-folder-open"></i> Dossiers Nécessitant Attention</h2>
+    <div class="alertes-grid" *ngIf="alertes.dossiersAttention.length > 0; else noDossiers">
+      <mat-card class="alerte-card" 
+                *ngFor="let alerte of alertes.dossiersAttention"
+                [class]="getSeverityClass(alerte.joursRetard)">
+        <mat-card-header>
+          <mat-card-title>{{ alerte.reference }}</mat-card-title>
+          <mat-chip *ngIf="alerte.joursRetard" 
+                    [class]="'severity-' + getSeverityClass(alerte.joursRetard)">
+            {{ alerte.joursRetard }} jours
+          </mat-chip>
+        </mat-card-header>
+        <mat-card-content>
+          <p class="raison">{{ alerte.raison }}</p>
+          <div class="score-badge" *ngIf="alerte.scoreIA">
+            <i class="fas fa-brain"></i> Score IA: {{ alerte.scoreIA }}%
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+    <ng-template #noDossiers>
+      <div class="empty-state">
+        <i class="fas fa-check-circle"></i>
+        <p>Aucun dossier ne nécessite d'attention immédiate</p>
+      </div>
+    </ng-template>
+  </div>
+
+  <!-- Agents sous-performance -->
+  <div class="agents-section" *ngIf="!loading && alertes">
+    <h2><i class="fas fa-users"></i> Agents Sous-Performance</h2>
+    <div class="agents-grid" *ngIf="alertes.agentsSousPerformance.length > 0; else noAgents">
+      <mat-card class="agent-card" *ngFor="let agent of alertes.agentsSousPerformance">
+        <mat-card-header>
+          <mat-card-title>{{ agent.nom }}</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="performance-info">
+            <p><strong>Taux de recouvrement:</strong> {{ agent.tauxRecouvrement.toFixed(2) }}%</p>
+            <p><strong>Objectif:</strong> {{ agent.objectif }}%</p>
+            <div class="progress-bar">
+              <div class="progress-fill" 
+                   [style.width.%]="(agent.tauxRecouvrement / agent.objectif) * 100"
+                   [class.below-target]="agent.tauxRecouvrement < agent.objectif">
+              </div>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+    <ng-template #noAgents>
+      <div class="empty-state">
+        <i class="fas fa-check-circle"></i>
+        <p>Tous les agents atteignent leurs objectifs</p>
+      </div>
+    </ng-template>
+  </div>
+
+  <!-- Départements rééquilibrage -->
+  <div class="departements-section" *ngIf="!loading && alertes">
+    <h2><i class="fas fa-balance-scale"></i> Départements - Rééquilibrage Recommandé</h2>
+    <div class="departements-grid" *ngIf="alertes.departementsReequilibrage.length > 0; else noDepartements">
+      <mat-card class="departement-card" *ngFor="let dept of alertes.departementsReequilibrage">
+        <mat-card-header>
+          <mat-card-title>{{ dept.nom }}</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <p><strong>Charge actuelle:</strong> {{ dept.charge }}%</p>
+          <p class="recommandation">{{ dept.recommandation }}</p>
+        </mat-card-content>
+      </mat-card>
+    </div>
+    <ng-template #noDepartements>
+      <div class="empty-state">
+        <i class="fas fa-check-circle"></i>
+        <p>La charge est bien répartie entre les départements</p>
+      </div>
+    </ng-template>
+  </div>
+</div>
+

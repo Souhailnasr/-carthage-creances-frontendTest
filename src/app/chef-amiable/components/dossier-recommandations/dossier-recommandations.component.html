@@ -41,17 +41,18 @@
     </mat-card-content>
   </mat-card>
 
-  <!-- Recommandation Finance -->
+  <!-- Recommandation Finance / Finalisation -->
   <mat-card class="recommendation-card finance" *ngIf="recommandationFinance">
     <mat-card-header>
       <mat-card-title>
         <mat-icon>attach_money</mat-icon>
-        Recommandation : Passer au Finance
+        <span *ngIf="dossierApi && getMontantRestant() === 0">Recommandation : Finaliser le Dossier</span>
+        <span *ngIf="!dossierApi || getMontantRestant() !== 0">Recommandation : Passer au Finance</span>
       </mat-card-title>
     </mat-card-header>
     <mat-card-content>
       <p *ngIf="dossierApi && getMontantRestant() === 0">
-        <strong>Recouvrement total :</strong> Le montant total a été recouvré. Le dossier peut être passé au Finance pour finalisation.
+        <strong>Recouvrement total :</strong> Le montant total a été recouvré. Le dossier peut être finalisé.
       </p>
       <p *ngIf="!dossierApi || getMontantRestant() !== 0">
         Le débiteur semble prêt à payer. Plusieurs réponses positives récentes indiquent une collaboration.
@@ -67,7 +68,22 @@
           <strong>Montant restant :</strong> {{ getMontantRestant() | number:'1.2-2' }} TND
         </li>
       </ul>
-      <button mat-raised-button color="primary" (click)="passerAuFinance()" [disabled]="loading">
+      <!-- Bouton Finaliser si recouvrement total, sinon Passer au Finance -->
+      <button 
+        *ngIf="dossierApi && getMontantRestant() === 0"
+        mat-raised-button 
+        color="primary" 
+        (click)="finaliserDossier()" 
+        [disabled]="loading">
+        <mat-icon>check_circle</mat-icon>
+        Finaliser le Dossier
+      </button>
+      <button 
+        *ngIf="!dossierApi || getMontantRestant() !== 0"
+        mat-raised-button 
+        color="primary" 
+        (click)="passerAuFinance()" 
+        [disabled]="loading">
         <mat-icon>arrow_forward</mat-icon>
         Passer au Finance
       </button>

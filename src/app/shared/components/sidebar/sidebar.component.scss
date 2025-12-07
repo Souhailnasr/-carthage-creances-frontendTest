@@ -177,6 +177,31 @@
   color: #3498db;
 }
 
+.nav-link {
+  position: relative;
+}
+
+.notification-badge-sidebar {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: #e74c3c;
+  color: white;
+  border-radius: 12px;
+  padding: 2px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  min-width: 18px;
+  text-align: center;
+  line-height: 16px;
+  z-index: 10;
+}
+
+.sub-nav-link .notification-badge-sidebar {
+  right: 15px;
+}
+
 .nav-link i {
   width: 20px;
   text-align: center;
@@ -227,6 +252,7 @@
   text-decoration: none;
   cursor: pointer;
   transition: all 0.2s ease;
+  position: relative;
   font-size: 14px;
 }
 

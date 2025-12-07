@@ -7,7 +7,7 @@ import { ToastService } from '../../../core/services/toast.service';
 import { 
   TraitementsDossierDTO, 
   ValidationEtatDTO,
-  StatutTarif 
+  StatutTarif
 } from '../../../shared/models/finance.models';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatButtonModule } from '@angular/material/button';
@@ -74,7 +74,8 @@ export class ValidationTarifsCompleteComponent implements OnInit, OnDestroy {
       console.log('📋 Dossier ID extrait:', this.dossierId);
       if (this.dossierId && !isNaN(this.dossierId)) {
         console.log('✅ Dossier ID valide, chargement des données...');
-        this.loadTraitements();
+        // ✅ CORRECTION : Charger avec forceRefresh pour s'assurer d'avoir les dernières données validées
+        this.loadTraitements(true);
         this.loadValidationEtat();
       } else {
         console.error('❌ Dossier ID invalide:', this.dossierId);
@@ -88,7 +89,8 @@ export class ValidationTarifsCompleteComponent implements OnInit, OnDestroy {
       if (!this.dossierId && queryParams['dossierId']) {
         this.dossierId = +queryParams['dossierId'];
         if (this.dossierId && !isNaN(this.dossierId)) {
-          this.loadTraitements();
+          // ✅ CORRECTION : Charger avec forceRefresh pour s'assurer d'avoir les dernières données validées
+          this.loadTraitements(true);
           this.loadValidationEtat();
         }
       }
@@ -100,37 +102,74 @@ export class ValidationTarifsCompleteComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  loadTraitements(): void {
-    console.log('📊 Chargement des traitements pour le dossier:', this.dossierId);
+  loadTraitements(forceRefresh: boolean = false): void {
+    console.log('📊 Chargement des traitements pour le dossier:', this.dossierId, '(forceRefresh:', forceRefresh, ')');
     this.isLoading = true;
-    this.financeService.getTraitementsDossier(this.dossierId)
+    // ✅ CORRECTION : Sauvegarder les traitements actuels pour éviter de perdre les données
+    const traitementsPrecedents = this.traitements;
+    
+    this.financeService.getTraitementsDossier(this.dossierId, forceRefresh)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (traitements) => {
-          console.log('✅ Traitements chargés:', traitements);
-          this.traitements = traitements;
+          console.log('✅ Traitements chargés depuis le backend (forceRefresh:', forceRefresh, '):', traitements);
+          console.log('✅ Phase Amiable - Actions:', traitements.phaseAmiable?.actions);
+          console.log('✅ Phase Amiable - Actions avec tarifs validés:', 
+            traitements.phaseAmiable?.actions?.filter(a => {
+              const statut = a.tarifExistant?.statut || a.statut;
+              const isValide = statut && (statut.toUpperCase() === 'VALIDE' || statut === StatutTarif.VALIDE);
+              console.log('  - Action', a.id, 'Type:', a.type, 'Statut:', statut, 'Validé:', isValide);
+              return isValide;
+            }).length);
+          
+          // ✅ CORRECTION : Créer une nouvelle référence complète pour forcer la détection de changement
+          // Cela garantit que ngOnChanges détecte le changement même si les objets imbriqués changent
+          this.traitements = {
+            ...traitements,
+            phaseAmiable: traitements.phaseAmiable ? {
+              ...traitements.phaseAmiable,
+              actions: traitements.phaseAmiable.actions ? traitements.phaseAmiable.actions.map(a => ({ ...a })) : []
+            } : undefined
+          };
+          
           this.calculerTotaux();
           this.isLoading = false;
+          
+          console.log('✅ Traitements mis à jour avec nouvelle référence, ngOnChanges devrait être déclenché');
+          console.log('✅ Nouvelle référence phaseAmiable:', this.traitements.phaseAmiable);
+          console.log('✅ Détails des actions après rechargement:');
+          this.traitements.phaseAmiable?.actions?.forEach(a => {
+            console.log('  - Action', a.id, 'Type:', a.type, 'Tarif existant:', a.tarifExistant?.id, 'Statut:', a.tarifExistant?.statut || a.statut);
+          });
         },
         error: (error) => {
           console.error('❌ Erreur lors du chargement des traitements:', error);
           console.error('❌ Détails de l\'erreur:', error.error);
-          this.toastService.error('Erreur lors du chargement des traitements. Vérifiez la console pour plus de détails.');
+          
+          // ✅ CORRECTION : Si on a des traitements précédents, les conserver au lieu de les perdre
+          if (traitementsPrecedents && traitementsPrecedents.phaseCreation) {
+            console.warn('⚠️ Erreur lors du rechargement, conservation des données précédentes');
+            this.traitements = traitementsPrecedents;
+            this.calculerTotaux();
+            this.toastService.warning('Erreur lors du rechargement des traitements. Les données précédentes sont conservées.');
+          } else {
+            // Initialiser avec des valeurs vides seulement si on n'a pas de données précédentes
+            this.traitements = {
+              phaseCreation: { traitements: [] },
+              phaseEnquete: { 
+                enquetePrecontentieuse: { 
+                  type: 'ENQUETE_PRECONTENTIEUSE', 
+                  date: new Date(), 
+                  statut: 'NON_VALIDE' 
+                }, 
+                traitementsPossibles: [] 
+              },
+              phaseAmiable: { actions: [] },
+              phaseJuridique: { documentsHuissier: [], actionsHuissier: [], audiences: [] }
+            };
+            this.toastService.error('Erreur lors du chargement des traitements. Vérifiez la console pour plus de détails.');
+          }
           this.isLoading = false;
-          // Initialiser avec des valeurs vides pour éviter les erreurs
-          this.traitements = {
-            phaseCreation: { traitements: [] },
-            phaseEnquete: { 
-              enquetePrecontentieuse: { 
-                type: 'ENQUETE_PRECONTENTIEUSE', 
-                date: new Date(), 
-                statut: 'NON_VALIDE' 
-              }, 
-              traitementsPossibles: [] 
-            },
-            phaseAmiable: { actions: [] },
-            phaseJuridique: { documentsHuissier: [], actionsHuissier: [], audiences: [] }
-          };
         }
       });
   }
@@ -153,9 +192,22 @@ export class ValidationTarifsCompleteComponent implements OnInit, OnDestroy {
   }
 
   onTarifValide(): void {
-    // Recharger les données après validation d'un tarif
-    this.loadTraitements();
-    this.loadValidationEtat();
+    // ✅ CORRECTION : Recharger les données après validation d'un tarif
+    // FORCER le rechargement depuis la base de données (pas de cache)
+    console.log('🔄 Rechargement FORCÉ des données depuis la base de données après validation...');
+    console.log('🔄 Traitements actuels avant rechargement:', this.traitements);
+    
+    // Ajouter un délai pour s'assurer que le backend a bien mis à jour les données
+    setTimeout(() => {
+      // ✅ FORCER le rechargement avec cache-busting
+      this.loadTraitements(true); // forceRefresh = true
+      this.loadValidationEtat();
+      // Recalculer les totaux après le rechargement
+      setTimeout(() => {
+        this.calculerTotaux();
+        console.log('✅ Totaux recalculés après validation');
+      }, 1000);
+    }, 500);
   }
 
   calculerTotaux(): void {

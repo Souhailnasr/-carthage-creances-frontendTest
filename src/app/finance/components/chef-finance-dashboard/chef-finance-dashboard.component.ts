@@ -8,6 +8,8 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatTableModule } from '@angular/material/table';
+import { MatChipsModule } from '@angular/material/chips';
 import { Subject, takeUntil } from 'rxjs';
 import { FinanceService, StatistiquesCouts } from '../../../core/services/finance.service';
 import { Finance } from '../../../shared/models/finance.models';
@@ -20,8 +22,14 @@ import { Router } from '@angular/router';
 import { DossierApiService } from '../../../core/services/dossier-api.service';
 import { DossierApi } from '../../../shared/models/dossier-api.model';
 import { EnqueteService } from '../../../core/services/enquete.service';
+import { IaPredictionService } from '../../../core/services/ia-prediction.service';
+import { IaPredictionBadgeComponent } from '../../../shared/components/ia-prediction-badge/ia-prediction-badge.component';
+import { IaPredictionResult } from '../../../shared/models/ia-prediction-result.model';
+import { Dossier } from '../../../shared/models/dossier.model';
 import { forkJoin, of, firstValueFrom } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
+import { StatistiqueCompleteService } from '../../../core/services/statistique-complete.service';
+import { StatistiquesGlobales } from '../../../shared/models/statistique-complete.model';
 
 @Component({
   selector: 'app-chef-finance-dashboard',
@@ -35,7 +43,10 @@ import { catchError, map } from 'rxjs/operators';
     MatProgressSpinnerModule,
     MatSnackBarModule,
     MatDialogModule,
-    MatTooltipModule
+    MatTooltipModule,
+    MatTableModule,
+    MatChipsModule,
+    IaPredictionBadgeComponent
   ],
   templateUrl: './chef-finance-dashboard.component.html',
   styleUrls: ['./chef-finance-dashboard.component.scss']
@@ -59,13 +70,25 @@ export class ChefFinanceDashboardComponent implements OnInit, OnDestroy {
     montantTotalEnCours: 0,
     nombreFacturesEmises: 0,
     nombreFacturesPayees: 0,
-    montantFacturesEnAttente: 0
+    montantFacturesEnAttente: 0,
+    // ✅ NOUVEAU : Statistiques financières
+    totalFraisEngages: 0,
+    fraisRecuperes: 0,
+    netGenere: 0
   };
   
   facturesEnAttente: Finance[] = [];
   fraisEnAttente: FluxFrais[] = [];
   facturesEnRetard: Facture[] = [];
   error: string | null = null;
+  
+  // ✅ Dossiers récents avec prédiction IA
+  dossiersRecents: DossierApi[] = [];
+  loadingDossiersRecents = false;
+  
+  // ✅ NOUVEAU : Statistiques de recouvrement par phase
+  statsRecouvrement: any = null;
+  statsFinancieres: any = null; // Statistiques financières complètes
   
   private destroy$ = new Subject<void>();
 
@@ -75,6 +98,8 @@ export class ChefFinanceDashboardComponent implements OnInit, OnDestroy {
     private factureService: FactureService,
     private dossierApiService: DossierApiService,
     private enqueteService: EnqueteService,
+    private iaPredictionService: IaPredictionService,
+    private statistiqueCompleteService: StatistiqueCompleteService,
     private snackBar: MatSnackBar,
     private jwtAuthService: JwtAuthService,
     private router: Router,
@@ -97,6 +122,72 @@ export class ChefFinanceDashboardComponent implements OnInit, OnDestroy {
     this.loadFacturesEnAttente();
     this.loadFraisEnAttente();
     this.loadFacturesEnRetard();
+    this.loadDossiersRecents();
+  }
+
+  /**
+   * Charger les dossiers récents avec leurs prédictions IA
+   */
+  loadDossiersRecents(): void {
+    this.loadingDossiersRecents = true;
+    this.dossierApiService.getAllDossiers(0, 10).pipe(
+      takeUntil(this.destroy$),
+      catchError(error => {
+        console.error('❌ Erreur lors du chargement des dossiers récents:', error);
+        return of({ content: [], totalElements: 0, totalPages: 0, size: 0, number: 0 });
+      })
+    ).subscribe({
+      next: (page) => {
+        this.dossiersRecents = page.content.slice(0, 5); // Prendre les 5 premiers
+        this.loadingDossiersRecents = false;
+      },
+      error: () => {
+        this.loadingDossiersRecents = false;
+      }
+    });
+  }
+
+  /**
+   * Obtenir la prédiction IA depuis un dossier API
+   */
+  getPrediction(dossier: DossierApi): IaPredictionResult | null {
+    if (!dossier.etatPrediction && dossier.riskScore === undefined) {
+      return null;
+    }
+    // Convertir DossierApi en Dossier pour utiliser le service
+    const dossierModel = new Dossier({
+      id: String(dossier.id),
+      etatPrediction: dossier.etatPrediction,
+      riskScore: dossier.riskScore,
+      riskLevel: dossier.riskLevel,
+      datePrediction: dossier.datePrediction
+    });
+    return this.iaPredictionService.getPredictionFromDossier(dossierModel);
+  }
+
+  /**
+   * Déclencher une prédiction IA pour un dossier
+   */
+  triggerPrediction(dossierId: number, event: Event): void {
+    event.stopPropagation();
+    this.iaPredictionService.predictForDossier(dossierId).subscribe({
+      next: (prediction) => {
+        this.snackBar.open('Prédiction IA calculée avec succès', 'Fermer', { duration: 3000 });
+        // Rafraîchir les dossiers récents
+        this.loadDossiersRecents();
+      },
+      error: (error) => {
+        console.error('❌ Erreur lors de la prédiction:', error);
+        this.snackBar.open('Erreur lors du calcul de la prédiction IA', 'Fermer', { duration: 3000 });
+      }
+    });
+  }
+
+  /**
+   * Naviguer vers le détail d'un dossier
+   */
+  viewDossier(dossierId: number): void {
+    this.router.navigate(['/dossier/detail', dossierId]);
   }
 
   ngOnDestroy(): void {
@@ -105,26 +196,113 @@ export class ChefFinanceDashboardComponent implements OnInit, OnDestroy {
   }
 
   loadStatistiques(): void {
-    // Charger les statistiques de coûts
-    this.financeService.getStatistiquesCouts().pipe(
-      takeUntil(this.destroy$)
-    ).subscribe({
-      next: (stats) => {
-        this.statistiques = {
-          ...stats,
-          tauxReussiteRecouvrement: 0,
-          nombreDossiersEnquete: 0,
-          nombreDossiersAmiable: 0,
-          nombreDossiersJuridique: 0,
-          nombreDossiersTotal: 0,
-          nombreDossiersClotures: 0,
-          montantTotalRecouvre: 0,
-          montantTotalEnCours: 0,
-          nombreFacturesEmises: 0,
-          nombreFacturesPayees: 0,
-          montantFacturesEnAttente: 0
-        };
-        // Charger les statistiques de dossiers
+    // ✅ STANDARDISATION : Utiliser getStatistiquesGlobales() + getStatistiquesFinancieres() + getStatistiquesCouts()
+    forkJoin({
+      globales: this.statistiqueCompleteService.getStatistiquesGlobales().pipe(
+        takeUntil(this.destroy$),
+        catchError((err) => {
+          console.warn('⚠️ Erreur lors du chargement des statistiques globales:', err);
+          return of(null);
+        })
+      ),
+      departement: this.statistiqueCompleteService.getStatistiquesDepartement().pipe(
+        takeUntil(this.destroy$),
+        catchError((err) => {
+          console.warn('⚠️ Erreur lors du chargement des statistiques du département:', err);
+          return of(null);
+        })
+      ),
+      couts: this.financeService.getStatistiquesCouts().pipe(
+        takeUntil(this.destroy$),
+        catchError((err) => {
+          console.warn('⚠️ Erreur lors du chargement des statistiques de coûts:', err);
+          return of(null);
+        })
+      ),
+      financieres: this.statistiqueCompleteService.getStatistiquesFinancieres().pipe(
+        takeUntil(this.destroy$),
+        catchError((err) => {
+          console.warn('⚠️ Erreur lors du chargement des statistiques financières:', err);
+          return of(null);
+        })
+      )
+    }).subscribe({
+      next: (results) => {
+        // ✅ STANDARDISATION : Prioriser getStatistiquesGlobales() comme source principale
+        // Mapper les statistiques SANS valeurs par défaut (0)
+        if (results.couts) {
+          this.statistiques = {
+            ...results.couts,
+            // ✅ Statistiques financières depuis /api/statistiques/financieres
+            montantTotalRecouvre: results.financieres?.montantRecouvre ?? results.globales?.montantRecouvre ?? results.departement?.montantRecouvre ?? null,
+            montantTotalEnCours: results.financieres?.montantEnCours ?? results.globales?.montantEnCours ?? results.departement?.montantEnCours ?? null,
+            // Taux de réussite depuis globales ou departement (financieres n'a pas de tauxReussiteGlobal)
+            tauxReussiteRecouvrement: results.globales?.tauxReussiteGlobal ?? results.departement?.tauxReussite ?? null,
+            // Nouvelles données financières disponibles
+            totalFraisEngages: results.financieres?.totalFraisEngages ?? undefined,
+            fraisRecuperes: results.financieres?.fraisRecuperes ?? undefined,
+            netGenere: results.financieres?.netGenere ?? undefined,
+            // Statistiques de dossiers depuis globales (priorité) ou departement
+            nombreDossiersEnquete: results.globales?.dossiersPhaseEnquete ?? results.departement?.dossiersParPhaseEnquete ?? null,
+            nombreDossiersAmiable: results.globales?.dossiersPhaseAmiable ?? results.departement?.dossiersParPhaseAmiable ?? null,
+            nombreDossiersJuridique: results.globales?.dossiersPhaseJuridique ?? results.departement?.dossiersParPhaseJuridique ?? null,
+            nombreDossiersTotal: results.globales?.totalDossiers ?? results.departement?.totalDossiers ?? null,
+            nombreDossiersClotures: results.globales?.dossiersClotures ?? results.departement?.dossiersClotures ?? null,
+            // Factures (sera rempli par loadStatistiquesFactures)
+            nombreFacturesEmises: undefined,
+            nombreFacturesPayees: undefined,
+            montantFacturesEnAttente: undefined
+          };
+        } else {
+          // Si couts est null, initialiser avec les données globales, financières et département
+          this.statistiques = {
+            totalFraisCreation: 0,
+            totalFraisGestion: 0,
+            totalActionsAmiable: 0,
+            totalActionsJuridique: 0,
+            totalAvocat: 0,
+            totalHuissier: 0,
+            grandTotal: 0,
+            montantTotalRecouvre: results.financieres?.montantRecouvre ?? results.globales?.montantRecouvre ?? results.departement?.montantRecouvre ?? null,
+            montantTotalEnCours: results.financieres?.montantEnCours ?? results.globales?.montantEnCours ?? results.departement?.montantEnCours ?? null,
+            tauxReussiteRecouvrement: results.globales?.tauxReussiteGlobal ?? results.departement?.tauxReussite ?? null,
+            totalFraisEngages: results.financieres?.totalFraisEngages ?? undefined,
+            fraisRecuperes: results.financieres?.fraisRecuperes ?? undefined,
+            netGenere: results.financieres?.netGenere ?? undefined,
+            nombreDossiersEnquete: results.globales?.dossiersPhaseEnquete ?? results.departement?.dossiersParPhaseEnquete ?? null,
+            nombreDossiersAmiable: results.globales?.dossiersPhaseAmiable ?? results.departement?.dossiersParPhaseAmiable ?? null,
+            nombreDossiersJuridique: results.globales?.dossiersPhaseJuridique ?? results.departement?.dossiersParPhaseJuridique ?? null,
+            nombreDossiersTotal: results.globales?.totalDossiers ?? results.departement?.totalDossiers ?? null,
+            nombreDossiersClotures: results.globales?.dossiersClotures ?? results.departement?.dossiersClotures ?? null,
+            nombreFacturesEmises: undefined,
+            nombreFacturesPayees: undefined,
+            montantFacturesEnAttente: undefined
+          };
+        }
+        // ✅ NOUVEAU : Stocker les statistiques financières complètes
+        this.statsFinancieres = results.financieres;
+        
+        // ✅ NOUVEAU : Charger les statistiques de recouvrement par phase
+        this.statistiqueCompleteService.getStatistiquesRecouvrementParPhaseDepartement().pipe(
+          takeUntil(this.destroy$),
+          catchError((err) => {
+            console.warn('⚠️ Erreur lors du chargement des statistiques de recouvrement par phase:', err);
+            return of(null);
+          })
+        ).subscribe({
+          next: (recouvrement) => {
+            this.statsRecouvrement = recouvrement;
+            console.log('✅ Statistiques de recouvrement par phase chargées:', recouvrement);
+          }
+        });
+        
+        console.log('✅ Statistiques chargées (standardisées):', {
+          globales: results.globales,
+          couts: results.couts,
+          financieres: results.financieres,
+          departement: results.departement
+        });
+        // Charger les statistiques de dossiers (pour compléter si nécessaire)
         this.loadStatistiquesDossiers();
         // Charger les statistiques de factures
         this.loadStatistiquesFactures();
@@ -182,10 +360,16 @@ export class ChefFinanceDashboardComponent implements OnInit, OnDestroy {
         const dossiersAmiable = results.amiable.content || [];
         const dossiersJuridique = results.juridique.content || [];
 
-        // Calculer les statistiques
-        this.statistiques.nombreDossiersTotal = results.tous.totalElements || 0;
-        this.statistiques.nombreDossiersAmiable = results.amiable.totalElements || 0;
-        this.statistiques.nombreDossiersJuridique = results.juridique.totalElements || 0;
+        // Calculer les statistiques (seulement si pas déjà définies depuis departement)
+        if (this.statistiques.nombreDossiersTotal === null || this.statistiques.nombreDossiersTotal === undefined || this.statistiques.nombreDossiersTotal === 0) {
+          this.statistiques.nombreDossiersTotal = results.tous.totalElements || 0;
+        }
+        if (this.statistiques.nombreDossiersAmiable === null || this.statistiques.nombreDossiersAmiable === undefined || this.statistiques.nombreDossiersAmiable === 0) {
+          this.statistiques.nombreDossiersAmiable = results.amiable.totalElements || 0;
+        }
+        if (this.statistiques.nombreDossiersJuridique === null || this.statistiques.nombreDossiersJuridique === undefined || this.statistiques.nombreDossiersJuridique === 0) {
+          this.statistiques.nombreDossiersJuridique = results.juridique.totalElements || 0;
+        }
 
         console.log('📊 Statistiques calculées:', {
           total: this.statistiques.nombreDossiersTotal,
@@ -224,29 +408,34 @@ export class ChefFinanceDashboardComponent implements OnInit, OnDestroy {
           console.log('📊 Dossiers en enquête:', this.statistiques.nombreDossiersEnquete, 'sur', tousDossiers.length);
         }
 
+        // ✅ CORRECTION : Ne remplacer que si les valeurs ne sont pas déjà définies depuis financieres/departement
         // Dossiers clôturés
         const dossiersClotures = tousDossiers.filter(d => d.dateCloture != null || d.dossierStatus === 'CLOTURE');
-        this.statistiques.nombreDossiersClotures = dossiersClotures.length;
+        if (this.statistiques.nombreDossiersClotures === null || this.statistiques.nombreDossiersClotures === undefined || this.statistiques.nombreDossiersClotures === 0) {
+          this.statistiques.nombreDossiersClotures = dossiersClotures.length;
+        }
         console.log('📊 Dossiers clôturés:', this.statistiques.nombreDossiersClotures);
 
-        // Montant total récupéré (dossiers clôturés)
-        this.statistiques.montantTotalRecouvre = dossiersClotures.reduce(
-          (sum, d) => sum + (d.montantCreance || 0), 0
-        );
+        // Montant total récupéré (dossiers clôturés) - seulement si pas déjà défini depuis financieres
+        if (this.statistiques.montantTotalRecouvre === null || this.statistiques.montantTotalRecouvre === undefined || this.statistiques.montantTotalRecouvre === 0) {
+          this.statistiques.montantTotalRecouvre = dossiersClotures.reduce(
+            (sum, d) => sum + (d.montantCreance || 0), 0
+          );
+        }
 
-        // Montant total en cours (dossiers non clôturés)
-        const dossiersEnCours = tousDossiers.filter(d => !d.dateCloture && d.dossierStatus !== 'CLOTURE');
-        this.statistiques.montantTotalEnCours = dossiersEnCours.reduce(
-          (sum, d) => sum + (d.montantCreance || 0), 0
-        );
+        // Montant total en cours (dossiers non clôturés) - seulement si pas déjà défini depuis financieres
+        if (this.statistiques.montantTotalEnCours === null || this.statistiques.montantTotalEnCours === undefined || this.statistiques.montantTotalEnCours === 0) {
+          const dossiersEnCours = tousDossiers.filter(d => !d.dateCloture && d.dossierStatus !== 'CLOTURE');
+          this.statistiques.montantTotalEnCours = dossiersEnCours.reduce(
+            (sum, d) => sum + (d.montantCreance || 0), 0
+          );
+        }
 
-        // Taux de réussite de recouvrement (% de dossiers clôturés)
-        if (this.statistiques.nombreDossiersTotal > 0) {
+        // Taux de réussite de recouvrement - seulement si pas déjà défini depuis financieres
+        if ((this.statistiques.tauxReussiteRecouvrement === null || this.statistiques.tauxReussiteRecouvrement === undefined || this.statistiques.tauxReussiteRecouvrement === 0) && this.statistiques.nombreDossiersTotal > 0) {
           this.statistiques.tauxReussiteRecouvrement = Math.round(
             (this.statistiques.nombreDossiersClotures / this.statistiques.nombreDossiersTotal) * 100 * 10
           ) / 10;
-        } else {
-          this.statistiques.tauxReussiteRecouvrement = 0;
         }
 
         console.log('✅ Statistiques finales:', {

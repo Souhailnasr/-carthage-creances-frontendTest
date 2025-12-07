@@ -13,6 +13,142 @@
     </div>
   </div>
 
+  <!-- Actions Rapides - Nouveau Système -->
+  <div class="quick-actions-new-section">
+    <h2><i class="fas fa-bolt"></i> Actions Rapides</h2>
+    <div class="actions-grid">
+      <a routerLink="/juridique/notifications/envoyer" class="action-card">
+        <div class="action-icon">
+          <i class="fas fa-paper-plane"></i>
+        </div>
+        <div class="action-content">
+          <h4>Envoyer Notification</h4>
+          <p>Envoyer une notification à tous mes agents</p>
+        </div>
+      </a>
+
+      <a routerLink="/juridique/taches/create" class="action-card">
+        <div class="action-icon">
+          <i class="fas fa-tasks"></i>
+        </div>
+        <div class="action-content">
+          <h4>Créer une Tâche</h4>
+          <p>Assigner une tâche urgente à un agent</p>
+        </div>
+      </a>
+    </div>
+  </div>
+
+  <!-- Statistiques Complètes - Nouveau Système -->
+  <div class="stats-completes-section" *ngIf="statsDepartement && !loadingStatsCompletes">
+    <h2><i class="fas fa-chart-bar"></i> Statistiques Complètes du Département</h2>
+    <div class="stats-grid-completes">
+      <app-stat-card 
+        *ngIf="statsDepartement.nombreAgents !== null && statsDepartement.nombreAgents !== undefined"
+        title="Mes Agents"
+        [stats]="{
+          'Nombre d\'agents': statsDepartement.nombreAgents ?? 0,
+          'Agents dans le département': (statsDepartement.agents && statsDepartement.agents.length) ? statsDepartement.agents.length : 0
+        }"
+        icon="people"
+        color="primary">
+      </app-stat-card>
+
+      <app-stat-card 
+        *ngIf="statsDepartement.totalDossiersDepartement !== null && statsDepartement.totalDossiersDepartement !== undefined && statsDepartement.chef"
+        title="Dossiers du Département"
+        [stats]="{
+          'Total': statsDepartement.totalDossiersDepartement ?? 0,
+          'Clôturés': (statsDepartement.chef.dossiersClotures !== null && statsDepartement.chef.dossiersClotures !== undefined) ? statsDepartement.chef.dossiersClotures : 0,
+          'En cours': (statsDepartement.chef.dossiersTraites !== null && statsDepartement.chef.dossiersTraites !== undefined) ? ((statsDepartement.chef.dossiersTraites - (statsDepartement.chef.dossiersClotures || 0))) : 0
+        }"
+        icon="folder"
+        color="accent">
+      </app-stat-card>
+
+      <!-- Prompt 4 : Section Audiences -->
+      <app-stat-card 
+        *ngIf="statsAudiences"
+        title="Audiences"
+        [stats]="{
+          'Total': statsAudiences.total ?? 0,
+          'Prochaines (7j)': statsAudiences.prochaines ?? 0,
+          'Passées': statsAudiences.passees ?? 0
+        }"
+        icon="event"
+        color="primary">
+      </app-stat-card>
+
+      <!-- Prompt 4 : Section Documents Huissier -->
+      <app-stat-card 
+        *ngIf="statsDocumentsHuissier"
+        title="Documents Huissier"
+      [stats]="{
+        'Complétés': (statsDocumentsHuissier.completes !== null && statsDocumentsHuissier.completes !== undefined) ? statsDocumentsHuissier.completes : 0,
+        'Créés': (statsDocumentsHuissier.crees !== null && statsDocumentsHuissier.crees !== undefined) ? statsDocumentsHuissier.crees : 0
+      }"
+        icon="description"
+        color="accent">
+      </app-stat-card>
+
+      <!-- Prompt 4 : Section Actions Huissier -->
+      <app-stat-card 
+        *ngIf="statsActionsHuissier"
+        title="Actions Huissier"
+      [stats]="{
+        'Complétées': (statsActionsHuissier.completes !== null && statsActionsHuissier.completes !== undefined) ? statsActionsHuissier.completes : 0,
+        'Créées': (statsActionsHuissier.crees !== null && statsActionsHuissier.crees !== undefined) ? statsActionsHuissier.crees : 0
+      }"
+        icon="gavel"
+        color="primary">
+      </app-stat-card>
+
+      <app-stat-card 
+        *ngIf="statsDepartement.chef && (statsDepartement.chef.tauxReussite !== null || statsDepartement.chef.montantRecouvre !== null || statsDepartement.chef.montantEnCours !== null)"
+        title="Performance"
+        [stats]="{
+          'Taux de réussite': (statsDepartement.chef.tauxReussite !== null && statsDepartement.chef.tauxReussite !== undefined) ? (statsDepartement.chef.tauxReussite * 100).toFixed(2) + '%' : '0%',
+          'Montant récupéré': formatAmount(statsDepartement.chef.montantRecouvre || 0),
+          'Montant en cours': formatAmount(statsDepartement.chef.montantEnCours || 0)
+        }"
+        icon="trending_up"
+        color="accent">
+      </app-stat-card>
+    </div>
+
+    <!-- ✅ NOUVEAU : Section Recouvrement par Phase -->
+    <div class="recouvrement-phase-section" *ngIf="statsRecouvrement">
+      <div class="section-header">
+        <h3><i class="fas fa-chart-pie"></i> Recouvrement par Phase</h3>
+      </div>
+      <div class="phase-cards">
+        <app-stat-card 
+          title="Recouvrement Juridique"
+          [stats]="{
+            'Montant recouvré': formatAmount(statsRecouvrement.montantRecouvrePhaseJuridique || 0),
+            'Nombre de dossiers': statsRecouvrement.dossiersAvecRecouvrementJuridique || 0,
+            'Taux de recouvrement': (statsRecouvrement.tauxRecouvrementJuridique || 0).toFixed(2) + '%'
+          }"
+          icon="gavel"
+          color="primary">
+        </app-stat-card>
+
+        <app-stat-card 
+          title="Vue d'Ensemble"
+          [stats]="{
+            'Montant total recouvré': formatAmount(statsRecouvrement.montantRecouvreTotal || 0),
+            'Montant total créances': formatAmount(statsRecouvrement.montantTotalCreances || 0)
+          }"
+          icon="chart-bar"
+          color="accent">
+        </app-stat-card>
+      </div>
+    </div>
+  </div>
+  <div *ngIf="loadingStatsCompletes" class="loading-stats">
+    <i class="fas fa-spinner fa-spin"></i> Chargement des statistiques...
+  </div>
+
   <!-- Section Agents -->
   <div class="agents-section" *ngIf="agentsJuridiques.length > 0">
     <h2><i class="fas fa-users"></i> Mes Agents ({{ agentsJuridiques.length }})</h2>
@@ -160,6 +296,34 @@
             <span class="decision-type rapporter">Rapporter</span>
             <span class="decision-count">{{ decisionsRapporter }}</span>
           </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section Prédictions IA -->
+  <div class="ia-predictions-section" *ngIf="recentDossiers.length > 0">
+    <h2><i class="fas fa-brain"></i> Prédictions IA - Dossiers Récents</h2>
+    <div class="predictions-grid">
+      <div class="prediction-card" *ngFor="let dossier of recentDossiers">
+        <div class="dossier-header-prediction">
+          <h4>{{ dossier.numeroDossier || 'Sans référence' }}</h4>
+          <span class="montant-badge">{{ formatAmount(dossier.montantCreance || 0) }}</span>
+        </div>
+        <div class="prediction-content">
+          <app-ia-prediction-badge
+            [prediction]="getPrediction(dossier)"
+            [loading]="isLoadingPrediction(dossier)"
+            [showDetails]="true"
+            size="small"
+          ></app-ia-prediction-badge>
+          <button 
+            *ngIf="!getPrediction(dossier) && !isLoadingPrediction(dossier)"
+            class="btn btn-sm btn-primary"
+            (click)="triggerPrediction(dossier.id!)"
+            title="Calculer Prédiction IA">
+            <i class="fas fa-brain"></i> Calculer
+          </button>
         </div>
       </div>
     </div>

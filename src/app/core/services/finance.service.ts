@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, throwError } from 'rxjs';
+import { Observable, throwError, forkJoin, of } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { 
@@ -36,6 +36,10 @@ export interface StatistiquesCouts {
   nombreFacturesEmises?: number; // Nombre de factures émises
   nombreFacturesPayees?: number; // Nombre de factures payées
   montantFacturesEnAttente?: number; // Montant des factures en attente
+  // ✅ NOUVEAU : Statistiques financières depuis /api/statistiques/financieres
+  totalFraisEngages?: number; // Total des frais engagés
+  fraisRecuperes?: number; // Frais récupérés
+  netGenere?: number; // Net généré
 }
 
 export interface ActionFinance {
@@ -568,10 +572,25 @@ export class FinanceService {
   /**
    * GET /api/finances/dossier/{dossierId}/traitements
    * Récupérer tous les traitements d'un dossier organisés par phase
+   * 
+   * Note: Si l'endpoint retourne 404, on utilise une approche alternative
+   * en récupérant les données depuis les endpoints individuels
    */
-  getTraitementsDossier(dossierId: number): Observable<TraitementsDossierDTO> {
-    return this.http.get<TraitementsDossierDTO>(`${this.apiUrl}/dossier/${dossierId}/traitements`).pipe(
+  getTraitementsDossier(dossierId: number, forceRefresh: boolean = false): Observable<TraitementsDossierDTO> {
+    // ✅ CORRECTION : Ajouter un paramètre timestamp pour forcer le rechargement depuis la base de données
+    const url = forceRefresh 
+      ? `${this.apiUrl}/dossier/${dossierId}/traitements?t=${Date.now()}`
+      : `${this.apiUrl}/dossier/${dossierId}/traitements`;
+    
+    console.log('📥 Chargement des traitements depuis la base de données (forceRefresh:', forceRefresh, ')');
+    return this.http.get<TraitementsDossierDTO>(url).pipe(
       map(traitements => {
+        // ✅ LOG CRITIQUE : Vérifier ce que le backend retourne AVANT le mapping
+        console.log('📥 RÉPONSE BRUTE DU BACKEND:', traitements);
+        console.log('📥 Phase Amiable brute:', traitements.phaseAmiable);
+        console.log('📥 Actions Amiables brutes:', traitements.phaseAmiable?.actions);
+        console.log('📥 Nombre d\'actions brutes:', traitements.phaseAmiable?.actions?.length || 0);
+        
         // Convertir les dates string en Date objects
         if (traitements.phaseCreation?.traitements) {
           traitements.phaseCreation.traitements = traitements.phaseCreation.traitements.map(t => ({
@@ -583,8 +602,17 @@ export class FinanceService {
           const ep = traitements.phaseEnquete.enquetePrecontentieuse;
           ep.date = typeof ep.date === 'string' ? new Date(ep.date) : ep.date;
         }
-        if (traitements.phaseAmiable?.actions) {
+        if (traitements.phaseAmiable?.actions && traitements.phaseAmiable.actions.length > 0) {
+          console.log('📊 Traitement des actions amiables - Nombre:', traitements.phaseAmiable.actions.length);
           traitements.phaseAmiable.actions = traitements.phaseAmiable.actions.map(a => {
+            console.log('  📋 Action brute depuis backend:', {
+              id: a.id,
+              type: a.type,
+              coutUnitaire: a.coutUnitaire,
+              tarifExistant: a.tarifExistant,
+              statut: a.statut
+            });
+            
             // Le backend retourne maintenant coutUnitaire selon la priorité :
             // 1. Si tarif existe : tarif.getCoutUnitaire() (BigDecimal)
             // 2. Sinon, si action.getCoutUnitaire() != null && > 0 : BigDecimal.valueOf(action.getCoutUnitaire())
@@ -600,11 +628,51 @@ export class FinanceService {
                 ? parseFloat(a.tarifExistant.coutUnitaire) 
                 : Number(a.tarifExistant.coutUnitaire);
             }
-            return {
+            
+            // ✅ CORRECTION CRITIQUE : Préserver explicitement tarifExistant et son statut
+            const actionMapped = {
               ...a,
-              date: typeof a.date === 'string' ? new Date(a.date) : a.date
+              date: typeof a.date === 'string' ? new Date(a.date) : a.date,
+              // ✅ S'assurer que tarifExistant est bien préservé avec tous ses champs
+              tarifExistant: a.tarifExistant ? {
+                ...a.tarifExistant,
+                // S'assurer que le statut est bien préservé
+                statut: a.tarifExistant.statut || a.statut
+              } : null,
+              // ✅ S'assurer que le statut de l'action est bien préservé
+              statut: a.tarifExistant?.statut || a.statut || 'NON_VALIDE'
             };
+            
+            console.log('  ✅ Action mappée:', {
+              id: actionMapped.id,
+              type: actionMapped.type,
+              coutUnitaire: actionMapped.coutUnitaire,
+              tarifExistant: actionMapped.tarifExistant,
+              statut: actionMapped.statut,
+              statutTarifExistant: actionMapped.tarifExistant?.statut
+            });
+            
+            return actionMapped;
           });
+          
+          console.log('✅ Actions amiables mappées - Total:', traitements.phaseAmiable.actions.length);
+          console.log('✅ Actions avec tarifs validés:', 
+            traitements.phaseAmiable.actions.filter(a => {
+              const statut = a.tarifExistant?.statut || a.statut;
+              const isValide = statut && (statut.toUpperCase() === 'VALIDE' || statut === 'VALIDE');
+              return isValide;
+            }).length
+          );
+        } else {
+          // ✅ LOG CRITIQUE : Si les actions sont vides ou undefined
+          console.warn('⚠️⚠️⚠️ PROBLÈME CRITIQUE : Phase Amiable sans actions !');
+          console.warn('⚠️ phaseAmiable:', traitements.phaseAmiable);
+          console.warn('⚠️ phaseAmiable.actions:', traitements.phaseAmiable?.actions);
+          console.warn('⚠️ Le backend ne retourne PAS les actions amiables validées !');
+          
+          // ✅ FALLBACK : Essayer de charger les actions depuis l'endpoint individuel
+          // Mais on ne peut pas faire ça dans un map(), donc on laisse vide pour l'instant
+          // Le composant devra gérer ce cas
         }
         if (traitements.phaseJuridique?.documentsHuissier) {
           traitements.phaseJuridique.documentsHuissier = traitements.phaseJuridique.documentsHuissier.map(d => ({
@@ -627,9 +695,174 @@ export class FinanceService {
         return traitements;
       }),
       catchError((error) => {
+        // Si 404, essayer de construire les traitements depuis les endpoints individuels
+        if (error.status === 404) {
+          console.warn('⚠️ Endpoint /traitements non disponible (404), construction depuis les endpoints individuels...');
+          return this.constructTraitementsFromIndividualEndpoints(dossierId);
+        }
+        // Pour les autres erreurs, propager l'erreur
         console.error('❌ Erreur lors de la récupération des traitements:', error);
         const errorMessage = error.error?.message || error.message || 'Erreur lors de la récupération des traitements';
         return throwError(() => new Error(errorMessage));
+      })
+    );
+  }
+
+  /**
+   * Construit les traitements depuis les endpoints individuels si /traitements n'existe pas
+   */
+  private constructTraitementsFromIndividualEndpoints(dossierId: number): Observable<TraitementsDossierDTO> {
+    console.log('🔧 Construction des traitements depuis les endpoints individuels pour le dossier:', dossierId);
+    
+    const baseUrl = environment.apiUrl;
+    
+    // Récupérer les actions amiables
+    return forkJoin({
+      actionsAmiables: this.http.get<any[]>(`${baseUrl}/api/actions/dossier/${dossierId}`).pipe(
+        catchError(() => {
+          console.warn('⚠️ Erreur lors de la récupération des actions amiables, utilisation d\'un tableau vide');
+          return of([]);
+        })
+      ),
+      actionsHuissier: this.http.get<any[]>(`${baseUrl}/api/huissier/actions`, {
+        params: new HttpParams().set('dossierId', dossierId.toString())
+      }).pipe(
+        catchError(() => {
+          console.warn('⚠️ Erreur lors de la récupération des actions huissier, utilisation d\'un tableau vide');
+          return of([]);
+        })
+      ),
+      documentsHuissier: this.http.get<any[]>(`${baseUrl}/api/huissier/documents`, {
+        params: new HttpParams().set('dossierId', dossierId.toString())
+      }).pipe(
+        catchError(() => {
+          console.warn('⚠️ Erreur lors de la récupération des documents huissier, utilisation d\'un tableau vide');
+          return of([]);
+        })
+      ),
+      audiences: this.http.get<any[]>(`${baseUrl}/api/audiences/dossier/${dossierId}`).pipe(
+        catchError(() => {
+          console.warn('⚠️ Erreur lors de la récupération des audiences, utilisation d\'un tableau vide');
+          return of([]);
+        })
+      ),
+      finance: this.http.get<any>(`${this.apiUrl}/dossier/${dossierId}`).pipe(
+        catchError(() => {
+          console.warn('⚠️ Erreur lors de la récupération des données finance, utilisation de null');
+          return of(null);
+        })
+      )
+    }).pipe(
+      map((results: {
+        actionsAmiables: any[];
+        actionsHuissier: any[];
+        documentsHuissier: any[];
+        audiences: any[];
+        finance: any | null;
+      }) => {
+        // Construire TraitementsDossierDTO depuis les résultats
+        const traitements: TraitementsDossierDTO = {
+          phaseCreation: {
+            traitements: []
+          },
+          phaseEnquete: {
+            enquetePrecontentieuse: {
+              type: 'ENQUETE_PRECONTENTIEUSE',
+              date: new Date(),
+              statut: 'NON_VALIDE'
+            },
+            traitementsPossibles: []
+          },
+          phaseAmiable: {
+            actions: (results.actionsAmiables || []).map((action: any) => {
+              // ✅ CORRECTION : S'assurer que coutUnitaire est toujours présent depuis l'action
+              // Priorité : 1. action.coutUnitaire, 2. action.cout, 3. undefined
+              let coutUnitaire: number | undefined = undefined;
+              if (action.coutUnitaire != null && action.coutUnitaire > 0) {
+                coutUnitaire = typeof action.coutUnitaire === 'string' 
+                  ? parseFloat(action.coutUnitaire) 
+                  : Number(action.coutUnitaire);
+              } else if (action.cout != null && action.cout > 0) {
+                coutUnitaire = typeof action.cout === 'string' 
+                  ? parseFloat(action.cout) 
+                  : Number(action.cout);
+              }
+              
+              return {
+                id: action.id,
+                type: action.type,
+                date: action.dateAction || action.date || new Date(),
+                occurrences: action.nbOccurrences || action.occurrences || 1,
+                coutUnitaire: coutUnitaire, // ✅ Utiliser undefined au lieu de null pour correspondre à ActionAmiableDTO
+                tarifExistant: null,
+                statut: 'NON_VALIDE' as any
+              };
+            })
+          },
+          phaseJuridique: {
+            documentsHuissier: (results.documentsHuissier || []).map((doc: any) => ({
+              id: doc.id,
+              type: doc.type,
+              date: doc.dateCreation || doc.date || new Date(),
+              coutUnitaire: doc.coutUnitaire || null,
+              tarifExistant: null,
+              statut: 'NON_VALIDE' as any
+            })),
+            actionsHuissier: (results.actionsHuissier || []).map((action: any) => ({
+              id: action.id,
+              type: action.type,
+              date: action.dateAction || action.date || new Date(),
+              coutUnitaire: action.coutUnitaire || null,
+              tarifExistant: null,
+              statut: 'NON_VALIDE' as any
+            })),
+            audiences: (results.audiences || []).map((audience: any) => ({
+              id: audience.id,
+              date: audience.dateAudience || audience.date || new Date(),
+              type: audience.type || 'AUDIENCE',
+              avocatId: audience.avocatId || undefined,
+              avocatNom: audience.avocatNom || undefined,
+              coutAudience: audience.coutAudience || audience.coutUnitaire || null,
+              coutAvocat: audience.coutAvocat || null,
+              tarifAudience: null,
+              tarifAvocat: null,
+              statut: 'NON_VALIDE' as any
+            }))
+          }
+        };
+
+        // Ajouter les frais de création et gestion depuis finance
+        if (results.finance) {
+          if (results.finance.fraisCreationDossier && traitements.phaseCreation) {
+            traitements.phaseCreation.traitements.push({
+              type: 'OUVERTURE_DOSSIER',
+              date: new Date(),
+              fraisFixe: results.finance.fraisCreationDossier,
+              tarifExistant: null,
+              statut: 'NON_VALIDE' as any
+            });
+          }
+        }
+
+        console.log('✅ Traitements construits depuis les endpoints individuels:', traitements);
+        return traitements;
+      }),
+      catchError((error) => {
+        console.error('❌ Erreur lors de la construction des traitements:', error);
+        // Retourner un objet vide plutôt que de propager l'erreur
+        return of({
+          phaseCreation: { traitements: [] },
+          phaseEnquete: { 
+            enquetePrecontentieuse: {
+              type: 'ENQUETE_PRECONTENTIEUSE',
+              date: new Date(),
+              statut: 'NON_VALIDE'
+            }, 
+            traitementsPossibles: [] 
+          },
+          phaseAmiable: { actions: [] },
+          phaseJuridique: { documentsHuissier: [], actionsHuissier: [], audiences: [] }
+        } as TraitementsDossierDTO);
       })
     );
   }
@@ -649,7 +882,8 @@ export class FinanceService {
       commentaire: tarif.commentaire
     };
 
-    // Mapper elementId vers le champ spécifique attendu par le backend
+    // ✅ CORRECTION : Mapper elementId vers le champ spécifique attendu par le backend
+    // Pour éviter les doublons, utiliser des champs différents pour audience et avocat
     if (tarif.elementId) {
       if (tarif.phase === PhaseFrais.AMIABLE && tarif.categorie === 'ACTION_AMIABLE') {
         requestBody.actionId = tarif.elementId;
@@ -658,9 +892,21 @@ export class FinanceService {
           requestBody.documentHuissierId = tarif.elementId;
         } else if (tarif.categorie === 'ACTION_HUISSIER') {
           requestBody.actionHuissierId = tarif.elementId;
-        } else if (tarif.categorie === 'AUDIENCE' || tarif.categorie === 'HONORAIRES_AVOCAT') {
-          // Les honoraires d'avocat sont aussi liés à l'audience
+        } else if (tarif.categorie === 'AUDIENCE') {
+          // Pour l'audience, utiliser audienceId
           requestBody.audienceId = tarif.elementId;
+        } else if (tarif.categorie === 'HONORAIRES_AVOCAT' || tarif.categorie.toUpperCase().includes('AVOCAT')) {
+          // ✅ ALIGNEMENT BACKEND : Pour les honoraires d'avocat, utiliser avocatId
+          // Le backend fait automatiquement le mapping avocatId → audienceId (audience la plus récente)
+          // Priorité : si avocatId est fourni, l'utiliser ; sinon utiliser elementId comme audienceId
+          if (tarif.avocatId) {
+            // ✅ Utiliser avocatId si fourni (le backend trouvera l'audience automatiquement)
+            requestBody.avocatId = tarif.avocatId;
+          } else if (tarif.elementId) {
+            // Fallback : utiliser elementId comme audienceId si avocatId n'est pas fourni
+            // (cas où on passe directement l'audienceId)
+            requestBody.audienceId = tarif.elementId;
+          }
         }
       } else if (tarif.phase === PhaseFrais.ENQUETE && tarif.categorie === 'ENQUETE_PRECONTENTIEUSE') {
         requestBody.enqueteId = tarif.elementId;
@@ -675,8 +921,18 @@ export class FinanceService {
       })),
       catchError((error) => {
         console.error('❌ Erreur lors de l\'ajout du tarif:', error);
+        console.error('❌ Détails de l\'erreur:', {
+          status: error.status,
+          message: error.error?.message,
+          error: error.error
+        });
+        // ✅ ALIGNEMENT BACKEND : Préserver le message d'erreur du backend
         const errorMessage = error.error?.message || error.message || 'Erreur lors de l\'ajout du tarif';
-        return throwError(() => new Error(errorMessage));
+        // Préserver le status HTTP pour une gestion d'erreur plus précise
+        const httpError = new Error(errorMessage) as any;
+        httpError.status = error.status;
+        httpError.error = error.error;
+        return throwError(() => httpError);
       })
     );
   }

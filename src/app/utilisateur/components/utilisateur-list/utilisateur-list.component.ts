@@ -17,6 +17,8 @@ import { Subject, takeUntil, debounceTime, distinctUntilChanged } from 'rxjs';
 import { UtilisateurService, Utilisateur } from '../../../services/utilisateur.service';
 import { UtilisateurCreateComponent } from '../utilisateur-create/utilisateur-create.component';
 import { UtilisateurEditComponent } from '../utilisateur-edit/utilisateur-edit.component';
+import { JwtAuthService } from '../../../core/services/jwt-auth.service';
+import { ConfirmationDialogComponent } from '../../../shared/components/dialogs/confirmation-dialog/confirmation-dialog.component';
 
 @Component({
   selector: 'app-utilisateur-list',
@@ -59,6 +61,8 @@ export class UtilisateurListComponent implements OnInit, OnDestroy {
   dataSource = new MatTableDataSource<Utilisateur>([]);
   searchControl = new FormControl('');
   isLoading = false;
+  currentUser: any = null; // ✅ NOUVEAU : Utilisateur connecté
+  isSuperAdmin = false; // ✅ NOUVEAU : Vérification du rôle
   private destroy$ = new Subject<void>();
 
   // Options pour les filtres
@@ -68,12 +72,31 @@ export class UtilisateurListComponent implements OnInit, OnDestroy {
   constructor(
     private utilisateurService: UtilisateurService,
     private dialog: MatDialog,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private jwtAuthService: JwtAuthService // ✅ NOUVEAU : Service d'authentification
   ) {}
 
   ngOnInit(): void {
+    this.loadCurrentUser(); // ✅ NOUVEAU : Charger l'utilisateur connecté
     this.loadUtilisateurs();
     this.setupSearch();
+  }
+
+  /**
+   * ✅ NOUVEAU : Charge l'utilisateur connecté et vérifie le rôle
+   */
+  loadCurrentUser(): void {
+    this.jwtAuthService.getCurrentUser()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (user) => {
+          this.currentUser = user;
+          this.isSuperAdmin = user?.roleUtilisateur === 'SUPER_ADMIN';
+        },
+        error: (error) => {
+          console.error('Erreur lors du chargement de l\'utilisateur connecté:', error);
+        }
+      });
   }
 
   ngOnDestroy(): void {
@@ -224,37 +247,78 @@ export class UtilisateurListComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Change le statut d'un utilisateur
+   * ✅ NOUVEAU : Change le statut d'un utilisateur avec confirmation et utilisation des nouveaux endpoints
    */
   toggleStatut(utilisateur: Utilisateur): void {
-    const nouveauStatut = utilisateur.statut === 'ACTIF' ? 'INACTIF' : 'ACTIF';
-    
-    this.utilisateurService.changeStatut(utilisateur.id, nouveauStatut)
+    // Vérifier que l'utilisateur connecté est SUPER_ADMIN
+    if (!this.isSuperAdmin) {
+      this.snackBar.open('Seul un Super Admin peut activer/désactiver des utilisateurs', 'Fermer', {
+        duration: 3000,
+        panelClass: ['error-snackbar']
+      });
+      return;
+    }
+
+    // Empêcher la désactivation d'un SUPER_ADMIN
+    if (utilisateur.roleUtilisateur === 'SUPER_ADMIN' && utilisateur.actif) {
+      this.snackBar.open('Impossible de désactiver un Super Admin', 'Fermer', {
+        duration: 3000,
+        panelClass: ['error-snackbar']
+      });
+      return;
+    }
+
+    const action = utilisateur.actif ? 'désactiver' : 'activer';
+    const dialogRef = this.dialog.open(ConfirmationDialogComponent, {
+      width: '400px',
+      data: {
+        title: `${action.charAt(0).toUpperCase() + action.slice(1)} l'utilisateur`,
+        message: `Êtes-vous sûr de vouloir ${action} l'utilisateur ${utilisateur.prenom} ${utilisateur.nom} ?`,
+        confirmText: action.charAt(0).toUpperCase() + action.slice(1),
+        cancelText: 'Annuler',
+        warning: !utilisateur.actif // Avertissement si on désactive
+      }
+    });
+
+    dialogRef.afterClosed()
       .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (utilisateurModifie) => {
-          // Mettre à jour l'utilisateur dans la liste
-          const index = this.dataSource.data.findIndex(u => u.id === utilisateur.id);
-          if (index !== -1) {
-            this.dataSource.data[index] = utilisateurModifie;
-            this.dataSource._updateChangeSubscription();
-          }
-          
-          this.snackBar.open(
-            `Statut changé vers ${nouveauStatut}`,
-            'Fermer',
-            {
-              duration: 3000,
-              panelClass: ['success-snackbar']
-            }
-          );
-        },
-        error: (error) => {
-          console.error('Erreur lors du changement de statut:', error);
-          this.snackBar.open('Erreur lors du changement de statut', 'Fermer', {
-            duration: 3000,
-            panelClass: ['error-snackbar']
-          });
+      .subscribe(result => {
+        if (result) {
+          this.isLoading = true;
+          const action$ = utilisateur.actif 
+            ? this.utilisateurService.desactiverUtilisateur(utilisateur.id!)
+            : this.utilisateurService.activerUtilisateur(utilisateur.id!);
+
+          action$.pipe(takeUntil(this.destroy$))
+            .subscribe({
+              next: (utilisateurModifie) => {
+                // Mettre à jour l'utilisateur dans la liste
+                const index = this.dataSource.data.findIndex(u => u.id === utilisateur.id);
+                if (index !== -1) {
+                  this.dataSource.data[index] = utilisateurModifie;
+                  this.dataSource._updateChangeSubscription();
+                }
+                
+                this.snackBar.open(
+                  `Utilisateur ${action} avec succès`,
+                  'Fermer',
+                  {
+                    duration: 3000,
+                    panelClass: ['success-snackbar']
+                  }
+                );
+                this.isLoading = false;
+              },
+              error: (error) => {
+                console.error('Erreur lors du changement de statut:', error);
+                const errorMessage = error.error?.message || error.message || 'Erreur lors du changement de statut';
+                this.snackBar.open(errorMessage, 'Fermer', {
+                  duration: 5000,
+                  panelClass: ['error-snackbar']
+                });
+                this.isLoading = false;
+              }
+            });
         }
       });
   }

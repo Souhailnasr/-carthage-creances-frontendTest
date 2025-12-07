@@ -1,0 +1,124 @@
+<div class="supervision-dossiers">
+  <div class="header">
+    <div class="header-content">
+      <h1><i class="fas fa-folder-open"></i> Supervision - Dossiers</h1>
+      <p class="subtitle">Vue d'ensemble consolidée des dossiers de recouvrement</p>
+    </div>
+    <button class="btn btn-primary" (click)="loadAllData()">
+      <i class="fas fa-sync-alt"></i> Actualiser
+    </button>
+  </div>
+
+  <!-- Statistiques principales -->
+  <div class="stats-section" *ngIf="!loadingStats && statsGlobales">
+    <app-stat-card 
+      title="Dossiers"
+      [stats]="{
+        'Total': statsGlobales.totalDossiers || 0,
+        'En cours': statsGlobales.dossiersEnCours || 0,
+        'Clôturés': statsGlobales.dossiersClotures || 0,
+        'Créés ce mois': statsGlobales.dossiersCreesCeMois || 0
+      }"
+      icon="folder"
+      color="primary">
+    </app-stat-card>
+
+    <app-stat-card 
+      title="Dossiers par Phase"
+      [stats]="{
+        'Création': statsGlobales.dossiersPhaseCreation || 0,
+        'Enquête': statsGlobales.dossiersPhaseEnquete || 0,
+        'Amiable': statsGlobales.dossiersPhaseAmiable || 0,
+        'Juridique': statsGlobales.dossiersPhaseJuridique || 0
+      }"
+      icon="layers"
+      color="accent">
+    </app-stat-card>
+
+    <app-stat-card 
+      title="Enquêtes"
+      [stats]="{
+        'Total': statsGlobales.dossiersPhaseEnquete || 0,
+        'Complétées': statsGlobales.enquetesCompletees || 0,
+        'En cours': (statsGlobales.dossiersPhaseEnquete || 0) - (statsGlobales.enquetesCompletees || 0)
+      }"
+      icon="search"
+      color="warn">
+    </app-stat-card>
+
+    <app-stat-card 
+      title="Performance"
+      [stats]="{
+        'Taux de réussite': (statsGlobales.tauxReussiteGlobal || 0).toFixed(2) + '%',
+        'Montant recouvré': formatAmount(statsGlobales.montantRecouvre || 0),
+        'Montant en cours': formatAmount(statsGlobales.montantEnCours || 0)
+      }"
+      icon="trending_up"
+      color="primary">
+    </app-stat-card>
+  </div>
+
+  <div *ngIf="loadingStats" class="loading-container">
+    <mat-progress-spinner mode="indeterminate" diameter="50"></mat-progress-spinner>
+    <p>Chargement des statistiques...</p>
+  </div>
+
+  <!-- Dossiers critiques -->
+  <div class="critical-section" *ngIf="!loadingCritiques">
+    <h2><i class="fas fa-exclamation-triangle"></i> Dossiers Critiques</h2>
+    <div class="dossiers-grid" *ngIf="dossiersCritiques.length > 0; else noCritiques">
+      <mat-card class="dossier-card critical" *ngFor="let dossier of dossiersCritiques">
+        <mat-card-header>
+          <mat-card-title>{{ dossier.numeroDossier || 'Sans référence' }}</mat-card-title>
+          <span class="montant-badge">{{ formatAmount(dossier.montantCreance || 0) }}</span>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="dossier-info">
+            <p><strong>Créancier:</strong> {{ dossier.creancier?.nom || 'Non renseigné' }}</p>
+            <p><strong>Débiteur:</strong> {{ dossier.debiteur?.nom || 'Non renseigné' }}</p>
+            <p><strong>Statut:</strong> 
+              <span [class]="getStatutClass(dossier.statut || '')">{{ dossier.statut || 'Non défini' }}</span>
+            </p>
+            <p><strong>Score IA:</strong> 
+              <span class="score-high" *ngIf="dossier.riskScore">Élevé ({{ dossier.riskScore }}%)</span>
+            </p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+    <ng-template #noCritiques>
+      <div class="empty-state">
+        <i class="fas fa-check-circle"></i>
+        <p>Aucun dossier critique identifié</p>
+      </div>
+    </ng-template>
+  </div>
+
+  <!-- Dossiers en retard -->
+  <div class="retard-section" *ngIf="!loadingRetard">
+    <h2><i class="fas fa-clock"></i> Dossiers Nécessitant Attention</h2>
+    <div class="dossiers-grid" *ngIf="dossiersEnRetard.length > 0; else noRetard">
+      <mat-card class="dossier-card" *ngFor="let dossier of dossiersEnRetard">
+        <mat-card-header>
+          <mat-card-title>{{ dossier.numeroDossier || 'Sans référence' }}</mat-card-title>
+          <span class="montant-badge">{{ formatAmount(dossier.montantCreance || 0) }}</span>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="dossier-info">
+            <p><strong>Créancier:</strong> {{ dossier.creancier?.nom || 'Non renseigné' }}</p>
+            <p><strong>Statut:</strong> 
+              <span [class]="getStatutClass(dossier.statut || '')">{{ dossier.statut || 'Non défini' }}</span>
+            </p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+    <ng-template #noRetard>
+      <div class="empty-state">
+        <i class="fas fa-check-circle"></i>
+        <p>Tous les dossiers sont à jour</p>
+      </div>
+    </ng-template>
+  </div>
+</div>
+

@@ -1,0 +1,186 @@
+<div class="audit-container">
+  <div class="header">
+    <h1>Audit & Logs Système</h1>
+    <p class="subtitle">Traçabilité complète de toutes les actions système</p>
+  </div>
+
+  <!-- Filtres -->
+  <mat-card class="filters-card">
+    <mat-card-header>
+      <mat-card-title>Filtres</mat-card-title>
+      <button mat-icon-button (click)="showAdvancedFilters = !showAdvancedFilters">
+        <mat-icon>{{ showAdvancedFilters ? 'expand_less' : 'expand_more' }}</mat-icon>
+      </button>
+    </mat-card-header>
+    <mat-card-content>
+      <form [formGroup]="filtersForm">
+        <div class="filters-row">
+          <mat-form-field appearance="outline">
+            <mat-label>Type d'Action</mat-label>
+            <mat-select formControlName="typeAction" multiple>
+              <mat-option *ngFor="let type of typesAction" [value]="type">
+                {{ type }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Recherche</mat-label>
+            <input matInput formControlName="recherche" placeholder="Rechercher dans les détails">
+            <mat-icon matPrefix>search</mat-icon>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Date Début</mat-label>
+            <input matInput [matDatepicker]="picker1" formControlName="dateDebut">
+            <mat-datepicker-toggle matSuffix [for]="picker1"></mat-datepicker-toggle>
+            <mat-datepicker #picker1></mat-datepicker>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Date Fin</mat-label>
+            <input matInput [matDatepicker]="picker2" formControlName="dateFin">
+            <mat-datepicker-toggle matSuffix [for]="picker2"></mat-datepicker-toggle>
+            <mat-datepicker #picker2></mat-datepicker>
+          </mat-form-field>
+        </div>
+
+        <!-- Filtres Avancés -->
+        <div class="advanced-filters" *ngIf="showAdvancedFilters">
+          <div class="filters-row">
+            <mat-form-field appearance="outline">
+              <mat-label>ID Utilisateur</mat-label>
+              <input matInput type="number" formControlName="utilisateurId">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Entité</mat-label>
+              <input matInput formControlName="entite" placeholder="DOSSIER, UTILISATEUR, etc.">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>ID Entité</mat-label>
+              <input matInput type="number" formControlName="entiteId">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Adresse IP</mat-label>
+              <input matInput formControlName="ip">
+            </mat-form-field>
+          </div>
+        </div>
+
+        <div class="filters-actions">
+          <button mat-raised-button color="primary" (click)="applyFilters()">
+            <mat-icon>search</mat-icon>
+            Appliquer
+          </button>
+          <button mat-button (click)="resetFilters()">
+            <mat-icon>refresh</mat-icon>
+            Réinitialiser
+          </button>
+          <button mat-raised-button color="accent" (click)="exporterCSV()">
+            <mat-icon>file_download</mat-icon>
+            Export CSV
+          </button>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Résultats -->
+  <mat-card class="results-card">
+    <mat-card-header>
+      <mat-card-title>
+        Résultats : {{ totalElements }} logs
+      </mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="table-container" *ngIf="!loading; else loadingTemplate">
+        <table mat-table [dataSource]="logs" class="logs-table">
+          <!-- Colonne Date/Heure -->
+          <ng-container matColumnDef="dateHeure">
+            <th mat-header-cell *matHeaderCellDef>Date/Heure</th>
+            <td mat-cell *matCellDef="let log">{{ log.dateHeure | date:'short' }}</td>
+          </ng-container>
+
+          <!-- Colonne Utilisateur -->
+          <ng-container matColumnDef="utilisateur">
+            <th mat-header-cell *matHeaderCellDef>Utilisateur</th>
+            <td mat-cell *matCellDef="let log">
+              {{ log.utilisateur.nom }} {{ log.utilisateur.prenom }}
+            </td>
+          </ng-container>
+
+          <!-- Colonne Type Action -->
+          <ng-container matColumnDef="typeAction">
+            <th mat-header-cell *matHeaderCellDef>Type Action</th>
+            <td mat-cell *matCellDef="let log">
+              <mat-chip>{{ log.typeAction }}</mat-chip>
+            </td>
+          </ng-container>
+
+          <!-- Colonne Entité -->
+          <ng-container matColumnDef="entite">
+            <th mat-header-cell *matHeaderCellDef>Entité</th>
+            <td mat-cell *matCellDef="let log">{{ log.entite }}</td>
+          </ng-container>
+
+          <!-- Colonne ID Entité -->
+          <ng-container matColumnDef="entiteId">
+            <th mat-header-cell *matHeaderCellDef>ID Entité</th>
+            <td mat-cell *matCellDef="let log">{{ log.entiteId }}</td>
+          </ng-container>
+
+          <!-- Colonne Détails -->
+          <ng-container matColumnDef="details">
+            <th mat-header-cell *matHeaderCellDef>Détails</th>
+            <td mat-cell *matCellDef="let log">
+              <span class="details-text">{{ log.details }}</span>
+            </td>
+          </ng-container>
+
+          <!-- Colonne IP -->
+          <ng-container matColumnDef="ip">
+            <th mat-header-cell *matHeaderCellDef>IP</th>
+            <td mat-cell *matCellDef="let log">{{ log.ip }}</td>
+          </ng-container>
+
+          <!-- Colonne Actions -->
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef>Actions</th>
+            <td mat-cell *matCellDef="let log">
+              <button mat-icon-button (click)="voirDetails(log)" matTooltip="Voir détails">
+                <mat-icon>visibility</mat-icon>
+              </button>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+        </table>
+
+        <mat-paginator
+          [length]="totalElements"
+          [pageSize]="pageSize"
+          [pageIndex]="pageIndex"
+          [pageSizeOptions]="[25, 50, 100]"
+          (page)="onPageChange($event)">
+        </mat-paginator>
+      </div>
+
+      <ng-template #loadingTemplate>
+        <div class="loading-container">
+          <mat-progress-spinner mode="indeterminate" diameter="50"></mat-progress-spinner>
+          <p>Chargement des logs...</p>
+        </div>
+      </ng-template>
+
+      <div *ngIf="logs.length === 0 && !loading" class="no-data">
+        <mat-icon>info</mat-icon>
+        <p>Aucun log disponible. Les logs seront disponibles après implémentation backend.</p>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>
+

@@ -1,0 +1,69 @@
+<div class="supervision-juridique">
+  <div class="header">
+    <div class="header-content">
+      <h1><i class="fas fa-gavel"></i> Supervision - Juridique</h1>
+      <p class="subtitle">Vue d'ensemble consolidée du département juridique</p>
+    </div>
+    <button class="btn btn-primary" (click)="loadData()">
+      <i class="fas fa-sync-alt"></i> Actualiser
+    </button>
+  </div>
+
+  <div *ngIf="loading" class="loading-container">
+    <mat-progress-spinner mode="indeterminate" diameter="50"></mat-progress-spinner>
+    <p>Chargement des statistiques...</p>
+  </div>
+
+  <div class="stats-section" *ngIf="!loading">
+    <!-- Prompt 7 : Audiences -->
+    <app-stat-card 
+      *ngIf="statsAudiences"
+      title="Audiences"
+      [stats]="{
+        'Total': (statsAudiences.total !== null && statsAudiences.total !== undefined) ? statsAudiences.total : 0,
+        'Prochaines (7j)': (statsAudiences.prochaines !== null && statsAudiences.prochaines !== undefined) ? statsAudiences.prochaines : 0,
+        'Passées': (statsAudiences.passees !== null && statsAudiences.passees !== undefined) ? statsAudiences.passees : 0
+      }"
+      icon="event"
+      color="primary">
+    </app-stat-card>
+
+    <!-- Prompt 7 : Documents Huissier -->
+    <app-stat-card 
+      *ngIf="statsDocuments"
+      title="Documents Huissier"
+      [stats]="{
+        'Créés': (statsDocuments?.crees !== null && statsDocuments?.crees !== undefined) ? statsDocuments.crees : 0,
+        'Complétés': (statsDocuments?.completes !== null && statsDocuments?.completes !== undefined) ? statsDocuments.completes : 0
+      }"
+      icon="description"
+      color="accent">
+    </app-stat-card>
+
+    <!-- Prompt 7 : Actions Huissier -->
+    <app-stat-card 
+      *ngIf="statsActions"
+      title="Actions Huissier"
+      [stats]="{
+        'Créées': (statsActions?.crees !== null && statsActions?.crees !== undefined) ? statsActions.crees : 0,
+        'Complétées': (statsActions?.completes !== null && statsActions?.completes !== undefined) ? statsActions.completes : 0
+      }"
+      icon="gavel"
+      color="warn">
+    </app-stat-card>
+
+    <!-- ✅ NOUVEAU : Section Recouvrement Juridique -->
+    <app-stat-card 
+      *ngIf="statsRecouvrement"
+      title="Recouvrement Juridique"
+      [stats]="{
+        'Montant recouvré': formatAmount(statsRecouvrement.montantRecouvrePhaseJuridique || 0),
+        'Nombre de dossiers': statsRecouvrement.dossiersAvecRecouvrementJuridique || 0,
+        'Taux de recouvrement': (statsRecouvrement.tauxRecouvrementJuridique || 0).toFixed(2) + '%'
+      }"
+      icon="gavel"
+      color="primary">
+    </app-stat-card>
+  </div>
+</div>
+

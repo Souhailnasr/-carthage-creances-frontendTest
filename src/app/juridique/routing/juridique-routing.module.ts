@@ -3,6 +3,9 @@ import { RouterModule, Routes } from '@angular/router';
 import { JuridiqueUserManagementComponent } from '../components/juridique-user-management/juridique-user-management.component';
 import { AuthGuard } from '../../core/guards';
 import { Role } from '../../shared/models';
+// Imports directs pour éviter les erreurs de résolution TypeScript
+import { SendNotificationComponent } from '../../shared/components/send-notification/send-notification.component';
+import { TacheFormComponent } from '../../shared/components/tache-form/tache-form.component';
 
 const routes: Routes = [
   {
@@ -55,6 +58,24 @@ const routes: Routes = [
     loadComponent: () => import('../../chef-amiable/components/taches/taches.component').then(m => m.TachesComponent),
     canActivate: [AuthGuard],
     data: { allowedRoles: [Role.CHEF_JURIDIQUE, Role.SUPER_ADMIN] }
+  },
+  {
+    path: 'notifications/envoyer',
+    component: SendNotificationComponent,
+    canActivate: [AuthGuard],
+    data: { allowedRoles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE, Role.SUPER_ADMIN] }
+  },
+  {
+    path: 'taches/create',
+    component: TacheFormComponent,
+    canActivate: [AuthGuard],
+    data: { allowedRoles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE, Role.SUPER_ADMIN] }
+  },
+  {
+    path: 'taches/:id/edit',
+    component: TacheFormComponent,
+    canActivate: [AuthGuard],
+    data: { allowedRoles: [Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE, Role.SUPER_ADMIN] }
   }
 ];
 

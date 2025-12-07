@@ -6,6 +6,11 @@
     <div class="traitement-info">
       <strong>Enquête Précontentieuse</strong>
       <span class="frais-fixe">300 TND (Fixe - Annexé)</span>
+      <!-- ✅ NOUVEAU : Badge "Automatique" pour les tarifs créés automatiquement -->
+      <span class="badge-automatique">
+        <mat-icon>auto_awesome</mat-icon>
+        Automatique
+      </span>
     </div>
     <div class="statut-badge" [ngClass]="getStatutClass(enquetePrecontentieuse.statut)">
       {{ enquetePrecontentieuse.statut }}

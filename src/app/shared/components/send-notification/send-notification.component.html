@@ -1,122 +1,66 @@
 <div class="send-notification-container">
-  <div class="header">
-    <h1>Envoyer une Notification</h1>
-    <a routerLink="/notifications" class="btn btn-secondary">
-      <i class="fas fa-arrow-left"></i>
-      Retour aux notifications
-    </a>
-  </div>
+  <mat-card>
+    <mat-card-header>
+      <mat-card-title>Envoyer une Notification</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <form [formGroup]="notificationForm" (ngSubmit)="sendNotification()">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Type de notification</mat-label>
+          <mat-select formControlName="type">
+            <mat-option value="NOTIFICATION_MANUELLE">Notification manuelle</mat-option>
+            <mat-option value="NOTIFICATION_CHEF_VERS_AGENT" *ngIf="isChef">Notification aux agents</mat-option>
+            <mat-option value="NOTIFICATION_SUPERADMIN_VERS_CHEF" *ngIf="isSuperAdmin">Notification aux chefs</mat-option>
+            <mat-option value="NOTIFICATION_SUPERADMIN_VERS_AGENT" *ngIf="isSuperAdmin">Notification aux agents</mat-option>
+            <mat-option value="RAPPEL">Rappel</mat-option>
+            <mat-option value="INFO">Information</mat-option>
+          </mat-select>
+        </mat-form-field>
 
-  <!-- Message de succès -->
-  <div class="success-message" *ngIf="showSuccess">
-    <i class="fas fa-check-circle"></i>
-    <span>Notification envoyée avec succès !</span>
-  </div>
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Titre</mat-label>
+          <input matInput formControlName="titre" required>
+          <mat-error *ngIf="notificationForm.get('titre')?.hasError('required')">
+            Le titre est obligatoire
+          </mat-error>
+        </mat-form-field>
 
-  <!-- Formulaire -->
-  <div class="form-container">
-    <form [formGroup]="notificationForm" (ngSubmit)="onSubmit()">
-      <div class="form-grid">
-        <!-- Destinataire -->
-        <div class="form-group">
-          <label for="destinataireId">Destinataire *</label>
-          <select 
-            id="destinataireId" 
-            formControlName="destinataireId"
-            [class.is-invalid]="notificationForm.get('destinataireId')?.invalid && notificationForm.get('destinataireId')?.touched">
-            <option value="">Sélectionner un utilisateur</option>
-            <option *ngFor="let user of users" [value]="user.id">
-              {{ getUserDisplayName(user) }}
-            </option>
-          </select>
-          <div class="invalid-feedback" *ngIf="getFieldError('destinataireId')">
-            {{ getFieldError('destinataireId') }}
-          </div>
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Message</mat-label>
+          <textarea matInput formControlName="message" rows="4" required></textarea>
+          <mat-error *ngIf="notificationForm.get('message')?.hasError('required')">
+            Le message est obligatoire
+          </mat-error>
+        </mat-form-field>
+
+        <!-- Sélection des utilisateurs (SuperAdmin uniquement) -->
+        <div *ngIf="isSuperAdmin" class="user-selection">
+          <h3>Sélectionner les destinataires</h3>
+          <mat-selection-list #selectionList (selectionChange)="onSelectionListChange($event)">
+            <mat-list-option *ngFor="let user of users" 
+                            [value]="toNumber(user.id)">
+              {{ user.nom }} {{ user.prenom }} ({{ user.roleUtilisateur }})
+            </mat-list-option>
+          </mat-selection-list>
+          <p *ngIf="selectedUsers.length === 0" class="hint">
+            Aucun utilisateur sélectionné = Envoyer à tous
+          </p>
+          <p *ngIf="selectedUsers.length > 0" class="hint-selected">
+            {{ selectedUsers.length }} utilisateur(s) sélectionné(s): {{ getSelectedUsersNames() }}
+          </p>
         </div>
 
-        <!-- Type de notification -->
-        <div class="form-group">
-          <label for="type">Type de notification *</label>
-          <select 
-            id="type" 
-            formControlName="type"
-            [class.is-invalid]="notificationForm.get('type')?.invalid && notificationForm.get('type')?.touched">
-            <option *ngFor="let option of typeOptions" [value]="option.value">
-              {{ option.label }}
-            </option>
-          </select>
-          <div class="invalid-feedback" *ngIf="getFieldError('type')">
-            {{ getFieldError('type') }}
-          </div>
+        <div class="actions">
+          <button mat-button type="button" (click)="notificationForm.reset()">Annuler</button>
+          <button mat-raised-button 
+                  type="submit" 
+                  color="primary" 
+                  [disabled]="notificationForm.invalid || loading">
+            <span *ngIf="loading">Envoi...</span>
+            <span *ngIf="!loading">Envoyer</span>
+          </button>
         </div>
-
-        <!-- Titre -->
-        <div class="form-group full-width">
-          <label for="titre">Titre *</label>
-          <input 
-            type="text" 
-            id="titre" 
-            formControlName="titre"
-            placeholder="Entrez le titre de la notification"
-            [class.is-invalid]="notificationForm.get('titre')?.invalid && notificationForm.get('titre')?.touched">
-          <div class="invalid-feedback" *ngIf="getFieldError('titre')">
-            {{ getFieldError('titre') }}
-          </div>
-        </div>
-
-        <!-- Message -->
-        <div class="form-group full-width">
-          <label for="message">Message *</label>
-          <textarea 
-            id="message" 
-            formControlName="message"
-            rows="5"
-            placeholder="Entrez le message de la notification"
-            [class.is-invalid]="notificationForm.get('message')?.invalid && notificationForm.get('message')?.touched"></textarea>
-          <div class="invalid-feedback" *ngIf="getFieldError('message')">
-            {{ getFieldError('message') }}
-          </div>
-        </div>
-
-        <!-- Lien d'action (optionnel) -->
-        <div class="form-group full-width">
-          <label for="lienAction">Lien d'action (optionnel)</label>
-          <input 
-            type="url" 
-            id="lienAction" 
-            formControlName="lienAction"
-            placeholder="https://exemple.com/action">
-          <small class="form-text">URL vers laquelle rediriger l'utilisateur lors du clic sur la notification</small>
-        </div>
-      </div>
-
-      <!-- Actions -->
-      <div class="form-actions">
-        <button type="button" class="btn btn-secondary" (click)="notificationForm.reset()">
-          <i class="fas fa-undo"></i>
-          Réinitialiser
-        </button>
-        <button type="submit" class="btn btn-primary" [disabled]="notificationForm.invalid || isSubmitting">
-          <i class="fas fa-paper-plane" *ngIf="!isSubmitting"></i>
-          <i class="fas fa-spinner fa-spin" *ngIf="isSubmitting"></i>
-          {{ isSubmitting ? 'Envoi en cours...' : 'Envoyer la notification' }}
-        </button>
-      </div>
-    </form>
-  </div>
-
-  <!-- Aperçu -->
-  <div class="preview-section" *ngIf="notificationForm.get('titre')?.value && notificationForm.get('message')?.value">
-    <h3>Aperçu de la notification</h3>
-    <div class="notification-preview">
-      <div class="preview-icon" [ngClass]="'notification-' + notificationForm.get('type')?.value">
-        <i [class]="getTypeIcon(notificationForm.get('type')?.value)"></i>
-      </div>
-      <div class="preview-content">
-        <h4>{{ notificationForm.get('titre')?.value }}</h4>
-        <p>{{ notificationForm.get('message')?.value }}</p>
-        <span class="preview-type">{{ notificationForm.get('type')?.value }}</span>
-      </div>
-    </div>
-  </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
 </div>

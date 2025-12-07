@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Subject, takeUntil } from 'rxjs';
+import { Subject, takeUntil, forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { DossierService } from '../../../core/services/dossier.service';
 import { AvocatService } from '../../services/avocat.service';
 import { HuissierService } from '../../services/huissier.service';
@@ -9,10 +10,19 @@ import { UtilisateurService } from '../../../services/utilisateur.service';
 import { JwtAuthService } from '../../../core/services/jwt-auth.service';
 import { DossierApiService } from '../../../core/services/dossier-api.service';
 import { StatistiqueService } from '../../../core/services/statistique.service';
+import { StatistiqueCompleteService } from '../../../core/services/statistique-complete.service';
+import { NotificationCompleteService } from '../../../core/services/notification-complete.service';
+import { TacheCompleteService } from '../../../core/services/tache-complete.service';
 import { PerformanceService } from '../../../core/services/performance.service';
+import { IaPredictionService } from '../../../core/services/ia-prediction.service';
 import { Role, User } from '../../../shared/models';
 import { DossierApi, Urgence } from '../../../shared/models/dossier-api.model';
 import { Audience, DecisionResult } from '../../models/audience.model';
+import { IaPredictionBadgeComponent } from '../../../shared/components/ia-prediction-badge/ia-prediction-badge.component';
+import { StatCardComponent } from '../../../shared/components/stat-card/stat-card.component';
+import { IaPredictionResult } from '../../../shared/models/ia-prediction-result.model';
+import { StatistiquesChef, StatistiquesGlobales, StatistiquesAudiences } from '../../../shared/models/statistique-complete.model';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 
 interface Activity {
   type: string;
@@ -24,7 +34,7 @@ interface Activity {
 @Component({
   selector: 'app-juridique-dashboard',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, IaPredictionBadgeComponent, StatCardComponent, MatSnackBarModule],
   templateUrl: './juridique-dashboard.component.html',
   styleUrls: ['./juridique-dashboard.component.scss']
 })
@@ -47,8 +57,26 @@ export class JuridiqueDashboardComponent implements OnInit, OnDestroy {
   dossiersAvecHuissier = 0;
   dossiersUrgents = 0;
   
+  // ✅ Statistiques standardisées
+  statsGlobales: StatistiquesGlobales | null = null;
+  statsAudiences: StatistiquesAudiences | null = null;
+  
   // Cache pour les performances des agents (pour éviter ExpressionChangedAfterItHasBeenCheckedError)
   private agentPerformanceCache: Map<string | number, number> = new Map();
+  
+  // Prédictions IA
+  recentDossiers: DossierApi[] = [];
+  predictions: Map<number, IaPredictionResult> = new Map();
+  loadingPredictions: Map<number, boolean> = new Map();
+  
+  // Statistiques complètes (nouveau système)
+  statsDepartement: StatistiquesChef | null = null;
+  statsRecouvrement: any = null; // ✅ NOUVEAU : Statistiques de recouvrement par phase
+  loadingStatsCompletes = false;
+  
+  // Anciennes propriétés (conservées pour compatibilité, mais statsAudiences est déjà défini ci-dessus)
+  statsDocumentsHuissier: any = null;
+  statsActionsHuissier: any = null;
   
   private destroy$ = new Subject<void>();
 
@@ -60,8 +88,13 @@ export class JuridiqueDashboardComponent implements OnInit, OnDestroy {
     private utilisateurService: UtilisateurService,
     private jwtAuthService: JwtAuthService,
     private dossierApiService: DossierApiService,
-    private statistiqueService: StatistiqueService,
-    private performanceService: PerformanceService
+    private statistiqueService: StatistiqueService, // Ancien - conservé
+    private statistiqueCompleteService: StatistiqueCompleteService, // Nouveau
+    private notificationCompleteService: NotificationCompleteService, // Nouveau
+    private tacheCompleteService: TacheCompleteService, // Nouveau
+    private performanceService: PerformanceService,
+    private iaPredictionService: IaPredictionService,
+    private snackBar: MatSnackBar
   ) {}
 
   ngOnInit(): void {
@@ -70,6 +103,80 @@ export class JuridiqueDashboardComponent implements OnInit, OnDestroy {
     // loadDossiersStats() est appelé séparément car il utilise une API différente
     // et met à jour totalDossiers avec les données de recouvrement juridique
     this.loadDossiersStats();
+    this.loadStatistiquesCompletes(); // Nouveau système
+    this.loadRecentDossiersWithPredictions();
+  }
+
+  /**
+   * Charge les statistiques avec le nouveau système complet
+   * Prompt 4 : Ajouter audiences, documents huissier, actions huissier
+   */
+  loadStatistiquesCompletes(): void {
+    this.loadingStatsCompletes = true;
+    
+    // ✅ NOUVEAU : Charger les statistiques du département + recouvrement par phase
+    forkJoin({
+      departement: this.statistiqueCompleteService.getStatistiquesDepartement().pipe(
+        takeUntil(this.destroy$),
+        catchError((error) => {
+          console.warn('⚠️ Erreur lors du chargement des statistiques du département:', error);
+          return of(null);
+        })
+      ),
+      audiences: this.statistiqueCompleteService.getStatistiquesAudiences().pipe(
+        takeUntil(this.destroy$),
+        catchError((error) => {
+          console.warn('⚠️ Erreur lors du chargement des audiences:', error);
+          return of(null);
+        })
+      ),
+      globales: this.statistiqueCompleteService.getStatistiquesGlobales().pipe(
+        takeUntil(this.destroy$),
+        catchError((error) => {
+          console.warn('⚠️ Erreur lors du chargement des statistiques globales:', error);
+          return of(null);
+        })
+      ),
+      recouvrement: this.statistiqueCompleteService.getStatistiquesRecouvrementParPhaseDepartement().pipe(
+        takeUntil(this.destroy$),
+        catchError((error) => {
+          console.warn('⚠️ Erreur lors du chargement des statistiques de recouvrement par phase:', error);
+          return of(null);
+        })
+      )
+    }).subscribe({
+      next: (results) => {
+        this.statsDepartement = results.departement;
+        this.statsAudiences = results.audiences;
+        this.statsRecouvrement = results.recouvrement; // ✅ NOUVEAU : Statistiques de recouvrement par phase
+        
+        // Extraire les statistiques documents et actions huissier depuis globales
+        if (results.globales) {
+          this.statsDocumentsHuissier = {
+            completes: results.globales.documentsHuissierCompletes !== null && results.globales.documentsHuissierCompletes !== undefined ? results.globales.documentsHuissierCompletes : null,
+            crees: results.globales.documentsHuissierCrees !== null && results.globales.documentsHuissierCrees !== undefined ? results.globales.documentsHuissierCrees : null
+          };
+          this.statsActionsHuissier = {
+            completes: results.globales.actionsHuissierCompletes !== null && results.globales.actionsHuissierCompletes !== undefined ? results.globales.actionsHuissierCompletes : null,
+            crees: results.globales.actionsHuissierCrees !== null && results.globales.actionsHuissierCrees !== undefined ? results.globales.actionsHuissierCrees : null
+          };
+        }
+        
+        // ✅ NOUVEAU : Mettre à jour le montant recouvré depuis les statistiques de recouvrement
+        if (results.recouvrement && results.recouvrement.montantRecouvrePhaseJuridique !== undefined && results.recouvrement.montantRecouvrePhaseJuridique !== null) {
+          if (this.statsDepartement && this.statsDepartement.chef) {
+            this.statsDepartement.chef.montantRecouvre = results.recouvrement.montantRecouvrePhaseJuridique;
+          }
+        }
+        
+        this.loadingStatsCompletes = false;
+        console.log('✅ Statistiques complètes du département juridique chargées:', results);
+      },
+      error: (error: any) => {
+        console.error('❌ Erreur lors du chargement des statistiques complètes:', error);
+        this.loadingStatsCompletes = false;
+      }
+    });
   }
 
   loadCurrentUser(): void {
@@ -132,37 +239,72 @@ export class JuridiqueDashboardComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const userRole = this.currentUser.roleUtilisateur;
-    const chefId = parseInt(this.currentUser.id);
-
-    // Charger les statistiques selon le rôle
-    if (userRole === 'SUPER_ADMIN') {
-      // Super Admin voit toutes les statistiques
-      this.statistiqueService.getStatistiquesGlobales().pipe(
-        takeUntil(this.destroy$)
-      ).subscribe({
-        next: (stats) => {
-          this.totalAudiences = stats.totalAudiences || 0;
-          // Les autres statistiques sont chargées par loadDossiersStats()
-        },
-        error: (error) => {
-          console.error('Erreur lors du chargement des statistiques globales:', error);
+    // ✅ STANDARDISATION : Utiliser getStatistiquesGlobales() + getStatistiquesAudiences()
+    forkJoin({
+      globales: this.statistiqueCompleteService.getStatistiquesGlobales().pipe(
+        takeUntil(this.destroy$),
+        catchError((error) => {
+          console.error('❌ Erreur lors du chargement des statistiques globales:', error);
+          return of(null);
+        })
+      ),
+      audiences: this.statistiqueCompleteService.getStatistiquesAudiences().pipe(
+        takeUntil(this.destroy$),
+        catchError((error) => {
+          console.warn('⚠️ Erreur lors du chargement des statistiques audiences:', error);
+          return of(null);
+        })
+      )
+    }).subscribe({
+      next: (results) => {
+        this.statsGlobales = results.globales;
+        this.statsAudiences = results.audiences;
+        
+        // Mapper les statistiques globales
+        if (results.globales) {
+          this.totalDossiers = results.globales.totalDossiers || 0;
+          this.totalAudiences = results.globales.audiencesTotales || 0;
+          this.dossiersEnCours = results.globales.dossiersEnCours || 0;
+          // Documents et actions huissier depuis globales
+          if (results.globales.documentsHuissierCrees !== undefined) {
+            // Peut être utilisé pour afficher les statistiques
+          }
+          if (results.globales.actionsHuissierCrees !== undefined) {
+            // Peut être utilisé pour afficher les statistiques
+          }
         }
-      });
-    } else if (userRole?.startsWith('CHEF_')) {
-      // Les chefs voient uniquement leurs statistiques
-      this.statistiqueService.getStatistiquesChef(chefId).pipe(
-        takeUntil(this.destroy$)
-      ).subscribe({
-        next: (stats) => {
-          // Les statistiques du chef incluent les données de ses agents
-          this.totalAudiences = stats.totalTachesAgents || 0; // Approximation
-        },
-        error: (error) => {
-          console.error('Erreur lors du chargement des statistiques du chef:', error);
+        
+        // Mapper les statistiques des audiences (endpoint spécialisé)
+        if (results.audiences) {
+          this.totalAudiences = results.audiences.total || results.globales?.audiencesTotales || 0;
+          this.statsAudiences = results.audiences;
+        } else if (results.globales) {
+          // Fallback sur les statistiques globales
+          this.totalAudiences = results.globales.audiencesTotales || 0;
+          if (results.globales.audiencesProchaines !== undefined) {
+            this.statsAudiences = {
+              total: results.globales.audiencesTotales || 0,
+              prochaines: results.globales.audiencesProchaines || 0,
+              passees: (results.globales.audiencesTotales || 0) - (results.globales.audiencesProchaines || 0)
+            };
+          }
         }
-      });
-    }
+        
+        // Initialiser avec 0 si null pour éviter l'affichage vide
+        this.totalAudiences = this.totalAudiences || 0;
+        this.totalDossiers = this.totalDossiers || 0;
+        this.dossiersEnCours = this.dossiersEnCours || 0;
+        
+        console.log('✅ Statistiques chargées (standardisées):', {
+          globales: results.globales,
+          audiences: results.audiences
+        });
+      },
+      error: (error) => {
+        console.error('❌ Erreur lors du chargement des statistiques:', error);
+        this.snackBar.open('Erreur lors du chargement des statistiques', 'Fermer', { duration: 3000 });
+      }
+    });
 
     // Load dossiers
     this.dossierService.loadAll()
@@ -327,5 +469,86 @@ export class JuridiqueDashboardComponent implements OnInit, OnDestroy {
       currency: 'TND',
       minimumFractionDigits: 2
     }).format(amount);
+  }
+
+  loadRecentDossiersWithPredictions(): void {
+    this.dossierApiService.getDossiersRecouvrementJuridique(0, 5).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (page) => {
+        const dossiers = Array.isArray(page.content) ? page.content : (Array.isArray(page) ? page : []);
+        this.recentDossiers = dossiers.slice(0, 5);
+        // Charger les prédictions pour chaque dossier
+        this.recentDossiers.forEach(dossier => {
+          if (dossier.id) {
+            this.loadPredictionForDossier(dossier.id);
+          }
+        });
+      },
+      error: (error) => {
+        console.error('❌ Erreur lors du chargement des dossiers récents:', error);
+        this.recentDossiers = [];
+      }
+    });
+  }
+
+  loadPredictionForDossier(dossierId: number): void {
+    // Vérifier si le dossier a déjà une prédiction dans les données chargées
+    const dossier = this.recentDossiers.find(d => d.id === dossierId);
+    if (dossier && dossier.etatPrediction && dossier.riskScore !== undefined) {
+      this.predictions.set(dossierId, {
+        etatFinal: dossier.etatPrediction,
+        riskScore: dossier.riskScore,
+        riskLevel: dossier.riskLevel || 'Moyen',
+        datePrediction: dossier.datePrediction || ''
+      });
+    }
+  }
+
+  getPrediction(dossier: DossierApi): IaPredictionResult | null {
+    if (!dossier.id) return null;
+    
+    // Vérifier d'abord dans le cache
+    if (this.predictions.has(dossier.id)) {
+      return this.predictions.get(dossier.id) || null;
+    }
+    
+    // Sinon, vérifier si le dossier a déjà une prédiction
+    if (dossier.etatPrediction && dossier.riskScore !== undefined) {
+      const prediction: IaPredictionResult = {
+        etatFinal: dossier.etatPrediction,
+        riskScore: dossier.riskScore,
+        riskLevel: dossier.riskLevel || 'Moyen',
+        datePrediction: dossier.datePrediction || ''
+      };
+      this.predictions.set(dossier.id, prediction);
+      return prediction;
+    }
+    
+    return null;
+  }
+
+  isLoadingPrediction(dossier: DossierApi): boolean {
+    return dossier.id ? this.loadingPredictions.get(dossier.id) || false : false;
+  }
+
+  triggerPrediction(dossierId: number): void {
+    this.loadingPredictions.set(dossierId, true);
+    this.iaPredictionService.predictForDossier(dossierId).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (prediction: IaPredictionResult) => {
+        if (prediction) {
+          this.predictions.set(dossierId, prediction);
+          // Recharger les dossiers pour obtenir la prédiction mise à jour
+          this.loadRecentDossiersWithPredictions();
+        }
+        this.loadingPredictions.set(dossierId, false);
+      },
+      error: (error: any) => {
+        console.error(`❌ Erreur lors du calcul de la prédiction pour le dossier ${dossierId}:`, error);
+        this.loadingPredictions.set(dossierId, false);
+      }
+    });
   }
 }

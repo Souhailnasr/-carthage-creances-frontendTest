@@ -12,14 +12,18 @@
     <!-- Formulaire de connexion -->
     <form class="login-form" [formGroup]="loginForm" (ngSubmit)="login()">
       <div class="form-group">
-        <label for="email">Email</label>
+        <label for="email">
+          <i class="fas fa-envelope"></i>
+          Email
+        </label>
         <input
           id="email"
           type="email"
           class="form-control"
           [class.is-invalid]="f['email'].invalid && (f['email'].dirty || f['email'].touched)"
           formControlName="email"
-          placeholder="votre.email@carthage-creance.tn">
+          placeholder="votre.email@carthage-creance.tn"
+          autocomplete="email">
         <div class="invalid-feedback" *ngIf="f['email'].invalid && (f['email'].dirty || f['email'].touched)">
           <span *ngIf="f['email'].errors?.['required']">L'email est requis</span>
           <span *ngIf="f['email'].errors?.['email']">Format d'email invalide</span>
@@ -27,7 +31,10 @@
       </div>
 
       <div class="form-group">
-        <label for="password">Mot de passe</label>
+        <label for="password">
+          <i class="fas fa-lock"></i>
+          Mot de passe
+        </label>
         <div class="password-input">
           <input
             id="password"
@@ -35,17 +42,27 @@
             class="form-control"
             [class.is-invalid]="f['password'].invalid && (f['password'].dirty || f['password'].touched)"
             formControlName="password"
-            placeholder="Votre mot de passe">
+            placeholder="Votre mot de passe"
+            autocomplete="current-password">
           <button
             type="button"
             class="password-toggle"
-            (click)="togglePasswordVisibility()">
+            (click)="togglePasswordVisibility()"
+            [attr.aria-label]="showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'">
             <i [class]="showPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
           </button>
         </div>
         <div class="invalid-feedback" *ngIf="f['password'].invalid && (f['password'].dirty || f['password'].touched)">
           <span *ngIf="f['password'].errors?.['required']">Le mot de passe est requis</span>
         </div>
+      </div>
+
+      <!-- ✅ NOUVEAU : Lien "Mot de passe oublié ?" -->
+      <div class="forgot-password-link">
+        <a routerLink="/forgot-password" class="link-forgot-password">
+          <i class="fas fa-question-circle"></i>
+          Mot de passe oublié ?
+        </a>
       </div>
 
       <!-- Message d'erreur -->
@@ -60,44 +77,8 @@
         [disabled]="loading || loginForm.invalid">
         <i class="fas fa-spinner fa-spin" *ngIf="loading"></i>
         <i class="fas fa-sign-in-alt" *ngIf="!loading"></i>
-        {{ loading ? 'Connexion...' : 'Se connecter' }}
+        <span>{{ loading ? 'Connexion...' : 'Se connecter' }}</span>
       </button>
     </form>
-
-    <!-- Comptes de démonstration -->
-    <div class="demo-accounts">
-      <h3>Comptes de démonstration</h3>
-      <div class="demo-buttons">
-        <!-- Super Admin -->
-        <button type="button" class="btn btn-demo" (click)="loginAsSuperAdmin()">
-          <i class="fas fa-crown"></i>
-          Super Admin
-        </button>
-        
-        <!-- Chef de Dossier -->
-        <button type="button" class="btn btn-demo" (click)="loginAsChefDossier()">
-          <i class="fas fa-user-tie"></i>
-          Chef Dossier
-        </button>
-        
-        <!-- Agent de Dossier -->
-        <button type="button" class="btn btn-demo" (click)="loginAsAgentDossier()">
-          <i class="fas fa-user"></i>
-          Agent Dossier
-        </button>
-        
-        <!-- Chef Juridique -->
-        <button type="button" class="btn btn-demo" (click)="loginAsChefJuridique()">
-          <i class="fas fa-gavel"></i>
-          Chef Juridique
-        </button>
-        
-        <!-- Chef Recouvrement Amiable -->
-        <button type="button" class="btn btn-demo" (click)="loginAsChefAmiable()">
-          <i class="fas fa-handshake"></i>
-          Chef Recouvrement Amiable
-        </button>
-      </div>
-    </div>
   </div>
 </div>

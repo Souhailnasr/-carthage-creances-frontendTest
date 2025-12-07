@@ -31,6 +31,20 @@ export interface DossierApi {
   finance?: FinanceApi;
   // Type de recouvrement
   typeRecouvrement?: TypeRecouvrement;
+  // ✅ Champs pour la prédiction IA
+  etatPrediction?: 'RECOVERED_TOTAL' | 'RECOVERED_PARTIAL' | 'NOT_RECOVERED';
+  riskScore?: number;
+  riskLevel?: 'Faible' | 'Moyen' | 'Élevé';
+  datePrediction?: string;
+  // ✅ Champ pour l'étape huissier (envoyé en snake_case depuis le backend comme dans la base de données)
+  etape_huissier?: 'EN_ATTENTE_DOCUMENTS' | 'EN_DOCUMENTS' | 'EN_ACTIONS' | 'EN_AUDIENCES' | 'AFFECTE_FINANCE';
+  // ✅ NOUVEAU : Montants recouvrés par phase
+  montantRecouvre?: number;
+  montantRecouvrePhaseAmiable?: number;
+  montantRecouvrePhaseJuridique?: number;
+  montantRestant?: number;
+  montantTotal?: number;
+  etatDossier?: 'RECOVERED_TOTAL' | 'RECOVERED_PARTIAL' | 'NOT_RECOVERED';
 }
 
 export interface DossierRequest {

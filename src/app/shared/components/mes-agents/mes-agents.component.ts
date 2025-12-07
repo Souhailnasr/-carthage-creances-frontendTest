@@ -5,6 +5,8 @@ import { AuthService } from '../../../core/services/auth.service';
 import { JwtAuthService } from '../../../core/services/jwt-auth.service';
 import { User, Role } from '../../../shared/models';
 import { Observable, Subscription } from 'rxjs';
+import { ToastService } from '../../../core/services/toast.service';
+import { Subject, takeUntil } from 'rxjs';
 
 @Component({
   selector: 'app-mes-agents',
@@ -18,22 +20,87 @@ export class MesAgentsComponent implements OnInit, OnDestroy {
   currentUser: User | null = null;
   loading = false;
   error: string | null = null;
+  isProcessingStatus = false; // Pour désactiver les boutons pendant le traitement
 
   private readonly subscriptions = new Subscription();
+  private destroy$ = new Subject<void>();
 
   constructor(
     private readonly utilisateurService: UtilisateurService,
     private readonly authService: AuthService,
-    private readonly jwtAuthService: JwtAuthService
+    private readonly jwtAuthService: JwtAuthService,
+    private readonly toastService: ToastService
   ) {}
 
   ngOnInit(): void {
-    this.currentUser = this.authService.getCurrentUser();
-    this.loadUtilisateurs();
+    // Charger l'utilisateur actuel depuis JwtAuthService (plus fiable)
+    this.jwtAuthService.getCurrentUser().subscribe({
+      next: (user) => {
+        this.currentUser = user;
+        this.loadUtilisateurs();
+      },
+      error: (error) => {
+        console.error('❌ Erreur lors du chargement de l\'utilisateur:', error);
+        // Fallback sur AuthService
+        this.currentUser = this.authService.getCurrentUser();
+        this.loadUtilisateurs();
+      }
+    });
   }
 
   ngOnDestroy(): void {
     this.subscriptions.unsubscribe();
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  /**
+   * Active ou désactive un utilisateur
+   */
+  toggleUserStatus(utilisateur: Utilisateur): void {
+    // Vérifier que l'utilisateur connecté est SUPER_ADMIN
+    if (!this.isSuperAdmin()) {
+      this.toastService.error('Seul un Super Admin peut activer/désactiver des utilisateurs');
+      return;
+    }
+
+    // Empêcher la désactivation d'un SUPER_ADMIN
+    if ((utilisateur.roleUtilisateur === 'SUPER_ADMIN' || utilisateur.role === 'SUPER_ADMIN') && utilisateur.actif) {
+      this.toastService.error('Impossible de désactiver un Super Admin');
+      return;
+    }
+
+    const action = utilisateur.actif ? 'désactiver' : 'activer';
+    const confirmed = confirm(`Êtes-vous sûr de vouloir ${action} l'utilisateur ${utilisateur.prenom} ${utilisateur.nom} ?`);
+    
+    if (!confirmed) {
+      return;
+    }
+
+    this.isProcessingStatus = true;
+    const action$ = utilisateur.actif 
+      ? this.utilisateurService.desactiverUtilisateur(utilisateur.id!)
+      : this.utilisateurService.activerUtilisateur(utilisateur.id!);
+
+    action$.pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (utilisateurModifie) => {
+          // Mettre à jour l'utilisateur dans la liste
+          const index = this.utilisateurs.findIndex(u => u.id === utilisateur.id);
+          if (index !== -1) {
+            this.utilisateurs[index] = utilisateurModifie;
+          }
+          
+          this.toastService.success(`Utilisateur ${action} avec succès`);
+          this.isProcessingStatus = false;
+        },
+        error: (error) => {
+          console.error('❌ Erreur lors du changement de statut:', error);
+          const errorMessage = error.error?.message || error.message || 'Erreur lors du changement de statut';
+          this.toastService.error(errorMessage);
+          this.isProcessingStatus = false;
+        }
+      });
   }
 
   loadUtilisateurs(): void {
@@ -112,11 +179,55 @@ export class MesAgentsComponent implements OnInit, OnDestroy {
   }
 
   isSuperAdmin(): boolean {
-    if (!this.currentUser?.roleUtilisateur) return false;
-    const role = this.currentUser.roleUtilisateur;
+    // Méthode 1: Vérifier depuis currentUser
+    if (this.currentUser?.roleUtilisateur) {
+      const role = this.currentUser.roleUtilisateur;
+      const roleString = typeof role === 'string' ? role : String(role);
+      
+      // Vérifier si c'est l'enum Role.SUPER_ADMIN (comparaison stricte)
+      if (role === Role.SUPER_ADMIN || roleString === Role.SUPER_ADMIN) {
+        return true;
+      }
+      
+      // Vérifier si c'est une string qui correspond à SUPER_ADMIN (plusieurs variantes possibles)
+      const normalizedRoleString = roleString.toUpperCase().trim();
+      if (normalizedRoleString === 'SUPER_ADMIN' || 
+          normalizedRoleString === 'SUPERADMIN' ||
+          normalizedRoleString.includes('SUPER_ADMIN') ||
+          normalizedRoleString.includes('SUPERADMIN')) {
+        return true;
+      }
+    }
     
-    // Vérifier si c'est l'enum Role.SUPER_ADMIN
-    return role === Role.SUPER_ADMIN;
+    // Méthode 2: Vérifier depuis le token JWT (fallback)
+    const roleAuthority = this.jwtAuthService.loggedUserAuthority();
+    if (roleAuthority) {
+      // Normaliser le rôle (supprimer le préfixe RoleUtilisateur_ si présent)
+      const normalizedRole = roleAuthority.replace(/^RoleUtilisateur_/, '').toUpperCase().trim();
+      if (normalizedRole === 'SUPER_ADMIN' || 
+          normalizedRole === 'SUPERADMIN' ||
+          normalizedRole.includes('SUPER_ADMIN') ||
+          normalizedRole.includes('SUPERADMIN')) {
+        return true;
+      }
+    }
+    
+    // Méthode 3: Vérifier depuis AuthService (fallback supplémentaire)
+    const authUser = this.authService.getCurrentUser();
+    if (authUser?.roleUtilisateur) {
+      const authRole = authUser.roleUtilisateur;
+      const authRoleString = typeof authRole === 'string' ? authRole : String(authRole);
+      const normalizedAuthRole = authRoleString.toUpperCase().trim();
+      
+      if (normalizedAuthRole === 'SUPER_ADMIN' || 
+          normalizedAuthRole === 'SUPERADMIN' ||
+          normalizedAuthRole.includes('SUPER_ADMIN') ||
+          normalizedAuthRole.includes('SUPERADMIN')) {
+        return true;
+      }
+    }
+    
+    return false;
   }
 
   isChef(): boolean {

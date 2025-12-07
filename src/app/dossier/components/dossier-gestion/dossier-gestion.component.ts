@@ -18,11 +18,14 @@ import { DossierApi, DossierRequest, Urgence, DossierStatus, TypeDocumentJustifi
 import { Role } from '../../../shared/models/enums.model';
 import { Page } from '../../../shared/models/pagination.model';
 import { JwtAuthService } from '../../../core/services/jwt-auth.service';
+import { IaPredictionService } from '../../../core/services/ia-prediction.service';
+import { IaPredictionBadgeComponent } from '../../../shared/components/ia-prediction-badge/ia-prediction-badge.component';
+import { IaPredictionResult } from '../../../shared/models/ia-prediction-result.model';
 
 @Component({
   selector: 'app-dossier-gestion',
   standalone: true,
-  imports: [CommonModule, RouterModule, ReactiveFormsModule, FormsModule, FormInputComponent],
+  imports: [CommonModule, RouterModule, ReactiveFormsModule, FormsModule, FormInputComponent, IaPredictionBadgeComponent],
   templateUrl: './dossier-gestion.component.html',
   styleUrls: ['./dossier-gestion.component.scss']
 })
@@ -109,6 +112,7 @@ export class DossierGestionComponent implements OnInit, OnDestroy {
     private debiteurApiService: DebiteurApiService,
     private dossierApiService: DossierApiService,
     private validationDossierService: ValidationDossierService,
+    private iaPredictionService: IaPredictionService,
     private router: Router
   ) { }
 
@@ -624,7 +628,12 @@ private getSortParameter(): string {
         debiteur: debiteur,
         // Ajouter les types pour l'affichage
         typeCreancier: (dossierApi.creancier as any)?.type || 'PERSONNE_PHYSIQUE',
-        typeDebiteur: (dossierApi.debiteur as any)?.type || 'PERSONNE_PHYSIQUE'
+        typeDebiteur: (dossierApi.debiteur as any)?.type || 'PERSONNE_PHYSIQUE',
+        // ✅ Champs IA depuis l'API
+        etatPrediction: dossierApi.etatPrediction,
+        riskScore: dossierApi.riskScore,
+        riskLevel: dossierApi.riskLevel,
+        datePrediction: dossierApi.datePrediction
       });
     });
   }
@@ -848,6 +857,9 @@ private getSortParameter(): string {
            this.currentUser.roleUtilisateur === Role.SUPER_ADMIN));
 
         // Construction du payload
+        // ⚠️ IMPORTANT : Ne PAS inclure contratSigne et pouvoir dans le JSON
+        // Ces champs ne font pas partie du DTO backend DossierRequest
+        // Les fichiers sont envoyés séparément dans FormData (multipart)
         const dossierRequest: any = {
           titre: formValue.titre,
           description: formValue.description,
@@ -862,16 +874,26 @@ private getSortParameter(): string {
           typeDebiteur: formValue.typeDebiteur,
           nomDebiteur: formValue.nomDebiteur,
           prenomDebiteur: formValue.typeDebiteur === 'PERSONNE_PHYSIQUE' ? (formValue.prenomDebiteur || '') : '',
-          contratSigne: formValue.contratSigne ? 'uploaded' : undefined,
-          pouvoir: formValue.pouvoir ? 'uploaded' : undefined,
+          // ✅ RETIRÉ : contratSigne et pouvoir ne doivent PAS être dans le JSON
+          // Les fichiers sont envoyés séparément dans FormData si nécessaires
           agentCreateurId: currentUserId, // ✅ ID utilisateur injecté dans le payload
           statut: isChef ? 'VALIDE' : 'EN_ATTENTE_VALIDATION'
         };
+        
+        // Log pour vérification (dev mode)
+        console.log('📋 Dossier JSON (sans contratSigne ni pouvoir):', JSON.stringify(dossierRequest, null, 2));
 
         // ✅ NOUVEAU : Utiliser la méthode unifiée qui détecte automatiquement les fichiers
         // Le service choisit automatiquement entre multipart (si fichiers) ou JSON (si pas de fichiers)
+        // D'après le backend, les fichiers doivent être envoyés seulement si :
+        // - La checkbox est cochée ET le fichier est présent
+        const contratChecked = !!formValue.contratSigne;
+        const pouvoirChecked = !!formValue.pouvoir;
+        
         const create$ = this.dossierApiService.createDossier(
           dossierRequest,
+          contratChecked,
+          pouvoirChecked,
           this.selectedContratFile || undefined,
           this.selectedPouvoirFile || undefined,
           isChef
@@ -897,7 +919,35 @@ private getSortParameter(): string {
             },
             error: (error: any) => {
               console.error('❌ Erreur lors de la création du dossier:', error);
-              this.toastService.error('Erreur lors de la création du dossier. Veuillez réessayer.');
+              console.error('❌ Status:', error?.status);
+              console.error('❌ Error body:', error?.error);
+              
+              // Extraire le message d'erreur depuis le body de la réponse
+              // Le backend retourne {"error": "...", "message": "...", "code": "...", "timestamp": "..."}
+              let errorMessage = 'Erreur lors de la création du dossier';
+              
+              if (error?.error) {
+                if (error.error.message) {
+                  errorMessage = error.error.message;
+                } else if (error.error.error) {
+                  errorMessage = error.error.error;
+                } else if (typeof error.error === 'string') {
+                  errorMessage = error.error;
+                }
+              } else if (error?.message) {
+                errorMessage = error.message;
+              }
+              
+              // Gestion spécifique selon le code HTTP
+              if (error?.status === 400) {
+                errorMessage = errorMessage || 'Format de données invalide ou validation échouée';
+              } else if (error?.status === 401) {
+                errorMessage = errorMessage || 'Token d\'authentification requis ou expiré';
+              } else if (error?.status === 500) {
+                errorMessage = errorMessage || 'Erreur interne du serveur';
+              }
+              
+              this.toastService.error(errorMessage);
             }
           });
       },
@@ -1168,14 +1218,125 @@ private getSortParameter(): string {
   }
 
   deleteDossier(dossier: Dossier): void {
-    if (confirm('Êtes-vous sûr de vouloir supprimer ce dossier ?')) {
-      const index = this.dossiers.findIndex(d => d.id === dossier.id);
-      if (index !== -1) {
-        this.dossiers.splice(index, 1);
-        this.filteredDossiers = [...this.dossiers];
-        this.toastService.success('Dossier supprimé avec succès.');
-      }
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce dossier ?')) {
+      return;
     }
+
+    const dossierId = typeof dossier.id === 'string' ? parseInt(dossier.id, 10) : dossier.id;
+    
+    if (isNaN(dossierId) || dossierId <= 0) {
+      this.toastService.error('ID de dossier invalide.');
+      console.error('❌ ID de dossier invalide:', dossier.id);
+      return;
+    }
+
+    console.log('🗑️ Suppression du dossier:', dossierId);
+
+    // Appeler le backend pour supprimer le dossier
+    // Note: Le backend @DeleteMapping("/{id}") n'attend que l'ID, pas de paramètres de requête
+    this.dossierApiService.deleteDossier(dossierId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          console.log('✅ Dossier supprimé avec succès côté backend:', dossierId);
+          
+          // Supprimer de la liste locale seulement après confirmation du backend
+          const index = this.dossiers.findIndex(d => {
+            const dId = typeof d.id === 'string' ? parseInt(d.id, 10) : d.id;
+            return dId === dossierId;
+          });
+          
+          if (index !== -1) {
+            this.dossiers.splice(index, 1);
+            this.filteredDossiers = [...this.dossiers];
+            
+            // Mettre à jour la pagination si nécessaire
+            this.applySortingAndPaging();
+            
+            this.toastService.success('Dossier supprimé avec succès.');
+          } else {
+            console.warn('⚠️ Dossier non trouvé dans la liste locale:', dossierId);
+            // Recharger la liste pour être sûr
+            this.loadDossiers();
+          }
+        },
+        error: (error) => {
+          console.error('❌ Erreur lors de la suppression du dossier:', error);
+          console.error('❌ Status:', error?.status);
+          console.error('❌ URL:', error?.url);
+          console.error('❌ Error body:', error?.error);
+          console.error('❌ Error message:', error?.message);
+          
+          // Le backend retourne maintenant des messages explicites dans error.error.message
+          // Format: {"error": "...", "message": "..."}
+          let errorMessage = 'Erreur lors de la suppression du dossier';
+          
+          // Extraire le message depuis le body de la réponse
+          if (error?.error) {
+            if (error.error.message) {
+              // Message explicite du backend
+              errorMessage = error.error.message;
+            } else if (error.error.error) {
+              errorMessage = error.error.error;
+            } else if (typeof error.error === 'string') {
+              errorMessage = error.error;
+            }
+          } else if (error?.message) {
+            errorMessage = error.message;
+          }
+          
+          // Gestion spécifique selon le code HTTP retourné par le backend
+          if (error?.status === 400) {
+            // Validations EN_ATTENTE - Le backend retourne 400 avec message explicite
+            errorMessage = errorMessage || 'Impossible de supprimer le dossier : des validations sont en cours (EN_ATTENTE)';
+            console.error('❌ Erreur 400: Validations EN_ATTENTE - Suppression bloquée');
+          } else if (error?.status === 404) {
+            // Dossier introuvable - Le backend retourne 404 avec message explicite
+            errorMessage = errorMessage || 'Dossier introuvable';
+            console.error('❌ Erreur 404: Dossier introuvable');
+          } else if (error?.status === 500) {
+            // Erreur serveur - Le backend retourne 500 avec message explicite
+            errorMessage = errorMessage || 'Erreur interne du serveur';
+            console.error('❌ Erreur 500: Erreur interne du serveur');
+          } else if (error?.status === 409) {
+            // Conflit (si jamais utilisé)
+            errorMessage = 'Impossible de supprimer le dossier : il est lié à d\'autres entités.';
+          } else if (error?.status === 403) {
+            // Permission refusée
+            errorMessage = 'Vous n\'avez pas les permissions nécessaires pour supprimer ce dossier.';
+          }
+          
+          this.toastService.error(errorMessage);
+        }
+      });
+  }
+
+  /**
+   * Obtenir la prédiction IA depuis un dossier
+   */
+  getPrediction(dossier: Dossier): IaPredictionResult | null {
+    return this.iaPredictionService.getPredictionFromDossier(dossier);
+  }
+
+  /**
+   * Déclencher une prédiction IA pour un dossier
+   */
+  triggerPrediction(dossierId: string, event: Event): void {
+    event.stopPropagation();
+    const id = parseInt(dossierId, 10);
+    if (isNaN(id)) return;
+    
+    this.iaPredictionService.predictForDossier(id).subscribe({
+      next: (prediction) => {
+        this.toastService.success('Prédiction IA calculée avec succès');
+        // Rafraîchir les dossiers pour obtenir la nouvelle prédiction
+        this.loadDossiers();
+      },
+      error: (error) => {
+        console.error('❌ Erreur lors de la prédiction:', error);
+        this.toastService.error('Erreur lors du calcul de la prédiction IA');
+      }
+    });
   }
 
   viewDossierDetails(dossier: Dossier): void {

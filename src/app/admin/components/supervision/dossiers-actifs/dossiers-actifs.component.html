@@ -1,0 +1,277 @@
+<div class="dossiers-actifs-container">
+  <div class="header">
+    <h1>Supervision - Dossiers Actifs</h1>
+    <p class="subtitle">Vue agrégée de tous les dossiers actifs avec filtres avancés</p>
+  </div>
+
+  <!-- Filtres -->
+  <mat-card class="filters-card">
+    <mat-card-header>
+      <mat-card-title>Filtres</mat-card-title>
+      <button mat-icon-button (click)="showAdvancedFilters = !showAdvancedFilters">
+        <mat-icon>{{ showAdvancedFilters ? 'expand_less' : 'expand_more' }}</mat-icon>
+      </button>
+    </mat-card-header>
+    <mat-card-content>
+      <form [formGroup]="filtersForm">
+        <div class="filters-row">
+          <mat-form-field appearance="outline">
+            <mat-label>Statut</mat-label>
+            <mat-select formControlName="statut" multiple>
+              <mat-option *ngFor="let statut of statuts" [value]="statut">
+                {{ statut }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Département</mat-label>
+            <mat-select formControlName="departement" multiple>
+              <mat-option *ngFor="let dept of departements" [value]="dept">
+                {{ dept }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Recherche Débiteur</mat-label>
+            <input matInput formControlName="debiteur" placeholder="Nom du débiteur">
+            <mat-icon matPrefix>search</mat-icon>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Montant Min</mat-label>
+            <input matInput type="number" formControlName="montantMin">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Montant Max</mat-label>
+            <input matInput type="number" formControlName="montantMax">
+          </mat-form-field>
+        </div>
+
+        <!-- Filtres Avancés -->
+        <div class="advanced-filters" *ngIf="showAdvancedFilters">
+          <div class="filters-row">
+            <mat-form-field appearance="outline">
+              <mat-label>Urgence</mat-label>
+              <mat-select formControlName="urgence">
+                <mat-option value="">Tous</mat-option>
+                <mat-option *ngFor="let urg of urgences" [value]="urg">
+                  {{ urg }}
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Score IA</mat-label>
+              <mat-select formControlName="scoreIA">
+                <mat-option value="">Tous</mat-option>
+                <mat-option *ngFor="let score of scoresIA" [value]="score">
+                  {{ score }}
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Date Création Début</mat-label>
+              <input matInput [matDatepicker]="picker1" formControlName="dateCreationDebut">
+              <mat-datepicker-toggle matSuffix [for]="picker1"></mat-datepicker-toggle>
+              <mat-datepicker #picker1></mat-datepicker>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Date Création Fin</mat-label>
+              <input matInput [matDatepicker]="picker2" formControlName="dateCreationFin">
+              <mat-datepicker-toggle matSuffix [for]="picker2"></mat-datepicker-toggle>
+              <mat-datepicker #picker2></mat-datepicker>
+            </mat-form-field>
+          </div>
+        </div>
+
+        <div class="filters-actions">
+          <button mat-raised-button color="primary" (click)="applyFilters()">
+            <mat-icon>search</mat-icon>
+            Appliquer
+          </button>
+          <button mat-button (click)="resetFilters()">
+            <mat-icon>refresh</mat-icon>
+            Réinitialiser
+          </button>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Résultats -->
+  <mat-card class="results-card">
+    <mat-card-header>
+      <mat-card-title>
+        Résultats : {{ totalElements }} dossiers
+      </mat-card-title>
+      <div class="header-actions">
+        <button mat-raised-button color="accent" (click)="exporterSelectionCSV()" [disabled]="selectedDossiers.size === 0">
+          <mat-icon>file_download</mat-icon>
+          Export CSV
+        </button>
+      </div>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="table-container" *ngIf="!loading; else loadingTemplate">
+        <table mat-table [dataSource]="dossiers" class="dossiers-table">
+          <!-- Colonne Sélection -->
+          <ng-container matColumnDef="select">
+            <th mat-header-cell *matHeaderCellDef>
+              <mat-checkbox
+                [checked]="isAllSelected()"
+                [indeterminate]="selectedDossiers.size > 0 && !isAllSelected()"
+                (change)="toggleSelectAll()">
+              </mat-checkbox>
+            </th>
+            <td mat-cell *matCellDef="let dossier">
+              <mat-checkbox
+                [checked]="selectedDossiers.has(dossier.id!)"
+                (change)="toggleSelection(dossier.id!)">
+              </mat-checkbox>
+            </td>
+          </ng-container>
+
+          <!-- Colonne Référence -->
+          <ng-container matColumnDef="reference">
+            <th mat-header-cell *matHeaderCellDef>Référence</th>
+            <td mat-cell *matCellDef="let dossier">{{ dossier.numeroDossier }}</td>
+          </ng-container>
+
+          <!-- Colonne Débiteur -->
+          <ng-container matColumnDef="debiteur">
+            <th mat-header-cell *matHeaderCellDef>Débiteur</th>
+            <td mat-cell *matCellDef="let dossier">
+              {{ dossier.debiteur?.nom }} {{ dossier.debiteur?.prenom }}
+            </td>
+          </ng-container>
+
+          <!-- Colonne Montant -->
+          <ng-container matColumnDef="montant">
+            <th mat-header-cell *matHeaderCellDef>Montant</th>
+            <td mat-cell *matCellDef="let dossier">
+              {{ dossier.montantCreance | number:'1.2-2' }} TND
+            </td>
+          </ng-container>
+
+          <!-- Colonne Statut -->
+          <ng-container matColumnDef="statut">
+            <th mat-header-cell *matHeaderCellDef>Statut</th>
+            <td mat-cell *matCellDef="let dossier">
+              <mat-chip [class]="'statut-' + dossier.statut?.toLowerCase()">
+                {{ dossier.statut }}
+              </mat-chip>
+            </td>
+          </ng-container>
+
+          <!-- Colonne Département -->
+          <ng-container matColumnDef="departement">
+            <th mat-header-cell *matHeaderCellDef>Département</th>
+            <td mat-cell *matCellDef="let dossier">
+              {{ dossier.typeRecouvrement || 'N/A' }}
+            </td>
+          </ng-container>
+
+          <!-- Colonne Agent -->
+          <ng-container matColumnDef="agent">
+            <th mat-header-cell *matHeaderCellDef>Agent</th>
+            <td mat-cell *matCellDef="let dossier">
+              {{ dossier.agentResponsable?.nom }} {{ dossier.agentResponsable?.prenom }}
+            </td>
+          </ng-container>
+
+          <!-- Colonne Score IA -->
+          <ng-container matColumnDef="scoreIA">
+            <th mat-header-cell *matHeaderCellDef>Score IA</th>
+            <td mat-cell *matCellDef="let dossier">
+              <span [class]="getScoreIAClass(dossier.riskScore)">
+                {{ dossier.riskScore || 'N/A' }}
+              </span>
+            </td>
+          </ng-container>
+
+          <!-- Colonne Urgence -->
+          <ng-container matColumnDef="urgence">
+            <th mat-header-cell *matHeaderCellDef>Urgence</th>
+            <td mat-cell *matCellDef="let dossier">
+              <mat-chip [class]="getUrgenceClass(dossier.urgence)">
+                {{ dossier.urgence }}
+              </mat-chip>
+            </td>
+          </ng-container>
+
+          <!-- Colonne Dernière Action -->
+          <ng-container matColumnDef="derniereAction">
+            <th mat-header-cell *matHeaderCellDef>Dernière Action</th>
+            <td mat-cell *matCellDef="let dossier">
+              {{ dossier.dateCreation | date:'short' }}
+            </td>
+          </ng-container>
+
+          <!-- Colonne Actions -->
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef>Actions</th>
+            <td mat-cell *matCellDef="let dossier">
+              <button mat-icon-button [matMenuTriggerFor]="menu" matTooltip="Actions">
+                <mat-icon>more_vert</mat-icon>
+              </button>
+              <mat-menu #menu="matMenu">
+                <button mat-menu-item (click)="voirDetails(dossier)">
+                  <mat-icon>visibility</mat-icon>
+                  Voir détails
+                </button>
+                <button mat-menu-item (click)="ajouterCommentaire(dossier)">
+                  <mat-icon>comment</mat-icon>
+                  Commentaire interne
+                </button>
+                <button mat-menu-item (click)="modifierCoordonnees(dossier)">
+                  <mat-icon>edit</mat-icon>
+                  Modifier coordonnées
+                </button>
+                <button mat-menu-item (click)="reaffecterDepartement(dossier)">
+                  <mat-icon>swap_horiz</mat-icon>
+                  Réaffecter département
+                </button>
+                <button mat-menu-item (click)="reaffecterAgent(dossier)">
+                  <mat-icon>person</mat-icon>
+                  Réaffecter agent
+                </button>
+                <button mat-menu-item (click)="forcerStatut(dossier)">
+                  <mat-icon>warning</mat-icon>
+                  Forcer statut
+                </button>
+                <button mat-menu-item (click)="exporterDossierPDF(dossier)">
+                  <mat-icon>picture_as_pdf</mat-icon>
+                  Exporter PDF
+                </button>
+              </mat-menu>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+        </table>
+
+        <mat-paginator
+          [length]="totalElements"
+          [pageSize]="pageSize"
+          [pageIndex]="pageIndex"
+          [pageSizeOptions]="[25, 50, 100]"
+          (page)="onPageChange($event)">
+        </mat-paginator>
+      </div>
+
+      <ng-template #loadingTemplate>
+        <div class="loading-container">
+          <mat-progress-spinner mode="indeterminate" diameter="50"></mat-progress-spinner>
+          <p>Chargement des dossiers...</p>
+        </div>
+      </ng-template>
+    </mat-card-content>
+  </mat-card>
+</div>
+

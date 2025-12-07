@@ -119,17 +119,44 @@ export class DossierListComponent implements OnInit {
     this.error = null;
 
     this.dossierService.deleteDossier(dossier.id).subscribe({
-      next: (response) => {
+      next: () => {
+        // Suppression réussie (204 NO_CONTENT, pas de body)
         // Supprimer de la liste locale
         this.dossiers = this.dossiers.filter(d => d.id !== dossier.id);
         this.filteredDossiers = [...this.dossiers];
         this.isLoading = false;
-        console.log('Dossier supprimé:', response);
+        console.log('✅ Dossier supprimé avec succès');
       },
       error: (error) => {
-        this.error = 'Erreur lors de la suppression du dossier';
         this.isLoading = false;
-        console.error('Erreur:', error);
+        
+        // Extraire le message d'erreur depuis le body de la réponse
+        let errorMessage = 'Erreur lors de la suppression du dossier';
+        
+        if (error?.error) {
+          // Le backend retourne {"error": "...", "message": "..."}
+          if (error.error.message) {
+            errorMessage = error.error.message;
+          } else if (error.error.error) {
+            errorMessage = error.error.error;
+          } else if (typeof error.error === 'string') {
+            errorMessage = error.error;
+          }
+        } else if (error?.message) {
+          errorMessage = error.message;
+        }
+        
+        // Gestion spécifique selon le code HTTP
+        if (error?.status === 400) {
+          errorMessage = errorMessage || 'Impossible de supprimer le dossier : des validations sont en cours (EN_ATTENTE)';
+        } else if (error?.status === 404) {
+          errorMessage = errorMessage || 'Dossier introuvable';
+        } else if (error?.status === 500) {
+          errorMessage = errorMessage || 'Erreur interne du serveur';
+        }
+        
+        this.error = errorMessage;
+        console.error('❌ Erreur lors de la suppression:', error);
       }
     });
   }

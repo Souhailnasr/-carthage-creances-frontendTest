@@ -285,6 +285,7 @@
           <th>Montant</th>
           <th>Créancier</th>
           <th>Débiteur</th>
+          <th>Prédiction IA</th>
           <th>Urgence</th>
           <th>Date Création</th>
           <th>Créateur</th>
@@ -301,6 +302,20 @@
           <td>{{ dossier.getFormattedAmount() }}</td>
           <td>{{ dossier.creancier.getFullName() }}</td>
           <td>{{ dossier.debiteur.getFullName() }}</td>
+          <td class="prediction-cell">
+            <app-ia-prediction-badge
+              [prediction]="getPrediction(dossier)"
+              [showDetails]="false"
+              size="small"
+            ></app-ia-prediction-badge>
+            <button 
+              *ngIf="!getPrediction(dossier)"
+              class="btn btn-sm btn-primary"
+              (click)="triggerPrediction(dossier.id, $event)"
+              title="Calculer Prédiction IA">
+              <i class="fas fa-brain"></i>
+            </button>
+          </td>
           <td>
             <span class="urgence-badge" [ngClass]="getUrgenceClass(dossier.urgence)">
               {{ getUrgenceLabel(dossier.urgence) }}

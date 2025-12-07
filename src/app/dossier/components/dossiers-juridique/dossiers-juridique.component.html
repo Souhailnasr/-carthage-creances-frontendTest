@@ -217,6 +217,32 @@
             </td>
           </ng-container>
 
+          <!-- ✅ Prédiction IA Column -->
+          <ng-container matColumnDef="predictionIA">
+            <th mat-header-cell *matHeaderCellDef>
+              <mat-icon class="header-icon">psychology</mat-icon>
+              PRÉDICTION IA
+            </th>
+            <td mat-cell *matCellDef="let dossier" (click)="$event.stopPropagation()">
+              <div class="prediction-cell">
+                <app-ia-prediction-badge
+                  [prediction]="getPrediction(dossier)"
+                  [showDetails]="false"
+                  size="small"
+                ></app-ia-prediction-badge>
+                <button 
+                  mat-icon-button 
+                  *ngIf="!getPrediction(dossier)"
+                  (click)="triggerPrediction(dossier.id, $event)"
+                  matTooltip="Calculer Prédiction IA"
+                  color="primary"
+                  class="btn-predict">
+                  <mat-icon>psychology</mat-icon>
+                </button>
+              </div>
+            </td>
+          </ng-container>
+
           <!-- Avocat Column -->
           <ng-container matColumnDef="avocat">
             <th mat-header-cell *matHeaderCellDef>

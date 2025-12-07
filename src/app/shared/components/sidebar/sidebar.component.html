@@ -39,6 +39,12 @@
           (click)="handleMenuClick(item)">
           <i [class]="item.icon"></i>
           <span class="nav-text" *ngIf="!isCollapsed">{{ item.label }}</span>
+          <!-- Badge de notification pour l'item Notifications -->
+          <span 
+            *ngIf="!isCollapsed && item.label === 'Notifications' && hasUnreadNotifications()" 
+            class="notification-badge-sidebar">
+            {{ getNotificationBadgeCount() }}
+          </span>
           <i 
             *ngIf="item.children && !isCollapsed" 
             class="fas fa-chevron-down expand-icon"
@@ -56,6 +62,12 @@
               (click)="navigateTo(child.route)">
               <i [class]="child.icon"></i>
               <span class="nav-text">{{ child.label }}</span>
+              <!-- Badge de notification pour "Mes Notifications" -->
+              <span 
+                *ngIf="child.label === 'Mes Notifications' && hasUnreadNotifications()" 
+                class="notification-badge-sidebar">
+                {{ getNotificationBadgeCount() }}
+              </span>
             </div>
           </li>
         </ul>

@@ -1,6 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
+import { JwtAuthService } from '../../../core/services/jwt-auth.service';
+import { Subject } from 'rxjs';
+import { takeUntil, first } from 'rxjs/operators';
 
 @Component({
   selector: 'app-role-redirect',
@@ -45,28 +48,75 @@ import { AuthService } from '../../../core/services/auth.service';
     }
   `]
 })
-export class RoleRedirectComponent implements OnInit {
+export class RoleRedirectComponent implements OnInit, OnDestroy {
+  private destroy$ = new Subject<void>();
 
   constructor(
     private authService: AuthService,
+    private jwtAuthService: JwtAuthService,
     private router: Router
   ) {}
 
   ngOnInit(): void {
-    const currentUser = this.authService.getCurrentUser();
-    
+    // ✅ CORRECTION: Utiliser l'Observable pour attendre que l'utilisateur soit chargé
+    // Essayer d'abord avec JwtAuthService (plus fiable)
+    this.jwtAuthService.getCurrentUser()
+      .pipe(
+        takeUntil(this.destroy$),
+        first() // Prendre seulement la première valeur
+      )
+      .subscribe({
+        next: (currentUser) => {
+          console.log('🔍 RoleRedirectComponent - Utilisateur chargé (JwtAuthService):', currentUser);
+          this.redirectUser(currentUser);
+        },
+        error: (error) => {
+          console.warn('⚠️ RoleRedirectComponent - Erreur avec JwtAuthService, fallback vers AuthService:', error);
+          // Fallback vers AuthService
+          const currentUser = this.authService.getCurrentUser();
+          if (currentUser) {
+            console.log('🔍 RoleRedirectComponent - Utilisateur chargé (AuthService):', currentUser);
+            this.redirectUser(currentUser);
+          } else {
+            // Attendre un peu et réessayer avec l'Observable
+            this.authService.currentUser$
+              .pipe(
+                takeUntil(this.destroy$),
+                first((user) => user !== null) // Attendre qu'un utilisateur soit disponible
+              )
+              .subscribe({
+                next: (user) => {
+                  console.log('🔍 RoleRedirectComponent - Utilisateur chargé (Observable):', user);
+                  this.redirectUser(user);
+                },
+                error: () => {
+                  console.log('🔍 RoleRedirectComponent - Pas d\'utilisateur, redirection vers login');
+                  this.router.navigate(['/login']);
+                }
+              });
+          }
+        }
+      });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  private redirectUser(currentUser: any): void {
+    if (!currentUser) {
+      console.log('🔍 RoleRedirectComponent - Pas d\'utilisateur, redirection vers login');
+      this.router.navigate(['/login']);
+      return;
+    }
+
     console.log('🔍 RoleRedirectComponent - Utilisateur actuel:', currentUser);
     console.log('🔍 RoleRedirectComponent - Rôle:', currentUser?.roleUtilisateur);
     
-    if (currentUser) {
-      const redirectUrl = this.getRedirectUrlByRole(currentUser.roleUtilisateur);
-      console.log('🔍 RoleRedirectComponent - URL de redirection:', redirectUrl);
-      this.router.navigate([redirectUrl]);
-    } else {
-      // Si pas d'utilisateur connecté, rediriger vers login
-      console.log('🔍 RoleRedirectComponent - Pas d\'utilisateur, redirection vers login');
-      this.router.navigate(['/login']);
-    }
+    const redirectUrl = this.getRedirectUrlByRole(currentUser.roleUtilisateur);
+    console.log('🔍 RoleRedirectComponent - URL de redirection:', redirectUrl);
+    this.router.navigate([redirectUrl]);
   }
 
   private getRedirectUrlByRole(role: string): string {

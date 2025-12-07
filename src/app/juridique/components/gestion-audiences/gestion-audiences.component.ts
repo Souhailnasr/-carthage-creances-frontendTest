@@ -15,6 +15,10 @@ import { HuissierDocumentService } from '../../services/huissier-document.servic
 import { HuissierActionService } from '../../services/huissier-action.service';
 import { DocumentHuissier } from '../../models/huissier-document.model';
 import { ActionHuissier } from '../../models/huissier-action.model';
+import { IaPredictionService } from '../../../core/services/ia-prediction.service';
+import { IaPredictionResult } from '../../../shared/models/ia-prediction-result.model';
+import { IaPredictionBadgeComponent } from '../../../shared/components/ia-prediction-badge/ia-prediction-badge.component';
+import { Dossier } from '../../../shared/models/dossier.model';
 
 export enum EtatFinalDossierJuridique {
   RECOUVREMENT_TOTAL = 'RECOUVREMENT_TOTAL',
@@ -25,7 +29,7 @@ export enum EtatFinalDossierJuridique {
 @Component({
   selector: 'app-gestion-audiences',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, IaPredictionBadgeComponent],
   templateUrl: './gestion-audiences.component.html',
   styleUrls: ['./gestion-audiences.component.scss']
 })
@@ -74,6 +78,14 @@ export class GestionAudiencesComponent implements OnInit, OnDestroy {
     reportedAudiences: 0
   };
   
+  // Prédiction IA
+  predictions: { [dossierId: number]: IaPredictionResult } = {};
+  loadingPredictions: { [dossierId: number]: boolean } = {};
+  
+  // Indicateur de recalcul du score IA
+  recalculatingScore: { [dossierId: number]: boolean } = {};
+  scoreUpdated: { [dossierId: number]: boolean } = {};
+  
   private destroy$ = new Subject<void>();
 
   constructor(
@@ -84,7 +96,8 @@ export class GestionAudiencesComponent implements OnInit, OnDestroy {
     private fb: FormBuilder,
     private toastService: ToastService,
     private documentService: HuissierDocumentService,
-    private actionService: HuissierActionService
+    private actionService: HuissierActionService,
+    private iaPredictionService: IaPredictionService
   ) {}
 
   ngOnInit(): void {
@@ -111,7 +124,19 @@ export class GestionAudiencesComponent implements OnInit, OnDestroy {
     
     this.finalisationForm = this.fb.group({
       etatFinal: ['', Validators.required],
-      montantRecouvre: [0, [Validators.required, Validators.min(0)]]
+      montantRecouvre: [0, [Validators.min(0)]]
+    });
+    
+    // Mettre à jour les validators dynamiquement selon l'état final
+    this.finalisationForm.get('etatFinal')?.valueChanges.subscribe(etat => {
+      const montantControl = this.finalisationForm.get('montantRecouvre');
+      if (etat === EtatFinalDossierJuridique.NON_RECOUVRE) {
+        montantControl?.clearValidators();
+        montantControl?.setValue(0);
+      } else {
+        montantControl?.setValidators([Validators.required, Validators.min(0)]);
+      }
+      montantControl?.updateValueAndValidity();
     });
   }
 
@@ -173,35 +198,55 @@ export class GestionAudiencesComponent implements OnInit, OnDestroy {
       });
   }
 
-  loadAudiences(): void {
-    // Load audiences APRÈS les dossiers pour pouvoir les utiliser dans la normalisation
-    this.audienceService.getAllAudiences()
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (audiences) => {
-          console.log('📥 Audiences brutes reçues du backend:', audiences);
-          
-          // Normaliser les audiences pour avoir dossierId
-          this.audiences = audiences.map(a => {
+  /**
+   * Normalise les audiences pour avoir dossierId
+   * Extrait la logique de normalisation pour la réutiliser
+   */
+  private normalizeAudiences(audiences: any[]): Audience[] {
+    if (!audiences || audiences.length === 0) {
+      console.warn('⚠️ normalizeAudiences() - Tableau d\'audiences vide ou null');
+      return [];
+    }
+    
+    return audiences.map(a => {
             const audience: any = { ...a };
             
-            // Log de l'audience brute AVANT normalisation
-            console.log(`🔍 Audience brute ${audience.id}:`, {
-              id: audience.id,
-              dossierId: audience.dossierId,
-              dossier_id: audience.dossier_id,
-              dossierIdType: typeof audience.dossierId,
-              dossierIdValue: audience.dossierId,
-              hasDossier: !!audience.dossier,
-              dossier: audience.dossier,
-              dossierIdFromDossier: audience.dossier?.id,
-              avocatId: audience.avocat?.id,
-              huissierId: audience.huissier?.id,
-              allKeys: Object.keys(audience)
-            });
+            // Log de l'audience brute AVANT normalisation (seulement pour les 3 premières pour éviter le spam)
+            if (audiences.indexOf(a) < 3) {
+              console.log(`🔍 normalizeAudiences() - Audience brute ${audience.id}:`, {
+                id: audience.id,
+                dossierId: audience.dossierId,
+                dossier_id: audience.dossier_id,
+                dossierIdType: typeof audience.dossierId,
+                dossierIdValue: audience.dossierId,
+                hasDossier: !!audience.dossier,
+                dossier: audience.dossier,
+                dossierIdFromDossier: audience.dossier?.id,
+                avocatId: audience.avocat?.id,
+                huissierId: audience.huissier?.id,
+                allKeys: Object.keys(audience)
+              });
+            }
             
-            // PRIORITÉ 1: Si l'audience a déjà dossierId, l'utiliser
-            if (audience.dossierId !== null && audience.dossierId !== undefined) {
+            // PRIORITÉ 1: Vérifier dossier_id (snake_case) - format base de données (LE PLUS IMPORTANT)
+            // Même si le service a déjà normalisé, on vérifie à nouveau car le backend peut retourner dossier_id
+            if (audience.dossier_id !== null && audience.dossier_id !== undefined && audience.dossier_id !== '') {
+              const dossierIdFromSnake = typeof audience.dossier_id === 'string' 
+                ? parseInt(audience.dossier_id, 10) 
+                : audience.dossier_id;
+              if (!isNaN(dossierIdFromSnake) && dossierIdFromSnake > 0) {
+                audience.dossierId = dossierIdFromSnake;
+                if (audiences.indexOf(a) < 3) {
+                  console.log(`🔧 normalizeAudiences() - Audience ${audience.id}: dossierId extrait de dossier_id = ${audience.dossierId}`);
+                }
+              } else {
+                if (audiences.indexOf(a) < 3) {
+                  console.warn(`⚠️ normalizeAudiences() - Audience ${audience.id}: dossier_id invalide: ${audience.dossier_id}`);
+                }
+              }
+            }
+            // PRIORITÉ 2: Si l'audience a déjà dossierId, l'utiliser
+            else if (audience.dossierId !== null && audience.dossierId !== undefined) {
               // Normaliser dossierId en number si c'est une string
               if (typeof audience.dossierId === 'string') {
                 audience.dossierId = parseInt(audience.dossierId, 10);
@@ -210,19 +255,12 @@ export class GestionAudiencesComponent implements OnInit, OnDestroy {
                 }
               }
             }
-            // PRIORITÉ 2: Si l'audience a un objet dossier mais pas dossierId, extraire l'ID
+            // PRIORITÉ 3: Si l'audience a un objet dossier mais pas dossierId, extraire l'ID
             else if (audience.dossier && audience.dossier.id !== null && audience.dossier.id !== undefined) {
               audience.dossierId = typeof audience.dossier.id === 'string' 
                 ? parseInt(audience.dossier.id, 10) 
                 : audience.dossier.id;
               console.log(`🔧 Audience ${audience.id}: dossierId extrait de dossier.id = ${audience.dossierId}`);
-            }
-            // PRIORITÉ 3: Vérifier si le backend utilise un autre nom de champ (dossier_id au lieu de dossierId)
-            else if (audience.dossier_id !== null && audience.dossier_id !== undefined) {
-              audience.dossierId = typeof audience.dossier_id === 'string' 
-                ? parseInt(audience.dossier_id, 10) 
-                : audience.dossier_id;
-              console.log(`🔧 Audience ${audience.id}: dossierId extrait de dossier_id = ${audience.dossierId}`);
             }
             // PRIORITÉ 4: SOLUTION DE CONTOURNEMENT - Trouver le dossier via l'avocat ou l'huissier
             // Cette solution fonctionne car chaque audience est associée à un dossier via son avocat/huissier
@@ -316,8 +354,61 @@ export class GestionAudiencesComponent implements OnInit, OnDestroy {
             
             return audience as Audience;
           });
+  }
+
+  loadAudiences(): void {
+    // Load audiences APRÈS les dossiers pour pouvoir les utiliser dans la normalisation
+    console.log('🔄 loadAudiences() - Début du chargement');
+    console.log('🔄 loadAudiences() - Nombre de dossiers disponibles:', this.dossiers.length);
+    
+    // Récupérer les audiences brutes directement depuis l'API pour avoir accès à dossier_id
+    this.audienceService.getAllAudiencesRaw()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (rawAudiences) => {
+          console.log('📥 loadAudiences() - Audiences brutes reçues:', rawAudiences?.length || 0);
           
-          console.log('✅ Audiences normalisées:', this.audiences.length);
+          if (!rawAudiences || rawAudiences.length === 0) {
+            console.warn('⚠️ loadAudiences() - Aucune audience brute reçue');
+            this.audiences = [];
+            this.calculateStats();
+            this.isLoading = false;
+            return;
+          }
+          
+          // Log des premières audiences brutes pour debug
+          if (rawAudiences.length > 0) {
+            console.log('📥 loadAudiences() - PREMIÈRE AUDIENCE BRUTE:', {
+              id: rawAudiences[0].id,
+              dossierId: rawAudiences[0].dossierId,
+              dossier_id: rawAudiences[0].dossier_id,
+              dossier: rawAudiences[0].dossier,
+              allKeys: Object.keys(rawAudiences[0])
+            });
+          }
+          
+          // Normaliser les audiences brutes pour extraire dossier_id
+          this.audiences = this.normalizeAudiences(rawAudiences);
+          
+          console.log('✅ loadAudiences() - Audiences normalisées:', this.audiences.length);
+          
+          // Vérifier que les audiences ont bien un dossierId
+          const audiencesAvecDossierId = this.audiences.filter(a => a.dossierId !== null && a.dossierId !== undefined && a.dossierId > 0);
+          console.log('✅ loadAudiences() - Audiences avec dossierId valide:', audiencesAvecDossierId.length);
+          
+          if (audiencesAvecDossierId.length < this.audiences.length) {
+            console.warn(`⚠️ loadAudiences() - ${this.audiences.length - audiencesAvecDossierId.length} audience(s) sans dossierId valide`);
+          }
+          
+          // Log détaillé des audiences normalisées (premières 5)
+          this.audiences.slice(0, 5).forEach((a, index) => {
+            console.log(`📋 Audience normalisée ${index + 1}:`, {
+              id: a.id,
+              dossierId: a.dossierId,
+              dossierIdType: typeof a.dossierId,
+              dateAudience: a.dateAudience
+            });
+          });
           
           // Log détaillé de chaque audience normalisée
           this.audiences.forEach((a, index) => {
@@ -451,7 +542,7 @@ export class GestionAudiencesComponent implements OnInit, OnDestroy {
       lieuTribunal: formValue.lieuTribunal,
       commentaireDecision: formValue.commentaireDecision || null,
       decisionResult: formValue.decisionResult || null, // Le service va convertir en "resultat"
-      dossierId: +this.selectedDossier.id, // Le service va convertir en dossier: { id: ... }
+      dossierId: this.selectedDossier?.id ? +this.selectedDossier.id : 0, // Le service va convertir en dossier: { id: ... }
       avocatId: formValue.avocatId ? +formValue.avocatId : null, // Le service va convertir en avocat: { id: ... }
       huissierId: formValue.huissierId ? +formValue.huissierId : null // Le service va convertir en huissier: { id: ... }
     };
@@ -466,23 +557,117 @@ export class GestionAudiencesComponent implements OnInit, OnDestroy {
     console.log('📋 Données du formulaire avant envoi:', audienceData);
 
 
+    const dossierId = this.selectedDossier?.id;
+    
+    // Afficher un message indiquant que le recalcul est en cours
+    if (dossierId) {
+      this.recalculatingScore[dossierId] = true;
+      this.toastService.info(
+        this.isEditMode 
+          ? 'Audience modifiée. Recalcul du score IA en cours...' 
+          : 'Audience créée. Recalcul du score IA en cours...',
+        3000
+      );
+    }
+
     const request = this.isEditMode && this.selectedAudience?.id
-      ? this.audienceService.updateAudience(this.selectedAudience.id, audienceData)
-      : this.audienceService.createAudience(audienceData);
+      ? this.audienceService.updateAudienceWithDossier(this.selectedAudience.id, audienceData)
+      : this.audienceService.createAudienceWithDossier(audienceData);
 
     request
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (createdAudience) => {
+        next: (response) => {
+          const { audience: createdAudience, dossier } = response;
           console.log('✅ Audience créée/modifiée reçue du backend:', createdAudience);
+          console.log('✅ Dossier mis à jour reçu:', dossier);
           
           this.toastService.success(
             this.isEditMode ? 'Audience modifiée avec succès.' : 'Audience ajoutée avec succès.'
           );
           this.cancelAudienceForm();
           
+          // Si le dossier mis à jour est retourné, mettre à jour le score IA
+          if (dossier && dossierId) {
+            // Mettre à jour le dossier dans la liste
+            const index = this.dossiers.findIndex(d => d.id === dossier.id);
+            if (index !== -1) {
+              this.dossiers[index] = dossier;
+              this.filteredDossiers = [...this.dossiers];
+              if (this.selectedDossier?.id === dossier.id) {
+                this.selectedDossier = dossier;
+              }
+            }
+            
+            // Afficher un indicateur de mise à jour du score
+            this.scoreUpdated[dossierId] = true;
+            this.recalculatingScore[dossierId] = false;
+            
+            // Masquer l'indicateur après 5 secondes
+            setTimeout(() => {
+              this.scoreUpdated[dossierId] = false;
+            }, 5000);
+            
+            // Afficher un message de succès avec le nouveau score
+            const riskScore = dossier.riskScore || dossier.scorePrediction;
+            const riskLevel = dossier.riskLevel || dossier.niveauRisque;
+            if (riskScore !== undefined && riskScore !== null) {
+              this.toastService.success(
+                `Score IA mis à jour : ${riskScore.toFixed(1)}% (${riskLevel || 'N/A'})`,
+                5000
+              );
+            }
+          } else if (dossierId) {
+            // Si le dossier n'est pas retourné, recharger manuellement
+            this.recalculatingScore[dossierId] = false;
+          }
+          
           // Recharger les audiences avec la même logique de normalisation
-          this.loadAudiences();
+          if (dossierId) {
+            // Recharger les audiences
+            this.audienceService.getAllAudiences()
+              .pipe(takeUntil(this.destroy$))
+              .subscribe({
+                next: (audiences) => {
+                  console.log('📥 Audiences rechargées après création:', audiences.length);
+                  
+                  // Normaliser les audiences (même logique que loadAudiences)
+                  this.audiences = this.normalizeAudiences(audiences);
+                  
+                  console.log('✅ Audiences normalisées après création:', this.audiences.length);
+                  console.log('✅ Audiences pour le dossier', dossierId, ':', 
+                    this.getAudiencesForDossier(dossierId).length);
+                  
+                  // Recalculer les stats
+                  this.calculateStats();
+                  
+                  // Si le dossier n'a pas été retourné, le recharger
+                  if (!dossier) {
+                    this.dossierApiService.getDossierById(dossierId)
+                      .pipe(takeUntil(this.destroy$))
+                      .subscribe({
+                        next: (dossierUpdated) => {
+                          const index = this.dossiers.findIndex(d => d.id === dossierUpdated.id);
+                          if (index !== -1) {
+                            this.dossiers[index] = dossierUpdated;
+                            this.filteredDossiers = [...this.dossiers];
+                            if (this.selectedDossier?.id === dossierUpdated.id) {
+                              this.selectedDossier = dossierUpdated;
+                            }
+                          }
+                        },
+                        error: (err) => console.error('Erreur lors du rechargement du dossier:', err)
+                      });
+                  }
+                },
+                error: (error) => {
+                  console.error('❌ Erreur lors du rechargement des audiences:', error);
+                }
+              });
+          } else {
+            // Si pas de dossier sélectionné, juste recharger les audiences
+            this.loadAudiences();
+          }
         },
         error: (error) => {
           console.error('❌ Erreur lors de la sauvegarde de l\'audience:', error);
@@ -515,6 +700,11 @@ export class GestionAudiencesComponent implements OnInit, OnDestroy {
           this.toastService.success('Audience supprimée avec succès.');
           // Recharger les audiences avec la même logique de normalisation
           this.loadAudiences();
+          
+          // Recalculer la prédiction IA après suppression d'audience
+          if (audience.dossierId) {
+            this.recalculatePredictionAfterAudience(audience.dossierId);
+          }
         },
           error: (error) => {
             console.error('❌ Erreur lors de la suppression:', error);
@@ -644,7 +834,13 @@ export class GestionAudiencesComponent implements OnInit, OnDestroy {
   }
 
   getAudiencesForDossier(dossierId: number | string): Audience[] {
-    if (!dossierId || !this.audiences || this.audiences.length === 0) {
+    if (!dossierId) {
+      console.log(`🔍 getAudiencesForDossier(${dossierId}): dossierId invalide`);
+      return [];
+    }
+    
+    if (!this.audiences || this.audiences.length === 0) {
+      console.log(`🔍 getAudiencesForDossier(${dossierId}): Aucune audience disponible (total: ${this.audiences?.length || 0})`);
       return [];
     }
     
@@ -652,26 +848,43 @@ export class GestionAudiencesComponent implements OnInit, OnDestroy {
     const dossierIdNum = typeof dossierId === 'string' ? parseInt(dossierId, 10) : dossierId;
     
     if (isNaN(dossierIdNum)) {
+      console.log(`🔍 getAudiencesForDossier(${dossierId}): dossierId invalide (NaN)`);
       return [];
     }
     
     // Trouver le dossier pour vérifier son avocat/huissier
     const dossier = this.dossiers.find(d => d.id === dossierIdNum);
     if (!dossier) {
+      console.log(`🔍 getAudiencesForDossier(${dossierIdNum}): Dossier non trouvé dans la liste`);
       return [];
     }
     
     const dossierAvocatId = dossier.avocat?.id || dossier.avocatId;
     const dossierHuissierId = dossier.huissier?.id || dossier.huissierId;
     
+    console.log(`🔍 getAudiencesForDossier(${dossierIdNum}): Recherche d'audiences`, {
+      dossierId: dossierIdNum,
+      dossierNumero: dossier.numeroDossier,
+      avocatId: dossierAvocatId,
+      huissierId: dossierHuissierId,
+      totalAudiences: this.audiences.length,
+      audiencesDisponibles: this.audiences.slice(0, 5).map(a => ({ 
+        id: a.id, 
+        dossierId: a.dossierId, 
+        dossierIdType: typeof a.dossierId,
+        dateAudience: a.dateAudience 
+      }))
+    });
+    
     // Filtrer les audiences qui correspondent à ce dossier
     const filtered = this.audiences.filter(audience => {
-      // Cas 1: audience.dossierId correspond directement
+      // Cas 1: audience.dossierId correspond directement (PRIORITÉ ABSOLUE)
       if (audience.dossierId !== null && audience.dossierId !== undefined) {
         const audienceDossierId = typeof audience.dossierId === 'string' 
           ? parseInt(audience.dossierId, 10) 
           : audience.dossierId;
         if (!isNaN(audienceDossierId) && audienceDossierId === dossierIdNum) {
+          console.log(`✅ Audience ${audience.id} correspond au dossier ${dossierIdNum} via dossierId`);
           return true;
         }
       }
@@ -682,25 +895,49 @@ export class GestionAudiencesComponent implements OnInit, OnDestroy {
           ? parseInt((audience as any).dossier.id, 10)
           : (audience as any).dossier.id;
         if (!isNaN(dossierObjId) && dossierObjId === dossierIdNum) {
+          console.log(`✅ Audience ${audience.id} correspond au dossier ${dossierIdNum} via dossier.id`);
           return true;
         }
       }
       
-      // Cas 3: SOLUTION DE CONTOURNEMENT - Correspondance via avocat/huissier
+      // Cas 3: Vérifier aussi dossier_id (snake_case) directement dans l'objet brut
+      if ((audience as any).dossier_id !== null && (audience as any).dossier_id !== undefined) {
+        const dossierIdSnake = typeof (audience as any).dossier_id === 'string'
+          ? parseInt((audience as any).dossier_id, 10)
+          : (audience as any).dossier_id;
+        if (!isNaN(dossierIdSnake) && dossierIdSnake === dossierIdNum) {
+          console.log(`✅ Audience ${audience.id} correspond au dossier ${dossierIdNum} via dossier_id`);
+          return true;
+        }
+      }
+      
+      // Cas 4: SOLUTION DE CONTOURNEMENT - Correspondance via avocat/huissier
       // Si l'audience a le même avocat que le dossier
       const audienceAvocatId = audience.avocatId || (audience as any).avocat?.id;
       if (dossierAvocatId && audienceAvocatId && dossierAvocatId === audienceAvocatId) {
+        console.log(`✅ Audience ${audience.id} correspond au dossier ${dossierIdNum} via avocat ${audienceAvocatId}`);
         return true;
       }
       
       // Si l'audience a le même huissier que le dossier
       const audienceHuissierId = audience.huissierId || (audience as any).huissier?.id;
       if (dossierHuissierId && audienceHuissierId && dossierHuissierId === audienceHuissierId) {
+        console.log(`✅ Audience ${audience.id} correspond au dossier ${dossierIdNum} via huissier ${audienceHuissierId}`);
         return true;
       }
       
       return false;
     });
+    
+    console.log(`✅ getAudiencesForDossier(${dossierIdNum}): ${filtered.length} audience(s) trouvée(s)`, 
+      filtered.map(a => ({ 
+        id: a.id, 
+        dossierId: a.dossierId, 
+        dossierIdType: typeof a.dossierId,
+        dateAudience: a.dateAudience,
+        resultat: a.decisionResult
+      }))
+    );
     
     return filtered;
   }
@@ -1015,7 +1252,97 @@ export class GestionAudiencesComponent implements OnInit, OnDestroy {
       return;
     }
     
-    this.finalisationForm.patchValue({ etatFinal: etat });
+    const montantRestantActuel = this.getMontantRestantActuel();
+    
+    // Si Recouvrement Total : montant recouvré dans cette étape = montant restant actuel
+    // Cela signifie qu'on recouvre tout ce qui reste, donc le montant restant final sera 0
+    if (etat === EtatFinalDossierJuridique.RECOUVREMENT_TOTAL) {
+      this.finalisationForm.patchValue({ 
+        etatFinal: etat,
+        montantRecouvre: montantRestantActuel
+      });
+    } 
+    // Si Non Recouvré : montant recouvré dans cette étape = 0 (rien n'est recouvré)
+    else if (etat === EtatFinalDossierJuridique.NON_RECOUVRE) {
+      this.finalisationForm.patchValue({ 
+        etatFinal: etat,
+        montantRecouvre: 0
+      });
+    }
+    // Si Recouvrement Partiel : laisser l'utilisateur saisir
+    else {
+      this.finalisationForm.patchValue({ 
+        etatFinal: etat,
+        montantRecouvre: 0
+      });
+    }
+  }
+
+  /**
+   * Récupère le montant déjà recouvré avant cette finalisation
+   * ✅ NOUVEAU : Utilise montantRecouvrePhaseAmiable + montantRecouvrePhaseJuridique
+   */
+  getMontantRecouvreActuel(): number {
+    if (!this.selectedDossierForFinalisation) return 0;
+    
+    const dossier = this.selectedDossierForFinalisation;
+    
+    // ✅ NOUVEAU : Utiliser les montants par phase
+    const montantAmiable = (dossier as any).montantRecouvrePhaseAmiable || 0;
+    const montantJuridique = (dossier as any).montantRecouvrePhaseJuridique || 0;
+    const montantTotal = montantAmiable + montantJuridique;
+    
+    // Fallback vers l'ancien système si les nouveaux champs ne sont pas disponibles
+    if (montantTotal === 0) {
+      return (dossier as any).montantRecouvre || 
+             (dossier.finance as any)?.montantRecouvre ||
+             dossier.finance?.montantRecupere || 
+             0;
+    }
+    
+    return montantTotal;
+  }
+
+  /**
+   * Calcule le montant restant AVANT cette finalisation (montant créance - montant déjà recouvré)
+   */
+  getMontantRestantActuel(): number {
+    if (!this.selectedDossierForFinalisation) return 0;
+    
+    const montantCreance = this.selectedDossierForFinalisation.montantCreance || 0;
+    const montantRecouvreActuel = this.getMontantRecouvreActuel();
+    
+    return Math.max(0, montantCreance - montantRecouvreActuel);
+  }
+
+  /**
+   * Calcule le montant restant APRÈS cette finalisation (en fonction du montant recouvré saisi)
+   */
+  getMontantRestant(): number {
+    if (!this.selectedDossierForFinalisation) return 0;
+    
+    const montantCreance = this.selectedDossierForFinalisation.montantCreance || 0;
+    const montantRecouvreActuel = this.getMontantRecouvreActuel();
+    const montantRecouvreDansCetteEtape = this.finalisationForm.get('montantRecouvre')?.value || 0;
+    const montantRecouvreTotal = montantRecouvreActuel + montantRecouvreDansCetteEtape;
+    
+    return Math.max(0, montantCreance - montantRecouvreTotal);
+  }
+
+  /**
+   * Vérifie si le champ montant recouvré doit être affiché
+   */
+  shouldShowMontantRecouvre(): boolean {
+    const etatFinal = this.finalisationForm.get('etatFinal')?.value;
+    return etatFinal !== EtatFinalDossierJuridique.NON_RECOUVRE;
+  }
+
+  /**
+   * Vérifie si le montant recouvré doit être en lecture seule (Recouvrement Total)
+   */
+  isMontantRecouvreReadOnly(): boolean {
+    const etatFinal = this.finalisationForm.get('etatFinal')?.value;
+    return etatFinal === EtatFinalDossierJuridique.RECOUVREMENT_TOTAL;
   }
 
   /**
@@ -1034,23 +1361,47 @@ export class GestionAudiencesComponent implements OnInit, OnDestroy {
 
     const formValue = this.finalisationForm.value;
     const etatFinal = formValue.etatFinal;
-    const montantRecouvre = formValue.montantRecouvre;
+    let montantRecouvre = formValue.montantRecouvre;
 
     // Validation du montant selon l'état
     const montantCreance = this.selectedDossierForFinalisation.montantCreance || 0;
-    if (etatFinal === EtatFinalDossierJuridique.RECOUVREMENT_TOTAL && montantRecouvre !== montantCreance) {
-      if (!confirm(`Le montant recouvré (${montantRecouvre} TND) ne correspond pas au montant de la créance (${montantCreance} TND).\n\nVoulez-vous continuer ?`)) {
+    const montantRecouvreActuel = this.getMontantRecouvreActuel();
+    const montantRestantActuel = this.getMontantRestantActuel();
+    const montantRecouvreTotal = montantRecouvreActuel + montantRecouvre;
+    
+    // Pour NON_RECOUVRE, le montant doit être 0 (déjà géré dans setEtatFinal)
+    if (etatFinal === EtatFinalDossierJuridique.NON_RECOUVRE) {
+      // Le montant est déjà à 0, pas besoin de validation supplémentaire
+      montantRecouvre = 0;
+    }
+    // Pour RECOUVREMENT_TOTAL, le montant recouvré dans cette étape doit être égal au montant restant actuel
+    // et le montant total recouvré doit être égal au montant créance
+    else if (etatFinal === EtatFinalDossierJuridique.RECOUVREMENT_TOTAL) {
+      // Vérifier que le montant recouvré dans cette étape = montant restant actuel
+      if (Math.abs(montantRecouvre - montantRestantActuel) > 0.01) {
+        // Corriger automatiquement si différent
+        this.finalisationForm.patchValue({ montantRecouvre: montantRestantActuel });
+        montantRecouvre = montantRestantActuel;
+      }
+      // Vérifier que le montant total recouvré = montant créance (avec une tolérance de 0.01 pour les arrondis)
+      if (Math.abs(montantRecouvreTotal - montantCreance) > 0.01) {
+        this.toastService.error(`Le montant total recouvré (${montantRecouvreTotal.toFixed(2)} TND) doit être égal au montant de la créance (${montantCreance.toFixed(2)} TND) pour un recouvrement total`);
         return;
       }
     }
-
-    if (etatFinal === EtatFinalDossierJuridique.RECOUVREMENT_PARTIEL && montantRecouvre >= montantCreance) {
-      this.toastService.error('Pour un recouvrement partiel, le montant recouvré doit être inférieur au montant de la créance');
-      return;
-    }
-
-    if (etatFinal === EtatFinalDossierJuridique.NON_RECOUVRE && montantRecouvre > 0) {
-      if (!confirm(`Vous avez indiqué "Non recouvré" mais un montant recouvré a été saisi (${montantRecouvre} TND).\n\nVoulez-vous continuer ?`)) {
+    // Pour RECOUVREMENT_PARTIEL, le montant doit être > 0 et < montant restant actuel
+    else if (etatFinal === EtatFinalDossierJuridique.RECOUVREMENT_PARTIEL) {
+      if (montantRecouvre <= 0) {
+        this.toastService.error('Pour un recouvrement partiel, le montant recouvré doit être supérieur à 0');
+        return;
+      }
+      if (montantRecouvre >= montantRestantActuel) {
+        this.toastService.error(`Pour un recouvrement partiel, le montant recouvré (${montantRecouvre.toFixed(2)} TND) doit être inférieur au montant restant (${montantRestantActuel.toFixed(2)} TND)`);
+        return;
+      }
+      // Vérifier que le montant total recouvré ne dépasse pas le montant créance
+      if (montantRecouvreTotal > montantCreance) {
+        this.toastService.error(`Le montant total recouvré (${montantRecouvreTotal.toFixed(2)} TND) ne peut pas dépasser le montant de la créance (${montantCreance.toFixed(2)} TND)`);
         return;
       }
     }
@@ -1172,5 +1523,80 @@ export class GestionAudiencesComponent implements OnInit, OnDestroy {
           this.toastService.error(errorMessage);
         }
       });
+  }
+
+  /**
+   * Obtient la prédiction IA pour un dossier
+   */
+  getPredictionForDossier(dossier: DossierApi): IaPredictionResult | null {
+    if (!dossier.id) return null;
+    
+    // Si on a déjà une prédiction en cache, l'utiliser
+    if (this.predictions[dossier.id]) {
+      return this.predictions[dossier.id];
+    }
+    
+    // Sinon, créer une prédiction depuis les données du dossier
+    if (!dossier.etatPrediction && dossier.riskScore === undefined) {
+      return null;
+    }
+    
+    const dossierModel = new Dossier({
+      id: String(dossier.id),
+      etatPrediction: dossier.etatPrediction,
+      riskScore: dossier.riskScore,
+      riskLevel: dossier.riskLevel,
+      datePrediction: dossier.datePrediction
+    });
+    
+    const prediction = this.iaPredictionService.getPredictionFromDossier(dossierModel);
+    // Ne stocker que si la prédiction n'est pas null
+    if (prediction) {
+      this.predictions[dossier.id] = prediction;
+    }
+    return prediction;
+  }
+
+  /**
+   * Déclenche le calcul de la prédiction IA pour un dossier
+   */
+  triggerPrediction(dossierId: number): void {
+    this.loadingPredictions[dossierId] = true;
+    this.iaPredictionService.predictForDossier(dossierId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (prediction) => {
+          this.predictions[dossierId] = prediction;
+          this.loadingPredictions[dossierId] = false;
+          
+          // Mettre à jour le dossier dans la liste avec la nouvelle prédiction
+          const dossier = this.dossiers.find(d => d.id === dossierId);
+          if (dossier) {
+            dossier.etatPrediction = prediction.etatFinal;
+            dossier.riskScore = prediction.riskScore;
+            dossier.riskLevel = prediction.riskLevel;
+            dossier.datePrediction = prediction.datePrediction;
+          }
+          
+          this.toastService.success('Prédiction IA calculée avec succès');
+        },
+        error: (error) => {
+          console.error('❌ Erreur lors de la prédiction IA:', error);
+          this.loadingPredictions[dossierId] = false;
+          this.toastService.error('Erreur lors du calcul de la prédiction IA');
+        }
+      });
+  }
+
+  /**
+   * Recalcule automatiquement la prédiction IA après une audience
+   */
+  recalculatePredictionAfterAudience(dossierId: number): void {
+    console.log('🔄 Recalcul de la prédiction IA pour le dossier', dossierId);
+    // Attendre un peu pour que le backend mette à jour les données
+    setTimeout(() => {
+      console.log('🔄 Déclenchement du recalcul de la prédiction IA...');
+      this.triggerPrediction(dossierId);
+    }, 1500); // Augmenter le délai à 1.5s pour laisser le temps au backend
   }
 }

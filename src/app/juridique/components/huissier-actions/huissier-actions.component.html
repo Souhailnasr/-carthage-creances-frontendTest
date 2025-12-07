@@ -1,276 +1,375 @@
 <div class="huissier-actions-container">
-  <div class="page-header">
-    <h2>
-      <i class="fas fa-gavel"></i>
-      Actions Huissier
-    </h2>
-    <p class="subtitle">Gérez les actions huissier pour chaque dossier. Les documents du dossier sont affichés ci-dessous. Une fois les actions créées, vous pourrez passer aux audiences.</p>
-  </div>
-
-  <!-- Sélection du dossier et de l'huissier -->
-  <div class="selection-section">
-    <div class="row g-3">
-      <div class="col-md-6">
-        <label for="dossier-select" class="form-label">
-          <i class="fas fa-folder-open"></i> Sélectionner un dossier *
-        </label>
-        <select 
-          id="dossier-select"
-          class="form-control"
-          [(ngModel)]="selectedDossierId"
-          (change)="onDossierSelected(selectedDossierId)"
-          [disabled]="isLoadingDossiers || isLoading">
-          <option [ngValue]="null">Sélectionner un dossier...</option>
-          <option *ngFor="let dossier of dossiers" [ngValue]="dossier.id">
-            {{ dossier.numeroDossier || 'Dossier #' + dossier.id }} - 
-            {{ dossier.creancier?.nom || 'N/A' }}
-            <span *ngIf="getDossierEtape(dossier) !== 'N/A'"> ({{ getDossierEtape(dossier) }})</span>
-          </option>
-        </select>
-      </div>
-      <div class="col-md-6">
-        <label for="huissier-select" class="form-label">
-          <i class="fas fa-user-shield"></i> Sélectionner un huissier
-        </label>
-        <select 
-          id="huissier-select"
-          class="form-control"
-          [(ngModel)]="selectedHuissierId"
-          [disabled]="isLoading">
-          <option [ngValue]="null">Sélectionner un huissier...</option>
-          <option *ngFor="let huissier of huissiers" [ngValue]="huissier.id">
-            {{ huissier.prenom }} {{ huissier.nom }}
-          </option>
-        </select>
-      </div>
-      
-      <!-- Bouton Affecter au Finance (visible si dossier sélectionné a au moins une audience) -->
-      <div class="col-12 mt-3" *ngIf="selectedDossier && canAffecterAuFinance(selectedDossier)">
-        <button 
-          class="btn btn-success w-100"
-          (click)="affecterAuFinance()"
-          [disabled]="isLoadingAffectationFinance || isLoading"
-          title="Affecter ce dossier au département finance avec toutes les informations (documents, actions, audiences)">
-          <i class="fas fa-money-bill-wave"></i> 
-          <span *ngIf="isLoadingAffectationFinance">
-            <i class="fas fa-spinner fa-spin"></i> Affectation en cours...
-          </span>
-          <span *ngIf="!isLoadingAffectationFinance">Affecter au Finance</span>
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Section Documents du Dossier -->
-  <div class="documents-section" *ngIf="selectedDossierId">
-    <h3>
-      <i class="fas fa-file-alt"></i>
-      Documents du Dossier
-    </h3>
-    
-    <div *ngIf="isLoadingDocuments" class="text-center py-3">
-      <div class="spinner-border text-primary" role="status" style="width: 2rem; height: 2rem;">
-        <span class="visually-hidden">Chargement...</span>
-      </div>
-    </div>
-
-    <div *ngIf="!isLoadingDocuments && documents.length === 0" class="alert alert-warning">
-      <i class="fas fa-exclamation-triangle"></i> 
-      Aucun document trouvé pour ce dossier.
-    </div>
-
-    <div *ngIf="!isLoadingDocuments && documents.length > 0" class="table-responsive">
-      <table class="table table-sm table-bordered">
-        <thead>
-          <tr>
-            <th>Type</th>
-            <th>Date de Création</th>
-            <th>Statut</th>
-            <th>Huissier</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let document of documents">
-            <td>{{ getDocumentTypeLabel(document.typeDocument) }}</td>
-            <td>{{ formatDate(document.dateCreation) }}</td>
-            <td>
-              <span class="badge" 
-                    [class.badge-warning]="document.status === 'PENDING'"
-                    [class.badge-danger]="document.status === 'EXPIRED'"
-                    [class.badge-success]="document.status === 'COMPLETED'">
-                {{ document.status || 'N/A' }}
-              </span>
-            </td>
-            <td>{{ document.huissierName }}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- Section Actions -->
-  <div class="actions-section" *ngIf="selectedDossierId">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-      <h3>
-        <i class="fas fa-gavel"></i>
-        Actions du Dossier
-      </h3>
-      <div class="d-flex align-items-center gap-3">
-        <span *ngIf="selectedDossier" class="badge badge-info">
-          <i class="fas fa-info-circle"></i> Étape actuelle : {{ getDossierEtape(selectedDossier) }}
-        </span>
-        <button 
-          class="btn btn-primary"
-          (click)="openActionForm()"
-          [disabled]="isLoading || !canCreateAction(selectedDossier!)"
-          [title]="!canCreateAction(selectedDossier!) ? 'Ce dossier n\'est pas à l\'étape actions. Vous ne pouvez que consulter les actions existantes.' : 'Créer une nouvelle action'">
-          <i class="fas fa-plus"></i> Créer une Action
-        </button>
-      </div>
-    </div>
-
-    <!-- Liste des actions -->
-    <div *ngIf="isLoadingActions" class="text-center py-5">
-      <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
-        <span class="visually-hidden">Chargement...</span>
-      </div>
-      <p class="mt-3 text-muted">Chargement des actions...</p>
-    </div>
-
-    <div *ngIf="!isLoadingActions && actions.length === 0" class="alert alert-info">
-      <i class="fas fa-info-circle"></i> 
+  <div class="header">
+    <div class="header-content">
       <div>
-        <strong>Aucune action trouvée.</strong> 
-        Créez votre première action pour ce dossier en cliquant sur le bouton "Créer une Action".
+        <h1>
+          <i class="fas fa-gavel"></i>
+          Actions Huissier
+        </h1>
+        <p class="subtitle">Gérez les actions huissier pour chaque dossier. Une fois les actions créées, vous pourrez passer aux audiences.</p>
       </div>
-    </div>
-
-    <div *ngIf="!isLoadingActions && actions.length > 0" class="table-responsive">
-      <table class="table table-striped table-hover">
-        <thead>
-          <tr>
-            <th>Type d'Action</th>
-            <th>Date</th>
-            <th>Montant Recouvré</th>
-            <th>Montant Restant</th>
-            <th>État Dossier</th>
-            <th>Huissier</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let action of actions">
-            <td>{{ getActionTypeLabel(action.typeAction) }}</td>
-            <td>{{ formatDate(action.dateAction) }}</td>
-            <td>{{ action.montantRecouvre ? (action.montantRecouvre | number:'1.2-2') + ' TND' : '-' }}</td>
-            <td>{{ action.montantRestant ? (action.montantRestant | number:'1.2-2') + ' TND' : '-' }}</td>
-            <td>
-              <span class="badge badge-info" *ngIf="action.etatDossier">
-                {{ getEtatDossierLabel(action.etatDossier) }}
-              </span>
-              <span *ngIf="!action.etatDossier" class="text-muted">-</span>
-            </td>
-            <td>{{ action.huissierName }}</td>
-            <td>
-              <div class="action-buttons">
-                <button class="btn btn-sm btn-info" 
-                        (click)="viewAction(action)"
-                        title="Visualiser"
-                        style="border-radius: 6px; padding: 0.4rem 0.8rem; margin-right: 0.25rem;">
-                  <i class="fas fa-eye"></i>
-                </button>
-                <button class="btn btn-sm btn-warning" 
-                        (click)="openActionForm(action)"
-                        title="Modifier"
-                        style="border-radius: 6px; padding: 0.4rem 0.8rem; margin-right: 0.25rem;">
-                  <i class="fas fa-edit"></i>
-                </button>
-                <button class="btn btn-sm btn-danger" 
-                        (click)="deleteAction(action)"
-                        title="Supprimer"
-                        style="border-radius: 6px; padding: 0.4rem 0.8rem; margin-right: 0.25rem;">
-                  <i class="fas fa-trash"></i>
-                </button>
-                <button class="btn btn-sm btn-secondary" 
-                        *ngIf="action.pieceJointeUrl"
-                        (click)="openDocument(action.pieceJointeUrl!)"
-                        title="Ouvrir la pièce jointe"
-                        style="border-radius: 6px; padding: 0.4rem 0.8rem;">
-                  <i class="fas fa-external-link-alt"></i>
-                </button>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Boutons d'action -->
-    <div class="mt-4 text-center d-flex justify-content-center gap-3 flex-wrap" *ngIf="selectedDossier">
-      <!-- Bouton Passer aux Audiences (seulement si à l'étape actions) -->
-      <button 
-        *ngIf="!isLoadingActions && actions.length > 0 && canCreateAction(selectedDossier)"
-        class="btn btn-success btn-lg"
-        (click)="passerAuxAudiences()"
-        [disabled]="!canPasserAuxAudiences() || isLoading"
-        [title]="!canPasserAuxAudiences() ? 'Vous devez créer au moins une action' : 'Passer à l\'étape Audiences'">
-        <i class="fas fa-arrow-right"></i> Passer aux Audiences
-      </button>
-      
-      <!-- Bouton Affecter au Finance (visible si dossier a au moins une audience, indépendamment de l'étape) -->
-      <button 
-        *ngIf="canAffecterAuFinance(selectedDossier)"
-        class="btn btn-success btn-lg"
-        (click)="affecterAuFinance()"
-        [disabled]="isLoadingAffectationFinance || isLoading"
-        title="Affecter ce dossier au département finance avec toutes les informations (documents, actions, audiences)">
-        <i class="fas fa-money-bill-wave"></i> 
-        <span *ngIf="isLoadingAffectationFinance">
-          <i class="fas fa-spinner fa-spin"></i> Affectation...
-        </span>
-        <span *ngIf="!isLoadingAffectationFinance">Affecter au Finance</span>
-      </button>
-      
-      <p class="text-muted mt-2 w-100" *ngIf="actions.length === 0 && canCreateAction(selectedDossier)">
-        <i class="fas fa-info-circle"></i> Créez au moins une action pour pouvoir passer aux audiences
-      </p>
-    </div>
-    <!-- Message informatif si le dossier est passé aux audiences -->
-    <div class="mt-4 alert alert-info" *ngIf="selectedDossier && !canCreateAction(selectedDossier)">
-      <i class="fas fa-info-circle"></i>
-      <strong>Ce dossier est à l'étape "{{ getDossierEtape(selectedDossier) }}".</strong>
-      Vous pouvez consulter les actions effectuées précédemment, mais vous ne pouvez plus en créer de nouvelles.
     </div>
   </div>
 
-  <!-- Message si aucun dossier sélectionné -->
-  <div *ngIf="!selectedDossierId" class="alert alert-warning text-center">
-    <i class="fas fa-exclamation-triangle"></i>
-    <strong>Veuillez sélectionner un dossier</strong> pour voir et gérer ses actions.
+  <!-- Statistics Cards -->
+  <div class="stats-section">
+    <div class="stat-card">
+      <div class="stat-icon stat-primary">
+        <i class="fas fa-folder"></i>
+      </div>
+      <div class="stat-content">
+        <div class="stat-value">{{ stats.totalDossiers }}</div>
+        <div class="stat-label">Dossiers</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon stat-info">
+        <i class="fas fa-gavel"></i>
+      </div>
+      <div class="stat-content">
+        <div class="stat-value">{{ stats.totalActions }}</div>
+        <div class="stat-label">Actions Total</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon stat-warning">
+        <i class="fas fa-lock"></i>
+      </div>
+      <div class="stat-content">
+        <div class="stat-value">{{ stats.conservatoireActions }}</div>
+        <div class="stat-label">Conservatoire</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon stat-success">
+        <i class="fas fa-hammer"></i>
+      </div>
+      <div class="stat-content">
+        <div class="stat-value">{{ stats.executiveActions }}</div>
+        <div class="stat-label">Exécutive</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon stat-danger">
+        <i class="fas fa-ban"></i>
+      </div>
+      <div class="stat-content">
+        <div class="stat-value">{{ stats.blocageActions + stats.immobiliereActions }}</div>
+        <div class="stat-label">Blocage/Immobilière</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search and Filters Section -->
+  <div class="filters-section">
+    <div class="search-bar">
+      <div class="search-input-group">
+        <i class="fas fa-search"></i>
+        <input 
+          type="text" 
+          [(ngModel)]="searchTerm" 
+          (input)="applyFilters()" 
+          placeholder="Rechercher par numéro de dossier, créancier, débiteur ou huissier..."
+          class="search-input"
+        >
+        <button class="clear-search" *ngIf="searchTerm" (click)="searchTerm = ''; applyFilters()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+    </div>
+    
+    <div class="filter-buttons">
+      <button 
+        class="filter-btn" 
+        [class.active]="filterType === 'all'"
+        (click)="filterType = 'all'; applyFilters()">
+        <i class="fas fa-list"></i> Tous
+      </button>
+      <button 
+        class="filter-btn" 
+        [class.active]="filterType === 'conservatoire'"
+        (click)="filterType = 'conservatoire'; applyFilters()">
+        <i class="fas fa-lock"></i> Conservatoire
+      </button>
+      <button 
+        class="filter-btn" 
+        [class.active]="filterType === 'executive'"
+        (click)="filterType = 'executive'; applyFilters()">
+        <i class="fas fa-hammer"></i> Exécutive
+      </button>
+      <button 
+        class="filter-btn" 
+        [class.active]="filterType === 'blocage'"
+        (click)="filterType = 'blocage'; applyFilters()">
+        <i class="fas fa-ban"></i> Blocage
+      </button>
+      <button 
+        class="filter-btn" 
+        [class.active]="filterType === 'immobiliere'"
+        (click)="filterType = 'immobiliere'; applyFilters()">
+        <i class="fas fa-building"></i> Immobilière
+      </button>
+    </div>
+  </div>
+
+  <!-- Dossiers with Actions -->
+  <div class="dossiers-section">
+    <div class="loading-spinner" *ngIf="isLoadingDossiers || isLoadingActions">
+      <i class="fas fa-spinner fa-spin"></i>
+      <p>Chargement des dossiers et actions...</p>
+    </div>
+    
+    <div class="dossiers-list" *ngIf="!isLoadingDossiers && !isLoadingActions && filteredDossiers.length > 0; else noDossiers">
+      <div class="dossier-item" *ngFor="let dossier of filteredDossiers; trackBy: trackByDossierId">
+        <div class="dossier-header">
+          <div class="dossier-info">
+            <h3 class="dossier-number">{{ dossier.numeroDossier || 'N/A' }}</h3>
+            <div class="dossier-details">
+              <span><strong>Créancier:</strong> {{ getCreancierName(dossier) }}</span>
+              <span><strong>Débiteur:</strong> {{ getDebiteurName(dossier) }}</span>
+              <span *ngIf="dossier.montantCreance"><strong>Montant:</strong> {{ dossier.montantCreance | currency:'TND':'symbol':'1.2-2' }}</span>
+              
+              <!-- Affichage de l'huissier affecté -->
+              <div class="assignments-info" *ngIf="hasHuissier(dossier)">
+                <div class="assignment-item">
+                  <i class="fas fa-file-signature"></i>
+                  <span><strong>Huissier:</strong> {{ getHuissierName(dossier) }}</span>
+                </div>
+              </div>
+              <div class="no-assignment" *ngIf="!hasHuissier(dossier)">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span class="warning-text">Aucun huissier affecté</span>
+              </div>
+              
+              <!-- Étape actuelle du dossier -->
+              <div class="dossier-etape" *ngIf="getDossierEtape(dossier) !== 'N/A'">
+                <i class="fas fa-info-circle"></i>
+                <span><strong>Étape:</strong> {{ getDossierEtape(dossier) }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="dossier-actions-buttons">
+            <button 
+              class="btn btn-primary" 
+              (click)="selectedDossier = dossier; selectedDossierId = dossier.id; openActionForm()"
+              [disabled]="!canCreateAction(dossier) || isLoading"
+              [title]="!canCreateAction(dossier) ? 'Ce dossier n\'est pas à l\'étape actions. Vous ne pouvez que consulter les actions existantes.' : 'Créer une nouvelle action'">
+              <i class="fas fa-plus"></i> Créer Action
+            </button>
+            <!-- Bouton Passer aux Audiences (visible si à l'étape actions) -->
+            <button 
+              *ngIf="canCreateAction(dossier) && canPasserAuxAudiences(dossier)"
+              class="btn btn-success"
+              (click)="selectedDossier = dossier; selectedDossierId = dossier.id; passerAuxAudiences()"
+              [disabled]="isLoading"
+              title="Passer à l'étape Audiences">
+              <i class="fas fa-arrow-right"></i> Passer aux Audiences
+            </button>
+            <!-- Bouton Affecter au Finance -->
+            <button 
+              *ngIf="canAffecterAuFinance(dossier)"
+              class="btn btn-info"
+              (click)="selectedDossier = dossier; selectedDossierId = dossier.id; affecterAuFinance()"
+              [disabled]="isLoadingAffectationFinance || isLoading"
+              title="Affecter ce dossier au département finance">
+              <i class="fas fa-money-bill-wave"></i> 
+              <span *ngIf="isLoadingAffectationFinance">
+                <i class="fas fa-spinner fa-spin"></i> Affectation...
+              </span>
+              <span *ngIf="!isLoadingAffectationFinance">Affecter au Finance</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- IA Prediction Badge -->
+        <div class="ia-prediction-section">
+          <app-ia-prediction-badge
+            [prediction]="getPredictionForDossier(dossier)"
+            [loading]="loadingPrediction && selectedDossierId === dossier.id"
+            [showDetails]="true"
+            size="medium"
+          ></app-ia-prediction-badge>
+          <button
+            *ngIf="!getPredictionForDossier(dossier) && !loadingPrediction"
+            class="btn btn-sm btn-outline-primary"
+            (click)="triggerPrediction(dossier.id!)"
+            title="Calculer Prédiction IA">
+            <i class="fas fa-brain"></i> Calculer Prédiction IA
+          </button>
+          <button
+            *ngIf="getPredictionForDossier(dossier) && !loadingPrediction"
+            class="btn btn-sm btn-outline-secondary"
+            (click)="triggerPrediction(dossier.id!)"
+            title="Recalculer Prédiction IA">
+            <i class="fas fa-sync-alt"></i> Recalculer Prédiction IA
+          </button>
+        </div>
+
+        <!-- Actions for this dossier -->
+        <div class="actions-list-section" *ngIf="getFilteredActionsForDossier(dossier.id).length > 0">
+          <div class="actions-header">
+            <h4>
+              <i class="fas fa-gavel"></i>
+              Actions ({{ getFilteredActionsForDossier(dossier.id).length }})
+            </h4>
+          </div>
+          <div class="actions-list">
+            <div class="action-card" 
+                 *ngFor="let action of getFilteredActionsForDossier(dossier.id); trackBy: trackByActionId">
+              <div class="action-card-header">
+                <div class="action-main-info">
+                  <div class="action-type-badge">
+                    <i class="fas fa-gavel"></i>
+                    <span>{{ getActionTypeLabel(action.typeAction) }}</span>
+                  </div>
+                  <div class="action-date-badge">
+                    <i class="fas fa-calendar"></i>
+                    <span>{{ formatDate(action.dateAction) }}</span>
+                  </div>
+                  <div class="action-etat-badge" *ngIf="action.etatDossier">
+                    <i class="fas fa-info-circle"></i>
+                    <span>{{ getEtatDossierLabel(action.etatDossier) }}</span>
+                  </div>
+                </div>
+                <div class="action-actions">
+                  <button class="action-btn view-btn" (click)="selectedDossier = dossier; selectedDossierId = dossier.id; viewAction(action)" title="Voir les détails">
+                    <i class="fas fa-eye"></i>
+                  </button>
+                  <button 
+                    class="action-btn edit-btn" 
+                    (click)="selectedDossier = dossier; selectedDossierId = dossier.id; openActionForm(action)" 
+                    [disabled]="!canCreateAction(dossier)"
+                    title="Modifier">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  <button 
+                    class="action-btn delete-btn" 
+                    (click)="selectedDossier = dossier; selectedDossierId = dossier.id; deleteAction(action)" 
+                    [disabled]="!canCreateAction(dossier)"
+                    title="Supprimer">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                  <button 
+                    class="action-btn attachment-btn" 
+                    *ngIf="action.pieceJointeUrl"
+                    (click)="openDocument(action.pieceJointeUrl!)" 
+                    title="Ouvrir la pièce jointe">
+                    <i class="fas fa-external-link-alt"></i>
+                  </button>
+                </div>
+              </div>
+              
+              <div class="action-details">
+                <div class="detail-row">
+                  <i class="fas fa-user-shield"></i>
+                  <span><strong>Huissier:</strong> {{ action.huissierName }}</span>
+                </div>
+                <div class="detail-row" *ngIf="action.montantRecouvre">
+                  <i class="fas fa-money-bill-wave"></i>
+                  <span><strong>Montant Recouvré:</strong> {{ action.montantRecouvre | number:'1.2-2' }} TND</span>
+                </div>
+                <div class="detail-row" *ngIf="action.montantRestant">
+                  <i class="fas fa-money-bill"></i>
+                  <span><strong>Montant Restant:</strong> {{ action.montantRestant | number:'1.2-2' }} TND</span>
+                </div>
+                <div class="detail-row" *ngIf="action.pieceJointeUrl">
+                  <i class="fas fa-paperclip"></i>
+                  <span>
+                    <strong>Pièce jointe:</strong> 
+                    <button class="btn-link" (click)="openDocument(action.pieceJointeUrl!)">
+                      <i class="fas fa-external-link-alt"></i> Ouvrir
+                    </button>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Message si aucune action -->
+        <div class="no-actions" *ngIf="getActionsForDossier(dossier.id).length === 0">
+          <div class="empty-state">
+            <i class="fas fa-gavel"></i>
+            <p>Aucune action enregistrée pour ce dossier.</p>
+            <button 
+              *ngIf="canCreateAction(dossier)"
+              class="btn btn-outline-primary" 
+              (click)="selectedDossier = dossier; selectedDossierId = dossier.id; openActionForm()">
+              <i class="fas fa-plus"></i> Créer la première action
+            </button>
+          </div>
+        </div>
+        
+        <!-- Message si actions filtrées vides mais actions existent -->
+        <div class="no-actions-filtered" *ngIf="getFilteredActionsForDossier(dossier.id).length === 0 && getActionsForDossier(dossier.id).length > 0">
+          <div class="empty-state">
+            <i class="fas fa-filter"></i>
+            <p>Aucune action ne correspond aux filtres sélectionnés.</p>
+            <button class="btn btn-outline-secondary" (click)="filterType = 'all'; applyFilters()">
+              <i class="fas fa-times"></i> Réinitialiser les filtres
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <ng-template #noDossiers>
+      <div class="no-dossiers">
+        <i class="fas fa-folder-open"></i>
+        <h3>Aucun dossier trouvé</h3>
+        <p>Aucun dossier n'est disponible pour la gestion des actions huissier.</p>
+      </div>
+    </ng-template>
   </div>
 
   <!-- Modal de création/modification d'action -->
-  <div class="modal" 
-       [class.show]="showActionForm"
+  <div class="modal-overlay" 
        *ngIf="showActionForm"
        (click)="closeActionForm()">
-    <div class="modal-dialog" (click)="$event.stopPropagation()">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">
-            {{ isEditActionMode ? 'Modifier une Action Huissier' : 'Créer une Action Huissier' }}
-          </h5>
-          <button type="button" class="close" (click)="closeActionForm()">
-            <span>&times;</span>
-          </button>
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>
+          <i class="fas" 
+             [class.fa-plus]="!isEditActionMode" 
+             [class.fa-edit]="isEditActionMode"></i>
+          {{ isEditActionMode ? 'Modifier une Action Huissier' : 'Créer une Action Huissier' }}
+        </h2>
+        <button class="close-btn" (click)="closeActionForm()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="dossier-info-modal" *ngIf="selectedDossier">
+          <h3>{{ selectedDossier.numeroDossier || 'N/A' }}</h3>
+          <div class="dossier-info-grid">
+            <div class="info-section">
+              <h4><i class="fas fa-info-circle"></i> Informations générales</h4>
+              <p *ngIf="selectedDossier.titre"><strong>Titre:</strong> {{ selectedDossier.titre }}</p>
+              <p *ngIf="selectedDossier.montantCreance">
+                <strong>Montant:</strong> {{ selectedDossier.montantCreance | currency:'TND':'symbol':'1.2-2' }}
+              </p>
+            </div>
+            <div class="info-section">
+              <h4><i class="fas fa-users"></i> Parties</h4>
+              <p><strong>Créancier:</strong> {{ getCreancierName(selectedDossier) }}</p>
+              <p><strong>Débiteur:</strong> {{ getDebiteurName(selectedDossier) }}</p>
+            </div>
+            <div class="info-section" *ngIf="hasHuissier(selectedDossier)">
+              <h4><i class="fas fa-user-shield"></i> Huissier affecté</h4>
+              <p><strong>Huissier:</strong> {{ getHuissierName(selectedDossier) }}</p>
+            </div>
+          </div>
         </div>
-        <div class="modal-body">
+
+        <form class="action-form">
           <div class="form-group">
             <label for="typeAction">Type d'Action *</label>
             <select 
               id="typeAction"
               class="form-control"
               [(ngModel)]="actionForm.typeAction"
+              name="typeAction"
               [disabled]="isLoading">
               <option [value]="TypeActionHuissier.ACLA_TA7AFOUDHIA">Saisie Conservatoire (العقلة التحفظية)</option>
               <option [value]="TypeActionHuissier.ACLA_TANFITHIA">Saisie Exécutive (العقلة التنفيذية)</option>
@@ -286,21 +385,65 @@
               id="huissierName"
               class="form-control"
               [(ngModel)]="actionForm.huissierName"
-              [disabled]="isLoading"
-              placeholder="Ex: Said ben salem">
+              name="huissierName"
+              [disabled]="true"
+              [readonly]="true"
+              placeholder="Rempli automatiquement depuis le dossier">
+            <small class="form-text text-muted">
+              Rempli automatiquement depuis l'huissier affecté au dossier
+            </small>
           </div>
 
           <div class="form-group">
-            <label for="montantRecouvre">Montant Recouvré (TND)</label>
+            <label for="montantRecouvre">Montant Recouvré (TND) *</label>
             <input 
               type="number"
               id="montantRecouvre"
               class="form-control"
               [(ngModel)]="actionForm.montantRecouvre"
+              (ngModelChange)="onMontantRecouvreChange()"
+              name="montantRecouvre"
               [disabled]="isLoading"
               step="0.01"
               min="0"
-              placeholder="Ex: 1500.50">
+              placeholder="Ex: 1500.50"
+              required>
+            <small class="form-text text-muted">
+              Le montant restant sera calculé automatiquement
+            </small>
+          </div>
+
+          <div class="form-group">
+            <label for="montantRestant">Montant Restant (TND)</label>
+            <input 
+              type="number"
+              id="montantRestant"
+              class="form-control"
+              [ngModel]="actionForm.montantRestant"
+              name="montantRestant"
+              [disabled]="true"
+              step="0.01"
+              min="0"
+              placeholder="Calculé automatiquement"
+              readonly>
+            <small class="form-text text-muted">
+              Calculé automatiquement : Montant Total - Montant Recouvré (cumulé)
+            </small>
+          </div>
+
+          <div class="form-group">
+            <label for="etatDossier">État du Dossier</label>
+            <select 
+              id="etatDossier"
+              class="form-control"
+              [(ngModel)]="actionForm.etatDossier"
+              name="etatDossier"
+              [disabled]="isLoading">
+              <option [ngValue]="undefined">Sélectionner...</option>
+              <option [value]="EtatDossier.EN_COURS">En Cours</option>
+              <option [value]="EtatDossier.CLOTURE">Clôturé</option>
+              <option [value]="EtatDossier.SUSPENDU">Suspendu</option>
+            </select>
           </div>
 
           <div class="form-group">
@@ -326,86 +469,87 @@
               </span>
             </div>
           </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" (click)="closeActionForm()">
-            Annuler
-          </button>
-          <button type="button" class="btn btn-primary" (click)="createAction()" [disabled]="isLoading">
-            <span *ngIf="isLoading" class="spinner-border spinner-border-sm mr-2"></span>
-            {{ isEditActionMode ? 'Modifier' : 'Créer' }}
-          </button>
-        </div>
+        </form>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeActionForm()">
+          Annuler
+        </button>
+        <button type="button" class="btn btn-primary" (click)="createAction()" [disabled]="isLoading">
+          <span *ngIf="isLoading" class="spinner-border spinner-border-sm mr-2"></span>
+          {{ isEditActionMode ? 'Modifier' : 'Créer' }}
+        </button>
       </div>
     </div>
   </div>
 
   <!-- Modal de visualisation d'action -->
-  <div class="modal" 
-       [class.show]="showActionView"
+  <div class="modal-overlay" 
        *ngIf="showActionView && selectedAction"
        (click)="closeActionView()">
-    <div class="modal-dialog modal-lg" (click)="$event.stopPropagation()">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">
-            <i class="fas fa-gavel"></i> Détails de l'Action
-          </h5>
-          <button type="button" class="close" (click)="closeActionView()">
-            <span>&times;</span>
-          </button>
-        </div>
-        <div class="modal-body">
-          <div class="action-details">
-            <div class="detail-row">
-              <span class="detail-label">Type d'Action:</span>
-              <span class="detail-value">{{ getActionTypeLabel(selectedAction.typeAction) }}</span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label">Date:</span>
-              <span class="detail-value">{{ formatDate(selectedAction.dateAction) }}</span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label">Montant Recouvré:</span>
-              <span class="detail-value">{{ selectedAction.montantRecouvre ? (selectedAction.montantRecouvre | number:'1.2-2') + ' TND' : '-' }}</span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label">Montant Restant:</span>
-              <span class="detail-value">{{ selectedAction.montantRestant ? (selectedAction.montantRestant | number:'1.2-2') + ' TND' : '-' }}</span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label">État du Dossier:</span>
-              <span class="detail-value">
-                <span class="badge badge-info" *ngIf="selectedAction.etatDossier">
-                  {{ getEtatDossierLabel(selectedAction.etatDossier) }}
-                </span>
-                <span *ngIf="!selectedAction.etatDossier" class="text-muted">-</span>
+    <div class="modal-content modal-lg" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>
+          <i class="fas fa-gavel"></i> Détails de l'Action
+        </h2>
+        <button class="close-btn" (click)="closeActionView()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="action-details-view">
+          <div class="detail-row">
+            <span class="detail-label">Type d'Action:</span>
+            <span class="detail-value">{{ getActionTypeLabel(selectedAction.typeAction) }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Date:</span>
+            <span class="detail-value">{{ formatDate(selectedAction.dateAction) }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Montant Recouvré:</span>
+            <span class="detail-value">{{ selectedAction.montantRecouvre ? (selectedAction.montantRecouvre | number:'1.2-2') + ' TND' : '-' }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Montant Restant:</span>
+            <span class="detail-value">{{ selectedAction.montantRestant ? (selectedAction.montantRestant | number:'1.2-2') + ' TND' : '-' }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">État du Dossier:</span>
+            <span class="detail-value">
+              <span class="badge badge-info" *ngIf="selectedAction.etatDossier">
+                {{ getEtatDossierLabel(selectedAction.etatDossier) }}
               </span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label">Huissier:</span>
-              <span class="detail-value">{{ selectedAction.huissierName }}</span>
-            </div>
-            <div class="detail-row" *ngIf="selectedAction.pieceJointeUrl">
-              <span class="detail-label">Pièce Jointe:</span>
-              <span class="detail-value">
-                <button class="btn btn-sm btn-info" (click)="openDocument(selectedAction.pieceJointeUrl!)">
-                  <i class="fas fa-external-link-alt"></i> Ouvrir
-                </button>
-              </span>
-            </div>
+              <span *ngIf="!selectedAction.etatDossier" class="text-muted">-</span>
+            </span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Huissier:</span>
+            <span class="detail-value">{{ selectedAction.huissierName }}</span>
+          </div>
+          <div class="detail-row" *ngIf="selectedAction.pieceJointeUrl">
+            <span class="detail-label">Pièce Jointe:</span>
+            <span class="detail-value">
+              <button class="btn btn-sm btn-info" (click)="openDocument(selectedAction.pieceJointeUrl!)">
+                <i class="fas fa-external-link-alt"></i> Ouvrir
+              </button>
+            </span>
           </div>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" (click)="closeActionView()">
-            Fermer
-          </button>
-          <button type="button" class="btn btn-warning" (click)="openActionForm(selectedAction); closeActionView()">
-            <i class="fas fa-edit"></i> Modifier
-          </button>
-        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeActionView()">
+          Fermer
+        </button>
+        <button 
+          *ngIf="canCreateAction(selectedDossier!)"
+          type="button" 
+          class="btn btn-warning" 
+          (click)="openActionForm(selectedAction); closeActionView()">
+          <i class="fas fa-edit"></i> Modifier
+        </button>
       </div>
     </div>
   </div>
 </div>
-

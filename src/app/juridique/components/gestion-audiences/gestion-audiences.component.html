@@ -165,20 +165,41 @@
               <i class="fas fa-check-circle"></i> 
               Finaliser le Dossier
             </button>
-            <!-- Bouton Affecter au Finance (visible si dossier a au moins une audience, indépendamment de l'étape) -->
-            <button 
-              *ngIf="canAffecterAuFinance(dossier)"
-              class="btn btn-success"
-              (click)="selectedDossier = dossier; affecterAuFinance()"
-              [disabled]="isLoadingAffectationFinance"
-              title="Affecter ce dossier au département finance avec toutes les informations (documents, actions, audiences)">
-              <i class="fas fa-money-bill-wave"></i> 
-              <span *ngIf="isLoadingAffectationFinance">
-                <i class="fas fa-spinner fa-spin"></i> Affectation...
-              </span>
-              <span *ngIf="!isLoadingAffectationFinance">Affecter au Finance</span>
-            </button>
           </div>
+        </div>
+
+        <!-- IA Prediction Badge -->
+        <div class="ia-prediction-section" 
+             [class.score-recalculating]="recalculatingScore[dossier.id!]"
+             [class.score-updated]="scoreUpdated[dossier.id!]">
+          <app-ia-prediction-badge
+            [prediction]="getPredictionForDossier(dossier)"
+            [loading]="loadingPredictions[dossier.id!] || recalculatingScore[dossier.id!]"
+            [showDetails]="true"
+            size="medium"
+          ></app-ia-prediction-badge>
+          <div class="score-update-indicator" *ngIf="recalculatingScore[dossier.id!]">
+            <i class="fas fa-spinner fa-spin"></i>
+            <span>Recalcul en cours...</span>
+          </div>
+          <div class="score-update-badge" *ngIf="scoreUpdated[dossier.id!] && !recalculatingScore[dossier.id!]">
+            <i class="fas fa-check-circle"></i>
+            <span>Score mis à jour</span>
+          </div>
+          <button
+            *ngIf="!getPredictionForDossier(dossier) && !loadingPredictions[dossier.id!]"
+            class="btn btn-sm btn-outline-primary"
+            (click)="triggerPrediction(dossier.id!)"
+            title="Calculer Prédiction IA">
+            <i class="fas fa-brain"></i> Calculer Prédiction IA
+          </button>
+          <button
+            *ngIf="getPredictionForDossier(dossier) && !loadingPredictions[dossier.id!]"
+            class="btn btn-sm btn-outline-secondary"
+            (click)="triggerPrediction(dossier.id!)"
+            title="Recalculer Prédiction IA">
+            <i class="fas fa-sync-alt"></i> Recalculer Prédiction IA
+          </button>
         </div>
 
         <!-- Audiences for this dossier -->
@@ -598,19 +619,6 @@
             <button type="button" class="btn btn-secondary" (click)="cancelAudienceForm()">
               <i class="fas fa-times"></i> {{ isViewMode ? 'Fermer' : 'Annuler' }}
             </button>
-            <!-- Bouton Affecter au Finance (visible si dossier a au moins une audience, indépendamment de l'étape) -->
-            <button 
-              *ngIf="selectedDossier && canAffecterAuFinance(selectedDossier)"
-              type="button" 
-              class="btn btn-success"
-              (click)="affecterAuFinance()"
-              [disabled]="isLoadingAffectationFinance">
-              <i class="fas fa-money-bill-wave"></i> 
-              <span *ngIf="isLoadingAffectationFinance">
-                <i class="fas fa-spinner fa-spin"></i> Affectation...
-              </span>
-              <span *ngIf="!isLoadingAffectationFinance">Affecter au Finance</span>
-            </button>
             <button *ngIf="!isViewMode" type="submit" class="btn btn-primary" [disabled]="audienceForm.invalid">
               <i class="fas" [class.fa-check]="!isEditMode" [class.fa-save]="isEditMode"></i>
               {{ isEditMode ? 'Enregistrer' : 'Ajouter Audience' }}
@@ -702,7 +710,7 @@
             </div>
           </div>
 
-          <div class="form-section">
+          <div class="form-section" *ngIf="shouldShowMontantRecouvre()">
             <h3>Montant Recouvré</h3>
             <p class="form-description">Indiquez le montant recouvré dans cette étape juridique :</p>
             
@@ -716,11 +724,20 @@
                 id="montantRecouvre"
                 formControlName="montantRecouvre"
                 class="form-control"
+                [readonly]="isMontantRecouvreReadOnly()"
+                [class.readonly]="isMontantRecouvreReadOnly()"
                 min="0"
                 step="0.01"
                 placeholder="0.00">
               <div class="form-hint" *ngIf="selectedDossierForFinalisation">
-                Montant de la créance: <strong>{{ selectedDossierForFinalisation.montantCreance || 0 | number:'1.2-2' }} TND</strong>
+                Montant total: <strong>{{ selectedDossierForFinalisation.montantCreance || 0 | number:'1.2-2' }} TND</strong>
+              </div>
+              <div class="form-hint" *ngIf="selectedDossierForFinalisation && getMontantRestantActuel() >= 0">
+                Montant restant (avant finalisation): <strong>{{ getMontantRestantActuel() | number:'1.2-2' }} TND</strong>
+              </div>
+              <div class="form-hint" *ngIf="selectedDossierForFinalisation && getMontantRestant() >= 0" [style.color]="getMontantRestant() === 0 ? '#28a745' : '#666'">
+                Montant restant (après finalisation): <strong>{{ getMontantRestant() | number:'1.2-2' }} TND</strong>
+                <span *ngIf="getMontantRestant() === 0" style="color: #28a745; font-weight: bold;">✓ Dossier recouvré totalement</span>
               </div>
               <div class="form-error" *ngIf="finalisationForm.get('montantRecouvre')?.invalid && finalisationForm.get('montantRecouvre')?.touched">
                 <span *ngIf="finalisationForm.get('montantRecouvre')?.errors?.['required']">Le montant recouvré est obligatoire</span>

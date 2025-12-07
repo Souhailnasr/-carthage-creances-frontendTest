@@ -3,6 +3,38 @@
   max-width: 1400px;
   margin: 0 auto;
 
+  .stats-completes-section {
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+    h2 {
+      margin-bottom: 1.5rem;
+      color: #333;
+      font-size: 1.5rem;
+    }
+
+    .stats-grid-completes {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .loading-stats {
+      text-align: center;
+      padding: 2rem;
+      color: #666;
+
+      i {
+        font-size: 2rem;
+        margin-bottom: 1rem;
+        display: block;
+      }
+    }
+  }
+
   .dashboard-header {
     margin-bottom: 32px;
 

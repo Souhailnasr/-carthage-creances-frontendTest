@@ -5,13 +5,11 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, FormsModule } 
 import { interval, Subject, Subscription, takeUntil } from 'rxjs';
 import {
   ActionHuissier,
-  AuditLog,
   Creancier,
   Debiteur,
   DocumentHuissier,
   Dossier,
   User,
-  NotificationHuissier,
   Recommendation,
   TypeDocumentJustificatif,
   UrgenceDossier,
@@ -27,16 +25,17 @@ import { DossierMontantService } from '../../../core/services/dossier-montant.se
 import { ActionAmiableService } from '../../../core/services/action-amiable.service';
 import { DocumentHuissierService } from '../../../core/services/document-huissier.service';
 import { ActionHuissierService } from '../../../core/services/action-huissier.service';
-import { NotificationHuissierService } from '../../../core/services/notification-huissier.service';
 import { RecommendationService } from '../../../core/services/recommendation.service';
-import { AuditLogService } from '../../../core/services/audit-log.service';
 import { montantRecouvreInfTotal, montantValidator } from '../../../shared/validators/montant.validator';
 import { TndPipe } from '../../../shared/pipes/tnd.pipe';
+import { IaPredictionService } from '../../../core/services/ia-prediction.service';
+import { IaPredictionResult } from '../../../shared/models/ia-prediction-result.model';
+import { IaPredictionBadgeComponent } from '../../../shared/components/ia-prediction-badge/ia-prediction-badge.component';
 
 @Component({
   selector: 'app-dossier-detail',
   standalone: true,
-  imports: [CommonModule, RouterModule, ReactiveFormsModule, FormsModule, TndPipe],
+  imports: [CommonModule, RouterModule, ReactiveFormsModule, FormsModule, TndPipe, IaPredictionBadgeComponent],
   templateUrl: './dossier-detail.component.html',
   styleUrls: ['./dossier-detail.component.scss']
 })
@@ -44,18 +43,19 @@ export class DossierDetailComponent implements OnInit, OnDestroy {
   dossier: Dossier | null = null;
   documents: DocumentHuissier[] = [];
   actionsHuissier: ActionHuissier[] = [];
-  notifications: NotificationHuissier[] = [];
   recommendations: Recommendation[] = [];
-  auditLogs: AuditLog[] = [];
-  unreadNotifications = 0;
   highPriorityRecommendations = 0;
+  // ✅ Prédiction IA
+  prediction: IaPredictionResult | null = null;
+  loadingPrediction = false;
+  // ✅ Documents du dossier (contrat signé et pouvoir)
+  contratSigneFilePath: string | null = null;
+  pouvoirFilePath: string | null = null;
   loadingStates = {
     dossier: false,
     documents: false,
     actions: false,
-    notifications: false,
-    recommendations: false,
-    audit: false
+    recommendations: false
   };
   montantForm: FormGroup;
   documentForm: FormGroup;
@@ -92,10 +92,9 @@ export class DossierDetailComponent implements OnInit, OnDestroy {
     private actionAmiableService: ActionAmiableService,
     private documentHuissierService: DocumentHuissierService,
     private actionHuissierService: ActionHuissierService,
-    private notificationHuissierService: NotificationHuissierService,
     private recommendationService: RecommendationService,
-    private auditLogService: AuditLogService,
     private utilisateurService: UtilisateurService,
+    private iaPredictionService: IaPredictionService,
     private fb: FormBuilder
   ) {
     this.montantForm = this.fb.group({
@@ -185,9 +184,34 @@ export class DossierDetailComponent implements OnInit, OnDestroy {
     this.loadDossier(String(dossierId));
     this.loadDocuments(dossierId);
     this.loadActions(dossierId);
-    this.loadNotifications(dossierId);
     this.loadRecommendations(dossierId);
-    this.loadAuditLogs(dossierId);
+    // ✅ Charger la prédiction IA si le dossier est déjà chargé
+    if (this.dossier) {
+      this.prediction = this.iaPredictionService.getPredictionFromDossier(this.dossier);
+    }
+  }
+
+  /**
+   * Déclencher une nouvelle prédiction IA
+   */
+  triggerPrediction(): void {
+    if (!this.dossier?.id) return;
+    
+    this.loadingPrediction = true;
+    this.iaPredictionService.predictForDossier(this.dossier.id).subscribe({
+      next: (prediction) => {
+        this.prediction = prediction;
+        this.loadingPrediction = false;
+        // Rafraîchir le dossier pour obtenir les valeurs mises à jour
+        this.loadDossier(this.dossier!.id);
+        this.toastService.success('Prédiction IA calculée avec succès');
+      },
+      error: (error) => {
+        console.error('❌ Erreur lors de la prédiction:', error);
+        this.loadingPrediction = false;
+        this.toastService.error('Erreur lors du calcul de la prédiction IA');
+      }
+    });
   }
 
   loadDossier(id: string): void {
@@ -264,10 +288,24 @@ export class DossierDetailComponent implements OnInit, OnDestroy {
             debiteur: debiteur,
             // Ajouter les types pour l'affichage
             typeCreancier: (api as any).creancier?.type || 'PERSONNE_PHYSIQUE',
-            typeDebiteur: (api as any).debiteur?.type || 'PERSONNE_PHYSIQUE'
+            typeDebiteur: (api as any).debiteur?.type || 'PERSONNE_PHYSIQUE',
+            // ✅ Champs IA depuis l'API
+            etatPrediction: (api as any).etatPrediction,
+            riskScore: (api as any).riskScore,
+            riskLevel: (api as any).riskLevel,
+            datePrediction: (api as any).datePrediction
           });
 
           this.dossier = mapped;
+          // ✅ Stocker les chemins des fichiers du dossier
+          this.contratSigneFilePath = (api as any).contratSigneFilePath || null;
+          this.pouvoirFilePath = (api as any).pouvoirFilePath || null;
+          console.log('📄 Documents du dossier:', {
+            contratSigne: this.contratSigneFilePath,
+            pouvoir: this.pouvoirFilePath
+          });
+          // ✅ Charger la prédiction IA depuis le dossier
+          this.prediction = this.iaPredictionService.getPredictionFromDossier(mapped);
           // Debug: Vérifier le dossier et canAssignToAgent après chargement
           console.log('🔍 DossierDetail - Dossier chargé:', this.dossier);
           console.log('🔍 DossierDetail - canAssignToAgent après chargement:', this.canAssignToAgent());
@@ -321,24 +359,6 @@ export class DossierDetailComponent implements OnInit, OnDestroy {
       });
   }
 
-  private loadNotifications(dossierId: number): void {
-    this.loadingStates.notifications = true;
-    this.notificationHuissierService.getNotificationsByDossier(dossierId)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: notifications => {
-          this.notifications = notifications || [];
-          this.unreadNotifications = this.notifications.filter(n => !n.acked).length;
-        },
-        error: err => {
-          console.error('Erreur notifications:', err);
-          // En cas d'erreur backend, initialiser avec un tableau vide
-          this.notifications = [];
-          this.unreadNotifications = 0;
-        },
-        complete: () => this.loadingStates.notifications = false
-      });
-  }
 
   private loadRecommendations(dossierId: number): void {
     this.loadingStates.recommendations = true;
@@ -356,23 +376,6 @@ export class DossierDetailComponent implements OnInit, OnDestroy {
           this.highPriorityRecommendations = 0;
         },
         complete: () => this.loadingStates.recommendations = false
-      });
-  }
-
-  private loadAuditLogs(dossierId: number): void {
-    this.loadingStates.audit = true;
-    this.auditLogService.getLogsByDossier(dossierId)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: logs => {
-          this.auditLogs = logs || [];
-        },
-        error: err => {
-          console.error('Erreur audit logs:', err);
-          // En cas d'erreur backend, initialiser avec un tableau vide
-          this.auditLogs = [];
-        },
-        complete: () => this.loadingStates.audit = false
       });
   }
 
@@ -399,7 +402,6 @@ export class DossierDetailComponent implements OnInit, OnDestroy {
             montantRestant: montantRestant,
             etatDossier: (dossier as any).etatDossier
           });
-          this.loadAuditLogs(parseInt(this.dossier.id, 10));
         },
         error: err => console.error('Erreur mise à jour montants:', err)
       });
@@ -429,7 +431,6 @@ export class DossierDetailComponent implements OnInit, OnDestroy {
             montantRestant: montantRestant
           });
           this.amiableForm.reset({ montantRecouvre: 0 });
-          this.loadAuditLogs(parseInt(this.dossier.id, 10));
         },
         error: err => console.error('Erreur action amiable:', err)
       });
@@ -459,7 +460,6 @@ export class DossierDetailComponent implements OnInit, OnDestroy {
             delaiLegalDays: 10
           });
           this.loadDocuments(dossierId);
-          this.loadNotifications(dossierId);
         },
         error: err => console.error('Erreur création document:', err)
       });
@@ -490,31 +490,11 @@ export class DossierDetailComponent implements OnInit, OnDestroy {
             updateMode: 'ADD'
           });
           this.loadActions(dossierId);
-          this.loadNotifications(dossierId);
-          this.loadAuditLogs(dossierId);
         },
         error: err => console.error('Erreur création action:', err)
       });
   }
 
-  acknowledgeNotification(notificationId: number): void {
-    const userId = this.authService.getCurrentUser()?.id;
-    if (!userId) {
-      this.toastService.error('Utilisateur non authentifié.');
-      return;
-    }
-
-    this.notificationHuissierService.acknowledgeNotification(notificationId, parseInt(userId, 10))
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: () => {
-          if (this.currentDossierId) {
-            this.loadNotifications(this.currentDossierId);
-          }
-        },
-        error: err => console.error('Erreur acknowledgement notification:', err)
-      });
-  }
 
   acknowledgeRecommendation(recommendationId: number): void {
     const userId = this.authService.getCurrentUser()?.id;
@@ -933,13 +913,33 @@ export class DossierDetailComponent implements OnInit, OnDestroy {
     return this.dossier.agentResponsable === user.getFullName();
   }
 
+  /**
+   * Vérifie si l'utilisateur actuel est le chef dossier ou un agent du chef dossier
+   */
+  isChefDossierOrAgent(): boolean {
+    if (!this.currentUser || !this.dossier) return false;
+    
+    // Vérifier si c'est le chef dossier
+    if (this.isChefDossierUser || this.isChefDossier()) {
+      return true;
+    }
+    
+    // Vérifier si c'est un agent du chef dossier (agent responsable du dossier)
+    const userFullName = this.currentUser.getFullName ? this.currentUser.getFullName() : `${this.currentUser.prenom} ${this.currentUser.nom}`;
+    return this.dossier.agentResponsable === userFullName;
+  }
+
   onUploadContrat(event: any): void {
     const file: File | undefined = event?.target?.files?.[0];
     if (!file || !this.dossier) return;
     this.dossierApiService.uploadPdf(parseInt(this.dossier.id), 'contratSigne', file)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: () => this.toastService.success('Contrat signé téléversé.'),
+        next: () => {
+          this.toastService.success('Contrat signé téléversé.');
+          // Recharger le dossier pour mettre à jour les chemins des fichiers
+          this.loadDossier(this.dossier!.id);
+        },
         error: () => this.toastService.error('Erreur lors du téléversement du contrat.')
       });
   }
@@ -950,9 +950,133 @@ export class DossierDetailComponent implements OnInit, OnDestroy {
     this.dossierApiService.uploadPdf(parseInt(this.dossier.id), 'pouvoir', file)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: () => this.toastService.success('Pouvoir téléversé.'),
+        next: () => {
+          this.toastService.success('Pouvoir téléversé.');
+          // Recharger le dossier pour mettre à jour les chemins des fichiers
+          this.loadDossier(this.dossier!.id);
+        },
         error: () => this.toastService.error('Erreur lors du téléversement du pouvoir.')
       });
+  }
+
+  /**
+   * Télécharge le contrat signé via l'API
+   * Le backend ne sert pas les fichiers comme ressources statiques
+   * Il faut utiliser un endpoint API pour télécharger les fichiers
+   */
+  downloadContratSigne(): void {
+    if (!this.contratSigneFilePath || !this.dossier) {
+      this.toastService.error('Contrat signé non disponible.');
+      return;
+    }
+
+    const dossierId = parseInt(this.dossier.id, 10);
+    if (isNaN(dossierId)) {
+      this.toastService.error('ID de dossier invalide.');
+      return;
+    }
+
+    console.log('📥 Téléchargement du contrat signé via API:', {
+      dossierId,
+      filePath: this.contratSigneFilePath
+    });
+
+    // Utiliser l'endpoint API pour télécharger le fichier
+    this.dossierApiService.downloadDossierFile(dossierId, 'contratSigne')
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (blob: Blob) => {
+          // Créer un lien de téléchargement
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `contrat-signe-${this.dossier!.numeroDossier}.pdf`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(url);
+          
+          this.toastService.success('Contrat signé téléchargé avec succès.');
+        },
+        error: (error) => {
+          console.error('❌ Erreur lors du téléchargement du contrat signé:', error);
+          
+          // Si l'endpoint API n'existe pas, afficher un message explicite
+          let errorMessage = 'Impossible de télécharger le contrat signé.';
+          if (error?.message) {
+            errorMessage = error.message;
+          }
+          
+          this.toastService.error(errorMessage);
+        }
+      });
+  }
+
+  /**
+   * Télécharge le pouvoir via l'API
+   * Le backend ne sert pas les fichiers comme ressources statiques
+   * Il faut utiliser un endpoint API pour télécharger les fichiers
+   */
+  downloadPouvoir(): void {
+    if (!this.pouvoirFilePath || !this.dossier) {
+      this.toastService.error('Pouvoir non disponible.');
+      return;
+    }
+
+    const dossierId = parseInt(this.dossier.id, 10);
+    if (isNaN(dossierId)) {
+      this.toastService.error('ID de dossier invalide.');
+      return;
+    }
+
+    console.log('📥 Téléchargement du pouvoir via API:', {
+      dossierId,
+      filePath: this.pouvoirFilePath
+    });
+
+    // Utiliser l'endpoint API pour télécharger le fichier
+    this.dossierApiService.downloadDossierFile(dossierId, 'pouvoir')
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (blob: Blob) => {
+          // Créer un lien de téléchargement
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `pouvoir-${this.dossier!.numeroDossier}.pdf`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(url);
+          
+          this.toastService.success('Pouvoir téléchargé avec succès.');
+        },
+        error: (error) => {
+          console.error('❌ Erreur lors du téléchargement du pouvoir:', error);
+          
+          // Si l'endpoint API n'existe pas, afficher un message explicite
+          let errorMessage = 'Impossible de télécharger le pouvoir.';
+          if (error?.message) {
+            errorMessage = error.message;
+          }
+          
+          this.toastService.error(errorMessage);
+        }
+      });
+  }
+
+  /**
+   * Vérifie si le contrat signé est disponible
+   */
+  hasContratSigne(): boolean {
+    return !!this.contratSigneFilePath;
+  }
+
+  /**
+   * Vérifie si le pouvoir est disponible
+   */
+  hasPouvoir(): boolean {
+    return !!this.pouvoirFilePath;
   }
 
   deleteContrat(): void {
@@ -960,7 +1084,11 @@ export class DossierDetailComponent implements OnInit, OnDestroy {
     this.dossierApiService.deletePdf(parseInt(this.dossier.id), 'contratSigne')
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: () => this.toastService.success('Contrat supprimé.'),
+        next: () => {
+          this.toastService.success('Contrat supprimé.');
+          // Recharger le dossier pour mettre à jour les chemins des fichiers
+          this.loadDossier(this.dossier!.id);
+        },
         error: () => this.toastService.error('Erreur lors de la suppression du contrat.')
       });
   }
@@ -970,7 +1098,11 @@ export class DossierDetailComponent implements OnInit, OnDestroy {
     this.dossierApiService.deletePdf(parseInt(this.dossier.id), 'pouvoir')
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: () => this.toastService.success('Pouvoir supprimé.'),
+        next: () => {
+          this.toastService.success('Pouvoir supprimé.');
+          // Recharger le dossier pour mettre à jour les chemins des fichiers
+          this.loadDossier(this.dossier!.id);
+        },
         error: () => this.toastService.error('Erreur lors de la suppression du pouvoir.')
       });
   }

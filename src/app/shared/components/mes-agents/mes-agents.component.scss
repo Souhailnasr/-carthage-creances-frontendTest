@@ -92,18 +92,19 @@
 .utilisateur-item {
   display: flex;
   gap: 16px;
-  align-items: flex-start;
+  align-items: center;
   padding: 18px 20px;
   background: #fff;
   border-radius: 14px;
   border-left: 5px solid #e5e7eb;
   box-shadow: 0 6px 24px rgba(15, 23, 42, 0.06);
-  transition: transform 0.2s ease, border-color 0.2s ease;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .utilisateur-item:hover {
   transform: translateX(4px);
   border-color: #2563eb;
+  box-shadow: 0 8px 28px rgba(15, 23, 42, 0.1);
 }
 
 .statut-wrapper {
@@ -194,16 +195,100 @@
   gap: 12px;
   font-size: 0.9rem;
   color: #6b7280;
+
+  i {
+    margin-right: 4px;
+    opacity: 0.7;
+  }
+}
+
+// ✅ NOUVEAU : Styles pour les boutons d'action
+.utilisateur-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  padding-left: 16px;
+}
+
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: 2px solid;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  
+  i {
+    font-size: 0.875rem;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  &:not(:disabled):hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  &:not(:disabled):active {
+    transform: translateY(0);
+  }
+}
+
+.action-btn-success {
+  background-color: #f0fdf4;
+  border-color: #16a34a;
+  color: #16a34a;
+
+  &:not(:disabled):hover {
+    background-color: #16a34a;
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
+  }
+}
+
+.action-btn-warning {
+  background-color: #fffbeb;
+  border-color: #f59e0b;
+  color: #f59e0b;
+
+  &:not(:disabled):hover {
+    background-color: #f59e0b;
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+  }
 }
 
 @media (max-width: 768px) {
   .utilisateur-item {
     flex-direction: column;
+    align-items: stretch;
   }
 
   .info-header {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .utilisateur-actions {
+    margin-left: 0;
+    padding-left: 0;
+    margin-top: 12px;
+    justify-content: flex-start;
+  }
+
+  .action-btn {
+    flex: 1;
+    justify-content: center;
   }
 }
 

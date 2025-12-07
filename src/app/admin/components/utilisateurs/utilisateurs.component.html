@@ -240,10 +240,23 @@
           <p class="user-department" *ngIf="utilisateur.departement">
             <i class="fas fa-building"></i> {{ getDepartmentDisplayName(utilisateur.departement) }}
           </p>
+          <!-- Performance -->
+          <div class="user-performance" *ngIf="getPerformanceScore(utilisateur) > 0">
+            <span class="performance-label">Performance:</span>
+            <span class="performance-score" [class]="getPerformanceClass(getPerformanceScore(utilisateur))">
+              {{ getPerformanceScore(utilisateur).toFixed(1) }}%
+            </span>
+            <button class="btn-link" (click)="voirPerformance(utilisateur)" title="Voir performance détaillée">
+              <i class="fas fa-chart-line"></i>
+            </button>
+          </div>
         </div>
         <div class="user-actions">
           <button class="btn btn-sm btn-outline-primary" (click)="showEditUserForm(utilisateur)">
             <i class="fas fa-edit"></i> Modifier
+          </button>
+          <button class="btn btn-sm btn-outline-info" (click)="voirPerformance(utilisateur)" *ngIf="getPerformanceScore(utilisateur) > 0">
+            <i class="fas fa-chart-line"></i> Performance
           </button>
           <button class="btn btn-sm btn-outline-danger" (click)="deleteUser(utilisateur)">
             <i class="fas fa-trash"></i> Supprimer

@@ -12,8 +12,66 @@
     <p>Chargement des statistiques...</p>
   </div>
 
+  <!-- Statistiques Complètes - Nouveau Système -->
+  <div class="stats-completes-section" *ngIf="statsCompletes">
+    <h2><i class="fas fa-chart-bar"></i> Statistiques Complètes</h2>
+    <div class="stats-grid-completes" *ngIf="!loadingStatsCompletes">
+      <app-stat-card 
+        title="Mes Dossiers"
+        [stats]="{
+          'Traités': statsCompletes.dossiersTraites,
+          'Validés': statsCompletes.dossiersValides,
+          'Clôturés': statsCompletes.dossiersClotures
+        }"
+        icon="folder"
+        color="primary">
+      </app-stat-card>
+
+      <app-stat-card 
+        title="Documents Huissier"
+        [stats]="{
+          'Total': statsCompletes.documentsHuissier
+        }"
+        icon="description"
+        color="accent">
+      </app-stat-card>
+
+      <app-stat-card 
+        title="Actions Huissier"
+        [stats]="{
+          'Total': statsCompletes.actionsHuissier
+        }"
+        icon="gavel"
+        color="primary">
+      </app-stat-card>
+
+      <app-stat-card 
+        title="Audiences"
+        [stats]="{
+          'Total': statsCompletes.audiences
+        }"
+        icon="event"
+        color="accent">
+      </app-stat-card>
+
+      <app-stat-card 
+        title="Performance"
+        [stats]="{
+          'Taux de réussite': statsCompletes.tauxReussite.toFixed(2) + '%',
+          'Montant récupéré': (statsCompletes.montantRecouvre | number:'1.0-0') + ' TND',
+          'Montant en cours': (statsCompletes.montantEnCours | number:'1.0-0') + ' TND'
+        }"
+        icon="trending_up"
+        color="accent">
+      </app-stat-card>
+    </div>
+    <div *ngIf="loadingStatsCompletes" class="loading-stats">
+      <i class="fas fa-spinner fa-spin"></i> Chargement des statistiques...
+    </div>
+  </div>
+
   <div class="dashboard-content" *ngIf="!loading && stats">
-    <!-- Métriques Principales -->
+    <!-- Métriques Principales (Ancien Système - Conservé) -->
     <div class="stats-grid">
       <mat-card class="stat-card">
         <mat-card-content>

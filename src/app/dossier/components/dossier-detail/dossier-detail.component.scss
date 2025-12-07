@@ -250,6 +250,51 @@
       color: #4b5563;
       line-height: 1.6;
     }
+
+    // ✅ Styles pour la section Prédiction IA
+    &.ia-prediction-section {
+      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+      border-left: 4px solid #007bff;
+      
+      .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+        
+        h2 {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin: 0;
+          font-size: 1.5rem;
+          color: #111827;
+          
+          i {
+            color: #007bff;
+            font-size: 1.5rem;
+          }
+        }
+        
+        .btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          padding: 8px 16px;
+          border-radius: 8px;
+          font-size: 0.875rem;
+          
+          i.fa-spin {
+            animation: spin 1s linear infinite;
+          }
+        }
+      }
+    }
+  }
+
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
   }
 
   .info-grid {
@@ -523,24 +568,6 @@
     }
   }
 
-  .audit-entry {
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
-    padding: 12px;
-
-    header {
-      display: flex;
-      justify-content: space-between;
-      font-weight: 600;
-      margin-bottom: 4px;
-    }
-
-    p {
-      margin: 0;
-      color: #4b5563;
-    }
-  }
-
   .loader {
     width: 16px;
     height: 16px;
@@ -651,6 +678,79 @@
           transform: translateY(-2px);
         }
       }
+    }
+  }
+}
+
+// ✅ Styles pour la section des documents du dossier (contrat signé et pouvoir)
+.dossier-documents-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 0;
+
+  .document-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+
+    &:hover:not(.empty) {
+      background: #f3f4f6;
+      border-color: #d1d5db;
+    }
+
+    &.empty {
+      opacity: 0.6;
+    }
+
+    .document-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1;
+
+      .document-icon {
+        font-size: 1.5rem;
+        color: #dc2626; // Rouge pour PDF
+        
+        &.disabled {
+          color: #9ca3af;
+        }
+      }
+
+      .document-details {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+
+        .document-name {
+          font-weight: 500;
+          color: #111827;
+          font-size: 0.95rem;
+        }
+
+        .document-type {
+          font-size: 0.85rem;
+          color: #6b7280;
+        }
+
+        .document-status {
+          font-size: 0.85rem;
+          color: #9ca3af;
+          font-style: italic;
+        }
+      }
+    }
+
+    .btn-sm {
+      padding: 8px 16px;
+      font-size: 0.9rem;
+      white-space: nowrap;
     }
   }
 }

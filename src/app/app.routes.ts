@@ -13,6 +13,14 @@ export const routes: Routes = [
     loadComponent: () => import('./auth/components/login/login.component').then(m => m.LoginComponent)
   },
   {
+    path: 'forgot-password',
+    loadComponent: () => import('./auth/components/forgot-password/forgot-password.component').then(m => m.ForgotPasswordComponent)
+  },
+  {
+    path: 'reset-password',
+    loadComponent: () => import('./auth/components/reset-password/reset-password.component').then(m => m.ResetPasswordComponent)
+  },
+  {
     path: 'dashboard',
     loadComponent: () => import('./shared/components/dashboard/dashboard.component').then(m => m.DashboardComponent),
     canActivate: [AuthGuard]
@@ -21,20 +29,6 @@ export const routes: Routes = [
     path: 'admin',
     loadChildren: () => import('./admin/admin.module').then(m => m.AdminModule),
     canActivate: [AuthGuard]
-  },
-  {
-    path: 'utilisateurs',
-    loadComponent: () => import('./components/utilisateurs-list/utilisateurs-list.component').then(m => m.UtilisateursListComponent),
-    canActivate: [AuthGuard, RoleGuard],
-    data: {
-      allowedRoles: [
-        Role.SUPER_ADMIN,
-        Role.CHEF_DEPARTEMENT_DOSSIER,
-        Role.CHEF_DEPARTEMENT_RECOUVREMENT_AMIABLE,
-        Role.CHEF_DEPARTEMENT_RECOUVREMENT_JURIDIQUE,
-        Role.CHEF_DEPARTEMENT_FINANCE
-      ]
-    }
   },
   {
     path: 'dossier',

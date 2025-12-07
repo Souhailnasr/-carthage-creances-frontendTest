@@ -1,7 +1,8 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Subject, takeUntil } from 'rxjs';
+import { Subject, takeUntil, forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { DossierApi } from '../../../shared/models/dossier-api.model';
 import { DossierApiService } from '../../../core/services/dossier-api.service';
 import { HuissierService } from '../../services/huissier.service';
@@ -13,33 +14,41 @@ import { ActionHuissier, ActionHuissierDTO, TypeActionHuissier, EtatDossier } fr
 import { DocumentHuissier } from '../../models/huissier-document.model';
 import { Audience } from '../../models/audience.model';
 import { ToastService } from '../../../core/services/toast.service';
+import { IaPredictionService } from '../../../core/services/ia-prediction.service';
+import { IaPredictionResult } from '../../../shared/models/ia-prediction-result.model';
+import { IaPredictionBadgeComponent } from '../../../shared/components/ia-prediction-badge/ia-prediction-badge.component';
+import { Dossier } from '../../../shared/models/dossier.model';
 
 @Component({
   selector: 'app-huissier-actions',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, IaPredictionBadgeComponent],
   templateUrl: './huissier-actions.component.html',
   styleUrls: ['./huissier-actions.component.scss']
 })
 export class HuissierActionsComponent implements OnInit, OnDestroy {
   // Données
   dossiers: DossierApi[] = [];
+  filteredDossiers: DossierApi[] = [];
   huissiers: Huissier[] = [];
   selectedDossierId: number | null = null;
   selectedHuissierId: number | null = null;
   selectedDossier: DossierApi | null = null;
   
-  // Documents du dossier sélectionné
+  // Actions - Toutes les actions de tous les dossiers
+  allActions: ActionHuissier[] = [];
+  // Actions par dossier (pour affichage)
+  actionsByDossier: { [dossierId: number]: ActionHuissier[] } = {};
+  
+  // Actions du dossier sélectionné (pour le formulaire)
+  actions: ActionHuissier[] = [];
+  
+  // Documents du dossier sélectionné (pour affichage)
   documents: DocumentHuissier[] = [];
   
   // Audiences (pour vérifier si le dossier peut être affecté au finance)
   audiences: Audience[] = [];
   
-  // Toutes les actions (pour vérifier si un dossier peut être affecté au finance)
-  allActions: ActionHuissier[] = [];
-  
-  // Actions du dossier sélectionné
-  actions: ActionHuissier[] = [];
   showActionForm = false;
   showActionView = false;
   selectedAction: ActionHuissier | null = null;
@@ -67,6 +76,25 @@ export class HuissierActionsComponent implements OnInit, OnDestroy {
   isLoadingDocuments = false;
   isLoadingAffectationFinance = false;
   
+  // Recherche et filtres
+  searchTerm: string = '';
+  filterType: 'all' | 'conservatoire' | 'executive' | 'blocage' | 'immobiliere' = 'all';
+  
+  // Statistiques
+  stats = {
+    totalDossiers: 0,
+    totalActions: 0,
+    conservatoireActions: 0,
+    executiveActions: 0,
+    blocageActions: 0,
+    immobiliereActions: 0
+  };
+  
+  // Prédiction IA
+  predictions: { [dossierId: number]: IaPredictionResult } = {};
+  loadingPrediction: boolean = false;
+  prediction: IaPredictionResult | null = null;
+  
   private destroy$ = new Subject<void>();
 
   constructor(
@@ -75,12 +103,16 @@ export class HuissierActionsComponent implements OnInit, OnDestroy {
     private actionService: HuissierActionService,
     private documentService: HuissierDocumentService,
     private audienceService: AudienceService,
-    private toastService: ToastService
+    private toastService: ToastService,
+    private iaPredictionService: IaPredictionService
   ) {}
 
   ngOnInit(): void {
-    this.loadDossiers();
     this.loadHuissiers();
+    // Charger les dossiers d'abord, puis les actions une fois les dossiers chargés
+    // Les audiences seront chargées à la demande si nécessaire
+    this.loadDossiers();
+    // Charger les audiences en arrière-plan (gestion d'erreur silencieuse)
     this.loadAllAudiences();
   }
 
@@ -90,24 +122,29 @@ export class HuissierActionsComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Charge la liste de TOUS les dossiers juridiques pour la traçabilité complète
+   * Charge la liste de TOUS les dossiers juridiques pour la traçabilité
    * (même ceux passés aux audiences - pour voir l'historique des actions)
    */
   loadDossiers(): void {
     this.isLoadingDossiers = true;
-    // Charger tous les dossiers juridiques pour avoir une vue complète avec traçabilité
     this.dossierApiService.getDossiersRecouvrementJuridique(0, 100)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (page) => {
           if (page && Array.isArray(page.content)) {
             this.dossiers = page.content;
+            this.filteredDossiers = [...this.dossiers];
           } else if (Array.isArray(page)) {
             this.dossiers = page;
+            this.filteredDossiers = [...this.dossiers];
           } else {
             this.dossiers = [];
+            this.filteredDossiers = [];
           }
+          this.calculateStats();
           this.isLoadingDossiers = false;
+          // Charger les actions une fois les dossiers chargés
+          this.loadAllActions();
         },
         error: (error) => {
           console.error('Erreur lors du chargement des dossiers:', error);
@@ -136,18 +173,100 @@ export class HuissierActionsComponent implements OnInit, OnDestroy {
 
   /**
    * Charge toutes les audiences pour vérifier si un dossier peut être affecté au finance
+   * Note: Les erreurs de normalisation des audiences sont gérées silencieusement
    */
   loadAllAudiences(): void {
     this.audienceService.getAllAudiences()
-      .pipe(takeUntil(this.destroy$))
+      .pipe(
+        takeUntil(this.destroy$),
+        catchError(error => {
+          // Ignorer les erreurs de normalisation (audiences sans dossierId)
+          // Ces erreurs sont gérées par le service et ne sont pas critiques
+          console.warn('⚠️ Certaines audiences n\'ont pas de dossierId, elles seront ignorées');
+          return of([]); // Retourner un tableau vide en cas d'erreur
+        })
+      )
       .subscribe({
         next: (audiences) => {
-          this.audiences = audiences || [];
-          console.log('✅ Audiences chargées:', this.audiences.length);
+          // Filtrer les audiences valides (avec dossierId)
+          this.audiences = (audiences || []).filter(audience => {
+            const dossierId = audience.dossierId || (audience as any).dossier_id;
+            return dossierId != null;
+          });
         },
         error: (error) => {
-          console.error('❌ Erreur lors du chargement des audiences:', error);
+          // Erreur déjà gérée par catchError, mais on s'assure que audiences est initialisé
           this.audiences = [];
+        }
+      });
+  }
+
+  /**
+   * Charge toutes les actions de tous les dossiers
+   * Note: Le backend n'a pas d'endpoint pour récupérer toutes les actions,
+   * donc on charge les actions pour chaque dossier individuellement
+   */
+  loadAllActions(): void {
+    this.isLoadingActions = true;
+    
+    // Si aucun dossier n'est chargé, on ne peut pas charger les actions
+    if (this.dossiers.length === 0) {
+      this.allActions = [];
+      this.actionsByDossier = {};
+      this.isLoadingActions = false;
+      return;
+    }
+
+    // Créer un tableau d'observables pour charger les actions de chaque dossier
+    const actionRequests = this.dossiers
+      .filter(dossier => dossier.id != null)
+      .map(dossier => 
+        this.actionService.getActionsByDossier(dossier.id!)
+          .pipe(
+            catchError(error => {
+              console.warn(`Erreur lors du chargement des actions pour le dossier ${dossier.id}:`, error);
+              return of([]); // Retourner un tableau vide en cas d'erreur
+            })
+          )
+      );
+
+    // Si aucun dossier valide, initialiser les structures vides
+    if (actionRequests.length === 0) {
+      this.allActions = [];
+      this.actionsByDossier = {};
+      this.isLoadingActions = false;
+      return;
+    }
+
+    // Charger toutes les actions en parallèle
+    forkJoin(actionRequests)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (actionsArrays) => {
+          // Fusionner tous les tableaux d'actions
+          this.allActions = actionsArrays.flat();
+          
+          // Grouper les actions par dossier
+          this.actionsByDossier = {};
+          this.allActions.forEach(action => {
+            const dossierId = action.dossierId || (action as any).dossier?.id;
+            if (dossierId) {
+              if (!this.actionsByDossier[dossierId]) {
+                this.actionsByDossier[dossierId] = [];
+              }
+              this.actionsByDossier[dossierId].push(action);
+            }
+          });
+          
+          this.applyFilters();
+          this.calculateStats();
+          this.isLoadingActions = false;
+        },
+        error: (error) => {
+          console.error('Erreur lors du chargement des actions:', error);
+          this.allActions = [];
+          this.actionsByDossier = {};
+          this.isLoadingActions = false;
         }
       });
   }
@@ -161,34 +280,10 @@ export class HuissierActionsComponent implements OnInit, OnDestroy {
     if (dossierId) {
       this.loadDocuments();
       this.loadActions();
-      // Charger les actions dans allActions pour référence future
-      this.loadActionsForDossier(dossierId);
     } else {
       this.documents = [];
       this.actions = [];
     }
-  }
-
-  /**
-   * Charge les actions d'un dossier et les ajoute à allActions pour référence
-   */
-  loadActionsForDossier(dossierId: number): void {
-    this.actionService.getActionsByDossier(dossierId)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (actions) => {
-          // Retirer les anciennes actions de ce dossier
-          this.allActions = this.allActions.filter(a => {
-            const actionDossierId = a.dossierId || (a as any).dossier?.id;
-            return actionDossierId !== dossierId;
-          });
-          // Ajouter les nouvelles actions
-          this.allActions.push(...actions);
-        },
-        error: (error) => {
-          console.error('Erreur lors du chargement des actions pour référence:', error);
-        }
-      });
   }
 
   /**
@@ -228,14 +323,14 @@ export class HuissierActionsComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (actions) => {
           this.actions = actions;
-          // Mettre à jour allActions pour référence future
-          // Retirer les anciennes actions de ce dossier
+          // Mettre à jour aussi allActions et actionsByDossier
           this.allActions = this.allActions.filter(a => {
             const actionDossierId = a.dossierId || (a as any).dossier?.id;
             return actionDossierId !== this.selectedDossierId;
           });
-          // Ajouter les nouvelles actions
           this.allActions.push(...actions);
+          this.actionsByDossier[this.selectedDossierId!] = actions;
+          this.calculateStats();
           this.isLoadingActions = false;
         },
         error: (error) => {
@@ -244,6 +339,162 @@ export class HuissierActionsComponent implements OnInit, OnDestroy {
           this.isLoadingActions = false;
         }
       });
+  }
+
+  /**
+   * Calcule les statistiques
+   */
+  calculateStats(): void {
+    this.stats.totalDossiers = this.dossiers.length;
+    this.stats.totalActions = this.allActions.length;
+    this.stats.conservatoireActions = this.allActions.filter(a => a.typeAction === TypeActionHuissier.ACLA_TA7AFOUDHIA).length;
+    this.stats.executiveActions = this.allActions.filter(a => a.typeAction === TypeActionHuissier.ACLA_TANFITHIA).length;
+    this.stats.blocageActions = this.allActions.filter(a => a.typeAction === TypeActionHuissier.ACLA_TAW9IFIYA).length;
+    this.stats.immobiliereActions = this.allActions.filter(a => a.typeAction === TypeActionHuissier.ACLA_A9ARYA).length;
+  }
+
+  /**
+   * Applique les filtres de recherche
+   */
+  applyFilters(): void {
+    let filtered = [...this.dossiers];
+
+    // Filtre par recherche
+    if (this.searchTerm) {
+      const searchLower = this.searchTerm.toLowerCase();
+      filtered = filtered.filter(dossier => {
+        const numeroMatch = dossier.numeroDossier?.toLowerCase().includes(searchLower);
+        const creancierMatch = this.getCreancierName(dossier).toLowerCase().includes(searchLower);
+        const debiteurMatch = this.getDebiteurName(dossier).toLowerCase().includes(searchLower);
+        const huissierMatch = this.getHuissierName(dossier).toLowerCase().includes(searchLower);
+        return numeroMatch || creancierMatch || debiteurMatch || huissierMatch;
+      });
+    }
+
+    // Filtre par type d'action
+    if (this.filterType !== 'all') {
+      filtered = filtered.filter(dossier => {
+        const actions = this.getActionsForDossier(dossier.id);
+        const etape = this.getEtapeHuissier(dossier);
+        
+        // Toujours afficher les dossiers passés aux audiences pour l'historique
+        if (etape === 'EN_AUDIENCES') {
+          return true;
+        }
+        
+        // Pour les autres dossiers, appliquer le filtre normalement
+        if (actions.length === 0) return false;
+        
+        switch (this.filterType) {
+          case 'conservatoire':
+            return actions.some(a => a.typeAction === TypeActionHuissier.ACLA_TA7AFOUDHIA);
+          case 'executive':
+            return actions.some(a => a.typeAction === TypeActionHuissier.ACLA_TANFITHIA);
+          case 'blocage':
+            return actions.some(a => a.typeAction === TypeActionHuissier.ACLA_TAW9IFIYA);
+          case 'immobiliere':
+            return actions.some(a => a.typeAction === TypeActionHuissier.ACLA_A9ARYA);
+          default:
+            return true;
+        }
+      });
+    }
+
+    this.filteredDossiers = filtered;
+  }
+
+  /**
+   * Obtient les actions d'un dossier
+   */
+  getActionsForDossier(dossierId: number | null): ActionHuissier[] {
+    if (!dossierId) return [];
+    return this.actionsByDossier[dossierId] || [];
+  }
+
+  /**
+   * Obtient les actions filtrées d'un dossier
+   */
+  getFilteredActionsForDossier(dossierId: number | null): ActionHuissier[] {
+    const actions = this.getActionsForDossier(dossierId);
+    if (this.filterType === 'all') return actions;
+    
+    return actions.filter(action => {
+      switch (this.filterType) {
+        case 'conservatoire':
+          return action.typeAction === TypeActionHuissier.ACLA_TA7AFOUDHIA;
+        case 'executive':
+          return action.typeAction === TypeActionHuissier.ACLA_TANFITHIA;
+        case 'blocage':
+          return action.typeAction === TypeActionHuissier.ACLA_TAW9IFIYA;
+        case 'immobiliere':
+          return action.typeAction === TypeActionHuissier.ACLA_A9ARYA;
+        default:
+          return true;
+      }
+    });
+  }
+
+  /**
+   * Obtient le nom du créancier
+   */
+  getCreancierName(dossier: DossierApi): string {
+    if (!dossier.creancier) return 'N/A';
+    const typeCreancier = (dossier.creancier as any).typeCreancier;
+    if (typeCreancier === 'PERSONNE_MORALE') {
+      return dossier.creancier.nom || 'N/A';
+    } else if (dossier.creancier.prenom && dossier.creancier.nom) {
+      return `${dossier.creancier.prenom} ${dossier.creancier.nom}`;
+    } else if (dossier.creancier.nom) {
+      return dossier.creancier.nom;
+    }
+    return 'N/A';
+  }
+
+  /**
+   * Obtient le nom du débiteur
+   */
+  getDebiteurName(dossier: DossierApi): string {
+    if (!dossier.debiteur) return 'N/A';
+    const typeDebiteur = (dossier.debiteur as any).typeDebiteur;
+    if (typeDebiteur === 'PERSONNE_MORALE') {
+      return dossier.debiteur.nom || 'N/A';
+    } else if (dossier.debiteur.prenom && dossier.debiteur.nom) {
+      return `${dossier.debiteur.prenom} ${dossier.debiteur.nom}`;
+    } else if (dossier.debiteur.nom) {
+      return dossier.debiteur.nom;
+    }
+    return 'N/A';
+  }
+
+  /**
+   * Obtient le nom de l'huissier
+   */
+  getHuissierName(dossier: DossierApi): string {
+    if (dossier.huissier) {
+      return `${dossier.huissier.prenom || ''} ${dossier.huissier.nom || ''}`.trim() || 'N/A';
+    }
+    return 'Non affecté';
+  }
+
+  /**
+   * Vérifie si le dossier a un huissier affecté
+   */
+  hasHuissier(dossier: DossierApi): boolean {
+    return !!dossier.huissier;
+  }
+
+  /**
+   * TrackBy pour améliorer les performances
+   */
+  trackByDossierId(index: number, dossier: DossierApi): any {
+    return dossier.id || index;
+  }
+
+  /**
+   * TrackBy pour les actions
+   */
+  trackByActionId(index: number, action: ActionHuissier): any {
+    return action.id || index;
   }
 
   /**
@@ -274,10 +525,24 @@ export class HuissierActionsComponent implements OnInit, OnDestroy {
       // Mode création
       this.isEditActionMode = false;
       this.selectedAction = null;
+      
+      // S'assurer que selectedDossier est défini
+      if (!this.selectedDossier && this.selectedDossierId) {
+        this.selectedDossier = this.dossiers.find(d => d.id === this.selectedDossierId) || null;
+      }
+      
+      // Récupérer le nom de l'huissier depuis le dossier sélectionné
+      const huissierName = this.selectedDossier ? this.getHuissierName(this.selectedDossier) : '';
+      
+      if (!huissierName || huissierName === 'Non affecté' || huissierName === 'N/A') {
+        this.toastService.warning('Aucun huissier affecté à ce dossier. Veuillez affecter un huissier d\'abord.');
+        return;
+      }
+      
       this.actionForm = {
         dossierId: this.selectedDossierId,
         typeAction: TypeActionHuissier.ACLA_TA7AFOUDHIA,
-        huissierName: this.getSelectedHuissierName(),
+        huissierName: huissierName,
         montantRecouvre: undefined,
         montantRestant: undefined,
         etatDossier: undefined,
@@ -285,6 +550,9 @@ export class HuissierActionsComponent implements OnInit, OnDestroy {
         updateMode: 'ADD'
       };
       this.selectedFile = null;
+      
+      // Calculer le montant restant initial
+      this.calculateMontantRestant();
     }
     this.showActionForm = true;
   }
@@ -308,6 +576,80 @@ export class HuissierActionsComponent implements OnInit, OnDestroy {
       }
       this.selectedFile = file;
     }
+  }
+
+  /**
+   * Calcule le montant restant automatiquement
+   * Montant Restant = Montant Total du Dossier - Montant Recouvré (cumulé)
+   */
+  calculateMontantRestant(): void {
+    if (!this.selectedDossier) {
+      this.actionForm.montantRestant = undefined;
+      return;
+    }
+
+    // Récupérer le montant total du dossier
+    const montantTotal = this.selectedDossier.montantCreance || 0;
+    
+    // Récupérer le montant déjà recouvré (depuis le dossier ou les actions précédentes)
+    const montantDejaRecouvre = this.getMontantRecouvreCumule();
+    
+    // Calculer le montant recouvré avec cette nouvelle action
+    const montantRecouvreActuel = this.actionForm.montantRecouvre || 0;
+    const montantRecouvreTotal = montantDejaRecouvre + montantRecouvreActuel;
+    
+    // Calculer le montant restant
+    const montantRestant = montantTotal - montantRecouvreTotal;
+    
+    // S'assurer que le montant restant n'est pas négatif
+    this.actionForm.montantRestant = Math.max(0, montantRestant);
+    
+    console.log('💰 Calcul montant restant:', {
+      montantTotal,
+      montantDejaRecouvre,
+      montantRecouvreActuel,
+      montantRecouvreTotal,
+      montantRestant: this.actionForm.montantRestant
+    });
+  }
+
+  /**
+   * Récupère le montant déjà recouvré (cumulé) pour ce dossier
+   */
+  private getMontantRecouvreCumule(): number {
+    if (!this.selectedDossier || !this.selectedDossier.id) {
+      return 0;
+    }
+
+    // Récupérer toutes les actions existantes pour ce dossier
+    const actions = this.getActionsForDossier(this.selectedDossier.id);
+    
+    // Si on est en mode édition, exclure l'action actuelle du calcul
+    const actionsToCount = this.isEditActionMode && this.selectedAction
+      ? actions.filter(a => a.id !== this.selectedAction!.id)
+      : actions;
+    
+    // Calculer le montant recouvré cumulé
+    const montantCumule = actionsToCount.reduce((total, action) => {
+      return total + (action.montantRecouvre || 0);
+    }, 0);
+    
+    // Vérifier aussi dans le dossier lui-même (si disponible)
+    const dossierAny = this.selectedDossier as any;
+    const montantRecouvreDossier = dossierAny.montantRecouvre || 
+                                    dossierAny.finance?.montantRecouvre || 
+                                    dossierAny.finance?.montantRecupere || 
+                                    0;
+    
+    // Prendre le maximum entre les deux (pour éviter les doublons)
+    return Math.max(montantCumule, montantRecouvreDossier);
+  }
+
+  /**
+   * Gère le changement du montant recouvré
+   */
+  onMontantRecouvreChange(): void {
+    this.calculateMontantRestant();
   }
 
   /**
@@ -336,8 +678,13 @@ export class HuissierActionsComponent implements OnInit, OnDestroy {
           this.selectedAction = null;
           this.selectedFile = null;
           this.loadActions();
+          this.loadAllActions(); // Recharger toutes les actions pour mettre à jour la vue
           this.isLoading = false;
           this.toastService.success(`Action ${isEdit ? 'modifiée' : 'créée'} avec succès`);
+          // Recalculer la prédiction IA après l'action
+          if (this.selectedDossierId) {
+            this.recalculatePredictionAfterAction(this.selectedDossierId);
+          }
         },
         error: (error) => {
           console.error(`Erreur lors de la ${isEdit ? 'modification' : 'création'} de l'action:`, error);
@@ -365,7 +712,12 @@ export class HuissierActionsComponent implements OnInit, OnDestroy {
           next: () => {
             this.toastService.success('Action supprimée avec succès');
             this.loadActions();
+            this.loadAllActions(); // Recharger toutes les actions pour mettre à jour la vue
             this.isLoading = false;
+            // Recalculer la prédiction IA après la suppression
+            if (action.dossierId) {
+              this.recalculatePredictionAfterAction(action.dossierId);
+            }
           },
           error: (error) => {
             console.error('Erreur lors de la suppression de l\'action:', error);
@@ -418,8 +770,9 @@ export class HuissierActionsComponent implements OnInit, OnDestroy {
           console.log('Dossier passé aux audiences:', dossier);
           this.toastService.success('Dossier passé aux audiences avec succès');
           this.isLoading = false;
-          // Recharger les dossiers pour mettre à jour la liste
+          // Recharger les dossiers et actions pour mettre à jour la liste
           this.loadDossiers();
+          this.loadAllActions();
           // Réinitialiser la sélection
           this.selectedDossierId = null;
           this.selectedDossier = null;
@@ -437,8 +790,10 @@ export class HuissierActionsComponent implements OnInit, OnDestroy {
   /**
    * Vérifie si le bouton "Passer aux Audiences" peut être activé
    */
-  canPasserAuxAudiences(): boolean {
-    return this.selectedDossierId !== null && this.actions.length > 0;
+  canPasserAuxAudiences(dossier: DossierApi): boolean {
+    if (!dossier || !dossier.id) return false;
+    const actions = this.getActionsForDossier(dossier.id);
+    return actions.length > 0 && this.canCreateAction(dossier);
   }
 
   /**
@@ -537,9 +892,9 @@ export class HuissierActionsComponent implements OnInit, OnDestroy {
    * Récupère l'étape actuelle du dossier pour l'affichage
    */
   getDossierEtape(dossier: DossierApi): string {
-    // Si le backend renvoie etapeHuissier, l'utiliser
-    if ((dossier as any).etapeHuissier) {
-      const etape = (dossier as any).etapeHuissier;
+    // Si le backend renvoie etape_huissier, l'utiliser
+    const etape = this.getEtapeHuissier(dossier);
+    if (etape) {
       const labels: { [key: string]: string } = {
         'EN_ATTENTE_DOCUMENTS': 'En attente documents',
         'EN_DOCUMENTS': 'Documents',
@@ -552,11 +907,23 @@ export class HuissierActionsComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Extrait etape_huissier depuis le dossier (peut être dans différentes propriétés)
+   */
+  private getEtapeHuissier(dossier: DossierApi): string | undefined {
+    const dossierAny = dossier as any;
+    // Essayer différents noms possibles
+    return dossierAny.etape_huissier || 
+           dossierAny.etapeHuissier || 
+           dossierAny['etape_huissier'] ||
+           undefined;
+  }
+
+  /**
    * Vérifie si le dossier est à l'étape actions (pour permettre la création)
    */
   canCreateAction(dossier: DossierApi): boolean {
     if (!dossier) return false;
-    const etape = (dossier as any).etapeHuissier;
+    const etape = this.getEtapeHuissier(dossier);
     // Permettre la création si à l'étape actions
     return etape === 'EN_ACTIONS';
   }
@@ -574,25 +941,6 @@ export class HuissierActionsComponent implements OnInit, OnDestroy {
       // Vérifier si l'audience a un dossierId qui correspond
       const audienceDossierId = audience.dossierId || (audience as any).dossier_id;
       return audienceDossierId === dossierId;
-    });
-  }
-
-  /**
-   * Récupère les actions d'un dossier spécifique
-   */
-  getActionsForDossier(dossierId: number | null): ActionHuissier[] {
-    if (!dossierId || !this.allActions || this.allActions.length === 0) {
-      // Si c'est le dossier sélectionné, utiliser this.actions
-      if (this.selectedDossierId === dossierId) {
-        return this.actions;
-      }
-      return [];
-    }
-    
-    // Filtrer les actions qui correspondent à ce dossier
-    return this.allActions.filter(action => {
-      const actionDossierId = action.dossierId || (action as any).dossier?.id;
-      return actionDossierId === dossierId;
     });
   }
 
@@ -626,7 +974,7 @@ export class HuissierActionsComponent implements OnInit, OnDestroy {
     }
 
     if (!this.canAffecterAuFinance(this.selectedDossier)) {
-      this.toastService.error('Ce dossier doit avoir au moins une audience pour être affecté au finance');
+      this.toastService.error('Ce dossier doit avoir au moins une action ou une audience pour être affecté au finance');
       return;
     }
 
@@ -666,5 +1014,82 @@ export class HuissierActionsComponent implements OnInit, OnDestroy {
         }
       });
   }
-}
 
+  /**
+   * Obtient la prédiction IA pour un dossier
+   */
+  getPredictionForDossier(dossier: DossierApi): IaPredictionResult | null {
+    if (!dossier.id) return null;
+    
+    // Si on a déjà une prédiction en cache, l'utiliser
+    if (this.predictions[dossier.id]) {
+      return this.predictions[dossier.id];
+    }
+    
+    // Sinon, créer une prédiction depuis les données du dossier
+    if (!dossier.etatPrediction && dossier.riskScore === undefined) {
+      return null;
+    }
+    
+    const dossierModel = new Dossier({
+      id: String(dossier.id),
+      etatPrediction: dossier.etatPrediction,
+      riskScore: dossier.riskScore,
+      riskLevel: dossier.riskLevel,
+      datePrediction: dossier.datePrediction
+    });
+    
+    const prediction = this.iaPredictionService.getPredictionFromDossier(dossierModel);
+    // Ne stocker que si la prédiction n'est pas null
+    if (prediction) {
+      this.predictions[dossier.id] = prediction;
+    }
+    return prediction;
+  }
+
+  /**
+   * Déclenche le calcul de la prédiction IA pour un dossier
+   */
+  triggerPrediction(dossierId: number): void {
+    this.loadingPrediction = true;
+    this.iaPredictionService.predictForDossier(dossierId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (prediction) => {
+          this.predictions[dossierId] = prediction;
+          this.loadingPrediction = false;
+          
+          // Mettre à jour le dossier dans la liste avec la nouvelle prédiction
+          const dossier = this.dossiers.find(d => d.id === dossierId);
+          if (dossier) {
+            dossier.etatPrediction = prediction.etatFinal;
+            dossier.riskScore = prediction.riskScore;
+            dossier.riskLevel = prediction.riskLevel;
+            dossier.datePrediction = prediction.datePrediction;
+          }
+          
+          // Mettre à jour la prédiction pour le dossier sélectionné si c'est le même
+          if (this.selectedDossierId === dossierId) {
+            this.prediction = prediction;
+          }
+          
+          this.toastService.success('Prédiction IA calculée avec succès');
+        },
+        error: (error) => {
+          console.error('❌ Erreur lors de la prédiction IA:', error);
+          this.loadingPrediction = false;
+          this.toastService.error('Erreur lors du calcul de la prédiction IA');
+        }
+      });
+  }
+
+  /**
+   * Recalcule automatiquement la prédiction IA après une action huissier
+   */
+  recalculatePredictionAfterAction(dossierId: number): void {
+    // Attendre un peu pour que le backend mette à jour les données
+    setTimeout(() => {
+      this.triggerPrediction(dossierId);
+    }, 1000);
+  }
+}

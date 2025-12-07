@@ -213,6 +213,20 @@ export class DossierRecommandationsComponent implements OnInit, OnChanges, OnDes
     }
   }
 
+  /**
+   * Finalise le dossier amiable (appelé depuis le composant parent)
+   * Cette méthode sera appelée par le composant parent gestion-actions
+   */
+  finaliserDossier(): void {
+    // Émettre un événement pour que le composant parent ouvre le formulaire de finalisation
+    // Le composant parent (gestion-actions) gère l'ouverture du formulaire
+    if (this.dossierId) {
+      // Utiliser un EventEmitter ou appeler directement la méthode du parent
+      // Pour l'instant, on affiche un message
+      this.snackBar.open('Veuillez utiliser le bouton "Finaliser le Dossier" dans l\'onglet Détails', 'Fermer', { duration: 5000 });
+    }
+  }
+
   passerAuJuridique(): void {
     if (confirm('Êtes-vous sûr de vouloir passer ce dossier au Recouvrement Juridique ?')) {
       if (this.dossierId) {

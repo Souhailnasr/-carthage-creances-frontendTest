@@ -195,6 +195,9 @@ export interface TarifDossierRequest {
   quantite?: number;
   commentaire?: string;
   elementId?: number; // ID de l'élément lié (action, document, audience, etc.)
+  // ✅ NOUVEAU : Support de avocatId pour les honoraires d'avocat
+  // Le backend fait automatiquement le mapping avocatId → audienceId
+  avocatId?: number; // ID de l'avocat (pour les honoraires d'avocat uniquement)
 }
 
 export enum StatutTarif {

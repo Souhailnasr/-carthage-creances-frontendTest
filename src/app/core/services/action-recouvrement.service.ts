@@ -291,23 +291,78 @@ export class ActionRecouvrementService {
               error: new Error('DossierApiService non disponible')
             });
           }
-          return this.dossierApiService.updateMontantRecouvre(dossierId, montantRecouvre).pipe(
-            map((updatedDossier: DossierApi) => {
-              return {
-                action: createdAction,
-                dossier: updatedDossier,
-                montantUpdated: true
-              };
+          // Calculer le montant cumulé : additionner le nouveau montant au montant existant
+          // D'abord, récupérer le dossier actuel pour obtenir le montant recouvré existant
+          return this.dossierApiService.getDossierById(dossierId).pipe(
+            switchMap((currentDossier: DossierApi) => {
+              const montantRecouvreActuel = (currentDossier as any).montantRecouvre || 
+                                            (currentDossier.finance as any)?.montantRecouvre ||
+                                            currentDossier.finance?.montantRecupere || 0;
+              
+              // Le montant recouvré envoyé est déjà cumulé dans le formulaire, donc on l'utilise tel quel
+              // Mais si le backend attend un montant additionnel, on calcule la différence
+              const montantACumuler = montantRecouvre - montantRecouvreActuel;
+              
+              console.log('💰 Montant recouvré actuel:', montantRecouvreActuel);
+              console.log('💰 Montant recouvré à envoyer:', montantRecouvre);
+              console.log('💰 Montant à cumuler:', montantACumuler);
+              
+              // Utiliser le montant total (cumulé) pour la mise à jour
+              return this.dossierApiService.updateMontantRecouvre(dossierId, montantRecouvre).pipe(
+                map((updatedDossier: DossierApi) => {
+                  console.log('✅ Montant recouvré mis à jour avec succès:', updatedDossier);
+                  return {
+                    action: createdAction,
+                    dossier: updatedDossier,
+                    montantUpdated: true
+                  };
+                }),
+                catchError((error) => {
+                  // Si la mise à jour du montant échoue, retourner quand même l'action créée
+                  console.error('❌ Erreur lors de la mise à jour du montant:', error);
+                  console.error('❌ Détails de l\'erreur:', {
+                    status: error?.status,
+                    statusText: error?.statusText,
+                    message: error?.message,
+                    error: error?.error,
+                    url: error?.url
+                  });
+                  
+                  // Si c'est une erreur 404, essayer de recharger le dossier pour vérifier son état
+                  if (error?.status === 404) {
+                    console.warn('⚠️ Endpoint non trouvé (404). Le dossier peut ne pas être en phase amiable.');
+                  }
+                  
+                  return of({
+                    action: createdAction,
+                    dossier: null,
+                    montantUpdated: false,
+                    error: error
+                  });
+                })
+              );
             }),
             catchError((error) => {
-              // Si la mise à jour du montant échoue, retourner quand même l'action créée
-              console.error('❌ Erreur lors de la mise à jour du montant:', error);
-              return of({
-                action: createdAction,
-                dossier: null,
-                montantUpdated: false,
-                error: error
-              });
+              // Si le chargement du dossier échoue, essayer quand même la mise à jour
+              console.warn('⚠️ Impossible de charger le dossier actuel, tentative de mise à jour directe:', error);
+              return this.dossierApiService.updateMontantRecouvre(dossierId, montantRecouvre).pipe(
+                map((updatedDossier: DossierApi) => {
+                  return {
+                    action: createdAction,
+                    dossier: updatedDossier,
+                    montantUpdated: true
+                  };
+                }),
+                catchError((updateError) => {
+                  console.error('❌ Erreur lors de la mise à jour du montant (fallback):', updateError);
+                  return of({
+                    action: createdAction,
+                    dossier: null,
+                    montantUpdated: false,
+                    error: updateError
+                  });
+                })
+              );
             })
           );
         } else {

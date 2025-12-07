@@ -20,10 +20,14 @@ import { FormsModule } from '@angular/forms';
 import { Subject, takeUntil, finalize } from 'rxjs';
 import { DossierApiService } from '../../../core/services/dossier-api.service';
 import { JwtAuthService } from '../../../core/services/jwt-auth.service';
+import { IaPredictionService } from '../../../core/services/ia-prediction.service';
 import { DossierApi, TypeRecouvrement, Urgence } from '../../../shared/models/dossier-api.model';
 import { Page } from '../../../shared/models/pagination.model';
 import { User } from '../../../shared/models';
 import { Role } from '../../../shared/models/enums.model';
+import { IaPredictionBadgeComponent } from '../../../shared/components/ia-prediction-badge/ia-prediction-badge.component';
+import { IaPredictionResult } from '../../../shared/models/ia-prediction-result.model';
+import { Dossier } from '../../../shared/models/dossier.model';
 
 @Component({
   selector: 'app-dossiers-amiable',
@@ -45,7 +49,8 @@ import { Role } from '../../../shared/models/enums.model';
     MatTooltipModule,
     MatSelectModule,
     MatMenuModule,
-    MatExpansionModule
+    MatExpansionModule,
+    IaPredictionBadgeComponent
   ],
   templateUrl: './dossiers-amiable.component.html',
   styleUrls: ['./dossiers-amiable.component.scss']
@@ -90,13 +95,14 @@ export class DossiersAmiableComponent implements OnInit, OnDestroy {
   sortKey: 'dateCreation' | 'montantCreance' | 'statut' = 'dateCreation';
   sortDir: 'asc' | 'desc' = 'desc';
   
-  displayedColumns: string[] = ['numeroDossier', 'titre', 'montantCreance', 'creancier', 'debiteur', 'urgence', 'statut', 'dateCreation', 'actions'];
+  displayedColumns: string[] = ['numeroDossier', 'titre', 'montantCreance', 'creancier', 'debiteur', 'predictionIA', 'urgence', 'statut', 'dateCreation', 'actions'];
   
   private destroy$ = new Subject<void>();
 
   constructor(
     private dossierApiService: DossierApiService,
     private jwtAuthService: JwtAuthService,
+    private iaPredictionService: IaPredictionService,
     private snackBar: MatSnackBar,
     private router: Router
   ) {}
@@ -236,6 +242,42 @@ export class DossiersAmiableComponent implements OnInit, OnDestroy {
     this.pageIndex = event.pageIndex;
     this.pageSize = event.pageSize;
     this.loadDossiers();
+  }
+
+  /**
+   * Obtenir la prédiction IA depuis un dossier API
+   */
+  getPrediction(dossier: DossierApi): IaPredictionResult | null {
+    if (!dossier.etatPrediction && dossier.riskScore === undefined) {
+      return null;
+    }
+    // Convertir DossierApi en Dossier pour utiliser le service
+    const dossierModel = new Dossier({
+      id: String(dossier.id),
+      etatPrediction: dossier.etatPrediction,
+      riskScore: dossier.riskScore,
+      riskLevel: dossier.riskLevel,
+      datePrediction: dossier.datePrediction
+    });
+    return this.iaPredictionService.getPredictionFromDossier(dossierModel);
+  }
+
+  /**
+   * Déclencher une prédiction IA pour un dossier
+   */
+  triggerPrediction(dossierId: number, event: Event): void {
+    event.stopPropagation(); // Empêcher la navigation vers le détail
+    this.iaPredictionService.predictForDossier(dossierId).subscribe({
+      next: (prediction) => {
+        this.snackBar.open('Prédiction IA calculée avec succès', 'Fermer', { duration: 3000 });
+        // Rafraîchir les dossiers pour obtenir la nouvelle prédiction
+        this.loadDossiers();
+      },
+      error: (error) => {
+        console.error('❌ Erreur lors de la prédiction:', error);
+        this.snackBar.open('Erreur lors du calcul de la prédiction IA', 'Fermer', { duration: 3000 });
+      }
+    });
   }
 
   onSortChange(sort: Sort): void {

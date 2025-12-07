@@ -118,35 +118,83 @@ export class ValidationTarifsEnqueteComponent implements OnInit, OnDestroy {
   }
 
   validerTarifFixe(traitement: any): void {
+    this.isLoading = true;
+    
     if (!traitement.tarifExistant) {
-      // Créer le tarif fixe s'il n'existe pas
+      // ✅ Pour les frais fixes, créer le tarif avec validation automatique
       const tarifRequest: TarifDossierRequest = {
         phase: PhaseFrais.ENQUETE,
         categorie: 'ENQUETE_PRECONTENTIEUSE',
         typeElement: 'Enquête Précontentieuse',
         coutUnitaire: traitement.fraisFixe || 300,
         quantite: 1,
-        commentaire: 'Frais fixe selon annexe'
+        commentaire: 'Frais fixe selon annexe - Validation automatique'
       };
 
       this.financeService.ajouterTarif(this.dossierId, tarifRequest)
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: (tarifDto) => {
+            console.log('✅ Tarif créé:', tarifDto);
             traitement.tarifExistant = tarifDto;
+            // ✅ Valider automatiquement après création pour les frais fixes
             this.validerTarif(tarifDto);
           },
           error: (error) => {
-            this.toastService.error(error.message || 'Erreur lors de la création du tarif');
+            console.error('❌ Erreur lors de la création du tarif:', error);
+            const errorMessage = error.error?.message || error.error?.error || error.message || '';
+            
+            // ✅ CORRECTION : Si le tarif existe déjà (erreur "unique result" ou "existe déjà"), 
+            // récupérer le tarif existant et le valider
+            if (errorMessage.includes('unique result') || 
+                errorMessage.includes('existe déjà') || 
+                errorMessage.includes('already exists') ||
+                errorMessage.includes('Un tarif existe déjà')) {
+              console.log('⚠️ Tarif existe déjà, tentative de récupération...');
+              // Essayer de récupérer le tarif existant depuis les traitements
+              this.financeService.getTraitementsDossier(this.dossierId)
+                .pipe(takeUntil(this.destroy$))
+                .subscribe({
+                  next: (traitements) => {
+                    const tarifExistant = traitements?.phaseEnquete?.enquetePrecontentieuse?.tarifExistant;
+                    if (tarifExistant) {
+                      console.log('✅ Tarif existant trouvé:', tarifExistant);
+                      traitement.tarifExistant = tarifExistant;
+                      // Valider le tarif existant
+                      this.validerTarif(tarifExistant);
+                    } else {
+                      this.toastService.warning('Un tarif existe déjà pour cette phase. Veuillez recharger la page.');
+                      this.isLoading = false;
+                    }
+                  },
+                  error: (err) => {
+                    console.error('❌ Erreur lors de la récupération des traitements:', err);
+                    this.toastService.warning('Un tarif existe déjà. Veuillez recharger la page pour voir le tarif existant.');
+                    this.isLoading = false;
+                  }
+                });
+            } else {
+              this.toastService.error(errorMessage || 'Erreur lors de la création du tarif');
+              this.isLoading = false;
+            }
           }
         });
     } else {
+      // Si le tarif existe déjà, juste le valider
       this.validerTarif(traitement.tarifExistant);
     }
   }
 
   validerTarif(tarif: any): void {
+    if (!tarif || !tarif.id) {
+      console.error('❌ Tarif invalide pour validation:', tarif);
+      this.toastService.error('Tarif invalide');
+      return;
+    }
+    
     this.isLoading = true;
+    console.log('📤 Validation du tarif:', tarif.id);
+    
     this.financeService.validerTarif(tarif.id)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
@@ -168,8 +216,10 @@ export class ValidationTarifsEnqueteComponent implements OnInit, OnDestroy {
           this.isLoading = false;
         },
         error: (error) => {
-          console.error('Erreur lors de la validation du tarif:', error);
-          this.toastService.error(error.message || 'Erreur lors de la validation du tarif');
+          console.error('❌ Erreur lors de la validation du tarif:', error);
+          console.error('❌ Détails de l\'erreur:', error.error);
+          const errorMessage = error.error?.message || error.error?.error || error.message || 'Erreur lors de la validation du tarif';
+          this.toastService.error(errorMessage);
           this.isLoading = false;
         }
       });

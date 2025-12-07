@@ -2,8 +2,10 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
-import { NotificationService, Notification, TypeNotification, StatutNotification } from '../../../core/services/notification.service';
-import { interval, Subscription } from 'rxjs';
+import { NotificationCompleteService } from '../../../core/services/notification-complete.service';
+import { JwtAuthService } from '../../../core/services/jwt-auth.service';
+import { Notification, TypeNotification, StatutNotification } from '../../../shared/models/notification-complete.model';
+import { Subject, takeUntil, interval } from 'rxjs';
 
 @Component({
   selector: 'app-notifications-page',
@@ -18,10 +20,11 @@ export class NotificationsPageComponent implements OnInit, OnDestroy {
   selectedFilter: 'all' | 'unread' | 'read' = 'all';
   selectedType: 'all' | TypeNotification = 'all';
   isLoading: boolean = false;
-  private subscription: Subscription = new Subscription();
+  private destroy$ = new Subject<void>();
 
   constructor(
-    private notificationService: NotificationService
+    private notificationService: NotificationCompleteService,
+    private jwtAuthService: JwtAuthService
   ) {}
 
   ngOnInit(): void {
@@ -30,45 +33,76 @@ export class NotificationsPageComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.subscription.unsubscribe();
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   loadNotifications(): void {
     this.isLoading = true;
-    // Mock user ID pour les tests
-    const mockUserId = 1;
-    this.notificationService.getNotifications(mockUserId).subscribe({
-      next: (notifications: Notification[]) => {
-        this.notifications = notifications;
-        this.applyFilters();
-        this.isLoading = false;
-      },
-      error: (error: any) => {
-        console.error('Erreur lors du chargement des notifications', error);
-        this.isLoading = false;
-      }
-    });
+    this.jwtAuthService.getCurrentUser()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (user) => {
+          if (user?.id) {
+            const userId = typeof user.id === 'string' ? parseInt(user.id) : Number(user.id);
+            this.notificationService.getNotificationsByUser(userId)
+              .pipe(takeUntil(this.destroy$))
+              .subscribe({
+                next: (notifications: Notification[]) => {
+                  this.notifications = notifications || [];
+                  this.applyFilters();
+                  this.isLoading = false;
+                },
+                error: (error: any) => {
+                  console.error('Erreur lors du chargement des notifications', error);
+                  this.notifications = [];
+                  this.applyFilters();
+                  this.isLoading = false;
+                }
+              });
+          } else {
+            console.warn('⚠️ Utilisateur non connecté');
+            this.isLoading = false;
+          }
+        },
+        error: (error) => {
+          console.error('Erreur lors du chargement de l\'utilisateur:', error);
+          this.isLoading = false;
+        }
+      });
   }
 
   startPolling(): void {
     // Polling toutes les 30 secondes pour les nouvelles notifications
-    this.subscription.add(
-      interval(30000).subscribe(() => {
+    interval(30000)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
         this.loadNotifications();
-      })
-    );
+      });
   }
 
   applyFilters(): void {
     this.filteredNotifications = this.notifications.filter(notification => {
       const matchesStatus = this.selectedFilter === 'all' ||
-        (this.selectedFilter === 'unread' && notification.statut === 'NON_LUE') ||
-        (this.selectedFilter === 'read' && notification.statut === 'LUE');
+        (this.selectedFilter === 'unread' && notification.statut === StatutNotification.NON_LUE) ||
+        (this.selectedFilter === 'read' && notification.statut === StatutNotification.LUE);
 
       const matchesType = this.selectedType === 'all' || notification.type === this.selectedType;
 
       return matchesStatus && matchesType;
     });
+  }
+
+  getUnreadCount(): number {
+    return this.notifications.filter(n => n.statut === StatutNotification.NON_LUE).length;
+  }
+
+  getTotalCount(): number {
+    return this.notifications.length;
+  }
+
+  getReadCount(): number {
+    return this.notifications.filter(n => n.statut === StatutNotification.LUE).length;
   }
 
   onFilterChange(): void {
@@ -80,46 +114,81 @@ export class NotificationsPageComponent implements OnInit, OnDestroy {
   }
 
   markAsRead(notification: Notification): void {
-    if (notification.statut === 'NON_LUE') {
-      this.notificationService.marquerLue(notification.id).subscribe({
-        next: () => {
-          notification.statut = 'LUE';
-          notification.dateLecture = new Date().toISOString();
-          this.applyFilters();
-        },
-        error: (error: any) => {
-          console.error('Erreur lors du marquage comme lue:', error);
-        }
-      });
+    if (notification.statut === StatutNotification.NON_LUE && notification.id) {
+      this.notificationService.marquerLue(notification.id)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: () => {
+            notification.statut = StatutNotification.LUE;
+            notification.dateLecture = new Date().toISOString();
+            this.applyFilters();
+            // Recharger le compteur
+            this.loadNotifications();
+          },
+          error: (error: any) => {
+            console.error('Erreur lors du marquage comme lue:', error);
+          }
+        });
     }
   }
 
   markAllAsRead(): void {
-    const mockUserId = 1;
-    this.notificationService.marquerToutesLues(mockUserId).subscribe({
-      next: () => {
-        this.notifications.forEach(notification => {
-          notification.statut = 'LUE';
-          notification.dateLecture = new Date().toISOString();
-        });
-        this.applyFilters();
-      },
-      error: (error: any) => {
-        console.error('Erreur lors du marquage de toutes les notifications:', error);
-      }
-    });
+    this.jwtAuthService.getCurrentUser()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (user) => {
+          if (user?.id) {
+            const userId = typeof user.id === 'string' ? parseInt(user.id) : Number(user.id);
+            this.notificationService.marquerToutesLues(userId)
+              .pipe(takeUntil(this.destroy$))
+              .subscribe({
+                next: () => {
+                  this.notifications.forEach(notification => {
+                    notification.statut = StatutNotification.LUE;
+                    notification.dateLecture = new Date().toISOString();
+                  });
+                  this.applyFilters();
+                  // Recharger les notifications
+                  this.loadNotifications();
+                },
+                error: (error: any) => {
+                  console.error('Erreur lors du marquage de toutes les notifications:', error);
+                }
+              });
+          }
+        },
+        error: (error) => {
+          console.error('Erreur lors du chargement de l\'utilisateur:', error);
+        }
+      });
   }
 
   deleteNotification(notification: Notification): void {
-    this.notificationService.deleteNotification(notification.id).subscribe({
-      next: () => {
-        this.notifications = this.notifications.filter(n => n.id !== notification.id);
-        this.applyFilters();
-      },
-      error: (error: any) => {
-        console.error('Erreur lors de la suppression:', error);
-      }
-    });
+    if (!notification.id) {
+      console.warn('⚠️ Impossible de supprimer la notification: ID manquant');
+      return;
+    }
+
+    // Demander confirmation avant suppression
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cette notification ?')) {
+      return;
+    }
+
+    this.notificationService.supprimerNotification(notification.id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          // Retirer la notification de la liste locale après confirmation du backend
+          this.notifications = this.notifications.filter(n => n.id !== notification.id);
+          this.applyFilters();
+          console.log('✅ Notification supprimée avec succès');
+        },
+        error: (error: any) => {
+          console.error('❌ Erreur lors de la suppression de la notification:', error);
+          // Afficher un message d'erreur à l'utilisateur
+          alert('Erreur lors de la suppression de la notification. Veuillez réessayer.');
+        }
+      });
   }
 
   getNotificationIcon(type: string): string {
@@ -160,8 +229,9 @@ export class NotificationsPageComponent implements OnInit, OnDestroy {
     return classes[type] || 'notification-info';
   }
 
-  formatDate(dateString: string): string {
-    const date = new Date(dateString);
+  formatDate(dateInput: string | Date): string {
+    // Convertir en Date si c'est une string
+    const date = dateInput instanceof Date ? dateInput : new Date(dateInput);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
     const diffMinutes = Math.round(diffMs / (1000 * 60));
@@ -173,10 +243,6 @@ export class NotificationsPageComponent implements OnInit, OnDestroy {
     if (diffHours < 24) return `il y a ${diffHours} heures`;
     if (diffDays < 30) return `il y a ${diffDays} jours`;
     return date.toLocaleDateString('fr-FR');
-  }
-
-  getUnreadCount(): number {
-    return this.notifications.filter(n => n.statut === 'NON_LUE').length;
   }
 
   getTypeOptions(): Array<{value: string, label: string}> {

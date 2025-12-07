@@ -6,6 +6,7 @@ import { DossierService, DossierStats } from '../../../core/services/dossier.ser
 import { DossierApiService } from '../../../core/services/dossier-api.service';
 import { RoleService } from '../../../core/services/role.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { StatistiqueCompleteService } from '../../../core/services/statistique-complete.service';
 import { User, Role, Dossier, StatutDossier, Urgence } from '../../models';
 import { Subject, takeUntil } from 'rxjs';
 import { NotificationComponent } from '../notification/notification.component';
@@ -74,6 +75,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     public roleService: RoleService, // Public to be accessible in template
     private authService: AuthService,
     private jwtAuthService: JwtAuthService,
+    private statistiqueCompleteService: StatistiqueCompleteService,
     private router: Router
   ) { }
 
@@ -90,13 +92,27 @@ export class DashboardComponent implements OnInit, OnDestroy {
       
       this.currentUser = user;
       
+      // ✅ CORRECTION: Rediriger les Super Admins vers leur dashboard spécifique
+      if (this.isSuperAdmin()) {
+        console.log('🔍 Dashboard - Super Admin détecté, redirection vers /admin/dashboard');
+        this.router.navigate(['/admin/dashboard']);
+        return;
+      }
+      
+      // ✅ CORRECTION: Rediriger les Chefs de Dossier vers leur dashboard dédié
+      if (this.currentUser?.roleUtilisateur === 'CHEF_DEPARTEMENT_DOSSIER' && this.router.url.includes('/dossier/dashboard')) {
+        console.log('🔍 Chef Dossier détecté sur /dossier/dashboard, redirection vers /dossier/chef-dashboard');
+        this.router.navigate(['/dossier/chef-dashboard']);
+        return;
+      }
+      
       // 🔍 Debug: Vérifier l'état de l'authentification
       console.log('🔍 Dashboard - Utilisateur actuel:', this.currentUser);
       console.log('🔍 Dashboard - AuthToken sessionStorage:', sessionStorage.getItem('authToken'));
       console.log('🔍 Dashboard - ID utilisateur:', this.currentUser?.id);
     
-    console.log('🔍 DashboardComponent - Utilisateur actuel:', this.currentUser);
-    console.log('🔍 DashboardComponent - Rôle:', this.currentUser?.roleUtilisateur);
+      console.log('🔍 DashboardComponent - Utilisateur actuel:', this.currentUser);
+      console.log('🔍 DashboardComponent - Rôle:', this.currentUser?.roleUtilisateur);
     
       // Charger les données du dashboard seulement quand l'utilisateur est disponible
       this.loadDashboardData();
@@ -190,47 +206,80 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   loadStatistics(): void {
-    // Déterminer le rôle et l'ID agent pour les statistiques
-    const role = this.currentUser?.roleUtilisateur === 'AGENT_DOSSIER' ? 'AGENT' : 'CHEF';
-    const agentId = this.currentUser?.roleUtilisateur === 'AGENT_DOSSIER' ? Number(this.currentUser?.id) : undefined;
-    
-    // Charger les vraies statistiques depuis l'API
-    this.dossierApiService.stats(role as 'CHEF' | 'AGENT', agentId)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
+    // Prompt 3 : Agent Dossier doit utiliser getStatistiquesMesDossiers()
+    if (this.currentUser?.roleUtilisateur === 'AGENT_DOSSIER') {
+      // Utiliser le nouveau service pour les statistiques personnelles
+      this.statistiqueCompleteService.getStatistiquesMesDossiers().pipe(
+        takeUntil(this.destroy$)
+      ).subscribe({
         next: (stats: any) => {
-          console.log('✅ Statistiques chargées:', stats);
-          this.stats = {
-            totalDossiers: stats.totalDossiers || 0,
-            dossiersEnCours: stats.dossiersEnCours || 0,
-            dossiersValides: stats.dossiersValides || 0,
-            dossiersRejetes: stats.dossiersRejetes || 0,
-            dossiersAmiables: stats.dossiersAmiables || 0,
-            dossiersJuridiques: stats.dossiersJuridiques || 0,
-            dossiersClotures: stats.dossiersClotures || 0,
-            dossiersCrees: stats.dossiersCreesCeMois || 0,
-            agentsActifs: stats.agentsActifs || 0,
-            performanceAgents: stats.performanceAgents || 0,
-            dossiersCreesParAgent: stats.dossiersCreesParAgent || 0,
-            dossiersAssignes: stats.dossiersAssignes || 0
-          };
+          console.log('✅ Statistiques personnelles chargées:', stats);
+          // Mapper SANS valeurs par défaut - 0 doit rester 0
+          if (stats.dossiersTraites !== undefined && stats.dossiersTraites !== null) {
+            this.stats.totalDossiers = stats.dossiersTraites;
+          }
+          if (stats.dossiersEnCours !== undefined && stats.dossiersEnCours !== null) {
+            this.stats.dossiersEnCours = stats.dossiersEnCours;
+          }
+          if (stats.dossiersValides !== undefined && stats.dossiersValides !== null) {
+            this.stats.dossiersValides = stats.dossiersValides;
+          }
+          if (stats.dossiersClotures !== undefined && stats.dossiersClotures !== null) {
+            this.stats.dossiersClotures = stats.dossiersClotures;
+          }
+          if (stats.montantRecouvre !== undefined && stats.montantRecouvre !== null) {
+            // Pas de mapping direct, mais on peut l'utiliser pour d'autres stats
+          }
+          if (stats.tauxReussite !== undefined && stats.tauxReussite !== null) {
+            this.stats.performanceAgents = stats.tauxReussite;
+          }
         },
         error: (error: any) => {
-          console.error('❌ Erreur lors du chargement des statistiques:', error);
-          // En cas d'erreur, utiliser le service de dossier
-          this.dossierService.refreshStats()
-            .pipe(takeUntil(this.destroy$))
-            .subscribe({
-              next: (s: DossierStats) => {
-                this.stats = s;
-              },
-              error: (err: any) => {
-                console.error('❌ Erreur lors du chargement des statistiques (fallback):', err);
-                // Garder les valeurs par défaut (0)
-              }
-            });
+          console.error('❌ Erreur lors du chargement des statistiques personnelles:', error);
         }
       });
+    } else {
+      // Pour les chefs, utiliser l'ancien système
+      const role = 'CHEF';
+      this.dossierApiService.stats(role as 'CHEF' | 'AGENT')
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (stats: any) => {
+            console.log('✅ Statistiques chargées:', stats);
+            // Mapper SANS valeurs par défaut - 0 doit rester 0
+            if (stats.totalDossiers !== undefined && stats.totalDossiers !== null) {
+              this.stats.totalDossiers = stats.totalDossiers;
+            }
+            if (stats.dossiersEnCours !== undefined && stats.dossiersEnCours !== null) {
+              this.stats.dossiersEnCours = stats.dossiersEnCours;
+            }
+            if (stats.dossiersValides !== undefined && stats.dossiersValides !== null) {
+              this.stats.dossiersValides = stats.dossiersValides;
+            }
+            if (stats.dossiersRejetes !== undefined && stats.dossiersRejetes !== null) {
+              this.stats.dossiersRejetes = stats.dossiersRejetes;
+            }
+            if (stats.dossiersAmiables !== undefined && stats.dossiersAmiables !== null) {
+              this.stats.dossiersAmiables = stats.dossiersAmiables;
+            }
+            if (stats.dossiersJuridiques !== undefined && stats.dossiersJuridiques !== null) {
+              this.stats.dossiersJuridiques = stats.dossiersJuridiques;
+            }
+            if (stats.dossiersClotures !== undefined && stats.dossiersClotures !== null) {
+              this.stats.dossiersClotures = stats.dossiersClotures;
+            }
+            if (stats.dossiersCreesCeMois !== undefined && stats.dossiersCreesCeMois !== null) {
+              this.stats.dossiersCrees = stats.dossiersCreesCeMois;
+            }
+            if (stats.agentsActifs !== undefined && stats.agentsActifs !== null) {
+              this.stats.agentsActifs = stats.agentsActifs;
+            }
+          },
+          error: (error: any) => {
+            console.error('❌ Erreur lors du chargement des statistiques:', error);
+          }
+        });
+    }
   }
 
   loadAgentPersonalStats(): void {

@@ -21,11 +21,76 @@
     </div>
   </div>
 
+  <!-- Actions Rapides - Nouveau Système -->
+  <div class="quick-actions-new-section">
+    <div class="section-header">
+      <h2><i class="fas fa-bolt"></i> Actions Rapides</h2>
+    </div>
+    <div class="actions-grid">
+      <a routerLink="/admin/notifications/envoyer" class="action-card primary">
+        <div class="action-icon">
+          <i class="fas fa-paper-plane"></i>
+        </div>
+        <div class="action-content">
+          <h4>Envoyer Notification</h4>
+          <p>Envoyer une notification à tous mes agents</p>
+        </div>
+        <div class="action-arrow">
+          <i class="fas fa-chevron-right"></i>
+        </div>
+      </a>
+
+      <a routerLink="/chef-amiable/taches/create" class="action-card accent">
+        <div class="action-icon">
+          <i class="fas fa-tasks"></i>
+        </div>
+        <div class="action-content">
+          <h4>Créer une Tâche</h4>
+          <p>Assigner une tâche urgente à un agent</p>
+        </div>
+        <div class="action-arrow">
+          <i class="fas fa-chevron-right"></i>
+        </div>
+      </a>
+
+      <a routerLink="/chef-amiable/gestion-actions" class="action-card success">
+        <div class="action-icon">
+          <i class="fas fa-list-check"></i>
+        </div>
+        <div class="action-content">
+          <h4>Gestion des Actions</h4>
+          <p>Gérer les actions de recouvrement amiable</p>
+        </div>
+        <div class="action-arrow">
+          <i class="fas fa-chevron-right"></i>
+        </div>
+      </a>
+
+      <a routerLink="/chef-amiable/mes-agents" class="action-card info">
+        <div class="action-icon">
+          <i class="fas fa-users"></i>
+        </div>
+        <div class="action-content">
+          <h4>Mes Agents</h4>
+          <p>Voir tous mes agents et leurs performances</p>
+        </div>
+        <div class="action-arrow">
+          <i class="fas fa-chevron-right"></i>
+        </div>
+      </a>
+    </div>
+  </div>
+
   <!-- Section Agents -->
-  <div class="agents-section" *ngIf="agentsActifs.length > 0">
-    <h2><i class="fas fa-users"></i> Mes Agents ({{ agentsActifs.length }})</h2>
-    <div class="agents-grid">
-      <div class="agent-card" *ngFor="let agent of agentsActifs">
+  <div class="agents-section">
+    <div class="section-header">
+      <h2><i class="fas fa-users"></i> Mes Agents ({{ agentsActifs.length }})</h2>
+      <a routerLink="/chef-amiable/mes-agents" class="view-all-link" *ngIf="agentsActifs.length > 0">
+        <i class="fas fa-arrow-right"></i> Voir tous
+      </a>
+    </div>
+    <div class="agents-grid" *ngIf="agentsActifs.length > 0">
+      <div class="agent-card" *ngFor="let agent of agentsActifs.slice(0, 4)">
         <div class="agent-avatar">
           {{ agent.prenom.charAt(0) }}{{ agent.nom.charAt(0) }}
         </div>
@@ -34,11 +99,106 @@
           <p class="agent-email">{{ agent.email }}</p>
           <span class="agent-role-badge">Agent Amiable</span>
         </div>
+        <div class="agent-status">
+          <span class="status-indicator active"></span>
+          <span class="status-text">Actif</span>
+        </div>
       </div>
+    </div>
+    <div class="no-agents" *ngIf="agentsActifs.length === 0">
+      <i class="fas fa-users-slash"></i>
+      <p>Aucun agent actif pour le moment</p>
+      <a routerLink="/chef-amiable/mes-agents" class="btn-primary">Gérer les agents</a>
     </div>
   </div>
 
-  <!-- Statistiques principales -->
+  <!-- Statistiques Complètes - Nouveau Système -->
+  <div class="stats-completes-section" *ngIf="statsDepartement && !loadingStatsCompletes">
+    <div class="section-header">
+      <h2><i class="fas fa-chart-bar"></i> Statistiques Complètes du Département</h2>
+    </div>
+    <div class="stats-grid-completes">
+      <app-stat-card 
+        *ngIf="statsDepartement.nombreAgents !== null && statsDepartement.nombreAgents !== undefined"
+        title="Mes Agents"
+        [stats]="{
+          'Nombre d\'agents': statsDepartement.nombreAgents ?? 0,
+          'Agents dans le département': (statsDepartement.agents && statsDepartement.agents.length) ? statsDepartement.agents.length : 0
+        }"
+        icon="people"
+        color="primary">
+      </app-stat-card>
+
+      <app-stat-card 
+        *ngIf="statsDepartement.totalDossiersDepartement !== null && statsDepartement.totalDossiersDepartement !== undefined && statsDepartement.chef"
+        title="Dossiers du Département"
+        [stats]="{
+          'Total': statsDepartement.totalDossiersDepartement ?? 0,
+          'Clôturés': (statsDepartement.chef.dossiersClotures !== null && statsDepartement.chef.dossiersClotures !== undefined) ? statsDepartement.chef.dossiersClotures : 0,
+          'En cours': (statsDepartement.chef.dossiersTraites !== null && statsDepartement.chef.dossiersTraites !== undefined) ? ((statsDepartement.chef.dossiersTraites - (statsDepartement.chef.dossiersClotures || 0))) : 0
+        }"
+        icon="folder"
+        color="accent">
+      </app-stat-card>
+
+      <app-stat-card 
+        *ngIf="statsDepartement.chef && (statsDepartement.chef.actionsAmiables !== null || statsDepartement.chef.tauxReussite !== null)"
+        title="Actions Amiables"
+        [stats]="{
+          'Total': statsDepartement.chef.actionsAmiables ?? 0,
+          'Taux de réussite': (statsDepartement.chef.tauxReussite !== null && statsDepartement.chef.tauxReussite !== undefined) ? (statsDepartement.chef.tauxReussite * 100).toFixed(2) + '%' : '0%'
+        }"
+        icon="handshake"
+        color="primary">
+      </app-stat-card>
+
+      <app-stat-card 
+        *ngIf="statsDepartement.chef && (statsDepartement.chef.tauxReussite !== null || statsDepartement.chef.montantRecouvre !== null || statsDepartement.chef.montantEnCours !== null)"
+        title="Performance"
+        [stats]="{
+          'Taux de réussite': (statsDepartement.chef.tauxReussite !== null && statsDepartement.chef.tauxReussite !== undefined) ? (statsDepartement.chef.tauxReussite * 100).toFixed(2) + '%' : '0%',
+          'Montant récupéré': formatAmount(statsDepartement.chef.montantRecouvre || 0),
+          'Montant en cours': formatAmount(statsDepartement.chef.montantEnCours || 0)
+        }"
+        icon="trending_up"
+        color="accent">
+      </app-stat-card>
+    </div>
+
+    <!-- ✅ NOUVEAU : Section Recouvrement par Phase -->
+    <div class="recouvrement-phase-section" *ngIf="statsRecouvrement">
+      <div class="section-header">
+        <h3><i class="fas fa-chart-pie"></i> Recouvrement par Phase</h3>
+      </div>
+      <div class="phase-cards">
+        <app-stat-card 
+          title="Recouvrement Amiable"
+          [stats]="{
+            'Montant recouvré': formatAmount(statsRecouvrement.montantRecouvrePhaseAmiable || 0),
+            'Nombre de dossiers': statsRecouvrement.dossiersAvecRecouvrementAmiable || 0,
+            'Taux de recouvrement': (statsRecouvrement.tauxRecouvrementAmiable || 0).toFixed(2) + '%'
+          }"
+          icon="handshake"
+          color="primary">
+        </app-stat-card>
+
+        <app-stat-card 
+          title="Vue d'Ensemble"
+          [stats]="{
+            'Montant total recouvré': formatAmount(statsRecouvrement.montantRecouvreTotal || 0),
+            'Montant total créances': formatAmount(statsRecouvrement.montantTotalCreances || 0)
+          }"
+          icon="chart-bar"
+          color="accent">
+        </app-stat-card>
+      </div>
+    </div>
+  </div>
+  <div *ngIf="loadingStatsCompletes" class="loading-stats">
+    <i class="fas fa-spinner fa-spin"></i> Chargement des statistiques...
+  </div>
+
+  <!-- Statistiques principales (Ancien Système - Conservé) -->
   <div class="stats-grid">
     <div class="stat-card">
       <div class="stat-icon">
@@ -122,54 +282,82 @@
   </div>
 
   <!-- Graphiques et performances -->
-  <div class="charts-section">
+  <div class="charts-section" *ngIf="performances && performances.length > 0">
     <div class="chart-container">
       <h2>Performances des Agents</h2>
       <div class="performance-list">
         <div class="performance-item" *ngFor="let perf of performances">
           <div class="agent-info">
-            <h4>{{ perf.nomAgent }}</h4>
-            <p>{{ perf.dossiersAssignes }} dossiers assignés</p>
+            <h4>{{ perf.nomAgent || 'Agent' }}</h4>
+            <p>{{ perf.dossiersAssignes || 0 }} dossiers assignés</p>
           </div>
           <div class="performance-stats">
             <div class="stat">
               <span class="label">Taux de réussite:</span>
-              <span class="value">{{ perf.tauxReussite | number:'1.1-1' }}%</span>
+              <span class="value">{{ (perf.tauxReussite || 0) | number:'1.1-1' }}%</span>
             </div>
             <div class="stat">
               <span class="label">Montant récupéré:</span>
-              <span class="value">{{ perf.getFormattedMontantRecupere() }}</span>
+              <span class="value">{{ formatAmount(perf.montantRecupere || 0) }}</span>
             </div>
             <div class="stat">
               <span class="label">Actions effectuées:</span>
-              <span class="value">{{ perf.actionsEffectuees }}</span>
+              <span class="value">{{ perf.actionsEffectuees || 0 }}</span>
             </div>
           </div>
           <div class="progress-bar">
-            <div class="progress-fill" [style.width.%]="perf.tauxReussite"></div>
+            <div class="progress-fill" [style.width.%]="perf.tauxReussite || 0"></div>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="chart-container">
+    <div class="chart-container" *ngIf="statistiques.actionsEffectuees !== null || statistiques.actionsReussies !== null">
       <h2>Actions Effectuées</h2>
       <div class="actions-summary">
         <div class="action-stat">
-          <h3>{{ statistiques.actionsEffectuees }}</h3>
+          <h3>{{ statistiques.actionsEffectuees ?? 0 }}</h3>
           <p>Total Actions</p>
         </div>
         <div class="action-stat">
-          <h3>{{ statistiques.actionsReussies }}</h3>
+          <h3>{{ statistiques.actionsReussies ?? 0 }}</h3>
           <p>Actions Réussies</p>
         </div>
         <div class="action-stat">
           <h3>{{ getTauxReussiteActions() | number:'1.1-1' }}%</h3>
           <p>Taux de Réussite</p>
         </div>
-        <div class="action-stat">
+        <div class="action-stat" *ngIf="statistiques.coutTotalActions !== null && statistiques.coutTotalActions !== undefined && statistiques.coutTotalActions > 0">
           <h3>{{ statistiques.getFormattedCoutTotal() }}</h3>
           <p>Coût Total</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section Prédictions IA -->
+  <div class="ia-predictions-section" *ngIf="recentDossiers.length > 0">
+    <h2><i class="fas fa-brain"></i> Prédictions IA - Dossiers Récents</h2>
+    <div class="predictions-grid">
+      <div class="prediction-card" *ngFor="let dossier of recentDossiers">
+        <div class="dossier-header-prediction">
+          <h4>{{ dossier.numeroDossier || 'Sans référence' }}</h4>
+          <span class="montant-badge">{{ formatAmount(dossier.montantCreance || 0) }}</span>
+        </div>
+        <div class="prediction-content">
+          <app-ia-prediction-badge
+            [prediction]="getPrediction(dossier)"
+            [loading]="isLoadingPrediction(dossier)"
+            [showDetails]="true"
+            size="small"
+          ></app-ia-prediction-badge>
+          <button 
+            *ngIf="!getPrediction(dossier) && !isLoadingPrediction(dossier)"
+            class="btn btn-sm btn-primary"
+            (click)="triggerPrediction(dossier.id!)"
+            title="Calculer Prédiction IA">
+            <i class="fas fa-brain"></i> Calculer
+          </button>
         </div>
       </div>
     </div>

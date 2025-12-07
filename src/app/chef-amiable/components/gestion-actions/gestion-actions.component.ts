@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -23,6 +23,10 @@ import { ConfirmationDialogComponent, ConfirmationDialogData } from '../../../sh
 import { DossierActionsAmiableComponent } from '../../../dossier/components/dossier-actions-amiable/dossier-actions-amiable.component';
 import { DossierRecommandationsComponent } from '../dossier-recommandations/dossier-recommandations.component';
 import { JwtAuthService } from '../../../core/services/jwt-auth.service';
+import { IaPredictionService } from '../../../core/services/ia-prediction.service';
+import { IaPredictionResult } from '../../../shared/models/ia-prediction-result.model';
+import { IaPredictionBadgeComponent } from '../../../shared/components/ia-prediction-badge/ia-prediction-badge.component';
+import { Dossier } from '../../../shared/models/dossier.model';
 
 interface DossierAvecActions {
   id?: number;
@@ -40,7 +44,8 @@ interface DossierAvecActions {
   standalone: true,
   imports: [
     CommonModule, 
-    FormsModule, 
+    FormsModule,
+    ReactiveFormsModule,
     MatSnackBarModule, 
     MatProgressSpinnerModule, 
     MatDialogModule,
@@ -52,7 +57,8 @@ interface DossierAvecActions {
     MatTooltipModule,
     MatBadgeModule,
     DossierActionsAmiableComponent,
-    DossierRecommandationsComponent
+    DossierRecommandationsComponent,
+    IaPredictionBadgeComponent
   ],
   templateUrl: './gestion-actions.component.html',
   styleUrls: ['./gestion-actions.component.scss']
@@ -93,6 +99,23 @@ export class GestionActionsComponent implements OnInit, OnDestroy {
     { value: ReponseDebiteur.EN_ATTENTE, label: 'EN_ATTENTE' }
   ];
 
+  // Prédiction IA
+  prediction: IaPredictionResult | null = null;
+  loadingPrediction: boolean = false;
+
+  // Formulaire de finalisation
+  finalisationForm!: FormGroup;
+  showFinalisationForm: boolean = false;
+  selectedDossierForFinalisation: DossierApi | null = null;
+  isLoadingFinalisation: boolean = false;
+
+  // Enum pour l'état final
+  etatFinalDossier = {
+    RECOUVREMENT_TOTAL: 'RECOUVREMENT_TOTAL',
+    RECOUVREMENT_PARTIEL: 'RECOUVREMENT_PARTIEL',
+    NON_RECOUVRE: 'NON_RECOUVRE'
+  };
+
   constructor(
     private chefAmiableService: ChefAmiableService,
     private dossierApiService: DossierApiService,
@@ -100,7 +123,9 @@ export class GestionActionsComponent implements OnInit, OnDestroy {
     private snackBar: MatSnackBar,
     private dialog: MatDialog,
     private router: Router,
-    private jwtAuthService: JwtAuthService
+    private jwtAuthService: JwtAuthService,
+    private iaPredictionService: IaPredictionService,
+    private fb: FormBuilder
   ) {
     // Configuration du debounce pour la recherche
     this.searchSubject.pipe(
@@ -121,7 +146,30 @@ export class GestionActionsComponent implements OnInit, OnDestroy {
       return;
     }
     
+    this.initializeFinalisationForm();
     this.loadDossiers();
+  }
+
+  /**
+   * Initialise le formulaire de finalisation
+   */
+  initializeFinalisationForm(): void {
+    this.finalisationForm = this.fb.group({
+      etatFinal: ['', Validators.required],
+      montantRecouvre: [0, [Validators.min(0)]]
+    });
+    
+    // Mettre à jour les validators dynamiquement selon l'état final
+    this.finalisationForm.get('etatFinal')?.valueChanges.subscribe(etat => {
+      const montantControl = this.finalisationForm.get('montantRecouvre');
+      if (etat === this.etatFinalDossier.NON_RECOUVRE) {
+        montantControl?.clearValidators();
+        montantControl?.setValue(0);
+      } else {
+        montantControl?.setValidators([Validators.required, Validators.min(0)]);
+      }
+      montantControl?.updateValueAndValidity();
+    });
   }
 
   ngOnDestroy(): void {
@@ -357,6 +405,8 @@ export class GestionActionsComponent implements OnInit, OnDestroy {
           this.tabs[1].disabled = false;
           this.tabs[2].disabled = false;
           this.tabs[3].disabled = false;
+          // Charger la prédiction IA pour ce dossier
+          this.loadPredictionForDossier(dossierApi);
           // Aller directement à l'onglet Actions
           this.selectedTab = 1;
         },
@@ -369,6 +419,79 @@ export class GestionActionsComponent implements OnInit, OnDestroy {
           this.selectedTab = 1;
         }
       });
+    }
+  }
+
+  /**
+   * Charge la prédiction IA pour un dossier
+   */
+  loadPredictionForDossier(dossierApi: DossierApi): void {
+    if (!dossierApi.id) return;
+    
+    // Si le dossier a déjà une prédiction, l'utiliser
+    if (dossierApi.etatPrediction || dossierApi.riskScore !== undefined) {
+      const dossierModel = new Dossier({
+        id: String(dossierApi.id),
+        etatPrediction: dossierApi.etatPrediction,
+        riskScore: dossierApi.riskScore,
+        riskLevel: dossierApi.riskLevel,
+        datePrediction: dossierApi.datePrediction
+      });
+      this.prediction = this.iaPredictionService.getPredictionFromDossier(dossierModel);
+    } else {
+      this.prediction = null;
+    }
+  }
+
+  /**
+   * Obtient la prédiction IA pour le dossier sélectionné
+   */
+  getPrediction(): IaPredictionResult | null {
+    return this.prediction;
+  }
+
+  /**
+   * Déclenche le calcul de la prédiction IA pour le dossier sélectionné
+   */
+  triggerPrediction(): void {
+    if (!this.dossierApiSelectionne?.id) {
+      this.snackBar.open('Aucun dossier sélectionné', 'Fermer', { duration: 3000 });
+      return;
+    }
+
+    this.loadingPrediction = true;
+    this.iaPredictionService.predictForDossier(this.dossierApiSelectionne.id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (prediction) => {
+          this.prediction = prediction;
+          this.loadingPrediction = false;
+          // Mettre à jour le dossier avec la nouvelle prédiction
+          if (this.dossierApiSelectionne) {
+            this.dossierApiSelectionne.etatPrediction = prediction.etatFinal;
+            this.dossierApiSelectionne.riskScore = prediction.riskScore;
+            this.dossierApiSelectionne.riskLevel = prediction.riskLevel;
+            this.dossierApiSelectionne.datePrediction = prediction.datePrediction;
+          }
+          this.snackBar.open('Prédiction IA calculée avec succès', 'Fermer', { duration: 3000 });
+        },
+        error: (error) => {
+          console.error('❌ Erreur lors de la prédiction IA:', error);
+          this.loadingPrediction = false;
+          this.snackBar.open('Erreur lors du calcul de la prédiction IA', 'Fermer', { duration: 3000 });
+        }
+      });
+  }
+
+  /**
+   * Recalcule automatiquement la prédiction IA après une action
+   */
+  recalculatePredictionAfterAction(): void {
+    if (this.dossierApiSelectionne?.id) {
+      // Attendre un peu pour que le backend mette à jour les données
+      setTimeout(() => {
+        this.triggerPrediction();
+      }, 1000);
     }
   }
   
@@ -658,15 +781,25 @@ export class GestionActionsComponent implements OnInit, OnDestroy {
 
   /**
    * Récupère le montant recouvré du dossier
+   * ✅ NOUVEAU : Utilise montantRecouvrePhaseAmiable + montantRecouvrePhaseJuridique
    */
   getMontantRecouvre(): number | null {
     if (!this.dossierApiSelectionne) return null;
-    // Le backend peut retourner montantRecouvre directement ou via finance
-    // FinanceApi utilise montantRecupere, mais le backend peut aussi retourner montantRecouvre directement
-    return (this.dossierApiSelectionne as any).montantRecouvre || 
-           (this.dossierApiSelectionne.finance as any)?.montantRecouvre ||
-           this.dossierApiSelectionne.finance?.montantRecupere || 
-           null;
+    
+    // ✅ NOUVEAU : Utiliser les montants par phase
+    const montantAmiable = (this.dossierApiSelectionne as any).montantRecouvrePhaseAmiable || 0;
+    const montantJuridique = (this.dossierApiSelectionne as any).montantRecouvrePhaseJuridique || 0;
+    const montantTotal = montantAmiable + montantJuridique;
+    
+    // Fallback vers l'ancien système si les nouveaux champs ne sont pas disponibles
+    if (montantTotal === 0) {
+      return (this.dossierApiSelectionne as any).montantRecouvre || 
+             (this.dossierApiSelectionne.finance as any)?.montantRecouvre ||
+             this.dossierApiSelectionne.finance?.montantRecupere || 
+             null;
+    }
+    
+    return montantTotal;
   }
 
   /**
@@ -729,5 +862,237 @@ export class GestionActionsComponent implements OnInit, OnDestroy {
       'NON_AFFECTE': 'Non Affecté'
     };
     return labels[type] || type;
+  }
+
+  /**
+   * Vérifie si un dossier est finalisé (état = RECOVERED_TOTAL)
+   */
+  isDossierFinalise(dossier: DossierAvecActions | DossierApi | null): boolean {
+    if (!dossier) return false;
+    const dossierApi = dossier as any;
+    return dossierApi.etatPrediction === 'RECOVERED_TOTAL' || 
+           dossierApi.etatDossier === 'RECOVERED_TOTAL' ||
+           (dossierApi.finance && dossierApi.finance.montantRecupere >= (dossierApi.montantCreance || 0));
+  }
+
+  /**
+   * Ouvre le formulaire de finalisation du dossier amiable
+   */
+  openFinalisationForm(): void {
+    if (!this.dossierApiSelectionne || !this.dossierApiSelectionne.id) {
+      this.snackBar.open('Veuillez sélectionner un dossier', 'Fermer', { duration: 3000 });
+      return;
+    }
+    
+    // Vérifier que le dossier a au moins une action
+    const actionsCount = this.getActionsCount(this.dossierApiSelectionne.id);
+    if (actionsCount === 0) {
+      this.snackBar.open('Ce dossier doit avoir au moins une action pour être finalisé', 'Fermer', { duration: 3000 });
+      return;
+    }
+    
+    this.selectedDossierForFinalisation = this.dossierApiSelectionne;
+    this.finalisationForm.reset({
+      etatFinal: '',
+      montantRecouvre: 0
+    });
+    this.showFinalisationForm = true;
+  }
+
+  /**
+   * Ferme le formulaire de finalisation
+   */
+  closeFinalisationForm(): void {
+    this.showFinalisationForm = false;
+    this.selectedDossierForFinalisation = null;
+    this.finalisationForm.reset();
+  }
+
+  /**
+   * Définit l'état final du dossier via un bouton
+   */
+  setEtatFinal(etat: string): void {
+    if (!this.selectedDossierForFinalisation) {
+      this.snackBar.open('Aucun dossier sélectionné', 'Fermer', { duration: 3000 });
+      return;
+    }
+    
+    const montantCreance = this.selectedDossierForFinalisation.montantCreance || 0;
+    
+    // Si Recouvrement Total : montant recouvré = montant créance automatiquement
+    if (etat === this.etatFinalDossier.RECOUVREMENT_TOTAL) {
+      this.finalisationForm.patchValue({ 
+        etatFinal: etat,
+        montantRecouvre: montantCreance
+      });
+    } 
+    // Si Non Recouvré : montant recouvré = 0
+    else if (etat === this.etatFinalDossier.NON_RECOUVRE) {
+      this.finalisationForm.patchValue({ 
+        etatFinal: etat,
+        montantRecouvre: 0
+      });
+    }
+    // Si Recouvrement Partiel : laisser l'utilisateur saisir
+    else {
+      this.finalisationForm.patchValue({ 
+        etatFinal: etat,
+        montantRecouvre: 0
+      });
+    }
+  }
+
+  /**
+   * Calcule le montant restant en fonction du montant créance et du montant recouvré
+   */
+  getMontantRestantFinalisation(): number {
+    if (!this.selectedDossierForFinalisation) return 0;
+    
+    const montantCreance = this.selectedDossierForFinalisation.montantCreance || 0;
+    const montantRecouvre = this.finalisationForm.get('montantRecouvre')?.value || 0;
+    
+    return Math.max(0, montantCreance - montantRecouvre);
+  }
+
+  /**
+   * Vérifie si le champ montant recouvré doit être affiché
+   */
+  shouldShowMontantRecouvre(): boolean {
+    const etatFinal = this.finalisationForm.get('etatFinal')?.value;
+    return etatFinal !== this.etatFinalDossier.NON_RECOUVRE;
+  }
+
+  /**
+   * Vérifie si le montant recouvré doit être en lecture seule (Recouvrement Total)
+   */
+  isMontantRecouvreReadOnly(): boolean {
+    const etatFinal = this.finalisationForm.get('etatFinal')?.value;
+    return etatFinal === this.etatFinalDossier.RECOUVREMENT_TOTAL;
+  }
+
+  /**
+   * Obtient le label d'affichage pour l'état final
+   */
+  getEtatFinalLabel(etat: string): string {
+    const labels: { [key: string]: string } = {
+      'RECOUVREMENT_TOTAL': 'Recouvrement Total',
+      'RECOUVREMENT_PARTIEL': 'Recouvrement Partiel',
+      'NON_RECOUVRE': 'Non Recouvré'
+    };
+    return labels[etat] || etat;
+  }
+
+  /**
+   * Vérifie si un dossier peut être finalisé (doit avoir au moins une action et état = RECOVERED_TOTAL)
+   */
+  canFinaliserDossierAmiable(dossier: DossierAvecActions | DossierApi | null): boolean {
+    if (!dossier || !dossier.id) return false;
+    
+    // Vérifier si le dossier a au moins une action
+    const actionsCount = this.getActionsCount(dossier.id);
+    if (actionsCount === 0) return false;
+    
+    // Vérifier si le montant restant est 0 (recouvrement total)
+    const dossierApi = dossier as any;
+    const montantTotal = dossierApi.montantCreance || 0;
+    const montantRecouvre = this.getMontantRecouvre() || 0;
+    const montantRestant = Math.max(0, montantTotal - montantRecouvre);
+    
+    // Peut finaliser si montant restant = 0 (recouvrement total)
+    return montantRestant === 0 && montantTotal > 0;
+  }
+
+  /**
+   * Finalise le dossier amiable avec l'état final et le montant recouvré
+   */
+  finaliserDossierAmiable(): void {
+    if (!this.selectedDossierForFinalisation || !this.selectedDossierForFinalisation.id) {
+      this.snackBar.open('Aucun dossier sélectionné', 'Fermer', { duration: 3000 });
+      return;
+    }
+
+    if (this.finalisationForm.invalid) {
+      this.snackBar.open('Veuillez remplir tous les champs obligatoires', 'Fermer', { duration: 3000 });
+      return;
+    }
+
+    const formValue = this.finalisationForm.value;
+    const etatFinal = formValue.etatFinal;
+    let montantRecouvre = formValue.montantRecouvre;
+
+    // Validation du montant selon l'état
+    const montantCreance = this.selectedDossierForFinalisation.montantCreance || 0;
+    
+    // Pour NON_RECOUVRE, le montant doit être 0
+    if (etatFinal === this.etatFinalDossier.NON_RECOUVRE) {
+      montantRecouvre = 0;
+    }
+    // Pour RECOUVREMENT_TOTAL, le montant doit être égal au montant de la créance
+    else if (etatFinal === this.etatFinalDossier.RECOUVREMENT_TOTAL) {
+      if (montantRecouvre !== montantCreance) {
+        this.finalisationForm.patchValue({ montantRecouvre: montantCreance });
+        montantRecouvre = montantCreance;
+      }
+    }
+    // Pour RECOUVREMENT_PARTIEL, le montant doit être > 0 et < montant créance
+    else if (etatFinal === this.etatFinalDossier.RECOUVREMENT_PARTIEL) {
+      if (montantRecouvre <= 0) {
+        this.snackBar.open('Pour un recouvrement partiel, le montant recouvré doit être supérieur à 0', 'Fermer', { duration: 3000 });
+        return;
+      }
+      if (montantRecouvre >= montantCreance) {
+        this.snackBar.open('Pour un recouvrement partiel, le montant recouvré doit être inférieur au montant de la créance', 'Fermer', { duration: 3000 });
+        return;
+      }
+    }
+
+    const message = `Êtes-vous sûr de vouloir finaliser ce dossier amiable ?\n\n` +
+                    `Dossier: ${this.selectedDossierForFinalisation.numeroDossier || 'N/A'}\n` +
+                    `État final: ${this.getEtatFinalLabel(etatFinal)}\n` +
+                    `Montant recouvré: ${montantRecouvre} TND\n\n` +
+                    `Cette action marquera la fin du processus de recouvrement amiable.`;
+
+    if (!confirm(message)) {
+      return;
+    }
+
+    this.isLoadingFinalisation = true;
+    
+    // ✅ NOUVEAU : Utiliser la méthode finaliserDossierAmiable du service
+    this.dossierApiService.finaliserDossierAmiable(
+      this.selectedDossierForFinalisation.id,
+      etatFinal as 'RECOUVREMENT_TOTAL' | 'RECOUVREMENT_PARTIEL' | 'NON_RECOUVRE',
+      montantRecouvre
+    )
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (dossierUpdated) => {
+          console.log('✅ Dossier amiable finalisé:', dossierUpdated);
+          this.snackBar.open('Dossier amiable finalisé avec succès', 'Fermer', { duration: 3000 });
+          this.isLoadingFinalisation = false;
+          
+          // Mettre à jour le dossier dans la liste
+          const index = this.dossiers.findIndex(d => d.id === dossierUpdated.id);
+          if (index !== -1) {
+            this.dossiers[index] = { ...this.dossiers[index], ...dossierUpdated } as DossierAvecActions;
+          }
+          
+          // Mettre à jour le dossier sélectionné si c'est le même
+          if (this.dossierApiSelectionne?.id === dossierUpdated.id) {
+            this.dossierApiSelectionne = dossierUpdated;
+          }
+          
+          // Recharger les dossiers pour avoir les données à jour
+          this.loadDossiers();
+          
+          this.closeFinalisationForm();
+        },
+        error: (error) => {
+          console.error('❌ Erreur lors de la finalisation du dossier:', error);
+          this.isLoadingFinalisation = false;
+          const errorMessage = error.error?.message || error.error?.error || error.message || 'Erreur lors de la finalisation du dossier';
+          this.snackBar.open(errorMessage, 'Fermer', { duration: 5000 });
+        }
+      });
   }
 }

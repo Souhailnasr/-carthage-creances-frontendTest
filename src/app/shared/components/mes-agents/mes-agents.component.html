@@ -40,12 +40,25 @@
           <p class="email">{{ utilisateur.email }}</p>
           <div class="meta">
             <span *ngIf="utilisateur.derniereConnexion">
-              Dernière connexion : {{ utilisateur.derniereConnexion | date:'short' }}
+              <i class="fas fa-clock"></i> Dernière connexion : {{ utilisateur.derniereConnexion | date:'short' }}
             </span>
             <span *ngIf="utilisateur.derniereDeconnexion && !isActif(utilisateur)">
-              Dernière déconnexion : {{ utilisateur.derniereDeconnexion | date:'short' }}
+              <i class="fas fa-sign-out-alt"></i> Dernière déconnexion : {{ utilisateur.derniereDeconnexion | date:'short' }}
             </span>
           </div>
+        </div>
+        <!-- ✅ NOUVEAU : Bouton Activer/Désactiver (uniquement pour SUPER_ADMIN) -->
+        <div class="utilisateur-actions" *ngIf="isSuperAdmin()">
+          <button 
+            class="action-btn"
+            [class.action-btn-success]="!utilisateur.actif"
+            [class.action-btn-warning]="utilisateur.actif"
+            (click)="toggleUserStatus(utilisateur)"
+            [disabled]="isProcessingStatus || ((utilisateur.roleUtilisateur === 'SUPER_ADMIN' || utilisateur.role === 'SUPER_ADMIN') && utilisateur.actif)"
+            [title]="(utilisateur.roleUtilisateur === 'SUPER_ADMIN' || utilisateur.role === 'SUPER_ADMIN') && utilisateur.actif ? 'Impossible de désactiver un Super Admin' : (utilisateur.actif ? 'Désactiver l\'utilisateur' : 'Activer l\'utilisateur')">
+            <i class="fas" [class.fa-check-circle]="!utilisateur.actif" [class.fa-ban]="utilisateur.actif"></i>
+            <span>{{ utilisateur.actif ? 'Désactiver' : 'Activer' }}</span>
+          </button>
         </div>
       </div>
     </div>

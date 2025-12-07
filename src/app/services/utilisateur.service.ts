@@ -224,13 +224,19 @@ export class UtilisateurService {
 
   /**
    * Supprimer un utilisateur via l'API backend
+   * Endpoint : DELETE /api/admin/utilisateurs/{id}
    */
   deleteUtilisateur(id: number): Observable<void> {
-    const deleteUrl = `${this.baseUrl}/users/${id}`;
+    // ✅ CORRECTION : Utiliser /api/admin/utilisateurs/{id} (endpoint correct)
+    const deleteUrl = `${this.baseUrl}/admin/utilisateurs/${id}`;
+    const headers = new HttpHeaders({
+      'Content-Type': 'application/json'
+    });
     console.log('🗑️ Suppression utilisateur - URL:', deleteUrl);
     console.log('🗑️ ID utilisateur à supprimer:', id);
+    console.log('🔍 L\'AuthInterceptor ajoutera automatiquement le token JWT');
     
-    return this.http.delete<void>(deleteUrl)
+    return this.http.delete<void>(deleteUrl, { headers })
       .pipe(
         tap(() => {
           console.log('✅ Utilisateur supprimé avec succès, ID:', id);
@@ -319,6 +325,54 @@ export class UtilisateurService {
       .pipe(
         tap(updatedUtilisateur => {
           // Mettre à jour la liste locale après changement de statut
+          const currentUtilisateurs = this.utilisateursSubject.value;
+          const index = currentUtilisateurs.findIndex(u => u.id === id);
+          if (index !== -1) {
+            currentUtilisateurs[index] = updatedUtilisateur;
+            this.utilisateursSubject.next([...currentUtilisateurs]);
+          }
+        }),
+        catchError(this.handleError)
+      );
+  }
+
+  /**
+   * ✅ NOUVEAU : Activer (débloquer) un utilisateur
+   * Endpoint : PUT /api/admin/utilisateurs/{id}/activer
+   */
+  activerUtilisateur(id: number): Observable<Utilisateur> {
+    const headers = new HttpHeaders({
+      'Content-Type': 'application/json'
+    });
+    return this.http.put<Utilisateur>(`${this.baseUrl}/admin/utilisateurs/${id}/activer`, {}, { headers })
+      .pipe(
+        tap(updatedUtilisateur => {
+          console.log('✅ Utilisateur activé:', updatedUtilisateur);
+          // Mettre à jour la liste locale après activation
+          const currentUtilisateurs = this.utilisateursSubject.value;
+          const index = currentUtilisateurs.findIndex(u => u.id === id);
+          if (index !== -1) {
+            currentUtilisateurs[index] = updatedUtilisateur;
+            this.utilisateursSubject.next([...currentUtilisateurs]);
+          }
+        }),
+        catchError(this.handleError)
+      );
+  }
+
+  /**
+   * ✅ NOUVEAU : Désactiver (bloquer) un utilisateur
+   * Endpoint : PUT /api/admin/utilisateurs/{id}/desactiver
+   */
+  desactiverUtilisateur(id: number): Observable<Utilisateur> {
+    const headers = new HttpHeaders({
+      'Content-Type': 'application/json'
+    });
+    return this.http.put<Utilisateur>(`${this.baseUrl}/admin/utilisateurs/${id}/desactiver`, {}, { headers })
+      .pipe(
+        tap(updatedUtilisateur => {
+          console.log('✅ Utilisateur désactivé:', updatedUtilisateur);
+          // Mettre à jour la liste locale après désactivation
           const currentUtilisateurs = this.utilisateursSubject.value;
           const index = currentUtilisateurs.findIndex(u => u.id === id);
           if (index !== -1) {

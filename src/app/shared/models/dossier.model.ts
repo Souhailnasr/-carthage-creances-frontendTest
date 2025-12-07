@@ -62,6 +62,12 @@ export class Dossier {
   typeCreancier?: string;
   typeDebiteur?: string;
 
+  // ✅ Champs pour la prédiction IA (alignés avec le backend)
+  etatPrediction?: 'RECOVERED_TOTAL' | 'RECOVERED_PARTIAL' | 'NOT_RECOVERED';
+  riskScore?: number;
+  riskLevel?: 'Faible' | 'Moyen' | 'Élevé';
+  datePrediction?: string; // Format ISO string "2025-12-03T10:30:00" depuis le backend
+
   constructor(data?: Partial<Dossier>) {
     Object.assign(this, data);
   }

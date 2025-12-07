@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { map, catchError } from 'rxjs/operators';
 
 @Injectable({
   providedIn: 'root'
@@ -54,9 +54,8 @@ export class DossierService {
       'Content-Type': 'application/json'
     });
 
-    const params = new HttpParams().set('isChef', String(isChef));
-
-    return this.http.post(`${this.baseUrl}/create`, dossierData, { headers, params })
+    // D'après le backend, le paramètre isChef doit être dans l'URL (?isChef=true/false)
+    return this.http.post(`${this.baseUrl}/create?isChef=${isChef}`, dossierData, { headers })
       .pipe(
         catchError(error => {
           console.error('Erreur lors de la création du dossier:', error);
@@ -91,9 +90,9 @@ export class DossierService {
     // 3. Envoyer la requête multipart
     // ⚠️ IMPORTANT : Ne PAS définir Content-Type manuellement
     // Le navigateur ajoute automatiquement le Content-Type avec boundary
-    const params = new HttpParams().set('isChef', String(isChef));
+    // D'après le backend, le paramètre isChef doit être dans l'URL (?isChef=true/false)
 
-    return this.http.post(`${this.baseUrl}/create`, formData, { params })
+    return this.http.post(`${this.baseUrl}/create?isChef=${isChef}`, formData)
       .pipe(
         catchError(error => {
           console.error('Erreur lors de la création du dossier avec fichiers:', error);
@@ -162,13 +161,54 @@ export class DossierService {
 
   /**
    * Supprimer un dossier
+   * 
+   * Le backend retourne maintenant :
+   * - 204 NO_CONTENT : Suppression réussie (pas de body)
+   * - 404 NOT_FOUND : Dossier introuvable avec {"error": "...", "message": "..."}
+   * - 400 BAD_REQUEST : Validations EN_ATTENTE avec {"error": "...", "message": "..."}
+   * - 500 INTERNAL_SERVER_ERROR : Autres erreurs avec {"error": "...", "message": "..."}
+   * 
+   * @param id ID du dossier à supprimer
+   * @param isChef Paramètre ignoré (le backend n'attend pas de paramètres de requête)
    */
-  deleteDossier(id: number): Observable<any> {
-    return this.http.delete(`${this.baseUrl}/${id}`)
+  deleteDossier(id: number, isChef: boolean = false): Observable<any> {
+    // Utiliser observe: 'response' pour accéder au status code
+    return this.http.delete(`${this.baseUrl}/${id}`, { observe: 'response' })
       .pipe(
-        catchError(error => {
+        map((response) => {
+          // Le backend retourne 204 NO_CONTENT pour le succès (pas de body)
+          if (response.status === 204) {
+            return; // Succès, pas de body
+          }
+          // Si on arrive ici, c'est un cas inattendu
+          throw new Error(`Réponse inattendue du serveur: ${response.status}`);
+        }),
+        catchError((error) => {
           console.error(`Erreur lors de la suppression du dossier ${id}:`, error);
-          return throwError(() => error);
+          
+          // Extraire le message d'erreur depuis le body de la réponse
+          let errorMessage = 'Erreur lors de la suppression du dossier';
+          
+          if (error?.error) {
+            // Le backend retourne {"error": "...", "message": "..."}
+            if (error.error.message) {
+              errorMessage = error.error.message;
+            } else if (error.error.error) {
+              errorMessage = error.error.error;
+            } else if (typeof error.error === 'string') {
+              errorMessage = error.error;
+            }
+          } else if (error?.message) {
+            errorMessage = error.message;
+          }
+          
+          // Enrichir l'erreur avec le message extrait
+          const enrichedError = {
+            ...error,
+            message: errorMessage
+          };
+          
+          return throwError(() => enrichedError);
         })
       );
   }
