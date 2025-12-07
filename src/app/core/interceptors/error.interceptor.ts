@@ -58,7 +58,12 @@ export const ErrorInterceptor: HttpInterceptorFn = (req, next) => {
             break;
           case 401:
             message = 'Session expirée. Veuillez vous reconnecter.';
-            router.navigate(['/login']);
+            // ✅ CORRECTION : Ne pas rediriger vers /login si l'utilisateur est sur /reset-password ou /forgot-password
+            // Ces pages gèrent elles-mêmes les erreurs 401 (token invalide/expiré)
+            const currentUrl = router.url;
+            if (!currentUrl.includes('/reset-password') && !currentUrl.includes('/forgot-password')) {
+              router.navigate(['/login']);
+            }
             break;
           case 403:
             message = 'Accès interdit pour cette ressource.';

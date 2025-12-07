@@ -76,7 +76,9 @@ export class PasswordResetService {
    * Endpoint : GET /api/auth/reset-password/validate?token={token}
    */
   validateToken(token: string): Observable<ValidateTokenResponse> {
-    const headers = this.getHeaders();
+    // ✅ CORRECTION : Ajouter un header pour indiquer à l'intercepteur de ne pas rediriger vers /login
+    // car cette requête ne nécessite pas d'authentification (le token est dans l'URL)
+    const headers = this.getHeaders().set('X-Skip-Error-Toast', 'true');
     const params = new HttpParams().set('token', token);
 
     return this.http.get<ValidateTokenResponse>(`${this.apiUrl}/reset-password/validate`, { headers, params })
@@ -90,7 +92,9 @@ export class PasswordResetService {
    * Endpoint : POST /api/auth/reset-password
    */
   resetPassword(token: string, newPassword: string, confirmPassword: string): Observable<ResetPasswordResponse> {
-    const headers = this.getHeaders();
+    // ✅ CORRECTION : Ajouter un header pour indiquer à l'intercepteur de ne pas rediriger vers /login
+    // car cette requête ne nécessite pas d'authentification (le token est dans le body)
+    const headers = this.getHeaders().set('X-Skip-Error-Toast', 'true');
     const body: ResetPasswordRequest = {
       token,
       newPassword,

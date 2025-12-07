@@ -97,14 +97,21 @@ export const AuthInterceptor: HttpInterceptorFn = (req, next) => {
     );
   }
   
-  // Si pas de token et que la requête n'est pas pour /auth (login/register/logout), rediriger
+  // ✅ CORRECTION : Autoriser les endpoints de réinitialisation de mot de passe sans token
+  // Si pas de token et que la requête n'est pas pour /auth (login/register/logout/reset-password), rediriger
   // Note: /auth/logout peut être appelé sans token si le token a déjà été supprimé, on l'autorise quand même
+  // Note: /auth/reset-password ne nécessite pas de token (le token est dans l'URL en query param)
   if (!req.url.includes('/auth/authenticate') && 
       !req.url.includes('/auth/register') && 
       !req.url.includes('/auth/logout') && 
+      !req.url.includes('/auth/reset-password') && 
       !req.url.includes('/login')) {
     console.warn('⚠️ AuthInterceptor - Requête non authentifiée, redirection vers login');
-    if (!router.url.includes('/login')) {
+    // ✅ CORRECTION : Ne pas rediriger si l'utilisateur est déjà sur /reset-password ou /forgot-password
+    const currentUrl = router.url;
+    if (!currentUrl.includes('/login') && 
+        !currentUrl.includes('/reset-password') && 
+        !currentUrl.includes('/forgot-password')) {
       router.navigate(['/login'], {
         queryParams: { returnUrl: router.url }
       });
